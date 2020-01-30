@@ -1,17 +1,24 @@
 cmake_minimum_required(VERSION 3.13)
 
-# add the exectutable for all tests
-
 find_package(Catch2 REQUIRED CONFIG)
-find_package(Torch REQUIRED)
-
-
 add_executable(tests Tests.cpp)
-target_link_libraries(tests Catch2::Catch2
-                            ${libraries_to_link}
-                            hypertrie::hypertrie
-                            ${TORCH_LIBRARIES}
+target_link_libraries(tests PRIVATE
+        Catch2::Catch2
+        hypertrie::hypertrie
         )
+set(hypertrie_LIBTORCH_PATH "" CACHE PATH "The installation directory of pytorch.")
+if (hypertrie_LIBTORCH_PATH)
+    # add path
+    list(APPEND CMAKE_PREFIX_PATH ${hypertrie_LIBTORCH_PATH})
+    find_package(Torch REQUIRED)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
+    target_link_libraries(tests PRIVATE
+            ${TORCH_LIBRARIES}
+            )
+    # define C++ preprocess flag to include the tests depending on pytorch
+    add_compile_definitions(HYPERTRIE_ENABLE_LIBTORCH)
+endif ()
+
 # detect the tests
 
 include(CTest)

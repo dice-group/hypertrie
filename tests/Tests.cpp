@@ -7,4 +7,7 @@
 #include "TestBoolHypertrie.cpp"
 #include "TestHashDiagonal.cpp"
 #include "TestHashJoin.cpp"
+
+#ifdef HYPERTRIE_ENABLE_LIBTORCH
 #include "TestEinsum.cpp"
+#endif

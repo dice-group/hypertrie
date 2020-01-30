@@ -1,9 +1,25 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.13)
 project(hypertrie VERSION 0.5.0)
 set(CMAKE_CXX_STANDARD 17)
 
-include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-conan_basic_setup()
+include(${CMAKE_BINARY_DIR}/conan_paths.cmake)
+
+if (NOT EXISTS ${CMAKE_BINARY_DIR}/CMakeCache.txt)
+    if (NOT CMAKE_BUILD_TYPE)
+        set(CMAKE_BUILD_TYPE "Release" CACHE STRING "" FORCE)
+    endif ()
+endif ()
+
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -fomit-frame-pointer -momit-leaf-frame-pointer")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -stdlib=libc++ -lc++abi")
+else ()
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -fomit-frame-pointer")
+endif ()
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -Wextra -g -O0")
+
+set(THREADS_PREFER_PTHREAD_FLAG)
+find_package(Threads REQUIRED)
 
 # installation directories
 set(hypertrie_INSTALL_INCLUDE_DIR "include" CACHE STRING "The installation include directory")
@@ -20,11 +36,12 @@ target_include_directories(cppitertools INTERFACE
         $<INSTALL_INTERFACE:include>
         )
 
-set(libraries_to_link
-        cppitertools
-        tsl::sparse_map
-        ${CONAN_LIBS}
-        )
+find_package(abseil REQUIRED)
+find_package(tsl-hopscotch-map REQUIRED)
+find_package(fmt CONFIG REQUIRED)
+
+SET(Boost_USE_STATIC_LIBS ON)
+find_package(Boost REQUIRED COMPONENTS)
 
 add_library(hypertrie INTERFACE)
 add_library(hypertrie::hypertrie ALIAS hypertrie)
@@ -32,22 +49,26 @@ add_library(hypertrie::hypertrie ALIAS hypertrie)
 target_include_directories(hypertrie INTERFACE
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:${hypertrie_INSTALL_CMAKE_DIR}>
+        ${Boost_INCLUDE_DIRS}
         )
 
 
-target_link_libraries(hypertrie INTERFACE ${libraries_to_link}
+target_link_libraries(hypertrie INTERFACE
+        cppitertools
+        tsl::sparse_map
+        abseil::abseil
+        tsl-hopscotch-map::tsl-hopscotch-map
+        fmt::fmt
+        Boost::boost
+        Threads::Threads
         )
-
-
-# require C++17
-target_compile_features(hypertrie INTERFACE cxx_std_17)
 
 # testing
 option(hypertrie_BUILD_TESTS "Build test programs" OFF)
-if(hypertrie_BUILD_TESTS)
+if (hypertrie_BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
-endif()
+endif ()
 
 # Make package findable
 configure_file(cmake/dummy-config.cmake.in hypertrie-config.cmake @ONLY)

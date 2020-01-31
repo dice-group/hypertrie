@@ -25,8 +25,6 @@ find_package(Threads REQUIRED)
 set(hypertrie_INSTALL_INCLUDE_DIR "include" CACHE STRING "The installation include directory")
 set(hypertrie_INSTALL_CMAKE_DIR "share/hypertrie/cmake" CACHE STRING "The installation cmake directory")
 
-add_subdirectory(thirdparty/sparse-map)
-
 #include cppitertools, see https://github.com/ryanhaining/cppitertools
 add_library(cppitertools INTERFACE)
 add_library(cppitertools::cppitertools ALIAS cppitertools)
@@ -38,6 +36,7 @@ target_include_directories(cppitertools INTERFACE
 
 find_package(abseil REQUIRED)
 find_package(tsl-hopscotch-map REQUIRED)
+find_package(tsl-sparse-map REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 
 SET(Boost_USE_STATIC_LIBS ON)
@@ -55,12 +54,12 @@ target_include_directories(hypertrie INTERFACE
 
 target_link_libraries(hypertrie INTERFACE
         cppitertools
-        tsl::sparse_map
         abseil::abseil
         tsl-hopscotch-map::tsl-hopscotch-map
         fmt::fmt
         Boost::boost
         Threads::Threads
+        tsl-sparse-map::tsl-sparse-map
         )
 
 # testing

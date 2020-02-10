@@ -10,13 +10,15 @@ namespace einsum::internal {
 
 
 		std::shared_ptr<Subscript> subscript;
+		std::shared_ptr<Context> context;
 		Entry<key_part_type, value_type> *entry;
 		bool _ended = true;
 
 
 	public:
-		EntryGeneratorOperator(std::shared_ptr<Subscript> subscript)
-				: subscript(std::move(subscript)) {}
+		EntryGeneratorOperator(std::shared_ptr<Subscript> subscript, std::shared_ptr<Context> context)
+				: subscript(std::move(subscript)),
+				  context(context) {}
 
 
 		static void next(void *self_raw) {

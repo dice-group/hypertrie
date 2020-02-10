@@ -14,6 +14,7 @@ namespace einsum::internal {
 
 
 		std::shared_ptr<Subscript> subscript;
+		std::shared_ptr<Context> context;
 		LabelPossInOperand label_pos_in_result;
 		Entry <key_part_type, value_type> *entry;
 		bool ended_;
@@ -21,8 +22,9 @@ namespace einsum::internal {
 		typename const_BoolHypertrie_t::const_iterator operand_iter;
 
 	public:
-		ResolveOperator(std::shared_ptr<Subscript> subscript)
-				: subscript(std::move(subscript)) {
+		ResolveOperator(std::shared_ptr<Subscript> subscript, std::shared_ptr<Context> context)
+				: subscript(std::move(subscript)),
+				  context(context) {
 			label_pos_in_result = this->subscript->operand2resultMapping_ResolveType();
 			ended_ = true;
 		}

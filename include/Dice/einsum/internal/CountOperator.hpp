@@ -10,13 +10,15 @@ namespace einsum::internal {
 		static constexpr key_part_type default_key_part = (std::is_pointer_v<key_part_type>) ? nullptr : std::numeric_limits<key_part_type>::max();
 
 		std::shared_ptr<Subscript> subscript;
+		std::shared_ptr<Context> context;
 		Entry<key_part_type, value_type> *entry;
 		bool _ended;
 
 
 	public:
-		CountOperator(std::shared_ptr<Subscript> subscript)
-				: subscript(std::move(subscript)) {}
+		CountOperator(std::shared_ptr<Subscript> subscript, std::shared_ptr<Context> context)
+				: subscript(std::move(subscript)),
+				  context(context) {}
 
 
 		static void next(void *self_raw) {

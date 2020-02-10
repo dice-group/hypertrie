@@ -17,6 +17,7 @@ namespace einsum::internal {
 
 
 		std::shared_ptr<Subscript> subscript;
+		std::shared_ptr<Context> context;
 
 		Join_t join;
 		typename Join_t::iterator join_iter;
@@ -32,7 +33,9 @@ namespace einsum::internal {
 		bool ended_ = true;
 
 	public:
-		JoinOperator(std::shared_ptr<Subscript> subscript) : subscript(std::move(subscript)) {}
+		JoinOperator(std::shared_ptr<Subscript> subscript, std::shared_ptr<Context> context)
+				: subscript(std::move(subscript)),
+				  context(context){}
 
 
 		static void next(void *self_raw) {
@@ -82,7 +85,7 @@ namespace einsum::internal {
 			this->entry = &entry;
 			ended_ = false;
 			Label last_label = label;
-			label = CardinalityEstimation_t::getMinCardLabel(operands, subscript);
+			label = CardinalityEstimation_t::getMinCardLabel(operands, subscript, context);
 			if (label != last_label) {
 				label_poss_in_ops = subscript->getLabelPossInOperands(label);
 				is_result_label = subscript->isResultLabel(label);
@@ -92,7 +95,7 @@ namespace einsum::internal {
 			const std::shared_ptr<Subscript> &next_subscript = subscript->removeLabel(label);
 			// check if sub_operator was not yet initialized or if the next subscript is different
 			if (sub_operator.type == Subscript::Type::None or sub_operator.hash() != next_subscript->hash()) {
-				sub_operator = Operator_t::construct(next_subscript);
+				sub_operator = Operator_t::construct(next_subscript, context);
 			}
 
 			join = Join_t{operands, label_poss_in_ops};

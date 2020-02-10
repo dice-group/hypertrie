@@ -21,6 +21,7 @@ namespace einsum::internal {
 		class FullCartesianResult;
 
 		std::shared_ptr<Subscript> subscript; // set in construct
+		std::shared_ptr<Context> context;
 		std::vector<Operator_t> sub_operators; // set in construct
 		std::vector<Entry < key_part_type, value_type>> sub_entries;
 		Entry <key_part_type, value_type> *entry;
@@ -31,14 +32,15 @@ namespace einsum::internal {
 		bool ended_ = true; // set in load_impl // updated in load_impl, next
 
 	public:
-		CartesianOperator(std::shared_ptr<Subscript> subscript)
-				: subscript(std::move(subscript)) {
+		CartesianOperator(std::shared_ptr<Subscript> subscript, std::shared_ptr<Context> context)
+				: subscript(std::move(subscript)),
+				context(context){
 			// generate sub-operators
 			const std::vector<std::shared_ptr<Subscript>> &sub_subscripts = this->subscript->getCartesianSubscript().getSubSubscripts();
 			sub_operators.reserve(sub_subscripts.size());
 			sub_entries.reserve(sub_subscripts.size());
 			for (const auto &sub_subscript : sub_subscripts) {
-				sub_operators.push_back(Operator_t::construct(sub_subscript));
+				sub_operators.push_back(Operator_t::construct(sub_subscript, context));
 				using EntryKey = typename Entry<key_part_type, value_type>::key_type;
 				sub_entries.push_back({value_type(0), EntryKey(sub_subscript->resultLabelCount(), default_key_part)});
 			}

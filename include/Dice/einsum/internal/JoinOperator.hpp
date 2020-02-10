@@ -3,6 +3,7 @@
 
 #include "Dice/einsum/internal/Operator.hpp"
 #include "Dice/einsum/internal/CardinalityEstimation.hpp"
+#include "Dice/einsum/internal/Context.hpp"
 
 namespace einsum::internal {
 
@@ -50,7 +51,7 @@ namespace einsum::internal {
 			++self.sub_operator;
 			while (self.sub_operator.ended()) {
 				++self.join_iter;
-				if (self.join_iter) {
+				if (self.join_iter and not hasTimedOut(self.context->timeout)) {
 					std::vector<const_BoolHypertrie_t> next_operands;
 					std::tie(next_operands, self.current_key_part) = *self.join_iter;
 					self.sub_operator.load(std::move(next_operands), *self.entry);
@@ -67,7 +68,8 @@ namespace einsum::internal {
 		}
 
 		static bool ended(void *self_raw) {
-			return static_cast<JoinOperator *>(self_raw)->ended_;
+			auto &self = *static_cast<JoinOperator *>(self_raw);
+			return self.ended_ or hasTimedOut(self.context->timeout);
 		}
 
 		static void load(void *self_raw, std::vector<const_BoolHypertrie_t> operands, Entry<key_part_type, value_type> &entry) {
@@ -100,7 +102,7 @@ namespace einsum::internal {
 
 			join = Join_t{operands, label_poss_in_ops};
 			join_iter = join.begin();
-			while (join_iter != join.end()) {
+			while (join_iter != join.end() and not hasTimedOut(this->context->timeout)) {
 				std::vector<const_BoolHypertrie_t> next_operands;
 				std::tie(next_operands, current_key_part) = *join_iter;
 				sub_operator.load(std::move(next_operands), *this->entry);

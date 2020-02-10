@@ -13,37 +13,52 @@
 
 #include "utils/GenerateTriples.hpp"
 #include "einsum/EinsumTestData.hpp"
+#include <chrono>
 
 
 namespace hypertrie::tests::einsum {
+	using namespace std::literals::chrono_literals;
+	using time_point = std::chrono::steady_clock::time_point;
 
 template <typename T>
-void runTest(long excl_max, TestEinsum &test_einsum) {
-    auto einsum = &bh_ns::einsum2map<T>;
-    // expected result
-    torch::Tensor expected_result = torch::einsum(test_einsum.str_subscript, test_einsum.torchOperands());
-//		WARN(expected_result);
-    // result how it is
-    auto actual_result = einsum(test_einsum.subscript, test_einsum.hypertrieOperands());
+void runTest(long excl_max, TestEinsum &test_einsum, std::chrono::milliseconds timeout_duration = 0ms) {
+	auto einsum = &bh_ns::einsum2map<T>;
 
-    unsigned long result_depth = test_einsum.subscript->resultLabelCount();
-    for (const auto &key : product<std::size_t>(result_depth, excl_max)) {
-        auto actual_entry = (actual_result.count(key)) ? actual_result[key] : 0;
-        auto expected_entry = T(resolve(expected_result, key));  // to bool
+	// result how it is
+	auto start_time = std::chrono::steady_clock::now();
+	auto actual_result = einsum(test_einsum.subscript, test_einsum.hypertrieOperands(), start_time + timeout_duration);
+	auto end_time = std::chrono::steady_clock::now();
+	WARN(fmt::format("hypertrie: {}ms ", std::chrono::duration_cast<std::chrono::milliseconds>(end_time-start_time).count()));
+	REQUIRE((end_time - start_time) < (timeout_duration + 10ms));
+
+
+
+	// expected result
+	start_time = std::chrono::steady_clock::now();
+	torch::Tensor expected_result = torch::einsum(test_einsum.str_subscript, test_einsum.torchOperands());
+	end_time = std::chrono::steady_clock::now();
+	WARN(fmt::format("pytorch: {}ms ", std::chrono::duration_cast<std::chrono::milliseconds>(end_time-start_time).count()));
+//		WARN(expected_result);
+	if (timeout_duration == 0ms) {
+		unsigned long result_depth = test_einsum.subscript->resultLabelCount();
+		for (const auto &key : product<std::size_t>(result_depth, excl_max)) {
+			auto actual_entry = (actual_result.count(key)) ? actual_result[key] : 0;
+			auto expected_entry = T(resolve(expected_result, key));  // to bool
 //			WARN("key: ({})"_format(fmt::join(key, ", ")));
 //			WARN("expected: {}, actual {}"_format(resolve(expected_result, key), actual_entry));
-        REQUIRE (actual_entry == expected_entry);
-    }
+			REQUIRE (actual_entry == expected_entry);
+		}
+	}
 }
 
 template <typename T>
-void runTest(long excl_max, std::vector<TestOperand> &operands, const std::shared_ptr<Subscript> &subscript) {
+void runTest(long excl_max, std::vector<TestOperand> &operands, const std::shared_ptr<Subscript> &subscript, std::chrono::milliseconds timeout_duration = 0ms) {
     TestEinsum test_einsum{subscript, operands};
-    runTest<T>(excl_max, test_einsum);
+    runTest<T>(excl_max, test_einsum, timeout_duration);
 }
 
 template <typename T>
-void runSubscript(std::string subscript_string, long excl_max = 4, bool empty = false, std::size_t runs = 15) {
+void runSubscript(std::string subscript_string, long excl_max = 4, bool empty = false, std::size_t runs = 15, std::chrono::milliseconds timeout_duration = 0ms) {
 	static std::string result_type_str = std::is_same_v<T, bool> ? "bool" : "ulong";
     SECTION("{} [res:{}]"_format(subscript_string, result_type_str)) {
         for (std::size_t run : iter::range(runs))
@@ -55,10 +70,36 @@ void runSubscript(std::string subscript_string, long excl_max = 4, bool empty = 
                     TestOperand &operand = operands.emplace_back(operand_sc.size(), excl_max, empty);
 //						WARN(operand.torch_tensor);
                 }
-                runTest<T>(excl_max, operands, subscript);
+                    runTest<T>(excl_max, operands, subscript, timeout_duration);
 
             }
     }
+}
+
+TEST_CASE("timeout", "[einsum]"){
+		std::vector<std::string> subscript_strs{
+				"abc,dcebf,gdghg,bdg,ijibg->c", // is calculated faster
+				"abc,dcebf,gdghg,ijibg->c", // its minimal
+				"abcd,ceffb,cfgaf,hbgi,ccfaj->j",
+				"abbc,d,ebcfg,hdif,hhchj->b"
+		};
+		using namespace std::literals::chrono_literals;
+		std::chrono::milliseconds timeout_duration;
+		timeout_duration = 500ms;
+
+		for (bool empty : {false, true})
+			SECTION("empty = {}"_format(empty)) {
+				for (auto excl_max : {10}) {
+					SECTION("excl_max = {}"_format(excl_max)) {
+						for (auto subscript_str : subscript_strs) {
+							runSubscript<std::size_t>(subscript_str, excl_max, empty, 1, timeout_duration);
+
+							runSubscript<bool>(subscript_str, excl_max, empty, 1, timeout_duration);
+						}
+					}
+				}
+			}
+
 }
 
 TEST_CASE("problematic test cases", "[einsum]") {

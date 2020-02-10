@@ -28,7 +28,8 @@ namespace einsum::internal {
 		}
 
 		static bool ended(void *self_raw) {
-			return static_cast<CountOperator *>(self_raw)->_ended;
+			auto &self = *static_cast<CountOperator *>(self_raw);
+			return self._ended or hasTimedOut(self.context->timeout);
 		}
 
 		static void load(void *self_raw, std::vector<const_BoolHypertrie_t> operands, Entry<key_part_type, value_type> &entry) {
@@ -45,7 +46,7 @@ namespace einsum::internal {
 			assert(operands.size() == 1); // only one operand must be left to be resolved
 			this->entry->value = operands[0].size();
 			_ended = not this->entry->value;
-			if(not _ended)
+			if(not ended(this))
 				for(auto &key_part : entry.key)
 					key_part = std::numeric_limits<key_part_type>::max();
 		}

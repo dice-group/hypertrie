@@ -1,6 +1,7 @@
 #ifndef HYPERTRIE_RESOLVEOPERATOR_HPP
 #define HYPERTRIE_RESOLVEOPERATOR_HPP
 
+#include "Dice/einsum/internal/Context.hpp"
 
 namespace einsum::internal {
 
@@ -53,7 +54,7 @@ namespace einsum::internal {
 
 		static bool ended(void *self_raw) {
 			auto &self = *static_cast<ResolveOperator *>(self_raw);
-			return self.ended_;
+			return self.ended_ or hasTimedOut(self.context->timeout);
 		}
 
 		static void

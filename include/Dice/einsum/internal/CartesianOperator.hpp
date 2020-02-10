@@ -2,6 +2,7 @@
 #define HYPERTRIE_CARTESIANOPERATOR_HPP
 
 #include "Dice/einsum/internal/Operator.hpp"
+#include "Dice/einsum/internal/Context.hpp"
 #include <tsl/sparse_map.h>
 
 namespace einsum::internal {
@@ -34,7 +35,7 @@ namespace einsum::internal {
 	public:
 		CartesianOperator(std::shared_ptr<Subscript> subscript, std::shared_ptr<Context> context)
 				: subscript(std::move(subscript)),
-				context(context){
+				  context(context) {
 			// generate sub-operators
 			const std::vector<std::shared_ptr<Subscript>> &sub_subscripts = this->subscript->getCartesianSubscript().getSubSubscripts();
 			sub_operators.reserve(sub_subscripts.size());
@@ -82,7 +83,7 @@ namespace einsum::internal {
 
 		static bool ended(void *self_raw) {
 			auto &self = *static_cast<CartesianOperator *>(self_raw);
-			return self.ended_;
+			return self.ended_ or hasTimedOut(self.context->timeout);
 		}
 
 		static std::size_t hash(void *self_raw) {
@@ -154,6 +155,10 @@ namespace einsum::internal {
 					assert(sub_entry.value);
 					sub_result[sub_entry.key] += sub_entry.value;
 					++cart_op;
+					if (hasTimedOut(this->context->timeout)){
+						ended_ = true;
+						return;
+					}
 				}
 				if (sub_result.empty()) {
 					ended_ = true;

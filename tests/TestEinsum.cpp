@@ -23,7 +23,8 @@ namespace hypertrie::tests::einsum {
 template <typename T>
 void runTest(long excl_max, TestEinsum &test_einsum, std::chrono::milliseconds timeout_duration = 0ms) {
 	auto einsum = &bh_ns::einsum2map<T>;
-
+	if (timeout_duration == 0ms)
+		timeout_duration = std::chrono::milliseconds::max();
 	// result how it is
 	auto start_time = std::chrono::steady_clock::now();
 	auto actual_result = einsum(test_einsum.subscript, test_einsum.hypertrieOperands(), start_time + timeout_duration);
@@ -38,14 +39,13 @@ void runTest(long excl_max, TestEinsum &test_einsum, std::chrono::milliseconds t
 	torch::Tensor expected_result = torch::einsum(test_einsum.str_subscript, test_einsum.torchOperands());
 	end_time = std::chrono::steady_clock::now();
 	WARN(fmt::format("pytorch: {}ms ", std::chrono::duration_cast<std::chrono::milliseconds>(end_time-start_time).count()));
-//		WARN(expected_result);
 	if (timeout_duration == 0ms) {
 		unsigned long result_depth = test_einsum.subscript->resultLabelCount();
 		for (const auto &key : product<std::size_t>(result_depth, excl_max)) {
 			auto actual_entry = (actual_result.count(key)) ? actual_result[key] : 0;
 			auto expected_entry = T(resolve(expected_result, key));  // to bool
-//			WARN("key: ({})"_format(fmt::join(key, ", ")));
-//			WARN("expected: {}, actual {}"_format(resolve(expected_result, key), actual_entry));
+			INFO("key: ({})"_format(fmt::join(key, ", ")));
+			INFO("expected: {}, actual {}"_format(resolve(expected_result, key), actual_entry));
 			REQUIRE (actual_entry == expected_entry);
 		}
 	}
@@ -85,7 +85,7 @@ TEST_CASE("timeout", "[einsum]"){
 		};
 		using namespace std::literals::chrono_literals;
 		std::chrono::milliseconds timeout_duration;
-		timeout_duration = 500ms;
+		timeout_duration = 30ms;
 
 		for (bool empty : {false, true})
 			SECTION("empty = {}"_format(empty)) {
@@ -190,24 +190,24 @@ struct GenerateAndRunSetup {
 TEST_CASE("generate and run", "[einsum]") {
     static GenerateAndRunSetup setup = []() -> GenerateAndRunSetup {
         torch::manual_seed(std::hash<std::size_t>()(42));
-        long excl_max = 10;
-        std::size_t test_operands_count = 5;
+        long excl_max = 15;
+        std::size_t test_operands_count = 50;
         std::vector<TestEinsum> test_einsums;
 
         std::vector<TestOperand> test_operands;
         test_operands.reserve(test_operands_count);
         // generate tensors
-        for (auto r: gen_random<uint8_t>(test_operands_count, 1, 5)) {
-            TestOperand &operand = test_operands.emplace_back(r, excl_max);
-            UNSCOPED_INFO("Operand generated: depth = {}, dim_range = [0,{}), nnz = {}"_format(operand.depth,
+        for (auto depth: gen_random<uint8_t>(test_operands_count, 1, 4)) {
+            TestOperand &operand = test_operands.emplace_back(depth, excl_max);
+            WARN("Operand generated: depth = {}, dim_basis = [0,{}), nnz = {}"_format(operand.depth,
                                                                                                operand.excl_max,
                                                                                                operand.hypertrie.size()));
         }
-        std::size_t test_einsums_count = 3;
+        std::size_t test_einsums_count = 500;
         test_einsums.reserve(test_einsums_count);
 
         for ([[maybe_unused]]auto i : iter::range(test_einsums_count))
-            test_einsums.emplace_back(test_operands);
+            test_einsums.emplace_back(test_operands, 8);
 
         return {excl_max, std::move(test_operands), std::move(test_einsums)};
     }();
@@ -223,9 +223,4 @@ TEST_CASE("generate and run", "[einsum]") {
 
 
 }
-
-TEST_CASE("nothing", "[einsum]") {
-    // do nothing;
-}
-
 }

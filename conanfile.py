@@ -3,7 +3,7 @@ from conans import ConanFile, CMake
 
 class Hypertrie(ConanFile):
     name = "hypertrie"
-    version = "0.5"
+    version = "0.5.1"
     author = "DICE Group <info@dice-research.org>"
     description = "A flexible data structure for low-rank, sparse tensors supporting slices by any dimension and einstein summation (einsum)"
     homepage = "https://github.com/dice-group/hypertrie"

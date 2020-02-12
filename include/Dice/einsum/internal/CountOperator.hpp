@@ -10,13 +10,15 @@ namespace einsum::internal {
 		static constexpr key_part_type default_key_part = (std::is_pointer_v<key_part_type>) ? nullptr : std::numeric_limits<key_part_type>::max();
 
 		std::shared_ptr<Subscript> subscript;
+		std::shared_ptr<Context> context;
 		Entry<key_part_type, value_type> *entry;
 		bool _ended;
 
 
 	public:
-		CountOperator(std::shared_ptr<Subscript> subscript)
-				: subscript(std::move(subscript)) {}
+		CountOperator(std::shared_ptr<Subscript> subscript, std::shared_ptr<Context> context)
+				: subscript(std::move(subscript)),
+				  context(context) {}
 
 
 		static void next(void *self_raw) {
@@ -26,7 +28,8 @@ namespace einsum::internal {
 		}
 
 		static bool ended(void *self_raw) {
-			return static_cast<CountOperator *>(self_raw)->_ended;
+			auto &self = *static_cast<CountOperator *>(self_raw);
+			return self._ended;
 		}
 
 		static void load(void *self_raw, std::vector<const_BoolHypertrie_t> operands, Entry<key_part_type, value_type> &entry) {
@@ -43,7 +46,7 @@ namespace einsum::internal {
 			assert(operands.size() == 1); // only one operand must be left to be resolved
 			this->entry->value = operands[0].size();
 			_ended = not this->entry->value;
-			if(not _ended)
+			if(not ended(this))
 				for(auto &key_part : entry.key)
 					key_part = std::numeric_limits<key_part_type>::max();
 		}

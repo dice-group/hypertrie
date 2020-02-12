@@ -7,6 +7,8 @@
 
 namespace einsum::internal {
 
+	class Context;
+
 
 	template<typename value_type, typename key_part_type, template<typename, typename> class map_type,
 			template<typename> class set_type>
@@ -86,21 +88,21 @@ namespace einsum::internal {
 
 	public:
 		static Operator
-		construct(std::shared_ptr<Subscript> subscript) {
+		construct(std::shared_ptr<Subscript> subscript, std::shared_ptr<Context> context) {
 			switch (subscript->type) {
 				case Subscript::Type::Join:
-					return {std::make_shared<JoinOperator<value_type, key_part_type, map_type, set_type >>(subscript)};
+					return {std::make_shared<JoinOperator<value_type, key_part_type, map_type, set_type >>(subscript, context)};
 				case Subscript::Type::Resolve:
 					return {std::make_shared<ResolveOperator<value_type, key_part_type, map_type, set_type >>(
-							subscript)};
+							subscript, context)};
 				case Subscript::Type::Count:
-					return {std::make_shared<CountOperator<value_type, key_part_type, map_type, set_type >>(subscript)};
+					return {std::make_shared<CountOperator<value_type, key_part_type, map_type, set_type >>(subscript, context)};
 				case Subscript::Type::Cartesian:
 					return {std::make_shared<CartesianOperator<value_type, key_part_type, map_type, set_type >>(
-							subscript)};
+							subscript, context)};
 				case Subscript::Type::EntryGenerator:
 					return {std::make_shared<EntryGeneratorOperator<value_type, key_part_type, map_type, set_type >>(
-							subscript)};
+							subscript, context)};
 				default:
 					throw std::invalid_argument{"subscript is of an undefined type."};
 			}

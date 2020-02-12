@@ -3,6 +3,7 @@
 
 #include "Dice/einsum/internal/Operator.hpp"
 #include "Dice/einsum/internal/CardinalityEstimation.hpp"
+#include "Dice/einsum/internal/Context.hpp"
 
 namespace einsum::internal {
 
@@ -17,6 +18,7 @@ namespace einsum::internal {
 
 
 		std::shared_ptr<Subscript> subscript;
+		std::shared_ptr<Context> context;
 
 		Join_t join;
 		typename Join_t::iterator join_iter;
@@ -32,7 +34,9 @@ namespace einsum::internal {
 		bool ended_ = true;
 
 	public:
-		JoinOperator(std::shared_ptr<Subscript> subscript) : subscript(std::move(subscript)) {}
+		JoinOperator(std::shared_ptr<Subscript> subscript, std::shared_ptr<Context> context)
+				: subscript(std::move(subscript)),
+				  context(context){}
 
 
 		static void next(void *self_raw) {
@@ -47,7 +51,7 @@ namespace einsum::internal {
 			++self.sub_operator;
 			while (self.sub_operator.ended()) {
 				++self.join_iter;
-				if (self.join_iter) {
+				if (self.join_iter and not self.context->hasTimedOut()){
 					std::vector<const_BoolHypertrie_t> next_operands;
 					std::tie(next_operands, self.current_key_part) = *self.join_iter;
 					self.sub_operator.load(std::move(next_operands), *self.entry);
@@ -64,7 +68,8 @@ namespace einsum::internal {
 		}
 
 		static bool ended(void *self_raw) {
-			return static_cast<JoinOperator *>(self_raw)->ended_;
+			auto &self = *static_cast<JoinOperator *>(self_raw);
+			return self.ended_ or self.context->hasTimedOut();
 		}
 
 		static void load(void *self_raw, std::vector<const_BoolHypertrie_t> operands, Entry<key_part_type, value_type> &entry) {
@@ -82,7 +87,7 @@ namespace einsum::internal {
 			this->entry = &entry;
 			ended_ = false;
 			Label last_label = label;
-			label = CardinalityEstimation_t::getMinCardLabel(operands, subscript);
+			label = CardinalityEstimation_t::getMinCardLabel(operands, subscript, context);
 			if (label != last_label) {
 				label_poss_in_ops = subscript->getLabelPossInOperands(label);
 				is_result_label = subscript->isResultLabel(label);
@@ -92,12 +97,12 @@ namespace einsum::internal {
 			const std::shared_ptr<Subscript> &next_subscript = subscript->removeLabel(label);
 			// check if sub_operator was not yet initialized or if the next subscript is different
 			if (sub_operator.type == Subscript::Type::None or sub_operator.hash() != next_subscript->hash()) {
-				sub_operator = Operator_t::construct(next_subscript);
+				sub_operator = Operator_t::construct(next_subscript, context);
 			}
 
 			join = Join_t{operands, label_poss_in_ops};
 			join_iter = join.begin();
-			while (join_iter != join.end()) {
+			while (join_iter != join.end() and not this->context->hasTimedOut()) {
 				std::vector<const_BoolHypertrie_t> next_operands;
 				std::tie(next_operands, current_key_part) = *join_iter;
 				sub_operator.load(std::move(next_operands), *this->entry);

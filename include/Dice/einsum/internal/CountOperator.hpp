@@ -29,7 +29,7 @@ namespace einsum::internal {
 
 		static bool ended(void *self_raw) {
 			auto &self = *static_cast<CountOperator *>(self_raw);
-			return self._ended or hasTimedOut(self.context->timeout);
+			return self._ended;
 		}
 
 		static void load(void *self_raw, std::vector<const_BoolHypertrie_t> operands, Entry<key_part_type, value_type> &entry) {

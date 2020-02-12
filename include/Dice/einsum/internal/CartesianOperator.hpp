@@ -83,7 +83,7 @@ namespace einsum::internal {
 
 		static bool ended(void *self_raw) {
 			auto &self = *static_cast<CartesianOperator *>(self_raw);
-			return self.ended_ or hasTimedOut(self.context->timeout);
+			return self.ended_ or self.context->hasTimedOut();
 		}
 
 		static std::size_t hash(void *self_raw) {
@@ -155,7 +155,7 @@ namespace einsum::internal {
 					assert(sub_entry.value);
 					sub_result[sub_entry.key] += sub_entry.value;
 					++cart_op;
-					if (hasTimedOut(this->context->timeout)){
+					if (this->context->hasTimedOut()){
 						ended_ = true;
 						return;
 					}

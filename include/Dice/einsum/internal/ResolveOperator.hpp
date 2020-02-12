@@ -54,7 +54,7 @@ namespace einsum::internal {
 
 		static bool ended(void *self_raw) {
 			auto &self = *static_cast<ResolveOperator *>(self_raw);
-			return self.ended_ or hasTimedOut(self.context->timeout);
+			return self.ended_ or self.context->hasTimedOut();
 		}
 
 		static void

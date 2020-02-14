@@ -104,11 +104,11 @@ namespace hypertrie::internal {
 
 					found = true;
 					// iterate all but the first Diagonal
-					for (const auto &[op_pos, operand]: iter::enumerate(util::skip<1>(ops), 1)) {
-							if (not operand.contains(value.second)) {
-								found = false;
-								break;
-							}
+					for (const auto &operand: util::skip<1>(ops)) {
+						if (not operand.contains(value.second)) {
+							found = false;
+							break;
+						}
 					}
 					if (found) {
 						for (const auto &[op_pos, raw_op_ptr]: iter::enumerate(raw_outs)) {

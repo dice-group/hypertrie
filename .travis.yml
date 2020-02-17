@@ -54,5 +54,3 @@ deploy:
     on:
       all_branches: true
       condition: $TRAVIS_BRANCH =~ ^(master|development|travis_build)$
-    cleanup: false
-    skip_cleanup: true

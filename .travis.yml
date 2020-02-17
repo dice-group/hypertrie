@@ -21,7 +21,6 @@ install:
 cache:
   directories:
     - $HOME/.conan/data
-    - libtorch
     - $HOME/.cache/pip
 
 before_script:

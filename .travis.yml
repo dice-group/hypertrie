@@ -30,8 +30,19 @@ before_script:
   - conan remote add tsl https://api.bintray.com/conan/tessil/tsl && conan remote add public-conan https://api.bintray.com/conan/bincrafters/public-conan && conan remote add stiffstream https://api.bintray.com/conan/stiffstream/public
   # install libtorch
   - wget -O libtorch.zip https://download.pytorch.org/libtorch/cpu/libtorch-cxx11-abi-shared-with-deps-1.4.0%2Bcpu.zip
-  - unzip libtorch.zip  
+  - unzip libtorch.zip
 
 script:
-  
   - cd build && conan install .. --build=missing && cmake -Dhypertrie_BUILD_TESTS=ON -Dhypertrie_LIBTORCH_PATH=../libtorch -DCMAKE_BUILD_TYPE=Debug .. && make tests
+
+deploy:
+  - |
+    if [ "$TRAVIS_BRANCH" = "master" ] || [ "$TRAVIS_BRANCH" = "development" ]; then \
+    ( \
+    ( if [ "$TRAVIS_BRANCH" = "master" ] ; then export hypertrie_deploy_version="latest" fi ) && \
+    ( if [ "$TRAVIS_BRANCH" = "development" ] ; then export hypertrie_deploy_version="dev" fi ) && \
+    conan remove -f hypertrie/${hypertrie_deploy_version}@dice-group/stable --build missing || true && \
+    conan create . hypertrie/${hypertrie_deploy_version}@dice-group/stable && \
+    conan user -p $conan_token -r dice-group diceci && \
+    conan upload hypertrie/${hypertrie_deploy_version}@dice-group/stable --all -r dice-group && \
+    conan remove -f hypertrie/${hypertrie_deploy_version}@dice-group/stable --build missing || true ) fi |

@@ -35,6 +35,8 @@ before_script:
   - if [ ! -d libtorch ]; then ( unzip libtorch.zip ) fi
 
 script:
+  - ls -lh
+  - ls -lh libtorch
   - cd build && conan install .. --build=missing && cmake -Dhypertrie_BUILD_TESTS=ON -Dhypertrie_LIBTORCH_PATH=../libtorch -DCMAKE_BUILD_TYPE=Debug .. && make tests
 
 deploy:

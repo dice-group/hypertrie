@@ -21,6 +21,8 @@ install:
 cache:
   directories:
     - $HOME/.conan/data
+    - libtorch
+    - $HOME/.cache/pi
 
 before_script:
   - mkdir -p build #build dir
@@ -29,20 +31,15 @@ before_script:
   - conan profile update settings.compiler.libcxx=libstdc++11 default # use "new" C++ ABI
   - conan remote add tsl https://api.bintray.com/conan/tessil/tsl && conan remote add public-conan https://api.bintray.com/conan/bincrafters/public-conan && conan remote add stiffstream https://api.bintray.com/conan/stiffstream/public
   # install libtorch
-  - wget -O libtorch.zip https://download.pytorch.org/libtorch/cpu/libtorch-cxx11-abi-shared-with-deps-1.4.0%2Bcpu.zip
-  - unzip libtorch.zip
+  - if [ ! -d libtorch ]; then wget -O libtorch.zip https://download.pytorch.org/libtorch/cpu/libtorch-cxx11-abi-shared-with-deps-1.4.0%2Bcpu.zip fi
+  - if [ ! -d libtorch ]; then unzip libtorch.zip fi
 
 script:
   - cd build && conan install .. --build=missing && cmake -Dhypertrie_BUILD_TESTS=ON -Dhypertrie_LIBTORCH_PATH=../libtorch -DCMAKE_BUILD_TYPE=Debug .. && make tests
 
 deploy:
   - provider: script
-  - on:
-      all_branches: true
-      condition: "[ "$TRAVIS_BRANCH" = "master" ] || [ "$TRAVIS_BRANCH" = "development" ] || [ "$TRAVIS_BRANCH" = "travis_build" ]"
-  - cleanup: false
-  - skip_cleanup: true
-  - script: |
+    script: |
       #    if [ "$TRAVIS_BRANCH" = "master" ] || [ "$TRAVIS_BRANCH" = "development" ]; then \
       if [ "$TRAVIS_BRANCH" = "travis_build" ] || [ "$TRAVIS_BRANCH" = "development" ]; then \
       ( \
@@ -55,3 +52,8 @@ deploy:
       conan user -p $conan_token -r dice-group diceci && \
       conan upload hypertrie/${hypertrie_deploy_version}@dice-group/stable --all -r dice-group && \
       conan remove -f hypertrie/${hypertrie_deploy_version}@dice-group/stable --build missing || true ) fi |
+    on:
+      all_branches: true
+      condition: "[ "$TRAVIS_BRANCH" = "master" ] || [ "$TRAVIS_BRANCH" = "development" ] || [ "$TRAVIS_BRANCH" = "travis_build" ]"
+    cleanup: false
+    skip_cleanup: true

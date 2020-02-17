@@ -48,8 +48,10 @@ deploy:
       conan remote add dice-group https://api.bintray.com/conan/dice-group/tentris &&
       conan remove -f "hypertrie/${hypertrie_deploy_version}@dice-group/stable"  || true &&
       conan create . "hypertrie/${hypertrie_deploy_version}@dice-group/stable" -e hypertrie_deploy_version="${hypertrie_deploy_version}" --build missing &&
+      echo ${hypertrie_deploy_version} &&
       conan user -p $conan_token -r dice-group diceci &&
-      conan upload "hypertrie/${hypertrie_deploy_version}@dice-group/stable" --all -r dice-group -e hypertrie_deploy_version="${hypertrie_deploy_version}" &&
+      echo ${hypertrie_deploy_version} &&
+      conan upload "hypertrie/${hypertrie_deploy_version}@dice-group/stable" --all -r dice-group  &&
       conan remove -f "hypertrie/${hypertrie_deploy_version}@dice-group/stable" || true ); fi
     on:
       all_branches: true

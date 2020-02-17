@@ -38,8 +38,8 @@ script:
 deploy:
   - provider: script
   - on:
-      tags: true
       all_branches: true
+      condition: "[ "$TRAVIS_BRANCH" = "master" ] || [ "$TRAVIS_BRANCH" = "development" ] || [ "$TRAVIS_BRANCH" = "travis_build" ]"
   - cleanup: false
   - skip_cleanup: true
   - script: |

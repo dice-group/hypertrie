@@ -49,7 +49,7 @@ deploy:
       (conan remove -f "hypertrie/dev@dice-group/stable" || true);
       conan create . "hypertrie/dev@dice-group/stable" --build missing -e hypertrie_deploy_version="dev";
       conan upload "hypertrie/dev@dice-group/stable" --all -r dice-group;
-      conan remove -f "hypertrie/dev@dice-group/stable" || true ); fi
+      (conan remove -f "hypertrie/dev@dice-group/stable" || true ); fi
     on:
       all_branches: true
       condition: $TRAVIS_BRANCH =~ ^(master|development|travis_build)$

@@ -34,9 +34,9 @@ before_script:
   - if [ ! -d libtorch ]; then ( unzip libtorch.zip ) fi
 
 script:
-  - ls -lh
-  - ls -lh libtorch
   - cd build && conan install .. --build=missing && cmake -Dhypertrie_BUILD_TESTS=ON -Dhypertrie_LIBTORCH_PATH=../libtorch -DCMAKE_BUILD_TYPE=Debug .. && make tests
+
+before_deploy:
   - cd ../
 
 deploy:
@@ -44,12 +44,18 @@ deploy:
     script: >-
       conan remote add dice-group https://api.bintray.com/conan/dice-group/tentris &&
       conan user -p $conan_token -r dice-group diceci &&
-      if [ "$TRAVIS_BRANCH" = "travis_build" ] ; then
+      if [ "$TRAVIS_BRANCH" = "development" ] ; then
       export hypertrie_deploy_version="dev";
       (conan remove -f "hypertrie/dev@dice-group/stable" || true);
       conan create . "hypertrie/dev@dice-group/stable" --build missing -e hypertrie_deploy_version="dev";
       conan upload "hypertrie/dev@dice-group/stable" -f --all -r dice-group;
-      (conan remove -f "hypertrie/dev@dice-group/stable" || true ); fi
+      (conan remove -f "hypertrie/dev@dice-group/stable" || true ); fi ;
+      if [ "$TRAVIS_BRANCH" = "master" ] ; then
+      export hypertrie_deploy_version="latest";
+      (conan remove -f "hypertrie/latest@dice-group/stable" || true);
+      conan create . "hypertrie/latest@dice-group/stable" --build missing -e hypertrie_deploy_version="latest";
+      conan upload "hypertrie/latest@dice-group/stable" -f --all -r dice-group;
+      (conan remove -f "hypertrie/latest@dice-group/stable" || true ); fi
     on:
       all_branches: true
-      condition: $TRAVIS_BRANCH =~ ^(master|development|travis_build)$
+      condition: $TRAVIS_BRANCH =~ ^(master|development)$

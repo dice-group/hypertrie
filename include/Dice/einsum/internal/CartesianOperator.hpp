@@ -18,7 +18,7 @@ namespace einsum::internal {
 		class FullCartesianResult;
 
 		std::vector<std::shared_ptr<Operator_t>> sub_operators; // set in construct
-		std::vector<Entry < key_part_type, value_type>> sub_entries;
+		std::vector<Entry_t> sub_entries;
 
 		std::size_t iterated_pos; // set in load_impl
 		OriginalResultPoss iterated_sub_operator_result_mapping; // set in load_impl
@@ -34,8 +34,8 @@ namespace einsum::internal {
 			sub_entries.reserve(sub_subscripts.size());
 			for (const auto &sub_subscript : sub_subscripts) {
 				sub_operators.push_back(Operator_t::construct(sub_subscript, context));
-				using EntryKey = typename Entry<key_part_type, value_type>::key_type;
-				sub_entries.push_back({value_type(0), EntryKey(sub_subscript->resultLabelCount(), default_key_part)});
+				sub_entries.push_back(
+						{value_type(0), typename Entry_t::key_type(sub_subscript->resultLabelCount(), default_key_part)});
 			}
 
 		}
@@ -83,7 +83,7 @@ namespace einsum::internal {
 		}
 
 		static void
-		load(void *self_raw, std::vector<const_BoolHypertrie_t> operands, Entry <key_part_type, value_type> &entry) {
+		load(void *self_raw, std::vector<const_BoolHypertrie_t> operands, Entry_t &entry) {
 			static_cast<CartesianOperator *>(self_raw)->load_impl(std::move(operands), entry);
 		}
 
@@ -102,7 +102,7 @@ namespace einsum::internal {
 			return sub_operands;
 		}
 
-		inline void load_impl(std::vector<const_BoolHypertrie_t> operands, Entry <key_part_type, value_type> &entry) {
+		inline void load_impl(std::vector<const_BoolHypertrie_t> operands, Entry_t &entry) {
 			if constexpr(_debugeinsum_) fmt::print("Cartesian {}\n", this->subscript);
 			this->entry = &entry;
 			ended_ = false;
@@ -186,7 +186,7 @@ namespace einsum::internal {
 			std::vector<SubResult> sub_results;
 			typename std::vector<typename SubResult::const_iterator> iters; // set in constructor
 			typename std::vector<typename SubResult::const_iterator> ends;
-			Entry <key_part_type, value_type> *entry;
+			Entry_t *entry;
 			value_type value;
 			std::vector<OriginalResultPoss> result_mapping;
 			bool ended_ = false;
@@ -196,7 +196,7 @@ namespace einsum::internal {
 
 			FullCartesianResult(std::vector<SubResult> sub_results,
 								const CartesianSubSubscripts &cartSubSubscript,
-								Entry <key_part_type, value_type> &entry)
+								Entry_t &entry)
 					:
 					sub_results{std::move(sub_results)}, iters(this->sub_results.size()),
 					ends(this->sub_results.size()),

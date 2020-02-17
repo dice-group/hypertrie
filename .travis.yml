@@ -48,9 +48,10 @@ deploy:
       ( \
       # ( if [ "$TRAVIS_BRANCH" = "master" ] ; then export hypertrie_deploy_version="latest" fi ) && \
       # ( if [ "$TRAVIS_BRANCH" = "development" ] ; then export hypertrie_deploy_version="dev" fi ) && \
+      echo "$TRAVIS_BRANCH" && \
       ( if [ "$TRAVIS_BRANCH" = "travis_build" ] ; then export hypertrie_deploy_version="dev" fi ) && \
-      conan remove -f hypertrie/${hypertrie_deploy_version}@dice-group/stable --build missing || true && \
-      conan create . hypertrie/${hypertrie_deploy_version}@dice-group/stable && \
+      conan remove -f hypertrie/${hypertrie_deploy_version}@dice-group/stable  || true && \
+      conan create . hypertrie/${hypertrie_deploy_version}@dice-group/stable -e hypertrie_deploy_version=${hypertrie_deploy_version} --build missing && \
       conan user -p $conan_token -r dice-group diceci && \
       conan upload hypertrie/${hypertrie_deploy_version}@dice-group/stable --all -r dice-group && \
       conan remove -f hypertrie/${hypertrie_deploy_version}@dice-group/stable --build missing || true ) fi |

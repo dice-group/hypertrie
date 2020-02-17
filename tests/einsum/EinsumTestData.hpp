@@ -85,8 +85,8 @@ namespace hypertrie::tests::einsum {
 		 * Generates a random TestEinsum over the given test_operand_candidates
 		 * @param test_operand_candidates
 		 */
-		TestEinsum(std::vector<TestOperand> &test_operand_candidates) {
-			uint8_t operands_count = *gen_random<uint8_t>(1, 1, 5).begin();
+		TestEinsum(std::vector<TestOperand> &test_operand_candidates, int max_operand_count= 5) {
+			uint8_t operands_count = *gen_random<uint8_t>(1, 1, max_operand_count).begin();
 			auto depth_sum = 0;
 			for (auto &&i : gen_random<std::size_t>(operands_count, 0, test_operand_candidates.size() - 1)) {
 				depth_sum += test_operand_candidates[i].depth;

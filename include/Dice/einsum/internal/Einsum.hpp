@@ -10,6 +10,7 @@
 #include "Dice/einsum/internal/ResolveOperator.hpp"
 #include "Dice/einsum/internal/CountOperator.hpp"
 #include "Dice/einsum/internal/EntryGeneratorOperator.hpp"
+#include "Dice/einsum/internal/Context.hpp"
 
 namespace einsum::internal {
 	template<typename value_type, typename key_part_type, template<typename, typename> class map_type,
@@ -24,6 +25,7 @@ namespace einsum::internal {
 
 
 		std::shared_ptr<Subscript> subscript{};
+		std::shared_ptr<Context> context{};
 		std::vector<const_BoolHypertrie_t> operands{};
 		Operator_t op{};
 		Entry_t entry{};
@@ -32,8 +34,9 @@ namespace einsum::internal {
 	public:
 		Einsum() = default;
 
-		Einsum(std::shared_ptr<Subscript> subscript, const std::vector<const_BoolHypertrie_t> &operands)
-				: subscript(std::move(subscript)), operands(operands), op{Operator_t::construct(this->subscript)},
+		Einsum(std::shared_ptr<Subscript> subscript, const std::vector<const_BoolHypertrie_t> &operands, TimePoint timeout = TimePoint::max())
+				: subscript(std::move(subscript)), context{std::make_shared<Context>(timeout)},
+				  operands(operands), op{Operator_t::construct(this->subscript, context)},
 				  entry{0, Key_t(this->subscript->resultLabelCount(), std::numeric_limits<key_part_type>::max())} {}
 
 		[[nodiscard]] const std::shared_ptr<Subscript> &getSubscript() const {
@@ -50,7 +53,6 @@ namespace einsum::internal {
 
 		struct iterator {
 		private:
-
 
 			Operator_t *op;
 			Entry_t *current_entry;
@@ -107,13 +109,15 @@ namespace einsum::internal {
 		using Key_t = typename Entry_t::key_type;
 
 		std::shared_ptr<Subscript> subscript{};
+		std::shared_ptr<Context> context{};
 		std::vector<const_BoolHypertrie_t> operands{};
 		Operator_t op{};
 		Entry_t entry{};
 
 	public:
-		Einsum(std::shared_ptr<Subscript> subscript, const std::vector<const_BoolHypertrie_t> &operands)
-				: subscript(std::move(subscript)), operands(operands), op{Operator_t::construct(this->subscript)},
+		Einsum(std::shared_ptr<Subscript> subscript, const std::vector<const_BoolHypertrie_t> &operands, TimePoint timeout = std::numeric_limits<TimePoint>::max())
+				: subscript(std::move(subscript)), context{std::make_shared<Context>(timeout)},
+				  operands(operands), op{Operator_t::construct(this->subscript, context)},
 				  entry{false, Key_t(this->subscript->resultLabelCount(), std::numeric_limits<key_part_type>::max())} {}
 
 		[[nodiscard]] const std::shared_ptr<Subscript> &getSubscript() const {

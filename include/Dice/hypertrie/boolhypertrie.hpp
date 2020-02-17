@@ -45,15 +45,19 @@ namespace hypertrie {
 		using EinsumEntry = ::einsum::internal::Entry<key_part_type, value_type>;
 
 		using KeyHash = ::einsum::internal::KeyHash<key_part_type>;
+		using TimePoint = ::einsum::internal::TimePoint;
 
 		template<typename value_type = std::size_t>
-		static auto einsum2map(const std::shared_ptr<Subscript> &subscript, const std::vector<const_BoolHypertrie> &operands) {
+		static auto
+		einsum2map(const std::shared_ptr<Subscript> &subscript,
+		           const std::vector<const_BoolHypertrie> &operands,
+		           const TimePoint &time_point = TimePoint::max()) {
 			tsl::hopscotch_map<std::vector<key_part_type>, value_type, KeyHash> results{};
 			for (const auto &operand : operands)
 				if (operand.size() == 0)
 					return results;
 
-			Einsum<value_type> einsum{subscript, operands};
+			Einsum<value_type> einsum{subscript, operands, time_point};
 			for (auto &&entry : einsum) {
 				results[entry.key] += entry.value;
 			}

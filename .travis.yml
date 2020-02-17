@@ -52,6 +52,6 @@ deploy:
       conan remove -f hypertrie/${hypertrie_deploy_version}@dice-group/stable --build missing || true ) fi
     on:
       all_branches: true
-      condition: '(([ "$TRAVIS_BRANCH" = "master" ] || [ "$TRAVIS_BRANCH" = "development" ]) || [ "$TRAVIS_BRANCH" = "travis_build" ])'
+      condition: $TRAVIS_BRANCH =~ ^(master|development|travis_build)$
     cleanup: false
     skip_cleanup: true

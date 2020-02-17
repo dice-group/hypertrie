@@ -44,14 +44,13 @@ deploy:
     script: >-
       if [ "$TRAVIS_BRANCH" = "travis_build" ] || [ "$TRAVIS_BRANCH" = "development" ]; then
       (
-      echo "$TRAVIS_BRANCH" &&
-      if [ "$TRAVIS_BRANCH" = "travis_build" ] ; then ( echo "yo" && export hypertrie_deploy_version="dev" ) fi  &&
+      if [ "$TRAVIS_BRANCH" = "travis_build" ] ; then export hypertrie_deploy_version="dev"; fi  &&
       conan remote add dice-group https://api.bintray.com/conan/dice-group/tentris &&
       conan remove -f "hypertrie/${hypertrie_deploy_version}@dice-group/stable"  || true &&
       conan create . "hypertrie/${hypertrie_deploy_version}@dice-group/stable" -e hypertrie_deploy_version="${hypertrie_deploy_version}" --build missing &&
       conan user -p $conan_token -r dice-group diceci &&
       conan upload "hypertrie/${hypertrie_deploy_version}@dice-group/stable" --all -r dice-group &&
-      conan remove -f "hypertrie/${hypertrie_deploy_version}@dice-group/stable" --build missing || true ) fi
+      conan remove -f "hypertrie/${hypertrie_deploy_version}@dice-group/stable" --build missing || true ); fi
     on:
       all_branches: true
       condition: $TRAVIS_BRANCH =~ ^(master|development|travis_build)$

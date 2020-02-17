@@ -40,13 +40,13 @@ script:
 deploy:
   - provider: script
     script: |
-      #    if [ "$TRAVIS_BRANCH" = "master" ] || [ "$TRAVIS_BRANCH" = "development" ]; then \
+      # if [ "$TRAVIS_BRANCH" = "master" ] || [ "$TRAVIS_BRANCH" = "development" ]; then \
       if [ "$TRAVIS_BRANCH" = "travis_build" ] || [ "$TRAVIS_BRANCH" = "development" ]; then \
       ( \
-      # ( if [ "$TRAVIS_BRANCH" = "master" ] ; then export hypertrie_deploy_version="latest" fi ) && \
-      # ( if [ "$TRAVIS_BRANCH" = "development" ] ; then export hypertrie_deploy_version="dev" fi ) && \
+      #  if [ "$TRAVIS_BRANCH" = "master" ] ; then ( export hypertrie_deploy_version="latest" ) fi  && \
+      #  if [ "$TRAVIS_BRANCH" = "development" ] ; then ( export hypertrie_deploy_version="dev" ) fi  && \
       echo "$TRAVIS_BRANCH" && \
-      ( if [ "$TRAVIS_BRANCH" = "travis_build" ] ; then export hypertrie_deploy_version="dev" fi ) && \
+      if [ "$TRAVIS_BRANCH" = "travis_build" ] ; then ( export hypertrie_deploy_version="dev" ) fi  && \
       conan remove -f hypertrie/${hypertrie_deploy_version}@dice-group/stable  || true && \
       conan create . hypertrie/${hypertrie_deploy_version}@dice-group/stable -e hypertrie_deploy_version=${hypertrie_deploy_version} --build missing && \
       conan user -p $conan_token -r dice-group diceci && \

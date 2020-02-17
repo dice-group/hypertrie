@@ -22,7 +22,7 @@ cache:
   directories:
     - $HOME/.conan/data
     - libtorch
-    - $HOME/.cache/pi
+    - $HOME/.cache/pip
 
 before_script:
   - mkdir -p build #build dir

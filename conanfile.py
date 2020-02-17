@@ -24,7 +24,7 @@ class Hypertrie(ConanFile):
             self.version = env_version
         else:
             cmake_file = load(os.path.join(self.recipe_folder, "CMakeLists.txt"))
-            self.version = re.search(b"set\(hypertrie (.*)\)", cmake_file).group(1).strip()
+            self.version = re.search("set\(hypertrie (.*)\)", cmake_file).group(1).strip()
 
     def package(self):
         cmake = CMake(self)

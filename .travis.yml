@@ -48,7 +48,7 @@ deploy:
       export hypertrie_deploy_version="dev";
       (conan remove -f "hypertrie/dev@dice-group/stable" || true);
       conan create . "hypertrie/dev@dice-group/stable" --build missing -e hypertrie_deploy_version="dev";
-      conan upload "hypertrie/dev@dice-group/stable" --all -r dice-group;
+      conan upload "hypertrie/dev@dice-group/stable" -f --all -r dice-group;
       (conan remove -f "hypertrie/dev@dice-group/stable" || true ); fi
     on:
       all_branches: true

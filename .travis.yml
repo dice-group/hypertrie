@@ -42,7 +42,7 @@ deploy:
       all_branches: true
   - cleanup: false
   - skip_cleanup: true
-  - |
+  - script: |
     #    if [ "$TRAVIS_BRANCH" = "master" ] || [ "$TRAVIS_BRANCH" = "development" ]; then \
     if [ "$TRAVIS_BRANCH" = "travis_build" ] || [ "$TRAVIS_BRANCH" = "development" ]; then \
     ( \

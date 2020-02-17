@@ -47,7 +47,7 @@ deploy:
       if [ "$TRAVIS_BRANCH" = "travis_build" ] ; then export hypertrie_deploy_version="dev"; fi  &&
       conan remote add dice-group https://api.bintray.com/conan/dice-group/tentris &&
       conan remove -f "hypertrie/${hypertrie_deploy_version}@dice-group/stable"  || true &&
-      conan create . "hypertrie/${hypertrie_deploy_version}@dice-group/stable" -e hypertrie_deploy_version="${hypertrie_deploy_version}" --build missing &&
+      conan create . "hypertrie/${hypertrie_deploy_version}@dice-group/stable" --build missing &&
       echo ${hypertrie_deploy_version} &&
       conan user -p $conan_token -r dice-group diceci &&
       echo ${hypertrie_deploy_version} &&

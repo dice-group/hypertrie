@@ -1,9 +1,10 @@
 from conans import ConanFile, CMake
+from conans.tools import load
+import re, os
 
 
 class Hypertrie(ConanFile):
     name = "hypertrie"
-    version = "0.5.1"
     author = "DICE Group <info@dice-research.org>"
     description = "A flexible data structure for low-rank, sparse tensors supporting slices by any dimension and einstein summation (einsum)"
     homepage = "https://github.com/dice-group/hypertrie"
@@ -16,6 +17,14 @@ class Hypertrie(ConanFile):
     exports = "LICENSE.txt"
     exports_sources = "include/*", "thirdparty/*", "CMakeLists.txt", "cmake/*"
     no_copy_source = True
+
+    def set_version(self):
+        env_version = os.getenv("hypertrie_deploy_version", False)
+        if env_version:
+            self.version = env_version
+        else:
+            cmake_file = load(os.path.join(self.recipe_folder, "CMakeLists.txt"))
+            self.version = re.search(b"set\(hypertrie (.*)\)", cmake_file).group(1).strip()
 
     def package(self):
         cmake = CMake(self)

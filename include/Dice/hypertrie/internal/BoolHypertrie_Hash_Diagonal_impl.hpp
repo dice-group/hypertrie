@@ -243,7 +243,7 @@ namespace hypertrie::internal {
 		 * @return
 		 */
 		[[nodiscard]]
-		bool contains(key_part_type key_part) {
+		bool contains(key_part_type key_part) const {
 			return raw_diag_funcs->contains(raw_diag.get(), key_part);
 		}
 

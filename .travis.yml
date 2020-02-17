@@ -1,0 +1,37 @@
+os: linux
+dist: bionic
+language: cpp
+
+addons:
+  apt:
+    packages:
+      - g++-8
+      - make
+      - python3-pip # used for installing conan
+      - python3-setuptools # required for installing conan
+      - python3-wheel
+
+install:
+  - if [ "$CXX" = "g++" ]; then export CXX="g++-8" CC="gcc-8"; fi
+  - pip3 install --user conan
+  - pip3 install --user cmake==3.13.3
+  - cmake --version
+  - conan --version
+
+cache:
+  directories:
+    - $HOME/.conan/data
+
+before_script:
+  - mkdir -p build #build dir
+  - conan user #conan setup
+  - conan profile new --detect default
+  - conan profile update settings.compiler.libcxx=libstdc++11 default # use "new" C++ ABI
+  - conan remote add tsl https://api.bintray.com/conan/tessil/tsl && conan remote add public-conan https://api.bintray.com/conan/bincrafters/public-conan && conan remote add stiffstream https://api.bintray.com/conan/stiffstream/public
+  # install libtorch
+  - wget -O libtorch.zip https://download.pytorch.org/libtorch/cpu/libtorch-cxx11-abi-shared-with-deps-1.4.0%2Bcpu.zip
+  - unzip libtorch.zip  
+
+script:
+  
+  - cd build && conan install .. --build=missing && cmake -Dhypertrie_BUILD_TESTS=ON -Dhypertrie_LIBTORCH_PATH=../libtorch -DCMAKE_BUILD_TYPE=Debug .. && make tests

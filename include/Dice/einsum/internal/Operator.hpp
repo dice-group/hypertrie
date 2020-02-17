@@ -79,22 +79,14 @@ namespace einsum::internal {
 
 		Operator(Operator &&) noexcept = default;
 
-		Operator &operator=(Operator &&op) noexcept {
-			this->type = op.type;
-			this->operator_instance = std::move(op.operator_instance);
-			this->next_fp = op.next_fp;
-			this->ended_fp = op.ended_fp;
-			this->load_fp = op.load_fp;
-			this->hash_fp = op.hash_fp;
-			return *this;
-		}
+		Operator &operator=(Operator &&op) noexcept = default;
 
 		/**
 			 * This is only a stub to fulfill the C++ iterator interface.
 			 * The iterator is frowarded by using the operator* or by calling value().
 			 * @return reference to self.
 			 */
-		Operator &operator++() {
+		inline Operator &operator++() {
 			next();
 			return *this;
 		}
@@ -109,7 +101,7 @@ namespace einsum::internal {
 		 * Is true as long as there are more entrys retrievable via operator* or value.
 		 * @return
 		 */
-		operator bool() const { return not ended_fp(this); }
+		inline operator bool() const { return not ended_fp(this); }
 
 		/**
 		 * Returns true if the iteration is at its end.

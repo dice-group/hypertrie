@@ -18,7 +18,7 @@ namespace einsum::internal {
 		bool is_result_label = false;
 		LabelPossInOperands label_poss_in_ops;
 		LabelPos label_pos_in_result;
-		Label label = std::numeric_limits<Label>::max();
+		Label label = std::numeric_limits<Label>::max(); // TODO: type the unusable value (max) explicitly
 		key_part_type current_key_part;
 
 		std::shared_ptr<Operator_t> sub_operator;
@@ -39,32 +39,47 @@ namespace einsum::internal {
 					return;
 				}
 			}
-			self.sub_operator->operator++();
-			while (self.sub_operator->ended()) {
-				++self.join_iter;
-				if (self.join_iter and not self.context->hasTimedOut()){
+			self.sub_operator->next();
+			self.find_next_valid();
+		}
+
+	private:
+		/**
+		 * requires bool(join_iter) == true (not ended).
+		 * Finds the next valid entry of a sub_operator.
+		 * - If sub_operator has already a valid entry, it is not incremented.
+		 * - If sub_operator has ended, join_iter is increased until either a valid sub_operator entry is found or join_iter is ended
+		 * Finally, results are written to entry.
+		 */
+		void find_next_valid() {
+			assert(join_iter);
+			while (sub_operator->ended()) {
+				++join_iter;
+				if (join_iter and not this->context->hasTimedOut()) {
 					std::vector<const_BoolHypertrie_t> next_operands;
-					std::tie(next_operands, self.current_key_part) = *self.join_iter;
-					self.sub_operator->load(std::move(next_operands), *self.entry);
+					std::tie(next_operands, current_key_part) = *join_iter;
+					sub_operator->load(std::move(next_operands), *this->entry);
 				} else {
-					self.ended_ = true;
+					ended_ = true;
 					break;
 				}
 			}
-			if (self.is_result_label)
-				self.entry->key[self.label_pos_in_result] = self.current_key_part;
+			if (is_result_label)
+				this->entry->key[label_pos_in_result] = current_key_part;
 
-
-			if constexpr (_debugeinsum_) fmt::print("[{}]->{} {}\n", fmt::join(self.entry->key, ","), self.entry->value, self.subscript);
+			if constexpr (_debugeinsum_)
+				fmt::print("[{}]->{} {}\n", fmt::join(this->entry->key, ","), this->entry->value, this->subscript);
 		}
 
+	public:
 		static bool ended(const void *self_raw) {
 			auto &self = *static_cast<const JoinOperator *>(self_raw);
 			return self.ended_ or self.context->hasTimedOut();
 		}
 
-		static void load(void *self_raw, std::vector<const_BoolHypertrie_t> operands, Entry<key_part_type, value_type> &entry) {
-			static_cast<JoinOperator *>(self_raw)->load_impl(std::move(operands),entry);
+		static void
+		load(void *self_raw, std::vector<const_BoolHypertrie_t> operands, Entry <key_part_type, value_type> &entry) {
+			static_cast<JoinOperator *>(self_raw)->load_impl(std::move(operands), entry);
 		}
 
 		static std::size_t hash(const void *self_raw) {
@@ -72,7 +87,7 @@ namespace einsum::internal {
 		}
 
 	private:
-		inline void load_impl(std::vector<const_BoolHypertrie_t> operands, Entry<key_part_type, value_type> &entry) {
+		inline void load_impl(std::vector<const_BoolHypertrie_t> operands, Entry <key_part_type, value_type> &entry) {
 			if constexpr (_debugeinsum_) fmt::print("Join {}\n", this->subscript);
 
 			this->entry = &entry;
@@ -91,22 +106,19 @@ namespace einsum::internal {
 				sub_operator = Operator_t::construct(next_subscript, this->context);
 			}
 
+			// initialize the join
 			join = Join_t{operands, label_poss_in_ops};
 			join_iter = join.begin();
-			while (join_iter != join.end() and not this->context->hasTimedOut()) {
+			// check if join has entries
+			if (join_iter) {
 				std::vector<const_BoolHypertrie_t> next_operands;
 				std::tie(next_operands, current_key_part) = *join_iter;
+				// initialize the next sub_operator
 				sub_operator->load(std::move(next_operands), *this->entry);
-				if (not sub_operator->ended()) {
-					if (is_result_label)
-						this->entry->key[label_pos_in_result] = current_key_part;
-					return;
-				} else {
-					++join_iter;
-					continue;
-				}
+				find_next_valid();
+			} else {
+				this->ended_ = true;
 			}
-			ended_ = true;
 		}
 
 	};

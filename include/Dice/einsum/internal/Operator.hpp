@@ -2,8 +2,11 @@
 #define HYPERTRIE_OPERATOR_HPP
 
 #include <memory>
+#include <utility>
 #include "Dice/einsum/internal/Subscript.hpp"
 #include "Dice/einsum/internal/Entry.hpp"
+#include "Dice/einsum/internal/Context.hpp"
+#include "Dice/einsum/internal/CardinalityEstimation.hpp"
 
 namespace einsum::internal {
 
@@ -12,55 +15,22 @@ namespace einsum::internal {
 
 	template<typename value_type, typename key_part_type, template<typename, typename> class map_type,
 			template<typename> class set_type>
-	class CartesianOperator;
-
-	template<typename value_type, typename key_part_type, template<typename, typename> class map_type,
-			template<typename> class set_type>
-	class JoinOperator;
-
-	template<typename value_type, typename key_part_type, template<typename, typename> class map_type,
-			template<typename> class set_type>
-	class ResolveOperator;
-
-	template<typename value_type, typename key_part_type, template<typename, typename> class map_type,
-			template<typename> class set_type>
-	class CountOperator;
-
-	template<typename value_type, typename key_part_type, template<typename, typename> class map_type,
-			template<typename> class set_type>
-	class EntryGeneratorOperator;
-
-	template<typename value_type, typename key_part_type, template<typename, typename> class map_type,
-			template<typename> class set_type>
 	class Operator {
+	protected:
+		constexpr static const bool bool_value_type = std::is_same_v<value_type, bool>;
+		using const_BoolHypertrie_t = const_BoolHypertrie<key_part_type, map_type, set_type>;
+		typedef Operator<value_type, key_part_type, map_type, set_type> Operator_t;
+		using CardinalityEstimation_t = CardinalityEstimation<key_part_type, map_type, set_type>;
+		static constexpr key_part_type default_key_part = []() {
+			if constexpr (std::is_pointer_v<key_part_type>) return nullptr;
+			else return std::numeric_limits<key_part_type>::max();
+		}();
 	public:
 		mutable Subscript::Type type = Subscript::Type::None;
-	private:
-
-		template<typename T>
-		static constexpr Subscript::Type getType() {
-			if (std::is_same_v<T, JoinOperator<value_type, key_part_type, map_type, set_type>>) {
-				return Subscript::Type::Join;
-			}
-			if (std::is_same_v<T, ResolveOperator<value_type, key_part_type, map_type, set_type>>) {
-				return Subscript::Type::Resolve;
-			}
-			if (std::is_same_v<T, CountOperator<value_type, key_part_type, map_type, set_type>>) {
-				return Subscript::Type::Count;
-			}
-			if (std::is_same_v<T, CartesianOperator<value_type, key_part_type, map_type, set_type>>) {
-				return Subscript::Type::Cartesian;
-			}
-			if (std::is_same_v<T, CartesianOperator<value_type, key_part_type, map_type, set_type>>) {
-				return Subscript::Type::EntryGenerator;
-			}
-			return Subscript::Type::None;
-		}
-
-		/**
-		 * Pointer to the actual operator instance.
-		 */
-		std::shared_ptr<void> operator_instance;
+	protected:
+		std::shared_ptr<Subscript> subscript;
+		std::shared_ptr<Context> context;
+		Entry <key_part_type, value_type> *entry;
 
 		/**
 		 * Pointer to the next Function of the operator implementation.
@@ -74,7 +44,7 @@ namespace einsum::internal {
 		 * @param self actual operator instance
 		 * @return if iteration ended
 		 */
-		bool (*ended_fp)(void *self);
+		bool (*ended_fp)(const void *self);
 
 		/**
 		 * Pointer to the load Function of the operator implementation.
@@ -82,41 +52,27 @@ namespace einsum::internal {
 		 * @param operands operands to be loaded
 		 */
 		void (*load_fp)(void *self, std::vector<const_BoolHypertrie<key_part_type, map_type, set_type>> operands,
-		                Entry<key_part_type, value_type> &entry);
+						Entry<key_part_type, value_type> &entry);
 
-		std::size_t (*hash_fp)(void *self);
+		std::size_t (*hash_fp)(const void *self);
 
-	public:
-		static Operator
-		construct(std::shared_ptr<Subscript> subscript, std::shared_ptr<Context> context) {
-			switch (subscript->type) {
-				case Subscript::Type::Join:
-					return {std::make_shared<JoinOperator<value_type, key_part_type, map_type, set_type >>(subscript, context)};
-				case Subscript::Type::Resolve:
-					return {std::make_shared<ResolveOperator<value_type, key_part_type, map_type, set_type >>(
-							subscript, context)};
-				case Subscript::Type::Count:
-					return {std::make_shared<CountOperator<value_type, key_part_type, map_type, set_type >>(subscript, context)};
-				case Subscript::Type::Cartesian:
-					return {std::make_shared<CartesianOperator<value_type, key_part_type, map_type, set_type >>(
-							subscript, context)};
-				case Subscript::Type::EntryGenerator:
-					return {std::make_shared<EntryGeneratorOperator<value_type, key_part_type, map_type, set_type >>(
-							subscript, context)};
-				default:
-					throw std::invalid_argument{"subscript is of an undefined type."};
-			}
-		}
-
-
-	private:
+	protected:
 		template<typename T>
-		Operator(std::shared_ptr<T> op) : type(getType<T>()), operator_instance(std::move(op)), next_fp(&T::next),
-		                                  ended_fp(&T::ended),
-		                                  load_fp(&T::load),
-		                                  hash_fp(&T::hash) {}
+		Operator(Subscript::Type type,
+				 std::shared_ptr<Subscript> subscript,
+				 std::shared_ptr<Context> context,
+				 [[maybe_unused]] const T * dummy)
+				: type(type),
+				  subscript(std::move(subscript)),
+				  context(std::move(context)),
+				  next_fp(&T::next),
+				  ended_fp(&T::ended),
+				  load_fp(&T::load),
+				  hash_fp(&T::hash) {}
 
 	public:
+
+		static std::shared_ptr<Operator>  construct(const std::shared_ptr<Subscript> &subscript, const std::shared_ptr<Context> &context);
 		Operator() = default;
 
 		Operator(Operator &) = default;
@@ -147,19 +103,19 @@ namespace einsum::internal {
 		 * Returns the next entry and forwards the iterator. equal to operator*
 		 * @return
 		 */
-		inline void next() const { next_fp(operator_instance.get()); }
+		inline void next() { next_fp(this); }
 
 		/**
 		 * Is true as long as there are more entrys retrievable via operator* or value.
 		 * @return
 		 */
-		operator bool() const { return not ended_fp(operator_instance.get()); }
+		operator bool() const { return not ended_fp(this); }
 
 		/**
 		 * Returns true if the iteration is at its end.
 		 * @return
 		 */
-		inline bool ended() const { return ended_fp(operator_instance.get()); }
+		inline bool ended() const { return ended_fp(this); }
 
 
 		Operator &begin() { return *this; }
@@ -167,11 +123,11 @@ namespace einsum::internal {
 		bool end() { return false; }
 
 		void load(std::vector<const_BoolHypertrie<key_part_type, map_type, set_type>> operands,
-		          Entry<key_part_type, value_type> &entry) {
-			load_fp(operator_instance.get(), std::move(operands), entry);
+				  Entry<key_part_type, value_type> &entry) {
+			load_fp(this, std::move(operands), entry);
 		}
 
-		std::size_t hash() const { return hash_fp(operator_instance.get()); }
+		std::size_t hash() const { return hash_fp(this); }
 
 		bool operator!=(const Operator &other) const { return hash() != other.hash(); };
 

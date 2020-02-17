@@ -2,30 +2,23 @@
 #define HYPERTRIE_CARTESIANOPERATOR_HPP
 
 #include "Dice/einsum/internal/Operator.hpp"
-#include "Dice/einsum/internal/Context.hpp"
 #include <tsl/sparse_map.h>
 
 namespace einsum::internal {
 
 	template<typename value_type, typename key_part_type, template<typename, typename> class map_type,
 			template<typename> class set_type>
-	class CartesianOperator {
-		constexpr static const bool bool_value_type = std::is_same_v<value_type, bool>;
-		using const_BoolHypertrie_t = const_BoolHypertrie<key_part_type, map_type, set_type>;
-		using Operator_t = Operator<value_type, key_part_type, map_type, set_type>;
+	class CartesianOperator : public Operator<value_type, key_part_type, map_type, set_type> {
+#include "Dice/einsum/internal/OperatorMemberTypealiases.hpp"
+
+		using CartesianOperator_t = CartesianOperator<value_type, key_part_type, map_type, set_type>;
 
 		using SubResult = tsl::sparse_map<Key < key_part_type>, size_t, absl::Hash<Key < key_part_type> >>;
 
-		static constexpr key_part_type default_key_part = []() { if constexpr (std::is_pointer_v<key_part_type>) return nullptr; else return std::numeric_limits<key_part_type>::max(); }();
-
-
 		class FullCartesianResult;
 
-		std::shared_ptr<Subscript> subscript; // set in construct
-		std::shared_ptr<Context> context;
-		std::vector<Operator_t> sub_operators; // set in construct
+		std::vector<std::shared_ptr<Operator_t>> sub_operators; // set in construct
 		std::vector<Entry < key_part_type, value_type>> sub_entries;
-		Entry <key_part_type, value_type> *entry;
 
 		std::size_t iterated_pos; // set in load_impl
 		OriginalResultPoss iterated_sub_operator_result_mapping; // set in load_impl
@@ -33,9 +26,8 @@ namespace einsum::internal {
 		bool ended_ = true; // set in load_impl // updated in load_impl, next
 
 	public:
-		CartesianOperator(std::shared_ptr<Subscript> subscript, std::shared_ptr<Context> context)
-				: subscript(std::move(subscript)),
-				  context(context) {
+		CartesianOperator(const std::shared_ptr<Subscript> &subscript, const std::shared_ptr<Context> &context)
+				: Operator_t(Subscript::Type::Cartesian, subscript, context, this) {
 			// generate sub-operators
 			const std::vector<std::shared_ptr<Subscript>> &sub_subscripts = this->subscript->getCartesianSubscript().getSubSubscripts();
 			sub_operators.reserve(sub_subscripts.size());
@@ -62,8 +54,8 @@ namespace einsum::internal {
 
 			if (self.calculated_operands.ended()) {
 				auto &intereated_sub_op = self.sub_operators[self.iterated_pos];
-				++intereated_sub_op;
-				if (not intereated_sub_op.ended()) {
+				intereated_sub_op->operator++();
+				if (not intereated_sub_op->ended()) {
 					self.calculated_operands.restart();
 
 				} else { // if it is ended, set to ended_
@@ -81,13 +73,13 @@ namespace einsum::internal {
 				fmt::print("[{}]->{} {}\n", fmt::join(self.entry->key, ","), self.entry->value, self.subscript);
 		}
 
-		static bool ended(void *self_raw) {
-			auto &self = *static_cast<CartesianOperator *>(self_raw);
+		static bool ended(const void *self_raw) {
+			auto &self = *static_cast<const CartesianOperator *>(self_raw);
 			return self.ended_ or self.context->hasTimedOut();
 		}
 
-		static std::size_t hash(void *self_raw) {
-			return static_cast<CartesianOperator *>(self_raw)->subscript->hash();
+		static std::size_t hash(const void *self_raw) {
+			return static_cast<const CartesianOperator *>(self_raw)->subscript->hash();
 		}
 
 		static void
@@ -103,33 +95,34 @@ namespace einsum::internal {
 
 			std::vector<const_BoolHypertrie_t> sub_operands;
 
-			for (const auto &original_op_pos : subscript->getCartesianSubscript().getOriginalOperandPoss(cart_op_pos))
+			for (const auto &original_op_pos : this->subscript->getCartesianSubscript().getOriginalOperandPoss(
+					cart_op_pos))
 				sub_operands.emplace_back(operands[original_op_pos]);
 
 			return sub_operands;
 		}
 
 		inline void load_impl(std::vector<const_BoolHypertrie_t> operands, Entry <key_part_type, value_type> &entry) {
-			if constexpr(_debugeinsum_) fmt::print("Cartesian {}\n", subscript);
+			if constexpr(_debugeinsum_) fmt::print("Cartesian {}\n", this->subscript);
 			this->entry = &entry;
 			ended_ = false;
 			iterated_pos = 0; // todo: we can do better here
 			iterated_sub_operator_result_mapping = {
-					subscript->getCartesianSubscript().getOriginalResultPoss()[iterated_pos]};
+					this->subscript->getCartesianSubscript().getOriginalResultPoss()[iterated_pos]};
 
 			std::vector<SubResult> sub_results{};
 			// load the non iterated sub_operators
 
-			if constexpr(_debugeinsum_) fmt::print("Cartesian sub start {}\n", subscript);
+			if constexpr(_debugeinsum_) fmt::print("Cartesian sub start {}\n", this->subscript);
 			for (auto cart_op_pos: iter::range(sub_operators.size())) {
 				auto &cart_op = sub_operators[cart_op_pos];
-				cart_op.load(extractOperands(cart_op_pos, operands), sub_entries[cart_op_pos]);
-				if (cart_op.ended()) {
+				cart_op->load(extractOperands(cart_op_pos, operands), sub_entries[cart_op_pos]);
+				if (cart_op->ended()) {
 					ended_ = true;
 					return;
 				}
 			}
-			if constexpr(_debugeinsum_) fmt::print("Cartesian sub gen {}\n", subscript);
+			if constexpr(_debugeinsum_) fmt::print("Cartesian sub gen {}\n", this->subscript);
 			// calculate results of non-iterated sub_operators
 			// TODO: parallelize
 			for (auto cart_op_pos: iter::range(sub_operators.size())) {
@@ -138,8 +131,8 @@ namespace einsum::internal {
 				SubResult sub_result{};
 				auto &cart_op = sub_operators[cart_op_pos];
 				if constexpr (bool_value_type) {
-					if (subscript->all_result_done) {
-						if (cart_op.ended()) {
+					if (this->subscript->all_result_done) {
+						if (cart_op->ended()) {
 							ended_ = true;
 							return;
 						}
@@ -151,11 +144,11 @@ namespace einsum::internal {
 					}
 				}
 				auto &sub_entry = sub_entries[cart_op_pos];
-				while (not cart_op.ended()) {
+				while (not cart_op->ended()) {
 					assert(sub_entry.value);
 					sub_result[sub_entry.key] += sub_entry.value;
-					++cart_op;
-					if (this->context->hasTimedOut()){
+					cart_op->operator++();
+					if (this->context->hasTimedOut()) {
 						ended_ = true;
 						return;
 					}
@@ -166,13 +159,13 @@ namespace einsum::internal {
 				}
 				sub_results.emplace_back(std::move(sub_result));
 			}
-			calculated_operands = FullCartesianResult(std::move(sub_results), subscript->getCartesianSubscript(),
-			                                          *this->entry);
-			if constexpr(_debugeinsum_) fmt::print("Cartesian main start {}\n", subscript);
+			calculated_operands = FullCartesianResult(std::move(sub_results), this->subscript->getCartesianSubscript(),
+													  *this->entry);
+			if constexpr(_debugeinsum_) fmt::print("Cartesian main start {}\n", this->subscript);
 
 			// init iterator for the subscript part that is iterated as results are written out.
-			Operator_t &iterated_sub_operator = sub_operators[iterated_pos];
-			if (iterated_sub_operator.ended()) {
+			auto &iterated_sub_operator = sub_operators[iterated_pos];
+			if (iterated_sub_operator->ended()) {
 				ended_ = true;
 				return;
 			}
@@ -183,7 +176,7 @@ namespace einsum::internal {
 
 		static void
 		updateEntryKey(const OriginalResultPoss &original_result_poss, Entry <key_part_type, value_type> &sink,
-		               const typename Entry<key_part_type, value_type>::key_type &source_key) {
+					   const typename Entry<key_part_type, value_type>::key_type &source_key) {
 			for (auto i : iter::range(original_result_poss.size()))
 				sink.key[original_result_poss[i]] = source_key[i];
 		}
@@ -202,15 +195,15 @@ namespace einsum::internal {
 			FullCartesianResult() = default;
 
 			FullCartesianResult(std::vector<SubResult> sub_results,
-			                    const CartesianSubSubscripts &cartSubSubscript,
-			                    Entry <key_part_type, value_type> &entry)
+								const CartesianSubSubscripts &cartSubSubscript,
+								Entry <key_part_type, value_type> &entry)
 					:
 					sub_results{std::move(sub_results)}, iters(this->sub_results.size()),
 					ends(this->sub_results.size()),
 					entry{&entry} {
 				const auto &original_result_poss = cartSubSubscript.getOriginalResultPoss();
 				result_mapping = {original_result_poss.begin() + 1, // TODO: we need to change that when we do better
-				                  original_result_poss.end()};
+								  original_result_poss.end()};
 				value = value_type(1);
 				for (auto i: iter::range(this->sub_results.size())) {
 					const auto &sub_result = this->sub_results[i];

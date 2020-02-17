@@ -158,6 +158,8 @@ namespace hypertrie::tests::einsum {
 				"a,b,c->c",
 				"a,b,cd->d",
 				"a,bbc,cdc,cf->f",
+				"ab,bc,ca->abc",
+				"ab,bc,ca,ax,xy,ya->a",
 				"aa,ae,ac,ad,a,ab->abcde"
 
 		};

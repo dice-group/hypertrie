@@ -25,7 +25,7 @@ cache:
 before_script:
   - mkdir -p build #build dir
   - conan user #conan setup
-  - conan profile new --detect default
+  - conan profile new --detect default || true
   - conan profile update settings.compiler.libcxx=libstdc++11 default # use "new" C++ ABI
   - conan remote add tsl https://api.bintray.com/conan/tessil/tsl && conan remote add public-conan https://api.bintray.com/conan/bincrafters/public-conan && conan remote add stiffstream https://api.bintray.com/conan/stiffstream/public
   # install libtorch
@@ -36,11 +36,19 @@ script:
   - cd build && conan install .. --build=missing && cmake -Dhypertrie_BUILD_TESTS=ON -Dhypertrie_LIBTORCH_PATH=../libtorch -DCMAKE_BUILD_TYPE=Debug .. && make tests
 
 deploy:
+  - provider: script
+  - on:
+      tags: true
+      all_branches: true
+  - cleanup: false
+  - skip_cleanup: true
   - |
-    if [ "$TRAVIS_BRANCH" = "master" ] || [ "$TRAVIS_BRANCH" = "development" ]; then \
+    #    if [ "$TRAVIS_BRANCH" = "master" ] || [ "$TRAVIS_BRANCH" = "development" ]; then \
+    if [ "$TRAVIS_BRANCH" = "travis_build" ] || [ "$TRAVIS_BRANCH" = "development" ]; then \
     ( \
-    ( if [ "$TRAVIS_BRANCH" = "master" ] ; then export hypertrie_deploy_version="latest" fi ) && \
-    ( if [ "$TRAVIS_BRANCH" = "development" ] ; then export hypertrie_deploy_version="dev" fi ) && \
+    # ( if [ "$TRAVIS_BRANCH" = "master" ] ; then export hypertrie_deploy_version="latest" fi ) && \
+    # ( if [ "$TRAVIS_BRANCH" = "development" ] ; then export hypertrie_deploy_version="dev" fi ) && \
+    ( if [ "$TRAVIS_BRANCH" = "travis_build" ] ; then export hypertrie_deploy_version="dev" fi ) && \
     conan remove -f hypertrie/${hypertrie_deploy_version}@dice-group/stable --build missing || true && \
     conan create . hypertrie/${hypertrie_deploy_version}@dice-group/stable && \
     conan user -p $conan_token -r dice-group diceci && \

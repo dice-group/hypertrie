@@ -63,7 +63,7 @@ namespace einsum::internal {
 
 		Einsum(std::shared_ptr<Subscript> subscript, const std::vector<const_BoolHypertrie_t> &operands,
 			   TimePoint timeout = TimePoint::max())
-				: subscript(std::move(subscript)), context{std::make_shared<Context>(timeout)},
+				: subscript(std::move(subscript)), context{std::make_shared<Context>(this->subscript, timeout)},
 				  operands(operands),
 				  op{Operator_t::construct(this->subscript, context)},
 				  entry{0, Key_t(this->subscript->resultLabelCount(), std::numeric_limits<key_part_type>::max())} {}
@@ -146,7 +146,7 @@ namespace einsum::internal {
 	public:
 		Einsum(std::shared_ptr<Subscript> subscript, const std::vector<const_BoolHypertrie_t> &operands,
 			   TimePoint timeout = std::numeric_limits<TimePoint>::max())
-				: subscript(std::move(subscript)), context{std::make_shared<Context>(timeout)},
+				: subscript(std::move(subscript)), context{std::make_shared<Context>(this->subscript, timeout)},
 				  operands(operands),
 				  op{Operator_t::construct(this->subscript, context)},
 				  entry{false, Key_t(this->subscript->resultLabelCount(), std::numeric_limits<key_part_type>::max())} {}

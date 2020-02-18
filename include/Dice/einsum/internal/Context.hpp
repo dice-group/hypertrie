@@ -3,6 +3,7 @@
 
 #include "Dice/einsum/internal/Subscript.hpp"
 #include <chrono>
+#include <random>
 
 namespace einsum::internal {
 
@@ -16,6 +17,7 @@ namespace einsum::internal {
 	class Context {
 		constexpr static const uint max_counter = 500;
 	public:
+		static std::default_random_engine random_engine;
 		/**
 		 * The time after that the processing shall be stopped.
 		 */
@@ -31,7 +33,19 @@ namespace einsum::internal {
 		 */
 		bool timed_out = false;
 
-		Context(TimePoint const &timeout = TimePoint::max()) : timeout(timeout) {}
+		/**
+		 * Labelorder
+		 */
+		std::vector<Label> label_order{};
+
+		Context(const std::shared_ptr<Subscript> &subscript, TimePoint const &timeout = TimePoint::max()) :
+				timeout(timeout),
+				label_order([&]() {
+					const auto &labels = subscript->getOperandsLabelSet();
+					std::vector<Label> label_vector(labels.begin(), labels.end());
+					std::shuffle(label_vector.begin(), label_vector.end(), random_engine);
+					return label_vector;
+				}()) {}
 
 		/**
 		 * Checks if the timeout is already reached. This method is intentionally unsynchronized.
@@ -54,6 +68,8 @@ namespace einsum::internal {
 			return false;
 		}
 	};
+
+	std::default_random_engine Context::random_engine = std::default_random_engine{42};
 
 }
 #endif //HYPERTRIE_CONTEXT_HPP

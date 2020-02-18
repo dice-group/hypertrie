@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.13)
-project(hypertrie VERSION 0.5.1)
+project(hypertrie VERSION 0.5.2)
 set(CMAKE_CXX_STANDARD 17)
 
 include(${CMAKE_BINARY_DIR}/conan_paths.cmake)

@@ -23,16 +23,15 @@ namespace hypertrie::tests::einsum {
 	template<typename T>
 	void runTest(long excl_max, TestEinsum &test_einsum, std::chrono::milliseconds timeout_duration = 0ms) {
 		auto einsum = &bh_ns::einsum2map<T>;
-		if (timeout_duration == 0ms)
-			timeout_duration = std::chrono::milliseconds::max();
 		// result how it is
 		auto start_time = std::chrono::steady_clock::now();
-		auto actual_result = einsum(test_einsum.subscript, test_einsum.hypertrieOperands(),
-		                            start_time + timeout_duration);
+		auto timeout = (timeout_duration != 0ms) ? start_time + timeout_duration : time_point::max();
+		auto actual_result = einsum(test_einsum.subscript, test_einsum.hypertrieOperands(), timeout);
 		auto end_time = std::chrono::steady_clock::now();
 		WARN(fmt::format("hypertrie: {}ms ",
 		                 std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count()));
-		REQUIRE((end_time - start_time) < (timeout_duration + 10ms));
+		if (timeout_duration != 0ms)
+			REQUIRE((end_time - start_time) < (timeout_duration + 10ms));
 
 
 
@@ -159,6 +158,8 @@ namespace hypertrie::tests::einsum {
 				"a,b,c->c",
 				"a,b,cd->d",
 				"a,bbc,cdc,cf->f",
+				"ab,bc,ca->abc",
+				"ab,bc,ca,ax,xy,ya->a",
 				"aa,ae,ac,ad,a,ab->abcde"
 
 		};

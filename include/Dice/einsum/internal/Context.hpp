@@ -2,6 +2,7 @@
 #define HYPERTRIE_CONTEXT_HPP
 
 #include "Dice/einsum/internal/Subscript.hpp"
+#include <chrono>
 
 namespace einsum::internal {
 

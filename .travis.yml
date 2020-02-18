@@ -59,3 +59,14 @@ deploy:
     on:
       all_branches: true
       condition: $TRAVIS_BRANCH =~ ^(master|development)$
+  - provider: script
+    script: >-
+      conan remote add dice-group https://api.bintray.com/conan/dice-group/tentris;
+      conan user -p $conan_token -r dice-group diceci;
+      (conan remove -f "hypertrie/${TRAVIS_TAG}@dice-group/stable" || true);
+      export hypertrie_deploy_version="${TRAVIS_TAG}";
+      conan create . "hypertrie/${TRAVIS_TAG}@dice-group/stable" --build missing -e hypertrie_deploy_version="${TRAVIS_TAG}";
+      conan upload "hypertrie/${TRAVIS_TAG}@dice-group/stable" --force --all -r dice-group;
+      (conan remove -f "hypertrie/${TRAVIS_TAG}@dice-group/stable" || true )
+    on:
+      tags: true

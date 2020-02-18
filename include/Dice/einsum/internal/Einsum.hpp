@@ -13,6 +13,33 @@
 #include "Dice/einsum/internal/Context.hpp"
 
 namespace einsum::internal {
+
+	template<typename value_type, typename key_part_type, template<typename, typename> class map_type,
+			template<typename> class set_type>
+	std::shared_ptr<Operator<value_type, key_part_type, map_type, set_type>>
+	Operator<value_type, key_part_type, map_type, set_type>::construct(const std::shared_ptr<Subscript> &subscript,
+																	   const std::shared_ptr<Context> &context) {
+		switch (subscript->type) {
+			case Subscript::Type::Join:
+				return std::make_shared<JoinOperator<value_type, key_part_type, map_type, set_type>>(subscript,
+																									 context);
+			case Subscript::Type::Resolve:
+				return std::make_shared<ResolveOperator<value_type, key_part_type, map_type, set_type>>(subscript,
+																										context);
+			case Subscript::Type::Count:
+				return std::make_shared<CountOperator<value_type, key_part_type, map_type, set_type>>(subscript,
+																									  context);
+			case Subscript::Type::Cartesian:
+				return std::make_shared<CartesianOperator<value_type, key_part_type, map_type, set_type>>(subscript,
+																										  context);
+			case Subscript::Type::EntryGenerator:
+				return std::make_shared<EntryGeneratorOperator<value_type, key_part_type, map_type, set_type>>(
+						subscript, context);
+			default:
+				throw std::invalid_argument{"subscript is of an undefined type."};
+		}
+	}
+
 	template<typename value_type, typename key_part_type, template<typename, typename> class map_type,
 			template<typename> class set_type>
 	class Einsum {
@@ -27,16 +54,18 @@ namespace einsum::internal {
 		std::shared_ptr<Subscript> subscript{};
 		std::shared_ptr<Context> context{};
 		std::vector<const_BoolHypertrie_t> operands{};
-		Operator_t op{};
+		std::shared_ptr<Operator_t> op{};
 		Entry_t entry{};
 
 
 	public:
 		Einsum() = default;
 
-		Einsum(std::shared_ptr<Subscript> subscript, const std::vector<const_BoolHypertrie_t> &operands, TimePoint timeout = TimePoint::max())
+		Einsum(std::shared_ptr<Subscript> subscript, const std::vector<const_BoolHypertrie_t> &operands,
+			   TimePoint timeout = TimePoint::max())
 				: subscript(std::move(subscript)), context{std::make_shared<Context>(timeout)},
-				  operands(operands), op{Operator_t::construct(this->subscript, context)},
+				  operands(operands),
+				  op{Operator_t::construct(this->subscript, context)},
 				  entry{0, Key_t(this->subscript->resultLabelCount(), std::numeric_limits<key_part_type>::max())} {}
 
 		[[nodiscard]] const std::shared_ptr<Subscript> &getSubscript() const {
@@ -47,20 +76,20 @@ namespace einsum::internal {
 			return operands;
 		}
 
-		const Operator_t &getOp() const {
+		const std::shared_ptr<Operator_t> &getOp() const {
 			return op;
 		}
 
 		struct iterator {
 		private:
 
-			Operator_t *op;
+			std::shared_ptr<Operator_t> op;
 			Entry_t *current_entry;
 			bool ended_ = false;
 		public:
 			iterator() = default;
 
-			explicit iterator(Einsum &einsum, Entry_t &entry) : op(&einsum.op), current_entry{&entry} {}
+			explicit iterator(Einsum &einsum, Entry_t &entry) : op(einsum.op), current_entry{&entry} {}
 
 			iterator &operator++() {
 				op->next();
@@ -85,7 +114,7 @@ namespace einsum::internal {
 		};
 
 		iterator begin() {
-			op.load(operands, entry);
+			op->load(operands, entry);
 			return iterator{*this, entry};
 		}
 
@@ -111,13 +140,15 @@ namespace einsum::internal {
 		std::shared_ptr<Subscript> subscript{};
 		std::shared_ptr<Context> context{};
 		std::vector<const_BoolHypertrie_t> operands{};
-		Operator_t op{};
+		std::shared_ptr<Operator_t> op{};
 		Entry_t entry{};
 
 	public:
-		Einsum(std::shared_ptr<Subscript> subscript, const std::vector<const_BoolHypertrie_t> &operands, TimePoint timeout = std::numeric_limits<TimePoint>::max())
+		Einsum(std::shared_ptr<Subscript> subscript, const std::vector<const_BoolHypertrie_t> &operands,
+			   TimePoint timeout = std::numeric_limits<TimePoint>::max())
 				: subscript(std::move(subscript)), context{std::make_shared<Context>(timeout)},
-				  operands(operands), op{Operator_t::construct(this->subscript, context)},
+				  operands(operands),
+				  op{Operator_t::construct(this->subscript, context)},
 				  entry{false, Key_t(this->subscript->resultLabelCount(), std::numeric_limits<key_part_type>::max())} {}
 
 		[[nodiscard]] const std::shared_ptr<Subscript> &getSubscript() const {
@@ -128,7 +159,7 @@ namespace einsum::internal {
 			return operands;
 		}
 
-		const Operator_t &getOp() const {
+		const std::shared_ptr<Operator_t> &getOp() const {
 			return op;
 		}
 
@@ -136,14 +167,14 @@ namespace einsum::internal {
 		private:
 
 
-			Operator_t *op;
+			std::shared_ptr<Operator_t> op;
 			tsl::hopscotch_set<Key_t, ::einsum::internal::KeyHash<key_part_type>> found_entries{};
 			Entry_t *current_entry;
 			bool ended_ = false;
 		public:
 			iterator() = default;
 
-			explicit iterator(Einsum &einsum, Entry_t &entry) : op(&einsum.op), current_entry{&entry} {
+			explicit iterator(Einsum &einsum, Entry_t &entry) : op(einsum.op), current_entry{&entry} {
 				if (not op->ended()) {
 					found_entries.insert(current_entry->key);
 				}
@@ -180,7 +211,7 @@ namespace einsum::internal {
 		};
 
 		iterator begin() {
-			op.load(operands, entry);
+			op->load(operands, entry);
 			return iterator{*this, entry};
 		}
 

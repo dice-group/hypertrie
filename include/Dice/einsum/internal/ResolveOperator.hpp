@@ -7,25 +7,18 @@ namespace einsum::internal {
 
 	template<typename value_type, typename key_part_type, template<typename, typename> class map_type,
 			template<typename> class set_type>
-	class ResolveOperator {
-		constexpr static const bool bool_value_type = std::is_same_v<value_type, bool>;
-		using const_BoolHypertrie_t = const_BoolHypertrie<key_part_type, map_type, set_type>;
-		using Operator_t = Operator<value_type, key_part_type, map_type, set_type>;
-		static constexpr key_part_type default_key_part = []() { if constexpr (std::is_pointer_v<key_part_type>) return nullptr; else return std::numeric_limits<key_part_type>::max(); }();
+	class ResolveOperator : public Operator<value_type, key_part_type, map_type, set_type> {
+#include "Dice/einsum/internal/OperatorMemberTypealiases.hpp"
+		using ResolveOperator_t = ResolveOperator<value_type, key_part_type, map_type, set_type>;
 
-
-		std::shared_ptr<Subscript> subscript;
-		std::shared_ptr<Context> context;
 		LabelPossInOperand label_pos_in_result;
-		Entry <key_part_type, value_type> *entry;
 		bool ended_;
 
 		typename const_BoolHypertrie_t::const_iterator operand_iter;
 
 	public:
-		ResolveOperator(std::shared_ptr<Subscript> subscript, std::shared_ptr<Context> context)
-				: subscript(std::move(subscript)),
-				  context(context) {
+		ResolveOperator(const std::shared_ptr<Subscript> &subscript, const std::shared_ptr<Context> &context)
+				: Operator_t(Subscript::Type::Resolve, subscript, context, this) {
 			label_pos_in_result = this->subscript->operand2resultMapping_ResolveType();
 			ended_ = true;
 		}
@@ -52,8 +45,8 @@ namespace einsum::internal {
 				fmt::print("[{}]->{} {}\n", fmt::join(self.entry->key, ","), self.entry->value, self.subscript);
 		}
 
-		static bool ended(void *self_raw) {
-			auto &self = *static_cast<ResolveOperator *>(self_raw);
+		static bool ended(const void *self_raw) {
+			auto &self = *static_cast<const ResolveOperator *>(self_raw);
 			return self.ended_ or self.context->hasTimedOut();
 		}
 
@@ -63,14 +56,14 @@ namespace einsum::internal {
 			self.load_impl(std::move(operands), entry);
 		}
 
-		static std::size_t hash(void *self_raw) {
-			auto &self = *static_cast<ResolveOperator *>(self_raw);
+		static std::size_t hash(const void *self_raw) {
+			auto &self = *static_cast<const ResolveOperator *>(self_raw);
 			return self.subscript->hash();
 		}
 
 	private:
 		inline void load_impl(std::vector<const_BoolHypertrie_t> operands, Entry <key_part_type, value_type> &entry) {
-			if constexpr(_debugeinsum_) fmt::print("Resolve {}\n", subscript);
+			if constexpr(_debugeinsum_) fmt::print("Resolve {}\n", this->subscript);
 			this->entry = &entry;
 			assert(operands.size() == 1); // only one operand must be left to be resolved
 			operand_iter = std::move(operands[0].cbegin());

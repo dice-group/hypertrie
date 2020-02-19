@@ -127,6 +127,7 @@ namespace einsum::internal {
 
 	private:
 		mutable tsl::hopscotch_map<Label, std::shared_ptr<Subscript>> sub_subscripts{};
+		mutable tsl::hopscotch_map<LabelPossInOperands, std::shared_ptr<Subscript>, boost::hash<LabelPossInOperands>> sub_subscripts2{};
 
 		RawSubscript raw_subscript{};
 
@@ -160,6 +161,16 @@ namespace einsum::internal {
 			else
 				return sub_subscripts.insert(
 								{label, std::make_shared<Subscript>(raw_subscript.removeLabel(label))})
+						.first->second;
+		}
+
+		std::shared_ptr<Subscript> removeLabel(LabelPossInOperands label_poss_in_ops) const {
+			auto iterator = sub_subscripts2.find(label_poss_in_ops);
+			if (iterator != sub_subscripts2.end())
+				return iterator->second;
+			else
+				return sub_subscripts2.insert(
+								{label_poss_in_ops, std::make_shared<Subscript>(raw_subscript.removeLabel(label_poss_in_ops))})
 						.first->second;
 		}
 

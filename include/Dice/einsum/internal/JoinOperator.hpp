@@ -93,14 +93,15 @@ namespace einsum::internal {
 			this->entry = &entry;
 			ended_ = false;
 			Label last_label = label;
-			label = CardinalityEstimation_t::getMinCardLabel(operands, this->subscript, this->context);
-			if (label != last_label) {
-				label_poss_in_ops = this->subscript->getLabelPossInOperands(label);
-				is_result_label = this->subscript->isResultLabel(label);
-				if (is_result_label)
-					label_pos_in_result = this->subscript->getLabelPosInResult(label);
-			}
-			const std::shared_ptr<Subscript> &next_subscript = this->subscript->removeLabel(label);
+			// TODO: return the position of the selected label in the operands
+			LabelCardInfo label_card_info = CardinalityEstimation_t::getMinCardLabel(operands, this->subscript, this->context);
+			label = label_card_info.label;
+			label_poss_in_ops = label_card_info.label_poss_in_operands;
+			is_result_label = this->subscript->isResultLabel(label);
+			if (is_result_label)
+				label_pos_in_result = this->subscript->getLabelPosInResult(label);
+			// TODO: remove label by (op_pos + label_pos) list
+			const std::shared_ptr<Subscript> &next_subscript = this->subscript->removeLabel(label_poss_in_ops);
 			// check if sub_operator was not yet initialized or if the next subscript is different
 			if (not sub_operator or sub_operator->hash() != next_subscript->hash()) {
 				sub_operator = Operator_t::construct(next_subscript, this->context);

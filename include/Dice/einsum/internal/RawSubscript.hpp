@@ -196,6 +196,28 @@ namespace einsum::internal {
 			return RawSubscript(next_operands, result);
 		}
 
+		[[nodiscard]] auto removeLabel(const LabelPossInOperands &label_poss_in_operands) const noexcept {
+			OperandsSc next_operands{};
+			for (const auto &[operand, label_poss]: iter::zip(operands, label_poss_in_operands)) {
+				if (not label_poss.empty()) {
+					OperandSc new_operand{};
+					const auto remove_pos = label_poss.begin();
+					for (auto[pos, current_label]: iter::enumerate(operand)) {
+						if (remove_pos != label_poss.end() and pos == *remove_pos)
+							continue;
+						else
+							new_operand.push_back(current_label);
+					}
+					if (not new_operand.empty()) {
+						next_operands.push_back(std::move(new_operand));
+					}
+				} else {
+					next_operands.push_back(operand);
+				}
+			}
+			return RawSubscript(next_operands, result);
+		}
+
 		/**
 		 * Check if another Subscript is different. It is also different if the labels are ordered alike but other
 		 * labels are used.

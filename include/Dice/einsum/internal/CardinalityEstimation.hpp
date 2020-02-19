@@ -6,7 +6,16 @@
 #include "Dice/einsum/internal/Entry.hpp"
 
 namespace einsum::internal {
-
+	struct FullLabelPos {
+		OperandPos op_pos;
+		LabelPos label_pos;
+	};
+	using FullLabelPoss = std::vector<FullLabelPos>;
+	struct LabelCardInfo {
+		Label label;
+		LabelPossInOperands label_poss_in_operands;
+		double card;
+	};
 
 	template<typename key_part_type, template<typename, typename> class map_type,
 			template<typename> class set_type>
@@ -20,28 +29,23 @@ namespace einsum::internal {
 		 * @param sc
 		 * @return
 		 */
-		static Label getMinCardLabel(const std::vector<const_BoolHypertrie_t> &operands,
-		                             const std::shared_ptr<Subscript> &sc,
-		                             std::shared_ptr<Context> context) {
-			const tsl::hopscotch_set <Label> &operandsLabelSet = sc->getOperandsLabelSet();
-			const tsl::hopscotch_set <Label> &lonely_non_result_labels = sc->getLonelyNonResultLabelSet();
-			if (operandsLabelSet.size() == 1) {
-				return *operandsLabelSet.begin();
-			} else {
+		static LabelCardInfo getMinCardLabel(const std::vector<const_BoolHypertrie_t> &operands,
+											 const std::shared_ptr<Subscript> &sc,
+											 std::shared_ptr<Context> context) {
+			const tsl::hopscotch_set<Label> &operandsLabelSet = sc->getOperandsLabelSet();
+			const tsl::hopscotch_set<Label> &lonely_non_result_labels = sc->getLonelyNonResultLabelSet();
 
-				Label min_label = *operandsLabelSet.begin();
-				double min_cardinality = std::numeric_limits<double>::infinity();
-				for (const Label label : operandsLabelSet) {
-					if (lonely_non_result_labels.count(label))
-						continue;
-					const double label_cardinality = calcCard(operands, label, sc);
-					if (label_cardinality < min_cardinality) {
-						min_cardinality = label_cardinality;
-						min_label = label;
-					}
-				}
-				return min_label;
+			std::vector<LabelCardInfo> label_candidates{};
+
+			for (const Label label : operandsLabelSet) {
+				if (lonely_non_result_labels.count(label))
+					continue;
+				label_candidates.push_back(calcCard(operands, label, sc));
 			}
+			std::sort(label_candidates.begin(), label_candidates.end(),
+					  [&](const auto &left, const auto &right) -> bool { return left.card < right.card; });
+			assert(not label_candidates.empty());
+			return label_candidates[0];
 		}
 
 	protected:
@@ -53,51 +57,46 @@ namespace einsum::internal {
 		 * @param label the label
 		 * @return label's cardinality in current step.
 		 */
-		static double calcCard(const std::vector<const_BoolHypertrie_t> &operands, const Label label,
-		                       const std::shared_ptr<Subscript> &sc) {
+		static LabelCardInfo
+		calcCard(const std::vector<const_BoolHypertrie_t> &operands, const Label label,
+				 const std::shared_ptr<Subscript> &sc) {
+			// TODO: remove the additional information as soon as it clear that it is not needed.
+			struct Stats {
+				size_t dim_card;
+				size_t op_card;
+				OperandPos op_pos;
+				LabelPos label_pos;
+
+				[[nodiscard]] FullLabelPos getFullLabelPos() const {
+					return {op_pos, label_pos};
+				}
+			};
 			// get operands that have the label
 			const std::vector<LabelPos> &op_poss = sc->getPossOfOperandsWithLabel(label);
-			std::vector<double> op_dim_cardinalities(op_poss.size(), 1.0);
-			auto label_count = 0;
-			auto min_dim_card = std::numeric_limits<size_t>::max();
-			tsl::hopscotch_set <size_t> sizes{};
-
 			const LabelPossInOperands &label_poss_in_operands = sc->getLabelPossInOperands(label);
+			std::vector<Stats> label_stats{};
 			// iterate the operands that hold the label
 			for (auto[i, op_pos] : iter::enumerate(op_poss)) {
 				const auto &operand = operands[op_pos];
-				const auto op_dim_cards = operand.getCards(label_poss_in_operands[op_pos]);
-				const auto min_op_dim_card = *std::min_element(op_dim_cards.cbegin(), op_dim_cards.cend());
-				const auto max_op_dim_card = *std::max_element(op_dim_cards.cbegin(), op_dim_cards.cend());
-
-				for (const auto &op_dim_card : op_dim_cards)
-					sizes.insert(op_dim_card);
-
-				label_count += op_dim_cards.size();
-				// update minimal dimenension cardinality
-				if (min_op_dim_card < min_dim_card)
-					min_dim_card = min_op_dim_card;
-
-				op_dim_cardinalities[i] = double(max_op_dim_card); //
+				for (const auto &label_pos : label_poss_in_operands[op_pos]) {
+					size_t card = operand.getCards({label_pos})[0];
+					size_t op_card = operand.size();
+					label_stats.emplace_back(Stats{card, op_card, op_pos, label_pos});
+				}
 			}
-
-			std::size_t max_op_size = 0;
-			std::vector<std::size_t> op_sizes{};
-			for (auto op_pos : op_poss) {
-				auto current_op_size = operands[op_pos].size();
-				op_sizes.push_back(current_op_size);
-				if (current_op_size > max_op_size)
-					max_op_size = current_op_size;
-			}
-
-			auto const min_dim_card_d = double(min_dim_card);
-
-			double card = std::accumulate(op_dim_cardinalities.cbegin(), op_dim_cardinalities.cend(), double(1),
-			                              [&](double a, double b) {
-				                              return a * min_dim_card_d / b;
-			                              }) / sizes.size();
-			return card;
+			std::sort(label_stats.begin(), label_stats.end(),
+					  [&](const auto &left, const auto &right) -> bool { return left.dim_card < right.dim_card; });
+			assert(label_stats.size() > 1);
+			const Stats &min_card = label_stats.front();
+			const Stats &max_card = label_stats.back();
+			LabelPossInOperands result_label_poss_in_operands(sc->operandsCount());
+			result_label_poss_in_operands[min_card.op_pos].push_back(min_card.label_pos);
+			result_label_poss_in_operands[max_card.op_pos].push_back(max_card.label_pos);
+			return LabelCardInfo{label,
+								 result_label_poss_in_operands,
+								 ((double) min_card.dim_card) / ((double) max_card.dim_card)};
 		}
 	};
 }
 #endif //HYPERTRIE_CARDINALITYESTIMATION_HPP
+

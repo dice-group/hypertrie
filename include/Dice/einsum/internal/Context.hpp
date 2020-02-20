@@ -17,7 +17,7 @@ namespace einsum::internal {
 	template<typename key_part_type>
 	class Context {
 		constexpr static const uint max_counter = 500;
-		using FixedKeyPartsForLabels = std::map<Label, key_part_type>;
+		using FixedKeyPartsForLabels = tsl::hopscotch_map<Label, key_part_type>;
 	public:
 		/**
 		 * The time after that the processing shall be stopped.

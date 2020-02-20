@@ -42,6 +42,8 @@ namespace hypertrie::tests::einsum {
 		end_time = std::chrono::steady_clock::now();
 		WARN(fmt::format("pytorch: {}ms ",
 		                 std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count()));
+		if (_debugeinsum_) WARN("expected result:");
+		if (_debugeinsum_) WARN(expected_result);
 		if (timeout_duration == 0ms) {
 			unsigned long result_depth = test_einsum.subscript->resultLabelCount();
 			for (const auto &key : product<std::size_t>(result_depth, excl_max)) {
@@ -71,9 +73,10 @@ namespace hypertrie::tests::einsum {
 					torch::manual_seed(std::hash<std::size_t>()(run));
 					auto subscript = std::make_shared<Subscript>(subscript_string);
 					std::vector<TestOperand> operands{};
+					if (_debugeinsum_) WARN("operands");
 					for (const auto &operand_sc : subscript->getRawSubscript().operands) {
 						TestOperand &operand = operands.emplace_back(operand_sc.size(), excl_max, empty);
-//						WARN(operand.torch_tensor);
+						if (_debugeinsum_) WARN(operand.torch_tensor);
 					}
 					runTest<T>(excl_max, operands, subscript, timeout_duration);
 

@@ -38,8 +38,6 @@ namespace einsum::internal {
 			std::vector<LabelCardInfo> label_candidates{};
 
 			for (const Label label : operandsLabelSet) {
-				if (lonely_non_result_labels.count(label))
-					continue;
 				label_candidates.push_back(calcCard(operands, label, sc, bool(context->getFixedLabel(label))));
 			}
 			std::sort(label_candidates.begin(), label_candidates.end(),

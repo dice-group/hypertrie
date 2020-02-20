@@ -28,12 +28,9 @@ namespace einsum::internal {
 		bool label_is_fixed;
 
 	public:
-		JoinOperator(const std::shared_ptr<Subscript> &subscript, const std::shared_ptr<Context < key_part_type>>
-
-		&context)
-		:
-		Operator_t(Subscript::Type::Join, subscript, context,
-		this) {}
+		JoinOperator(const std::shared_ptr<Subscript> &subscript,
+				const std::shared_ptr<Context<key_part_type>> &context)
+				: Operator_t(Subscript::Type::Join, subscript, context, this) {}
 
 
 		static void next(void *self_raw) {
@@ -108,6 +105,9 @@ namespace einsum::internal {
 			this->entry = &entry;
 			ended_ = false;
 			Label last_label = label;
+			// clean up
+			if (not label_is_fixed) this->context->fixed_labels.erase(last_label);
+
 			// TODO: return the position of the selected label in the operands
 			LabelCardInfo label_card_info = CardinalityEstimation_t::getMinCardLabel(operands, this->subscript,
 																					 this->context);

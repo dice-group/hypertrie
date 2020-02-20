@@ -285,6 +285,10 @@ namespace einsum::internal {
 				  all_result_done(calcAllResultDone(operands_label_set, result_label_set)) {
 			switch (this->type) {
 
+				case Type::Count:
+				case Type::Resolve:
+					this->type = Type::Join;
+					[[fallthrough]];
 				case Type::Join: {
 					label_poss_in_result = raw_subscript.getLabelPossInResult();
 					for (const auto[op_pos, labels] : iter::enumerate(raw_subscript.operands))
@@ -308,17 +312,6 @@ namespace einsum::internal {
 					cartesian_sub_subscripts = {*this};
 					break;
 				}
-				case Type::Resolve: {
-					label_poss_in_result = raw_subscript.getLabelPossInResult();
-
-					operand2result_mapping_resolveType.reserve(resultLabelCount());
-					for (auto label: getOperandLabels(0))
-						operand2result_mapping_resolveType.emplace_back(
-								getLabelPosInResult(label)
-						);
-					break;
-				}
-				case Type::Count:
 					break;
 				case Type::EntryGenerator:
 					break;

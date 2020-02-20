@@ -2,6 +2,7 @@
 #define HYPERTRIE_CONTEXT_HPP
 
 #include "Dice/einsum/internal/Subscript.hpp"
+#include <unordered_map>
 #include <chrono>
 
 namespace einsum::internal {
@@ -13,8 +14,10 @@ namespace einsum::internal {
 	 * operators to communicate during execution.
 	 * It is also responsible for managing timeouts.
 	 */
+	template<typename key_part_type>
 	class Context {
 		constexpr static const uint max_counter = 500;
+		using FixedKeyPartsForLabels = std::map<Label, key_part_type>;
 	public:
 		/**
 		 * The time after that the processing shall be stopped.
@@ -30,8 +33,20 @@ namespace einsum::internal {
 		 * Indicates if the timeout was already reached.
 		 */
 		bool timed_out = false;
+		/**
+		 * variables, that have been fixed to a value by a previous join
+		 */
+		FixedKeyPartsForLabels fixed_labels{};
 
 		Context(TimePoint const &timeout = TimePoint::max()) : timeout(timeout) {}
+
+		[[nodiscard]] std::optional<key_part_type> getFixedLabel(Label label) const noexcept {
+			const auto &found = fixed_labels.find(label);
+			if (found != fixed_labels.end())
+				return found->second;
+			else
+				return std::nullopt;
+		}
 
 		/**
 		 * Checks if the timeout is already reached. This method is intentionally unsynchronized.

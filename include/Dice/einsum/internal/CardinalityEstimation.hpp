@@ -31,7 +31,7 @@ namespace einsum::internal {
 		 */
 		static LabelCardInfo getMinCardLabel(const std::vector<const_BoolHypertrie_t> &operands,
 											 const std::shared_ptr<Subscript> &sc,
-											 std::shared_ptr<Context> context) {
+											 std::shared_ptr<Context<key_part_type>> context) {
 			const tsl::hopscotch_set<Label> &operandsLabelSet = sc->getOperandsLabelSet();
 			const tsl::hopscotch_set<Label> &lonely_non_result_labels = sc->getLonelyNonResultLabelSet();
 
@@ -40,7 +40,7 @@ namespace einsum::internal {
 			for (const Label label : operandsLabelSet) {
 				if (lonely_non_result_labels.count(label))
 					continue;
-				label_candidates.push_back(calcCard(operands, label, sc));
+				label_candidates.push_back(calcCard(operands, label, sc, bool(context->getFixedLabel(label))));
 			}
 			std::sort(label_candidates.begin(), label_candidates.end(),
 					  [&](const auto &left, const auto &right) -> bool { return left.card < right.card; });
@@ -59,7 +59,7 @@ namespace einsum::internal {
 		 */
 		static LabelCardInfo
 		calcCard(const std::vector<const_BoolHypertrie_t> &operands, const Label label,
-				 const std::shared_ptr<Subscript> &sc) {
+				 const std::shared_ptr<Subscript> &sc, bool label_already_used) {
 			// TODO: remove the additional information as soon as it clear that it is not needed.
 			struct Stats {
 				size_t dim_card;
@@ -72,11 +72,12 @@ namespace einsum::internal {
 				}
 			};
 			// get operands that have the label
-			const std::vector<LabelPos> &op_poss = sc->getPossOfOperandsWithLabel(label);
+			const std::vector<OperandPos> &op_poss = sc->getPossOfOperandsWithLabel(label);
+			std::set<OperandPos> op_pos_set(op_poss.begin(), op_poss.end());
 			const LabelPossInOperands &label_poss_in_operands = sc->getLabelPossInOperands(label);
 			std::vector<Stats> label_stats{};
 			// iterate the operands that hold the label
-			for (auto[i, op_pos] : iter::enumerate(op_poss)) {
+			for (auto[i, op_pos] : iter::enumerate(op_pos_set)) {
 				const auto &operand = operands[op_pos];
 				for (const auto &label_pos : label_poss_in_operands[op_pos]) {
 					size_t card = operand.getCards({label_pos})[0];
@@ -86,15 +87,21 @@ namespace einsum::internal {
 			}
 			std::sort(label_stats.begin(), label_stats.end(),
 					  [&](const auto &left, const auto &right) -> bool { return left.dim_card < right.dim_card; });
-			assert(label_stats.size() > 1);
+			assert(label_stats.size() > 0);
 			const Stats &min_card = label_stats.front();
-			const Stats &max_card = label_stats.back();
-			LabelPossInOperands result_label_poss_in_operands(sc->operandsCount());
-			result_label_poss_in_operands[min_card.op_pos].push_back(min_card.label_pos);
-			result_label_poss_in_operands[max_card.op_pos].push_back(max_card.label_pos);
-			return LabelCardInfo{label,
-								 result_label_poss_in_operands,
-								 ((double) min_card.dim_card) / ((double) max_card.dim_card)};
+			if (label_stats.size() == 1 or label_already_used) {
+				LabelPossInOperands result_label_poss_in_operands(sc->operandsCount());
+				result_label_poss_in_operands[min_card.op_pos].push_back(min_card.label_pos);
+				return LabelCardInfo{label, result_label_poss_in_operands, 1};
+			} else {
+				const Stats &max_card = label_stats.back();
+				LabelPossInOperands result_label_poss_in_operands(sc->operandsCount());
+				result_label_poss_in_operands[min_card.op_pos].push_back(min_card.label_pos);
+				result_label_poss_in_operands[max_card.op_pos].push_back(max_card.label_pos);
+				return LabelCardInfo{label,
+									 result_label_poss_in_operands,
+									 ((double) min_card.dim_card) / ((double) max_card.dim_card)};
+			}
 		}
 	};
 }

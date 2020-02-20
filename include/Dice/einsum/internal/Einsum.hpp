@@ -18,7 +18,7 @@ namespace einsum::internal {
 			template<typename> class set_type>
 	std::shared_ptr<Operator<value_type, key_part_type, map_type, set_type>>
 	Operator<value_type, key_part_type, map_type, set_type>::construct(const std::shared_ptr<Subscript> &subscript,
-																	   const std::shared_ptr<Context> &context) {
+																	   const std::shared_ptr<Context<key_part_type>> &context) {
 		switch (subscript->type) {
 			case Subscript::Type::Join:
 				return std::make_shared<JoinOperator<value_type, key_part_type, map_type, set_type>>(subscript,
@@ -52,7 +52,7 @@ namespace einsum::internal {
 
 
 		std::shared_ptr<Subscript> subscript{};
-		std::shared_ptr<Context> context{};
+		std::shared_ptr<Context<key_part_type>> context{};
 		std::vector<const_BoolHypertrie_t> operands{};
 		std::shared_ptr<Operator_t> op{};
 		Entry_t entry{};
@@ -63,7 +63,7 @@ namespace einsum::internal {
 
 		Einsum(std::shared_ptr<Subscript> subscript, const std::vector<const_BoolHypertrie_t> &operands,
 			   TimePoint timeout = TimePoint::max())
-				: subscript(std::move(subscript)), context{std::make_shared<Context>(timeout)},
+				: subscript(std::move(subscript)), context{std::make_shared<Context<key_part_type>>(timeout)},
 				  operands(operands),
 				  op{Operator_t::construct(this->subscript, context)},
 				  entry{0, Key_t(this->subscript->resultLabelCount(), std::numeric_limits<key_part_type>::max())} {}
@@ -138,7 +138,7 @@ namespace einsum::internal {
 		using Key_t = typename Entry_t::key_type;
 
 		std::shared_ptr<Subscript> subscript{};
-		std::shared_ptr<Context> context{};
+		std::shared_ptr<Context<key_part_type>> context{};
 		std::vector<const_BoolHypertrie_t> operands{};
 		std::shared_ptr<Operator_t> op{};
 		Entry_t entry{};
@@ -146,7 +146,7 @@ namespace einsum::internal {
 	public:
 		Einsum(std::shared_ptr<Subscript> subscript, const std::vector<const_BoolHypertrie_t> &operands,
 			   TimePoint timeout = std::numeric_limits<TimePoint>::max())
-				: subscript(std::move(subscript)), context{std::make_shared<Context>(timeout)},
+				: subscript(std::move(subscript)), context{std::make_shared<Context<key_part_type>>(timeout)},
 				  operands(operands),
 				  op{Operator_t::construct(this->subscript, context)},
 				  entry{false, Key_t(this->subscript->resultLabelCount(), std::numeric_limits<key_part_type>::max())} {}

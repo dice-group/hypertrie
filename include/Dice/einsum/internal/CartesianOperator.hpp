@@ -26,7 +26,7 @@ namespace einsum::internal {
 		bool ended_ = true; // set in load_impl // updated in load_impl, next
 
 	public:
-		CartesianOperator(const std::shared_ptr<Subscript> &subscript, const std::shared_ptr<Context> &context)
+		CartesianOperator(const std::shared_ptr<Subscript> &subscript, const std::shared_ptr<Context<key_part_type>> &context)
 				: Operator_t(Subscript::Type::Cartesian, subscript, context, this) {
 			// generate sub-operators
 			const std::vector<std::shared_ptr<Subscript>> &sub_subscripts = this->subscript->getCartesianSubscript().getSubSubscripts();

@@ -287,7 +287,6 @@ namespace einsum::internal {
 
 				case Type::Join: {
 					label_poss_in_result = raw_subscript.getLabelPossInResult();
-
 					for (const auto[op_pos, labels] : iter::enumerate(raw_subscript.operands))
 						for (const Label label : labels)
 							poss_of_operands_with_labels[label].push_back(op_pos);
@@ -480,7 +479,7 @@ namespace fmt {
 
 		template<typename FormatContext>
 		auto format(const std::shared_ptr<einsum::internal::Subscript> &sub_script, FormatContext &ctx) {
-			return format_to(ctx.begin(), "{}", sub_script->to_string());
+			return format_to(ctx.out(), "{}", sub_script->to_string());
 		}
 	};
 }

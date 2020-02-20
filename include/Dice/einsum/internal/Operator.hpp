@@ -10,8 +10,6 @@
 
 namespace einsum::internal {
 
-	class Context;
-
 
 	template<typename value_type, typename key_part_type, template<typename, typename> class map_type,
 			template<typename> class set_type>
@@ -29,7 +27,7 @@ namespace einsum::internal {
 		mutable Subscript::Type type = Subscript::Type::None;
 	protected:
 		std::shared_ptr<Subscript> subscript;
-		std::shared_ptr<Context> context;
+		std::shared_ptr<Context<key_part_type>> context;
 		Entry <key_part_type, value_type> *entry;
 
 		/**
@@ -60,7 +58,7 @@ namespace einsum::internal {
 		template<typename T>
 		Operator(Subscript::Type type,
 				 std::shared_ptr<Subscript> subscript,
-				 std::shared_ptr<Context> context,
+				 std::shared_ptr<Context<key_part_type>> context,
 				 [[maybe_unused]] const T * dummy)
 				: type(type),
 				  subscript(std::move(subscript)),
@@ -72,7 +70,7 @@ namespace einsum::internal {
 
 	public:
 
-		static std::shared_ptr<Operator>  construct(const std::shared_ptr<Subscript> &subscript, const std::shared_ptr<Context> &context);
+		static std::shared_ptr<Operator>  construct(const std::shared_ptr<Subscript> &subscript, const std::shared_ptr<Context<key_part_type>> &context);
 		Operator() = default;
 
 		Operator(Operator &) = default;

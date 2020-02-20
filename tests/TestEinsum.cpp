@@ -17,6 +17,7 @@
 
 
 namespace hypertrie::tests::einsum {
+
 	using namespace std::literals::chrono_literals;
 	using time_point = std::chrono::steady_clock::time_point;
 
@@ -157,6 +158,15 @@ namespace hypertrie::tests::einsum {
 				"a,b,c->a",
 				"a,b,c->c",
 				"a,b,cd->d",
+				"a,a,a->a",
+				"aa,a,a->a",
+				"a,a,aa->a",
+				"ab,a,a->a",
+				"ab,ac,ba->a",
+				"ab,ac,ba->b",
+				"ab,ac,ba->c",
+				"aa,ab,bb->a",
+				"ba,aa,bb->a",
 				"a,bbc,cdc,cf->f",
 				"ab,bc,ca->abc",
 				"ab,bc,ca,ax,xy,ya->a",

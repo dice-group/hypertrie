@@ -17,7 +17,7 @@ namespace einsum::internal {
 		typename const_BoolHypertrie_t::const_iterator operand_iter;
 
 	public:
-		ResolveOperator(const std::shared_ptr<Subscript> &subscript, const std::shared_ptr<Context> &context)
+		ResolveOperator(const std::shared_ptr<Subscript> &subscript, const std::shared_ptr<Context<key_part_type>> &context)
 				: Operator_t(Subscript::Type::Resolve, subscript, context, this) {
 			label_pos_in_result = this->subscript->operand2resultMapping_ResolveType();
 			ended_ = true;

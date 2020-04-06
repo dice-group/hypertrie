@@ -6,7 +6,7 @@
 #define HYPERTRIE_RAWCOMPRESSEDBOOLHYPERTRIE_HPP
 
 #include "Dice/hypertrie/internal/compressed/RawCompressedBoolHypertrie_impl.hpp"
-// #include "Dice/hypertrie/internal/compressed/RawCompressedBoolHypertrie_Hash_Diagonal_impl.hpp"
+#include "Dice/hypertrie/internal/compressed/RawCompressedBoolHypertrie_Hash_Diagonal_impl.hpp"
 
 namespace hypertrie::internal::compressed::interface {
     template<typename key_part_type, template<typename, typename> typename map_type,

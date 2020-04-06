@@ -567,7 +567,7 @@ namespace hypertrie::tests::raw_compressedboolhypertrie {
         using BHT1NodePointer = NodePointer<1>;
 
         utils::resetDefaultRandomNumberGenerator();
-        auto tuples = utils::generateNTuples<BHT3Node::key_part_type, 4000, 3>({70, 14, 140});
+        auto tuples = utils::generateNTuples<BHT3Node::key_part_type, 4000, 3>({70, 14, 140}, 8);
 
         auto x = new BHT3Node{};
         for (auto tuple : tuples) {

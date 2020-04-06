@@ -24,7 +24,7 @@ namespace hypertrie::tests::boolhypertrie {
 	void test_single_write() {
 		std::array<std::size_t, depth> ranges{};
 		ranges.fill(15);
-		auto tuples = utils::generateNTuples<unsigned long, 500, depth, Key>(ranges);
+		auto tuples = utils::generateNTuples<unsigned long, 500, depth, Key>(ranges, 1);
 		SECTION("Boolhypertrie depth {}"_format(depth)) {
 			for (const auto &key: tuples) {
 				BH t{depth};
@@ -47,8 +47,8 @@ namespace hypertrie::tests::boolhypertrie {
 	void test_multi_write_read_delete() {
 		std::array<std::size_t, depth> ranges{};
 		ranges.fill(range_);
-		auto write_entries = utils::generateNTuples<unsigned long, count, depth, Key>(ranges);
-		auto remove_entries = utils::generateNTuples<unsigned long, count, depth, Key>(ranges);
+		auto write_entries = utils::generateNTuples<unsigned long, count, depth, Key>(ranges, 1);
+		auto remove_entries = utils::generateNTuples<unsigned long, count, depth, Key>(ranges, 1);
 		std::set<Key> retaining_entries{write_entries.begin(), write_entries.end()};
 		for (const auto &entry : remove_entries)
 			retaining_entries.erase(entry);
@@ -83,7 +83,7 @@ namespace hypertrie::tests::boolhypertrie {
 	void test_slicing() {
 		std::array<std::size_t, depth> ranges{};
 		ranges.fill(range_);
-		auto entries = utils::generateNTuples<unsigned long, count, depth, Key>(ranges);
+		auto entries = utils::generateNTuples<unsigned long, count, depth, Key>(ranges, 1);
 
 		BH t{depth};
 		for (const auto &key: entries)
@@ -169,7 +169,7 @@ namespace hypertrie::tests::boolhypertrie {
 	void test_iterator() {
 		std::array<std::size_t, depth> ranges{};
 		ranges.fill(range_);
-		auto entries = utils::generateNTuples<unsigned long, count, depth, Key>(ranges);
+		auto entries = utils::generateNTuples<unsigned long, count, depth, Key>(ranges, 1);
 
 		BH t{depth};
 		for (const auto &key: entries)

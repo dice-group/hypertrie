@@ -17,7 +17,7 @@ namespace hypertrie::tests::utils {
 
     template<typename key_part_type = std::size_t>
     inline std::vector<std::vector<key_part_type>>
-    generateNTuples(const std::size_t count, const std::size_t depth, const key_part_type max) {
+    generateNTuples(const std::size_t count, const std::size_t depth, const key_part_type max, const int multiple) {
         using Entry = std::vector<key_part_type>;
         // set up distributions
         std::vector<std::uniform_int_distribution<key_part_type>> distributions;
@@ -32,7 +32,7 @@ namespace hypertrie::tests::utils {
             Entry entry;
             entry.reserve(depth);
             for (auto j : iter::range(depth))
-                entry.push_back(distributions[j](defaultRandomNumberGenerator) * 8);
+                entry.push_back(distributions[j](defaultRandomNumberGenerator) * multiple);
             entries.emplace_back(std::move(entry));
         }
         return entries;
@@ -51,7 +51,7 @@ namespace hypertrie::tests::utils {
  * @return an array of n-tuples
  */
     template<typename value_type, std::size_t count, std::size_t n, typename tuple_type = std::array<value_type, n>>
-    inline std::vector<tuple_type> generateNTuples(const std::array<std::size_t, n> &ranges) {
+    inline std::vector<tuple_type> generateNTuples(const std::array<std::size_t, n> &ranges, const int multiple) {
         // set up distributions
         std::array<std::uniform_int_distribution<value_type>, n> distributions;
         for (auto j : iter::range(n)) {
@@ -69,7 +69,7 @@ namespace hypertrie::tests::utils {
 
             for (auto j : iter::range(n)) {
                 // @TODO using shifting instead of muliplying by 8
-                entry[j] = distributions[j](defaultRandomNumberGenerator) * 8;
+                entry[j] = distributions[j](defaultRandomNumberGenerator) * multiple;
             }
             entries.emplace_back(entry);
         }

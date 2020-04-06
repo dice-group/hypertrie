@@ -64,7 +64,7 @@ namespace hypertrie::tests::raw_boolhypertrie {
     TEST_CASE("test  slicing depth 5 BHT", "[RawBoolHypertrie]") {
 
         utils::resetDefaultRandomNumberGenerator();
-        auto tuples = utils::generateNTuples<unsigned long, 500, 5>({15, 15, 15, 15, 15});
+        auto tuples = utils::generateNTuples<unsigned long, 500, 5>({15, 15, 15, 15, 15}, 1);
 
         auto x = std::make_shared<RBH<5>>();
         for (auto tuple : tuples) {

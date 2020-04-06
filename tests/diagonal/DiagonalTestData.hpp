@@ -50,7 +50,7 @@ namespace hypertrie::tests {
 		                 const std::size_t depth, const key_part_type max)
 				: depth(depth), join_positions(join_positions),
 				  remaining_positions(getRemainingPoss(join_positions, depth)) {
-			entries = utils::generateNTuples(count, depth, max);
+			entries = utils::generateNTuples(count, depth, max, 1);
 
 			if (join_positions.empty());
 			else

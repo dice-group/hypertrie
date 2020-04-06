@@ -24,7 +24,7 @@ namespace hypertrie::tests::raw_diagonal {
 	TEST_CASE("basic tests", "RawDiagonal") {
 		RBH<1> x{};
 
-		auto data = utils::generateNTuples<unsigned long, 50, 1>({50});
+		auto data = utils::generateNTuples<unsigned long, 50, 1>({50}, 1);
 		std::set<unsigned long> key_parts;
 		for (const auto &entry : data) {
 			key_parts.insert(entry[0]);

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.10.2)
 
 find_package(Catch2 REQUIRED CONFIG)
 add_executable(tests Tests.cpp)

@@ -6,37 +6,37 @@
 #include <itertools.hpp>
 
 namespace hypertrie::tests::utils {
-	namespace {
-	}
+    namespace {
+    }
 
-	static inline auto defaultRandomNumberGenerator = std::mt19937_64{42};
+    static inline auto defaultRandomNumberGenerator = std::mt19937_64{42};
 
-	static inline void resetDefaultRandomNumberGenerator() {
-		defaultRandomNumberGenerator = std::mt19937_64{42};
-	}
+    static inline void resetDefaultRandomNumberGenerator() {
+        defaultRandomNumberGenerator = std::mt19937_64{42};
+    }
 
-	template<typename key_part_type = std::size_t>
-	inline std::vector<std::vector<key_part_type>>
-	generateNTuples(const std::size_t count, const std::size_t depth, const key_part_type max) {
-		using Entry = std::vector<key_part_type>;
-		// set up distributions
-		std::vector<std::uniform_int_distribution<key_part_type>> distributions;
-		distributions.reserve(count);
-		for ([[maybe_unused]] auto j : iter::range(count))
-			distributions.push_back(std::uniform_int_distribution<key_part_type>{0, max});
+    template<typename key_part_type = std::size_t>
+    inline std::vector<std::vector<key_part_type>>
+    generateNTuples(const std::size_t count, const std::size_t depth, const key_part_type max) {
+        using Entry = std::vector<key_part_type>;
+        // set up distributions
+        std::vector<std::uniform_int_distribution<key_part_type>> distributions;
+        distributions.reserve(count);
+        for ([[maybe_unused]] auto j : iter::range(count))
+            distributions.push_back(std::uniform_int_distribution<key_part_type>{0, max});
 
-		// generate n-tuples
-		std::vector<Entry> entries;
-		entries.reserve(count);
-		for ([[maybe_unused]] auto i : iter::range(count)) {
-			Entry entry;
-			entry.reserve(depth);
-			for (auto j : iter::range(depth))
-				entry.push_back(distributions[j](defaultRandomNumberGenerator));
-			entries.emplace_back(std::move(entry));
-		}
-		return entries;
-	}
+        // generate n-tuples
+        std::vector<Entry> entries;
+        entries.reserve(count);
+        for ([[maybe_unused]] auto i : iter::range(count)) {
+            Entry entry;
+            entry.reserve(depth);
+            for (auto j : iter::range(depth))
+                entry.push_back(distributions[j](defaultRandomNumberGenerator) * 8);
+            entries.emplace_back(std::move(entry));
+        }
+        return entries;
+    }
 
 
 /**
@@ -50,90 +50,91 @@ namespace hypertrie::tests::utils {
  * @tparam ranges the maximum values for the positions of the n-tuples.
  * @return an array of n-tuples
  */
-	template<typename value_type, std::size_t count, std::size_t n, typename tuple_type = std::array<value_type, n>>
-	inline std::vector<tuple_type> generateNTuples(const std::array<std::size_t, n> &ranges) {
-		// set up distributions
-		std::array<std::uniform_int_distribution<value_type>, n> distributions;
-		for (auto j : iter::range(n)) {
-			distributions[j] = std::uniform_int_distribution<value_type>{0, ranges[j]};
-		}
+    template<typename value_type, std::size_t count, std::size_t n, typename tuple_type = std::array<value_type, n>>
+    inline std::vector<tuple_type> generateNTuples(const std::array<std::size_t, n> &ranges) {
+        // set up distributions
+        std::array<std::uniform_int_distribution<value_type>, n> distributions;
+        for (auto j : iter::range(n)) {
+            distributions[j] = std::uniform_int_distribution<value_type>{1, ranges[j] + 1};
+        }
 
-		// generate n-tuples
-		std::vector<tuple_type> entries;
-		entries.reserve(count);
-		for ([[maybe_unused]] auto i : iter::range(count)) {
+        // generate n-tuples
+        std::vector<tuple_type> entries;
+        entries.reserve(count);
+        for ([[maybe_unused]] auto i : iter::range(count)) {
 
-			static tuple_type entry;
-			if constexpr (not std::is_same_v<tuple_type, std::array<value_type, n>>)
-				entry.resize(n);
+            static tuple_type entry;
+            if constexpr (not std::is_same_v<tuple_type, std::array<value_type, n>>)
+                entry.resize(n);
 
-			for (auto j : iter::range(n)) {
-				entry[j] = distributions[j](defaultRandomNumberGenerator);
-			}
-			entries.emplace_back(entry);
-		}
-		return entries;
-	}
+            for (auto j : iter::range(n)) {
+                // @TODO using shifting instead of muliplying by 8
+                entry[j] = distributions[j](defaultRandomNumberGenerator) * 8;
+            }
+            entries.emplace_back(entry);
+        }
+        return entries;
+    }
 
-	template<typename T, typename RandomNumberGenerator>
-	struct Randoms {
-		size_t size;
-		T min;
-		T max;
-		RandomNumberGenerator &randomNumberGenerator;
-		std::uniform_int_distribution<T> distribution;
+    template<typename T, typename RandomNumberGenerator>
+    struct Randoms {
+        size_t size;
+        T min;
+        T max;
+        RandomNumberGenerator &randomNumberGenerator;
+        std::uniform_int_distribution<T> distribution;
 
-		Randoms(size_t size, T min, T max, RandomNumberGenerator &randomNumberGenerator) :
-				size(size),
-				min(min),
-				max(max),
-				randomNumberGenerator(randomNumberGenerator),
-				distribution{min, max} {}
+        Randoms(size_t size, T min, T max, RandomNumberGenerator &randomNumberGenerator) :
+                size(size),
+                min(min),
+                max(max),
+                randomNumberGenerator(randomNumberGenerator),
+                distribution{min, max} {}
 
-		struct iterator {
-			Randoms &container;
-			T sample;
-			size_t i;
+        struct iterator {
+            Randoms &container;
+            T sample;
+            size_t i;
 
 
-			explicit iterator(Randoms &container, size_t i = 0) : container(container), i(i) {
-				if (i != container.size)
-					sample = container.distribution(container.randomNumberGenerator);
-			}
+            explicit iterator(Randoms &container, size_t i = 0) : container(container), i(i) {
+                if (i != container.size)
+                    sample = container.distribution(container.randomNumberGenerator);
+            }
 
-			T operator*() {
-				return sample;
-			}
+            T operator*() {
+                return sample;
+            }
 
-			void operator++() {
-				++i;
-				sample = container.distribution(container.randomNumberGenerator);
-			}
+            void operator++() {
+                ++i;
+                sample = container.distribution(container.randomNumberGenerator);
+            }
 
-			bool operator==(const iterator &other) { return i == other.i; }
+            bool operator==(const iterator &other) { return i == other.i; }
 
-			bool operator!=(const iterator &other) { return i != other.i; }
-		};
+            bool operator!=(const iterator &other) { return i != other.i; }
+        };
 
-		decltype(auto) begin() {
-			return iterator(*this);
-		}
+        decltype(auto) begin() {
+            return iterator(*this);
+        }
 
-		decltype(auto) end() {
-			return iterator(*this, size);
-		}
+        decltype(auto) end() {
+            return iterator(*this, size);
+        }
 
-	};
+    };
 
-	template<typename T, typename RandomNumberGenerator>
-	decltype(auto) gen_random(const size_t &size, T min, T max, RandomNumberGenerator &randomNumberGenerator) {
-		return Randoms{size, min, max, randomNumberGenerator};
-	}
+    template<typename T, typename RandomNumberGenerator>
+    decltype(auto) gen_random(const size_t &size, T min, T max, RandomNumberGenerator &randomNumberGenerator) {
+        return Randoms{size, min, max, randomNumberGenerator};
+    }
 
-	template<typename T>
-	decltype(auto) gen_random(const size_t &size, T min, T max) {
-		return Randoms{size, min, max, defaultRandomNumberGenerator};
-	}
+    template<typename T>
+    decltype(auto) gen_random(const size_t &size, T min, T max) {
+        return Randoms{size, min, max, defaultRandomNumberGenerator};
+    }
 
 
 }

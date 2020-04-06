@@ -6,6 +6,7 @@
 #include "Dice/hypertrie/internal/Join.hpp"
 #include "Dice/hypertrie/internal/HashJoin_impl.hpp"
 
+#include "Dice/hypertrie/internal/compressed/RawCompressedBoolHypertrie.hpp"
 #include <vector>
 #include <map>
 #include <itertools.hpp>

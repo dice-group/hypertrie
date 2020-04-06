@@ -2,6 +2,7 @@
 #define HYPERTRIE_BOOLHYPERTRIE_HPP
 
 #include "Dice/hypertrie/internal/BoolHypertrie.hpp"
+#include "Dice/hypertrie/internal/compressed/CompressedBoolHypertrie.hpp"
 #include "Dice/hypertrie/internal/RawBoolHypertrie.hpp"
 #include "Dice/hypertrie/internal/Join.hpp"
 #include "Dice/hypertrie/internal/HashJoin_impl.hpp"

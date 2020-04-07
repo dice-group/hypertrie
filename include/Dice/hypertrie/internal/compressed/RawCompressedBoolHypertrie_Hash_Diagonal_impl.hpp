@@ -5,9 +5,7 @@
 #ifndef HYPERTRIE_RAWCOMPRESSEDBOOLHYPERTRIE_HASH_DIAGONAL_IMPL_HPP
 #define HYPERTRIE_RAWCOMPRESSEDBOOLHYPERTRIE_HASH_DIAGONAL_IMPL_HPP
 
-#include "Dice/hypertrie/internal/util/CONSTANTS.hpp"
 #include "Dice/hypertrie/internal/compressed/RawCompressedBoolHypertrie_impl.hpp"
-#include "Dice/hypertrie/internal/container/AllContainer.hpp"
 #include <numeric>
 
 

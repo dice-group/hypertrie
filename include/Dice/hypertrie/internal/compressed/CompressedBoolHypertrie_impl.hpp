@@ -321,8 +321,8 @@ namespace hypertrie::internal::compressed {
     class CompressedBoolHypertrie : public const_CompressedBoolHypertrie<key_part_type, map_type, set_type> {
     protected:
         using base = const_CompressedBoolHypertrie<key_part_type, map_type, set_type>;
-        template<pos_type depth>
-        using RawCompressedBoolHypertrie = typename base::template RawCompressedBoolHypertrie<depth>;
+        template<pos_type depth, bool compressed>
+        using RawCompressedBoolHypertrie = typename base::template RawCompressedBoolHypertrie<depth, compressed>;
         template<pos_type depth, pos_type diag_depth>
         using RawCompressedBHTHashDiagonal =  typename base::template RawCompressedBHTHashDiagonal<diag_depth, depth>;
 

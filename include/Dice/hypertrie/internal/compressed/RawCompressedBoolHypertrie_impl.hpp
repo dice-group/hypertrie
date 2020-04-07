@@ -18,12 +18,18 @@
 #include <cassert>
 #include <cstdint>
 #include <itertools.hpp>
-#include <Dice/hypertrie/internal/util/PosCalc.hpp>
-#include <Dice/hypertrie/internal/util/TaggedPointerWrapper.hpp>
+#include "Dice/hypertrie/internal/util/TaggedPointerWrapper.hpp"
+#include "Dice/hypertrie/internal/util/CONSTANTS.hpp"
+#include "Dice/hypertrie/internal/util/NTuple.hpp"
+#include "Dice/hypertrie/internal/util/CountDownNTuple.hpp"
+#include "Dice/hypertrie/internal/util/FrontSkipIterator.hpp"
+#include "Dice/hypertrie/internal/util/PosCalc.hpp"
+#include "Dice/hypertrie/internal/container/AllContainer.hpp"
 
 namespace hypertrie::internal::compressed {
-    namespace {
-        using namespace iter;
+
+    constexpr int factorial(int n) {
+        return n <= 1 ? 1 : (n * factorial(n - 1));
     }
 
     template<pos_type diag_depth, pos_type depth, typename key_part_type, template<typename, typename> typename map_type,
@@ -248,7 +254,7 @@ namespace hypertrie::internal::compressed {
         std::vector<size_t> getCards(const std::vector<pos_type> &positions) const {
             assert((positions.size() == 1) ? positions[0] == 0 : positions.empty());
             std::vector<size_t> cards(positions.size());
-            for (auto i : range(positions.size()))
+            for (auto i : iter::range(positions.size()))
                 cards[i] = edges.size();
             return cards;
         }
@@ -427,7 +433,7 @@ namespace hypertrie::internal::compressed {
             std::size_t min_i = 0;
             auto delta_i = 0;
             auto delta = 0;
-            for (auto i : range(positions.size())) {
+            for (auto i : iter::range(positions.size())) {
                 if (not done[i]) {
                     min_i = i;
                     delta_i = delta;
@@ -490,7 +496,7 @@ namespace hypertrie::internal::compressed {
         [[nodiscard]]
         std::vector<size_t> getCards(const std::vector<pos_type> &positions) const {
             std::vector<size_t> cards(positions.size());
-            for (auto i : range(positions.size()))
+            for (auto i : iter::range(positions.size()))
                 cards[i] = edges[positions[i]].size();
             return cards;
         }
@@ -511,7 +517,7 @@ namespace hypertrie::internal::compressed {
             std::vector<pos_type> positions;
             std::vector<key_part_type> key_parts;
             positions.reserve(key.size());
-            for (const auto[position, key_part] : enumerate(key))
+            for (const auto[position, key_part] : iter::enumerate(key))
                 if (key_part.has_value()) {
                     positions.push_back(position);
                     key_parts.push_back(key_part.value());
@@ -641,7 +647,7 @@ namespace hypertrie::internal::compressed {
         [[nodiscard]]
         std::vector<size_t> getCards(const std::vector<pos_type> &positions) const {
             std::vector<size_t> cards(positions.size());
-            for (auto i : range(positions.size()))
+            for (auto i : iter::range(positions.size()))
                 cards[i] = edges[positions[i]].size();
             return cards;
         }
@@ -736,7 +742,7 @@ namespace hypertrie::internal::compressed {
             auto min_size = std::numeric_limits<std::size_t>::max();
             std::size_t delta = 0;
             std::size_t delta_i = 0;
-            for (auto i : range(positions.size()))
+            for (auto i : iter::range(positions.size()))
                 if (not done[i]) {
                     if (auto current_size = edges[positions[i] - delta].size(); current_size < min_size) {
                         min_i = i;
@@ -782,7 +788,7 @@ namespace hypertrie::internal::compressed {
             std::vector<pos_type> positions;
             std::vector<key_part_type> key_parts;
             positions.reserve(key.size());
-            for (const auto[position, key_part] : enumerate(key))
+            for (const auto[position, key_part] : iter::enumerate(key))
                 if (key_part.has_value()) {
                     positions.push_back(position);
                     key_parts.push_back(key_part.value());
@@ -1030,7 +1036,7 @@ namespace hypertrie::internal::compressed {
         [[nodiscard]]
         std::vector<size_t> getCards(const std::vector<pos_type> &positions) const {
             std::vector<size_t> cards(positions.size());
-            for (auto i : range(positions.size()))
+            for (auto i : iter::range(positions.size()))
                 cards[i] = edges[positions[i]].size();
             return cards;
         }
@@ -1120,7 +1126,7 @@ namespace hypertrie::internal::compressed {
             auto min_size = std::numeric_limits<std::size_t>::max();
             std::size_t delta = 0;
             std::size_t delta_i = 0;
-            for (auto i : range(positions.size()))
+            for (auto i : iter::range(positions.size()))
                 if (not done[i]) {
                     if (auto current_size =
                                 edges[positions[i] - delta].size() + compressed_edges[positions[i] - delta].size();
@@ -1192,7 +1198,7 @@ namespace hypertrie::internal::compressed {
             std::vector<pos_type> positions;
             std::vector<key_part_type> key_parts;
             positions.reserve(key.size());
-            for (const auto[position, key_part] : enumerate(key))
+            for (const auto[position, key_part] : iter::enumerate(key))
                 if (key_part.has_value()) {
                     positions.push_back(position);
                     key_parts.push_back(key_part.value());

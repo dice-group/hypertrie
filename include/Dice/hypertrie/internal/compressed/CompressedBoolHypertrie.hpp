@@ -11,7 +11,7 @@
 #include "Dice/hypertrie/internal/compressed/CompressedBoolHypertrie_impl.hpp"
 #include "Dice/hypertrie/internal/compressed/CompressedBoolHypertrie_Hash_Diagonal_impl.hpp"
 
-namespace hypertrie::internal::interface {
+namespace hypertrie::internal::compressed::interface {
     template<typename key_part_type, template<typename, typename> class map_type,
             template<typename> class set_type>
     struct compressedboolhypertrie {

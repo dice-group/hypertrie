@@ -6,6 +6,9 @@
 #define HYPERTRIE_COMPRESSEDBOOLHYPERTRIE_IMPL_HPP
 
 #include "Dice/hypertrie/internal/compressed/RawCompressedBoolHypertrie.hpp"
+#include "Dice/hypertrie/internal/util/CONSTANTS.hpp"
+#include <functional>
+#include <memory>
 
 namespace hypertrie::internal::compressed {
     template<typename key_part_type, template<typename, typename> class map_type,
@@ -158,12 +161,8 @@ namespace hypertrie::internal::compressed {
                     }
                 }
                 case 3: {
-                    NodePointer<3> node_ptr = NodePointer<3>{hypertrie};
-                    if (node_ptr.getTag() == NodePointer<3>::COMPRESSED_TAG) {
-                        return node_ptr.getCompressedNode()->size();
-                    } else {
-                        return node_ptr.getNode()->size();
-                    }
+                    Node<3>* node_ptr = static_cast<Node<3>*>(hypertrie);
+                    return node_ptr->size();
                 }
                 default:
                     throw std::logic_error{"not implemented."};
@@ -217,10 +216,10 @@ namespace hypertrie::internal::compressed {
 
         template<pos_type depth, pos_type result_depth>
         inline static auto
-        executeRawSlice(const void *hypertrie,
+        executeRawSlice(void *hypertrie,
                         typename Node<depth>::SliceKey raw_slice_key)
         -> std::conditional_t<(result_depth > 0), std::optional<const_CompressedBoolHypertrie const>, bool> {
-            NodePointer<depth> node_ptr{hypertrie};
+            NodePointer<depth> node_ptr(hypertrie);
             constexpr pos_type depth_val = result_depth;
 
             if constexpr (result_depth > 0) {
@@ -241,11 +240,17 @@ namespace hypertrie::internal::compressed {
                 }
 
             } else {
-                if (node_ptr.getTag() == NodePointer<depth>::COMPRESSED_TAG) {
-                    return node_ptr.getCompressedNode()->operator[](raw_slice_key);
+                if constexpr (depth > 2) {
+                    Node<depth> *node_ptr = static_cast<Node<depth> * >(hypertrie);
+                    return node_ptr->template operator[]<0>(raw_slice_key);
                 } else {
-                    return node_ptr.getNode()->operator[](raw_slice_key);
+                    if (node_ptr.getTag() == NodePointer<depth>::COMPRESSED_TAG) {
+                        return node_ptr.getCompressedNode()->template operator[]<0>(raw_slice_key);
+                    } else {
+                        return node_ptr.getNode()->template operator[]<0>(raw_slice_key);
+                    }
                 }
+
             }
         }
 
@@ -258,9 +263,9 @@ namespace hypertrie::internal::compressed {
                     NodePointer<1> node_ptr = NodePointer<1>{hypertrie};
                     if (slice_key[0]) {
                         if (node_ptr.getTag() == NodePointer<1>::COMPRESSED_TAG) {
-                            return node_ptr.getCompressedNode()->operator[](slice_key[0]);
+                            return node_ptr.getCompressedNode()->operator[](*(slice_key[0]));
                         } else {
-                            return node_ptr.getNode()->operator[](slice_key[0]);
+                            return node_ptr.getNode()->operator[](*(slice_key[0]));
                         }
                     } else {
                         if (this->size()) return {*this};

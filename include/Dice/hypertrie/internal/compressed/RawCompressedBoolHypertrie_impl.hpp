@@ -400,7 +400,7 @@ namespace hypertrie::internal::compressed {
         RawCompressedBoolHypertrie(children_type const &children) : edges(children) {}
 
         [[nodiscard]]
-        inline bool operator[](const Key &key) {
+        inline bool operator[](const Key &key) const {
             return edges[0] == key[0] and edges[1] == key[1];
         }
 
@@ -483,7 +483,7 @@ namespace hypertrie::internal::compressed {
                 return resolve<slice_count>(std::move(positions), std::move(key_parts), posCalc);
             } else {
                 Key full_key;
-                for (auto[slice, full] : zip(key, full_key))
+                for (auto[slice, full] : iter::zip(key, full_key))
                     full = *slice;
                 return this->operator[](full_key);
             }
@@ -603,7 +603,7 @@ namespace hypertrie::internal::compressed {
         RawCompressedBoolHypertrie(RawCompressedBoolHypertrie &&) noexcept = default;
 
         [[nodiscard]]
-        inline bool operator[](const Key &key) {
+        inline bool operator[](const Key &key) const {
             auto pos = minCardPos();
             auto compressed_child_type_it = edges[pos].find(key[pos]);
             if (compressed_child_type_it != edges[pos].end()) {
@@ -638,7 +638,7 @@ namespace hypertrie::internal::compressed {
                 return resolve<slice_count>(std::move(positions), std::move(key_parts), posCalc);
             } else {
                 Key full_key;
-                for (auto[slice, full] : zip(key, full_key))
+                for (auto[slice, full] : iter::zip(key, full_key))
                     full = *slice;
                 return this->operator[](full_key);
             }
@@ -842,6 +842,89 @@ namespace hypertrie::internal::compressed {
         }
     };
 
+    // Node type (depth == 3).
+    template<pos_type depth_t, typename key_part_type_t, template<typename, typename> typename map_type_t,
+            template<typename> typename set_type_t>
+    class RawCompressedBoolHypertrie<depth_t, key_part_type_t, map_type_t, set_type_t, true, typename std::enable_if_t<(
+            depth_t > 2)>> {
+    protected:
+        template<pos_type depth_tt, bool compressed_tt>
+        using rawCompressedboolhypertrie_c = RawCompressedBoolHypertrie<depth_tt, key_part_type_t, map_type_t, set_type_t, compressed_tt>;
+    public:
+        using Key = RawKey<depth_t, key_part_type_t>;
+        using SliceKey = typename rawCompressedboolhypertrie_c<depth_t, false>::SliceKey;
+        static constexpr pos_type depth = depth_t;
+    protected:
+        using root = rawCompressedboolhypertrie_c<depth_t, false>;
+
+        template<pos_type depth_k>
+        using Node = rawCompressedboolhypertrie_c<depth_k, false>;
+
+        template<pos_type depth_k>
+        using CompressedNode = rawCompressedboolhypertrie_c<depth_k, true>;
+
+        template<pos_type depth_m>
+        using NodePointer = util::CompressedBoolHyperTrieTaggedPointer<CompressedNode<depth_m> *, Node<depth_m> *, 2>;
+
+        using ChildNode = Node<depth - 1>;
+        using CompressedChildNode = CompressedNode<depth - 1>;
+    public:
+        using child_type = NodePointer<depth_t - 1>;
+
+    public:
+        // Set a new key in the CompressedBoolHypertrie - ignoring the bool value here
+        void set(const Key &key) {
+
+        }
+
+        [[nodiscard]]
+        child_type get(pos_type position, key_part_type_t key_part) const;
+
+        template<pos_type slice_count, typename  = typename std::enable_if_t<((slice_count >= 0) and
+                                                                              (slice_count < depth))>>
+        [[nodiscard]]
+        auto operator[](const SliceKey &key) const -> std::conditional_t<(slice_count > 0), NodePointer<slice_count>, bool> const {
+            if constexpr (slice_count > 0) {
+                return {};
+            } else {
+                return false;
+            }
+        }
+
+        [[nodiscard]]
+        bool diagonal(const key_part_type_t &key_part) const;
+
+        [[nodiscard]]
+        inline bool operator[](const Key &key) const {
+            return false;
+        }
+
+        [[nodiscard]]
+        std::vector<size_t> getCards(const std::vector<pos_type> &positions) const;
+
+        [[nodiscard]]
+        std::vector<pos_type>::iterator
+        minCardPos(std::vector<pos_type> &positions, const util::PosCalc *posCalc) const;
+
+        [[nodiscard]]
+        pos_type minCardPos() const;
+
+        [[nodiscard]]
+        std::vector<pos_type>::iterator minCardPos(std::vector<pos_type> &positions) const;
+
+        [[nodiscard]]
+        pos_type minCompressedCardPos() const;
+
+        template<pos_type diag_depth, typename  = typename std::enable_if_t<((diag_depth > 0) and
+                                                                             (diag_depth <= depth))>>
+        [[nodiscard]]
+        auto
+        diagonal(const std::vector<pos_type> &positions, const key_part_type_t &key_part) const -> std::conditional_t<(
+                depth != diag_depth), NodePointer<depth - diag_depth>, bool>;
+
+        size_t size() const;
+    };
+
     // Node type (depth == 3). Here the solo child of a key is comressed into the same node as a sequence of a static array
     template<pos_type depth_t, typename key_part_type_t, template<typename, typename> typename map_type_t,
             template<typename> typename set_type_t>
@@ -963,7 +1046,7 @@ namespace hypertrie::internal::compressed {
                 return resolve<slice_count>(std::move(positions), std::move(key_parts), posCalc);
             } else {
                 Key full_key;
-                for (auto[slice, full] : zip(key, full_key))
+                for (auto[slice, full] : iter::zip(key, full_key))
                     full = *slice;
                 return this->operator[](full_key);
             }

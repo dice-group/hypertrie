@@ -73,7 +73,7 @@ namespace hypertrie::internal::compressed {
         typedef bool child_type;
         typedef key_part_type_t key_part_type;
         template<pos_type depth_tt>
-        using NodePointer = util::CompressedBoolHyperTrieTaggedPointer<CompressedNode<depth_tt> *, Node<depth_tt> *, 2>;
+        using NodePointer = util::CompressedBoolHyperTrieTaggedPointer<CompressedNode<depth_tt> *, Node<depth_tt> *, 8>;
     private:
         key_part_type key_part;
     public:
@@ -383,7 +383,7 @@ namespace hypertrie::internal::compressed {
         using size_t = std::size_t;
     public:
         template<pos_type depth_tt>
-        using NodePointer = util::CompressedBoolHyperTrieTaggedPointer<CompressedNode<depth_tt> *, Node<depth_tt> *, 2>;
+        using NodePointer = util::CompressedBoolHyperTrieTaggedPointer<CompressedNode<depth_tt> *, Node<depth_tt> *, 8>;
 
         using PosCalc = util::PosCalc;
 
@@ -578,7 +578,7 @@ namespace hypertrie::internal::compressed {
         using CompressedChildNode = CompressedNode<depth - 1>;
 
         template<pos_type depth_tt>
-        using NodePointer = util::CompressedBoolHyperTrieTaggedPointer<CompressedNode<depth_tt> *, Node<depth_tt> *, 2>;
+        using NodePointer = util::CompressedBoolHyperTrieTaggedPointer<CompressedNode<depth_tt> *, Node<depth_tt> *, 8>;
 
         using child_type = NodePointer<1>;
     protected:
@@ -864,7 +864,7 @@ namespace hypertrie::internal::compressed {
         using CompressedNode = rawCompressedboolhypertrie_c<depth_k, true>;
 
         template<pos_type depth_m>
-        using NodePointer = util::CompressedBoolHyperTrieTaggedPointer<CompressedNode<depth_m> *, Node<depth_m> *, 2>;
+        using NodePointer = util::CompressedBoolHyperTrieTaggedPointer<CompressedNode<depth_m> *, Node<depth_m> *, 8>;
 
         using ChildNode = Node<depth - 1>;
         using CompressedChildNode = CompressedNode<depth - 1>;
@@ -955,7 +955,7 @@ namespace hypertrie::internal::compressed {
 
     public:
         template<pos_type depth_m>
-        using NodePointer = util::CompressedBoolHyperTrieTaggedPointer<CompressedNode<depth_m> *, Node<depth_m> *, 2>;
+        using NodePointer = util::CompressedBoolHyperTrieTaggedPointer<CompressedNode<depth_m> *, Node<depth_m> *, 8>;
 
     protected:
         using ChildNode = Node<depth - 1>;

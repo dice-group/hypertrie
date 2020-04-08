@@ -114,10 +114,14 @@ namespace hypertrie::internal::util {
 
     public:
         inline CompressedBoolHyperTrieTaggedPointer(CompressedNodeTypePtr compressedNode) {
+            // Safer to clear the tag as we set a fresh tag in the setter method
+            clearTag();
             setCompressedNode(compressedNode);
         }
 
         inline CompressedBoolHyperTrieTaggedPointer(NodeTypePtr node) {
+            // Safer to clear the tag as we set a fresh tag in the setter method
+            clearTag();
             setNode(node);
         }
 
@@ -126,6 +130,7 @@ namespace hypertrie::internal::util {
          * @param ptr it is already a tagged pointer
          */
         inline CompressedBoolHyperTrieTaggedPointer(void *ptr) {
+            // DON'T CLEAR THE TAG HERE AT ALL, as we lose the compression status information
             asPointer = ptr;
         }
 
@@ -145,8 +150,15 @@ namespace hypertrie::internal::util {
         }
 
         inline void setNode(NodeTypePtr node) {
+            // make sure that the tag isn't too large
+            assert((COMPRESSED_TAG & pointerMask) == 0);
+
             asPointer = node;
             asBits |= NON_COMPRESSED_TAG;
+        }
+
+        inline void clearTag() {
+            asBits &= pointerMask;
         }
 
     public:
@@ -154,7 +166,7 @@ namespace hypertrie::internal::util {
             return (asBits & tagMask);
         }
 
-        void *getPointer() const{
+        void *getPointer() const {
             return asPointer;
         }
 

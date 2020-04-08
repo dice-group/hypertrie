@@ -35,7 +35,7 @@ namespace hypertrie::internal::compressed {
         using CompressedNode = RawCompressedBoolHypertrie<depth_t, true>;
 
         template<pos_type depth_t>
-        using NodePointer = util::CompressedBoolHyperTrieTaggedPointer<CompressedNode<depth_t> *, Node<depth_t> *, 2>;
+        using NodePointer = util::CompressedBoolHyperTrieTaggedPointer<CompressedNode<depth_t> *, Node<depth_t> *, 8>;
 
     public:
         typedef std::vector<std::optional<key_part_type>> SliceKey;

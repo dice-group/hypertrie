@@ -335,9 +335,9 @@ namespace hypertrie::internal::compressed {
             }
         }
 
-        static value_type currentValue(void const *diag_ptr) {
+        static void* currentValue(void const *diag_ptr) {
             auto &diag = *static_cast<RawCompressedBHTHashDiagonal const *>(diag_ptr);
-            return diag.value;
+            return diag.value.getPointer();
         }
 
         static bool contains(void *diag_ptr, key_part_type key_part) {
@@ -454,9 +454,9 @@ namespace hypertrie::internal::compressed {
             return diag.iter->first;
         }
 
-        static value_type currentValue(void const *diag_ptr) {
+        static void* currentValue(void const *diag_ptr) {
             auto &diag = *static_cast<RawCompressedBHTHashDiagonal const *>(diag_ptr);
-            return diag.value;
+            return diag.value.getPointer();
         }
 
         static bool contains(void *diag_ptr, key_part_type key_part) {

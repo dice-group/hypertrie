@@ -11,12 +11,12 @@
 #include "utils/GenerateTriples.hpp"
 
 
-namespace hypertrie::tests::compressedboolhypertrie{
+namespace hypertrie::tests::compressedboolhypertrie {
     namespace {
         using namespace fmt::literals;
         using namespace hypertrie;
-        using BH = hypertrie::boolhypertrie<unsigned long, internal::container::boost_flat_map, internal::container::tsl_sparse_set>::CompressedBoolHypertrie ;
-        using const_BH = hypertrie::boolhypertrie<unsigned long, internal::container::boost_flat_map, internal::container::tsl_sparse_set>::const_CompressedBoolHypertrie ;
+        using BH = hypertrie::boolhypertrie<unsigned long, internal::container::boost_flat_map, internal::container::tsl_sparse_set>::CompressedBoolHypertrie;
+        using const_BH = hypertrie::boolhypertrie<unsigned long, internal::container::boost_flat_map, internal::container::tsl_sparse_set>::const_CompressedBoolHypertrie;
         using Key = BH::Key;
         using SliceKey = BH::SliceKey;
     }
@@ -38,6 +38,39 @@ namespace hypertrie::tests::compressedboolhypertrie{
     TEST_CASE("test_single write/read", "[CompressedBoolHypertrie]") {
         utils::resetDefaultRandomNumberGenerator();
         test_single_write<3>();
+    }
+
+    void print_key(const Key &key) {
+        std::cout << "[" << key[0] << ", " << key[1] << ", " << key[2] << "]\n";
+    }
+
+    TEST_CASE("test set/get", "[CompressedBoolHypertrie]") {
+        int min = 0;
+        int max = 100000;
+        BH x(3);
+        using keys_vector = std::vector<Key>;
+        keys_vector generated_keys{};
+        using key_part_type_t = unsigned long;
+        key_part_type_t last_key_part = 8;
+        for (size_t i = 0; i < 100000; i++) {
+            key_part_type_t randNumForKeyPart1 = rand() % (max - min + 1) + min;
+            last_key_part = randNumForKeyPart1;
+            key_part_type_t randNumForKeyPart2 = rand() % (max - min + 1) + min;
+            key_part_type_t randNumForKeyPart3 = rand() % (max - min + 1) + min;
+            Key key{randNumForKeyPart1 * 8, randNumForKeyPart2 * 8, randNumForKeyPart3 * 8};
+            std::cout << "Inserting Key: ";
+            print_key(key);
+            generated_keys.push_back(key);
+            x.set(key, true);
+        }
+
+        Key key11{last_key_part, last_key_part, last_key_part};
+        x.set(key11, true);
+        REQUIRE(x[key11] == true);
+
+        for (keys_vector::iterator iter = generated_keys.begin(); iter != generated_keys.end(); iter++) {
+            REQUIRE(x[*iter] == true);
+        }
     }
 
     template<int depth, int range_ = 15, int count = depth * range_ * 2>
@@ -92,7 +125,7 @@ namespace hypertrie::tests::compressedboolhypertrie{
                         expected_entries.insert(slice_entry);
                     }
 
-                    std::variant<std::optional<const_BH >, bool> variant = t[key];
+                    std::variant<std::optional<const_BH>, bool> variant = t[key];
                     if (positions.size() == depth) {
                         bool x = std::get<bool>(variant);
                         REQUIRE(x == bool(expected_entries.size()));

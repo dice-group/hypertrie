@@ -25,7 +25,7 @@ namespace hypertrie::tests::raw_compressedboolhypertrie {
         using CompressedNode = RCompressedBH<depth, true>;
 
         template<pos_type depth>
-        using NodePointer = util::CompressedBoolHyperTrieTaggedPointer<CompressedNode<depth> *, Node<depth> *, 2>;
+        using NodePointer = util::CompressedBoolHyperTrieTaggedPointer<CompressedNode<depth> *, Node<depth> *, 8>;
     }
 
     TEST_CASE("pointer tagging basic") {

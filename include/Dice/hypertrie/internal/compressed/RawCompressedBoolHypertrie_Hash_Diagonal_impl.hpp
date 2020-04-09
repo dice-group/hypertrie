@@ -10,6 +10,121 @@
 
 
 namespace hypertrie::internal::compressed {
+
+    template<pos_type diag_depth, pos_type depth, typename key_part_type, template<typename, typename> typename map_type,
+            template<typename> typename set_type>
+    class RawCompressedBHTHashDiagonal<diag_depth, depth, true, key_part_type, map_type, set_type, std::enable_if_t<(
+            depth == diag_depth and depth <= 2 and depth >= 1)>> {
+        template<pos_type depth_>
+        using BHTCompressedNode = RawCompressedBoolHypertrie<depth_, key_part_type, map_type, set_type, true>;
+
+    private:
+        BHTCompressedNode<depth> const &rawCompressedboolhypertrie;
+        bool isEmpty;
+
+    public:
+        explicit RawCompressedBHTHashDiagonal(const BHTCompressedNode<depth> &boolhypertrie) :
+                rawCompressedboolhypertrie{boolhypertrie} {}
+
+        static void init(void *diag_ptr) {
+            auto &diag = *static_cast<RawCompressedBHTHashDiagonal *>(diag_ptr);
+            diag.isEmpty = !diag.rawCompressedboolhypertrie.diagonal(diag.rawCompressedboolhypertrie.currentKeyPart(0));
+        }
+
+        static key_part_type currentKeyPart(void const *diag_ptr) {
+            auto &diag = *static_cast<RawCompressedBHTHashDiagonal const *>(diag_ptr);
+            return diag.rawCompressedboolhypertrie.currentKeyPart(0);
+        }
+
+        static bool contains(void *diag_ptr, key_part_type key_part) {
+            auto &diag = *static_cast<RawCompressedBHTHashDiagonal *>(diag_ptr);
+            return diag.rawCompressedboolhypertrie.diagonal(key_part);
+        }
+
+        static void inc(void *diag_ptr) {
+            auto &diag = *static_cast<RawCompressedBHTHashDiagonal *>(diag_ptr);
+            diag.isEmpty = true;
+        }
+
+        static bool empty(void const *diag_ptr) {
+            auto &diag = *static_cast<RawCompressedBHTHashDiagonal const *>(diag_ptr);
+            return diag.isEmpty;
+        }
+
+        static size_t size(void const *diag_ptr) {
+            return 1;
+        }
+
+    };
+
+    template<pos_type diag_depth, pos_type depth, typename key_part_type, template<typename, typename> typename map_type,
+            template<typename> typename set_type>
+    class RawCompressedBHTHashDiagonal<diag_depth, depth, true, key_part_type, map_type, set_type, std::enable_if_t<(
+            depth == diag_depth and depth == 2 and diag_depth == 1)>> {
+        template<pos_type depth_>
+        using BHTCompressedNode = RawCompressedBoolHypertrie<depth_, key_part_type, map_type, set_type, true>;
+        using child_type = typename BHTCompressedNode<depth>::child_type;
+
+    public:
+        using value_type = child_type;
+
+    private:
+        mutable BHTCompressedNode<depth> const *rawCompressedBoolhypertrie;
+        std::vector<pos_type> diag_poss;
+        value_type value;
+        bool isEmpty;
+
+    public:
+        RawCompressedBHTHashDiagonal(BHTCompressedNode<depth> const *const boolhypertrie,
+                                     std::vector<pos_type> positions)
+                : rawCompressedBoolhypertrie{boolhypertrie}, diag_poss{std::move(positions)} {}
+
+        RawCompressedBHTHashDiagonal(BHTCompressedNode<depth> const &boolhypertrie,
+                                     const std::vector<pos_type> &positions)
+                : rawCompressedBoolhypertrie(&boolhypertrie, positions) {}
+
+        RawCompressedBHTHashDiagonal(BHTCompressedNode<depth> *const &boolhypertrie,
+                                     const std::vector<pos_type> &positions)
+                : RawCompressedBHTHashDiagonal(boolhypertrie, positions) {}
+
+        static void init(void *diag_ptr) {
+            auto const &diag = *static_cast<RawCompressedBHTHashDiagonal *>(diag_ptr);
+            pos_type pos = *diag.diag_poss.begin();
+            diag.value = diag.rawCompressedBoolhypertrie->get(pos, diag.rawCompressedBoolhypertrie->currentKeyPart(pos));
+            diag.isEmpty = false;
+        }
+
+        static key_part_type currentKeyPart(void const *diag_ptr) {
+            auto &diag = *static_cast<RawCompressedBHTHashDiagonal const *>(diag_ptr);
+            return diag.rawCompressedBoolhypertrie->currentKeyPart(*diag.diag_poss.begin());
+        }
+
+        static void *currentValue(void const *diag_ptr) {
+            auto &diag = *static_cast<RawCompressedBHTHashDiagonal const *>(diag_ptr);
+            return diag.value.getPointer();
+        }
+
+        static bool contains(void *diag_ptr, key_part_type key_part) {
+            auto &diag = *static_cast<RawCompressedBHTHashDiagonal *>(diag_ptr);
+            diag.value = diag.rawCompressedBoolhypertrie->template diagonal<diag_depth>(diag.diag_poss, key_part);
+            return not diag.value.isEmpty();
+        }
+
+        static void inc(void *diag_ptr) {
+            auto &diag = *static_cast<RawCompressedBHTHashDiagonal *>(diag_ptr);
+            diag.isEmpty = true;
+        }
+
+        static bool empty(void const *diag_ptr) {
+            auto &diag = *static_cast<RawCompressedBHTHashDiagonal const *>(diag_ptr);
+            return diag.isEmpty;
+        }
+
+        static size_t size(void const *diag_ptr) {
+            return 1;
+        }
+    };
+
     template<pos_type diag_depth, pos_type depth, typename key_part_type, template<typename, typename> typename map_type,
             template<typename> typename set_type>
     class RawCompressedBHTHashDiagonal<diag_depth, depth, false, key_part_type, map_type, set_type, std::enable_if_t<(
@@ -335,7 +450,7 @@ namespace hypertrie::internal::compressed {
             }
         }
 
-        static void* currentValue(void const *diag_ptr) {
+        static void *currentValue(void const *diag_ptr) {
             auto &diag = *static_cast<RawCompressedBHTHashDiagonal const *>(diag_ptr);
             return diag.value.getPointer();
         }
@@ -454,7 +569,7 @@ namespace hypertrie::internal::compressed {
             return diag.iter->first;
         }
 
-        static void* currentValue(void const *diag_ptr) {
+        static void *currentValue(void const *diag_ptr) {
             auto &diag = *static_cast<RawCompressedBHTHashDiagonal const *>(diag_ptr);
             return diag.value.getPointer();
         }

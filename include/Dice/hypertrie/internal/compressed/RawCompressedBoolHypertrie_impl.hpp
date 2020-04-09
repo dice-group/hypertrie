@@ -137,6 +137,9 @@ namespace hypertrie::internal::compressed {
             return false;
         }
 
+        key_part_type currentKeyPart(const pos_type &pos) const {
+            return key_part;
+        }
 
         static auto &const_emtpy_instance() {
             static thread_local NodePointer<depth> inst{};
@@ -407,6 +410,10 @@ namespace hypertrie::internal::compressed {
         [[nodiscard]]
         bool diagonal(const key_part_type_t &key_part) const {
             return edges[0] == key_part and edges[1] == key_part;
+        }
+
+        key_part_type currentKeyPart(const pos_type &pos) const {
+            return edges[pos];
         }
 
         template<pos_type diag_depth, typename  = typename std::enable_if_t<((diag_depth > 0) and
@@ -883,7 +890,8 @@ namespace hypertrie::internal::compressed {
         template<pos_type slice_count, typename  = typename std::enable_if_t<((slice_count >= 0) and
                                                                               (slice_count < depth))>>
         [[nodiscard]]
-        auto operator[](const SliceKey &key) const -> std::conditional_t<(slice_count > 0), NodePointer<slice_count>, bool> const {
+        auto operator[](const SliceKey &key) const -> std::conditional_t<(slice_count >
+                                                                          0), NodePointer<slice_count>, bool> const {
             if constexpr (slice_count > 0) {
                 return {};
             } else {

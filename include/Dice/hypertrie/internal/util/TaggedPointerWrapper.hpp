@@ -64,7 +64,7 @@ namespace hypertrie::internal::util {
         }
 
         inline void setInt(key_part_type_t number) {
-            asBits = number;
+            asBits = reinterpret_cast<uintptr_t>(number);
             asBits |= INT_TAG;
         }
 

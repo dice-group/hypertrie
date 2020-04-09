@@ -32,7 +32,7 @@ namespace hypertrie::internal::compressed {
         return n <= 1 ? 1 : (n * factorial(n - 1));
     }
 
-    template<pos_type diag_depth, pos_type depth, typename key_part_type, template<typename, typename> typename map_type,
+    template<pos_type diag_depth, pos_type depth, bool compressed, typename key_part_type, template<typename, typename> typename map_type,
             template<typename> typename set_type, typename = typename std::enable_if_t<(diag_depth <= depth)>>
     class RawCompressedBHTHashDiagonal;
 
@@ -269,7 +269,7 @@ namespace hypertrie::internal::compressed {
             return edges.empty();
         }
 
-        template<pos_type, pos_type, typename, template<typename, typename> typename,
+        template<pos_type, pos_type, bool, typename, template<typename, typename> typename,
                 template<typename> typename, typename>
         friend
         class RawCompressedBHTHashDiagonal;
@@ -356,7 +356,7 @@ namespace hypertrie::internal::compressed {
         friend
         class RawCompressedBoolHypertrie;
 
-        template<pos_type, pos_type, typename, template<typename, typename> typename,
+        template<pos_type, pos_type, bool, typename, template<typename, typename> typename,
                 template<typename> typename, typename>
         friend
         class RawCompressedBHTHashDiagonal;
@@ -533,7 +533,7 @@ namespace hypertrie::internal::compressed {
     class RawCompressedBoolHypertrie<2, key_part_type_t, map_type_t, set_type_t, false> {
 
 
-        template<pos_type, pos_type, typename, template<typename, typename> typename,
+        template<pos_type, pos_type, bool, typename, template<typename, typename> typename,
                 template<typename> typename, typename>
         friend
         class RawCompressedBHTHashDiagonal;
@@ -931,7 +931,7 @@ namespace hypertrie::internal::compressed {
     class RawCompressedBoolHypertrie<depth_t, key_part_type_t, map_type_t, set_type_t, false, typename std::enable_if_t<(
             depth_t > 2)>> {
 
-        template<pos_type, pos_type, typename, template<typename, typename> typename,
+        template<pos_type, pos_type, bool, typename, template<typename, typename> typename,
                 template<typename> typename, typename>
         friend
         class RawCompressedBHTHashDiagonal;

@@ -15,8 +15,8 @@ namespace hypertrie::internal::compressed::interface {
         template<pos_type depth, bool compressed>
         using RawCompressedBoolHypertrie = hypertrie::internal::compressed::RawCompressedBoolHypertrie<depth, key_part_type, map_type, set_type, compressed>;
 
-        template<pos_type depth, pos_type diag_depth>
-        using RawCompressedBHTHashDiagonal = hypertrie::internal::compressed::RawCompressedBHTHashDiagonal<depth, diag_depth, key_part_type, map_type, set_type>;
+        template<pos_type depth, pos_type diag_depth, bool compressed>
+        using RawCompressedBHTHashDiagonal = hypertrie::internal::compressed::RawCompressedBHTHashDiagonal<depth, diag_depth, compressed, key_part_type, map_type, set_type>;
 
     };
 

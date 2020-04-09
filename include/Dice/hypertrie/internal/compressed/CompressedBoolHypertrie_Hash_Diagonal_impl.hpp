@@ -12,7 +12,7 @@ namespace hypertrie::internal::compressed {
     template<typename key_part_type, template<typename, typename> class map_type,
             template<typename> class set_type>
     class CompressedHashDiagonal {
-        using const_CompressedBoolHypertrie = const_CompressedBoolHypertrie<key_part_type, map_type, set_type>;
+        using const_CompressedBoolHypertrie = hypertrie::internal::compressed::const_CompressedBoolHypertrie<key_part_type, map_type, set_type>;
 
         template<pos_type depth>
         using NodePointer = typename const_CompressedBoolHypertrie::template NodePointer<depth>;
@@ -21,8 +21,8 @@ namespace hypertrie::internal::compressed {
         using RawCompressedBoolHypertrie = typename const_CompressedBoolHypertrie::template RawCompressedBoolHypertrie<depth, compressed>;
         using Key = typename const_CompressedBoolHypertrie::Key;
         using SliceKey = typename const_CompressedBoolHypertrie::SliceKey;
-        template<pos_type depth, pos_type diag_depth>
-        using RawCompressedHashDiagonal = typename hypertrie::internal::compressed::interface::rawcompressedboolhypertrie<key_part_type, map_type, set_type>::template RawCompressedBHTHashDiagonal<depth, diag_depth>;
+        template<pos_type depth, pos_type diag_depth, bool compressed>
+        using RawCompressedHashDiagonal = typename hypertrie::internal::compressed::interface::rawcompressedboolhypertrie<key_part_type, map_type, set_type>::template RawCompressedBHTHashDiagonal<depth, diag_depth, compressed>;
 
 
         struct RawDiagFunctions {
@@ -41,54 +41,51 @@ namespace hypertrie::internal::compressed {
             size_t (*size)(void const *);
         };
 
-        template<pos_type diag_depth_, pos_type depth>
+        template<pos_type diag_depth_, pos_type depth, bool compressed>
         static auto call_currentValue([[maybe_unused]]void const *diag_ptr) -> void * {
             if constexpr (depth > diag_depth_) {
-                return RawCompressedHashDiagonal<diag_depth_, depth>::currentValue(diag_ptr);
+                return RawCompressedHashDiagonal<diag_depth_, depth, compressed>::currentValue(diag_ptr);
             } else {
                 throw std::invalid_argument{"currentValue is only implemented for depth > diag_depth"};
             }
         }
 
-        template<pos_type depth, pos_type diag_depth_>
+        template<pos_type depth, pos_type diag_depth_, bool compressed>
         inline static RawDiagFunctions getRawDiagFunctions() {
             return RawDiagFunctions{
-                    &RawCompressedHashDiagonal<diag_depth_, depth>::init,
-                    &RawCompressedHashDiagonal<diag_depth_, depth>::currentKeyPart,
-                    &call_currentValue<diag_depth_, depth>,
-                    &RawCompressedHashDiagonal<diag_depth_, depth>::contains,
-                    &RawCompressedHashDiagonal<diag_depth_, depth>::inc,
-                    &RawCompressedHashDiagonal<diag_depth_, depth>::empty,
-                    &RawCompressedHashDiagonal<diag_depth_, depth>::size
+                    &RawCompressedHashDiagonal<diag_depth_, depth, compressed>::init,
+                    &RawCompressedHashDiagonal<diag_depth_, depth, compressed>::currentKeyPart,
+                    &call_currentValue<diag_depth_, depth, compressed>,
+                    &RawCompressedHashDiagonal<diag_depth_, depth, compressed>::contains,
+                    &RawCompressedHashDiagonal<diag_depth_, depth, compressed>::inc,
+                    &RawCompressedHashDiagonal<diag_depth_, depth, compressed>::empty,
+                    &RawCompressedHashDiagonal<diag_depth_, depth, compressed>::size
             };
         }
 
         inline static std::vector<std::vector<RawDiagFunctions>> functions{
                 {
-                        getRawDiagFunctions<1, 1>()
+                        getRawDiagFunctions<1, 1, false>()
                 },
                 {
-                        getRawDiagFunctions<2, 1>(),
-                        getRawDiagFunctions<2, 2>()
+                        getRawDiagFunctions<2, 1, false>(),
+                        getRawDiagFunctions<2, 2, false>()
                 },
                 {
-                        getRawDiagFunctions<3, 1>(),
-                        getRawDiagFunctions<3, 2>(),
-                        getRawDiagFunctions<3, 3>()
+                        getRawDiagFunctions<3, 1, false>(),
+                        getRawDiagFunctions<3, 2, false>(),
+                        getRawDiagFunctions<3, 3, false>()
                 },
-                /*{
-                        getRawDiagFunctions<4, 1>(),
-                        getRawDiagFunctions<4, 2>(),
-                        getRawDiagFunctions<4, 3>(),
-                        getRawDiagFunctions<4, 4>(),
+        };
+
+        inline static std::vector<std::vector<RawDiagFunctions>> compressed_functions{
+                {
+                        getRawDiagFunctions<1, 1, true>()
                 },
                 {
-                        getRawDiagFunctions<5, 1>(),
-                        getRawDiagFunctions<5, 2>(),
-                        getRawDiagFunctions<5, 3>(),
-                        getRawDiagFunctions<5, 4>(),
-                        getRawDiagFunctions<5, 5>(),
-                }*/
+                        getRawDiagFunctions<2, 1, true>(),
+                        getRawDiagFunctions<2, 2, true>()
+                },
         };
 
     public:
@@ -98,89 +95,73 @@ namespace hypertrie::internal::compressed {
         std::shared_ptr<void> raw_diag;
         RawDiagFunctions *raw_diag_funcs;
 
-        template<pos_type diag_depth_, pos_type depth>
+        template<pos_type diag_depth_, pos_type depth, bool compressed>
         static inline std::shared_ptr<void>
         getRawDiagonal(const const_CompressedBoolHypertrie &CBHT, [[maybe_unused]]const poss_type &positions) {
             if constexpr (depth == diag_depth_) {
-                // @TODO make raw diagonal compressed node aware
-                //const auto &raw_boolhypertrie = *(static_cast<RawBoolHypertrie<depth> const *>(CBHT.hypertrie.get()));
-                return std::make_shared<RawCompressedHashDiagonal<diag_depth_, depth>>(CBHT.hypertrie);
+                if constexpr (compressed) {
+                    return std::make_shared<RawCompressedHashDiagonal<diag_depth_, depth, true>>(CBHT.hypertrie);
+                } else {
+                    return std::make_shared<RawCompressedHashDiagonal<diag_depth_, depth, false>>(CBHT.hypertrie);
+                }
             } else {
-                //const auto &raw_boolhypertrie = *(static_cast<RawBoolHypertrie<depth> const *>(CBHT.hypertrie.get()));
-                return std::make_shared<RawCompressedHashDiagonal<diag_depth_, depth>>(CBHT.hypertrie);
+                if constexpr(compressed) {
+                    return std::make_shared<RawCompressedHashDiagonal<diag_depth_, depth, true>>(CBHT.hypertrie,
+                                                                                                 positions);
+                } else {
+                    return std::make_shared<RawCompressedHashDiagonal<diag_depth_, depth, false>>(CBHT.hypertrie,
+                                                                                                  positions);
+                }
             }
         }
 
         static inline std::shared_ptr<void>
-        getRawDiagonal(const CompressedHashDiagonal &boolhypertrie, const poss_type &positions) {
+        getRawDiagonal(const const_CompressedBoolHypertrie &boolhypertrie, const poss_type &positions,
+                       bool const compressed) {
             switch (boolhypertrie.depth()) {
                 case 1: {
-                    return getRawDiagonal<1, 1>(boolhypertrie, positions);
+                    if (compressed) {
+                        return getRawDiagonal<1, 1, true>(boolhypertrie, positions);
+                    } else {
+                        return getRawDiagonal<1, 1, false>(boolhypertrie, positions);
+                    }
                 }
                 case 2: {
-                    switch (positions.size()) {
-                        case 1: {
-                            return getRawDiagonal<1, 2>(boolhypertrie, positions);
+                    if (compressed) {
+                        switch (positions.size()) {
+                            case 1: {
+                                return getRawDiagonal<1, 2, true>(boolhypertrie, positions);
+                            }
+                            case 2: {
+                                return getRawDiagonal<2, 2, true>(boolhypertrie, positions);
+                            }
+                            default:
+                                break;
                         }
-                        case 2: {
-                            return getRawDiagonal<2, 2>(boolhypertrie, positions);
+                    } else {
+                        switch (positions.size()) {
+                            case 1: {
+                                return getRawDiagonal<1, 2, false>(boolhypertrie, positions);
+                            }
+                            case 2: {
+                                return getRawDiagonal<2, 2, false>(boolhypertrie, positions);
+                            }
+                            default:
+                                break;
                         }
-                        default:
-                            break;
                     }
                     break;
                 }
                 case 3: {
                     switch (positions.size()) {
                         case 1: {
-                            return getRawDiagonal<1, 3>(boolhypertrie, positions);
+                            return getRawDiagonal<1, 3, false>(boolhypertrie, positions);
                         }
                         case 2: {
-                            return getRawDiagonal<2, 3>(boolhypertrie, positions);
+                            return getRawDiagonal<2, 3, false>(boolhypertrie, positions);
                         }
                         case 3: {
-                            return getRawDiagonal<3, 3>(boolhypertrie, positions);
-                        }
-                        default:
-                            break;
-                    }
-                    break;
-                }
-                case 4: {
-                    switch (positions.size()) {
-                        case 1: {
-                            return getRawDiagonal<1, 4>(boolhypertrie, positions);
-                        }
-                        case 2: {
-                            return getRawDiagonal<2, 4>(boolhypertrie, positions);
-                        }
-                        case 3: {
-                            return getRawDiagonal<3, 4>(boolhypertrie, positions);
-                        }
-                        case 4: {
-                            return getRawDiagonal<4, 4>(boolhypertrie, positions);
-                        }
-                        default:
-                            break;
-                    }
-                    break;
-                }
-                case 5: {
-                    switch (positions.size()) {
-                        case 1: {
-                            return getRawDiagonal<1, 5>(boolhypertrie, positions);
-                        }
-                        case 2: {
-                            return getRawDiagonal<2, 5>(boolhypertrie, positions);
-                        }
-                        case 3: {
-                            return getRawDiagonal<3, 5>(boolhypertrie, positions);
-                        }
-                        case 4: {
-                            return getRawDiagonal<4, 5>(boolhypertrie, positions);
-                        }
-                        case 5: {
-                            return getRawDiagonal<5, 5>(boolhypertrie, positions);
+                            return getRawDiagonal<3, 3, false>(boolhypertrie, positions);
                         }
                         default:
                             break;
@@ -190,8 +171,9 @@ namespace hypertrie::internal::compressed {
                 default:
                     break;
             }
-            throw std::logic_error{"not implemented."};
+
         }
+
     public:
 
         CompressedHashDiagonal() = default;
@@ -207,9 +189,37 @@ namespace hypertrie::internal::compressed {
         CompressedHashDiagonal &operator=(const CompressedHashDiagonal &) = default;
 
 
-        CompressedHashDiagonal(const_CompressedBoolHypertrie const *const boolhypertrie, const poss_type &positions) :
-        raw_diag(getRawDiagonal(*boolhypertrie, positions)),
-        raw_diag_funcs(&functions[boolhypertrie->depth() - 1][positions.size() - 1]) {}
+        CompressedHashDiagonal(const_CompressedBoolHypertrie const *const boolhypertrie, const poss_type &positions) {
+
+            switch (boolhypertrie->depth()) {
+                case 1: {
+                    NodePointer<1> node_ptr{boolhypertrie->hypertrie};
+                    if (node_ptr.getTag() == NodePointer<1>::COMPRESSED_TAG) {
+                        this->raw_diag_funcs = &compressed_functions[boolhypertrie->depth() - 1][positions.size() - 1];
+                        this->raw_diag = getRawDiagonal(*boolhypertrie, positions, true);
+                    } else {
+                        this->raw_diag_funcs = &functions[boolhypertrie->depth() - 1][positions.size() - 1];
+                        this->raw_diag = getRawDiagonal(*boolhypertrie, positions, false);
+                    }
+                }
+                case 2: {
+                    NodePointer<2> node_ptr{boolhypertrie->hypertrie};
+                    if (node_ptr.getTag() == NodePointer<2>::COMPRESSED_TAG) {
+                        this->raw_diag_funcs = &compressed_functions[boolhypertrie->depth() - 1][positions.size() - 1];
+                        this->raw_diag = getRawDiagonal(*boolhypertrie, positions, true);
+                    } else {
+                        this->raw_diag_funcs = &functions[boolhypertrie->depth() - 1][positions.size() - 1];
+                        this->raw_diag = getRawDiagonal(*boolhypertrie, positions, false);
+                    }
+                }
+                case 3: {
+                    this->raw_diag_funcs = &functions[boolhypertrie->depth() - 1][positions.size() - 1];
+                    this->raw_diag = getRawDiagonal(*boolhypertrie, positions, false);
+                }
+                default:
+                    throw std::logic_error{"not implemented."};
+            }
+        }
 
         CompressedHashDiagonal(const const_CompressedBoolHypertrie &boolhypertrie, const poss_type &positions) :
                 CompressedHashDiagonal(&boolhypertrie, positions) {}

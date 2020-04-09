@@ -25,8 +25,8 @@ namespace hypertrie::internal::compressed {
     protected:
         template<pos_type depth, bool compressed>
         using RawCompressedBoolHypertrie = typename hypertrie::internal::compressed::interface::rawcompressedboolhypertrie<key_part_type, map_type, set_type>::template RawCompressedBoolHypertrie<depth, compressed>;
-        template<pos_type depth, pos_type diag_depth>
-        using RawCompressedBHTHashDiagonal = typename hypertrie::internal::compressed::interface::rawcompressedboolhypertrie<key_part_type, map_type, set_type>::template RawCompressedBHTHashDiagonal<diag_depth, depth>;
+        template<pos_type depth, pos_type diag_depth, bool compressed>
+        using RawCompressedBHTHashDiagonal = typename hypertrie::internal::compressed::interface::rawcompressedboolhypertrie<key_part_type, map_type, set_type>::template RawCompressedBHTHashDiagonal<diag_depth, depth, compressed>;
 
         template<pos_type depth_t>
         using Node = RawCompressedBoolHypertrie<depth_t, false>;
@@ -328,8 +328,8 @@ namespace hypertrie::internal::compressed {
         using base = const_CompressedBoolHypertrie<key_part_type, map_type, set_type>;
         template<pos_type depth, bool compressed>
         using RawCompressedBoolHypertrie = typename base::template RawCompressedBoolHypertrie<depth, compressed>;
-        template<pos_type depth, pos_type diag_depth>
-        using RawCompressedBHTHashDiagonal =  typename base::template RawCompressedBHTHashDiagonal<diag_depth, depth>;
+        template<pos_type depth, pos_type diag_depth, bool compressed>
+        using RawCompressedBHTHashDiagonal =  typename base::template RawCompressedBHTHashDiagonal<diag_depth, depth, compressed>;
 
         template<pos_type depth>
         using Node = typename base::template Node<depth>;

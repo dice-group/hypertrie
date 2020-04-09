@@ -1,9 +1,6 @@
 #ifndef HYPERTRIE_BOOLHYPERTRIE_IMPL_HPP
 #define HYPERTRIE_BOOLHYPERTRIE_IMPL_HPP
 
-
-#include "Dice/hypertrie/internal/util/CONSTANTS.hpp"
-
 #include "Dice/hypertrie/internal/RawBoolHypertrie.hpp"
 #include "Dice/hypertrie/internal/util/CONSTANTS.hpp"
 #include <functional>

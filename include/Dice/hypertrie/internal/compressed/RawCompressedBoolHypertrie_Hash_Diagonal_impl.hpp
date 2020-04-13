@@ -60,7 +60,7 @@ namespace hypertrie::internal::compressed {
     template<pos_type diag_depth, pos_type depth, typename key_part_type, template<typename, typename> typename map_type,
             template<typename> typename set_type>
     class RawCompressedBHTHashDiagonal<diag_depth, depth, true, key_part_type, map_type, set_type, std::enable_if_t<(
-            depth == diag_depth and depth == 2 and diag_depth == 1)>> {
+            depth == 2 and diag_depth == 1)>> {
         template<pos_type depth_>
         using BHTCompressedNode = RawCompressedBoolHypertrie<depth_, key_part_type, map_type, set_type, true>;
         using child_type = typename BHTCompressedNode<depth>::child_type;

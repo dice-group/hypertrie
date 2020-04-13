@@ -23,8 +23,8 @@ namespace hypertrie::internal::compressed {
         bool isEmpty;
 
     public:
-        explicit RawCompressedBHTHashDiagonal(const BHTCompressedNode<depth> &boolhypertrie) :
-                rawCompressedboolhypertrie{boolhypertrie} {}
+        explicit RawCompressedBHTHashDiagonal(const BHTCompressedNode<depth> *boolhypertrie) :
+                rawCompressedboolhypertrie{*boolhypertrie} {}
 
         static void init(void *diag_ptr) {
             auto &diag = *static_cast<RawCompressedBHTHashDiagonal *>(diag_ptr);
@@ -59,8 +59,7 @@ namespace hypertrie::internal::compressed {
 
     template<pos_type diag_depth, pos_type depth, typename key_part_type, template<typename, typename> typename map_type,
             template<typename> typename set_type>
-    class RawCompressedBHTHashDiagonal<diag_depth, depth, true, key_part_type, map_type, set_type, std::enable_if_t<(
-            depth == 2 and diag_depth == 1)>> {
+    class RawCompressedBHTHashDiagonal<diag_depth, depth, true, key_part_type, map_type, set_type, std::enable_if_t<(depth == 2 and diag_depth == 1)>> {
         template<pos_type depth_>
         using BHTCompressedNode = RawCompressedBoolHypertrie<depth_, key_part_type, map_type, set_type, true>;
         using child_type = typename BHTCompressedNode<depth>::child_type;
@@ -90,7 +89,8 @@ namespace hypertrie::internal::compressed {
         static void init(void *diag_ptr) {
             auto const &diag = *static_cast<RawCompressedBHTHashDiagonal *>(diag_ptr);
             pos_type pos = *diag.diag_poss.begin();
-            diag.value = diag.rawCompressedBoolhypertrie->get(pos, diag.rawCompressedBoolhypertrie->currentKeyPart(pos));
+            diag.value = diag.rawCompressedBoolhypertrie->get(pos,
+                                                              diag.rawCompressedBoolhypertrie->currentKeyPart(pos));
             diag.isEmpty = false;
         }
 
@@ -127,8 +127,7 @@ namespace hypertrie::internal::compressed {
 
     template<pos_type diag_depth, pos_type depth, typename key_part_type, template<typename, typename> typename map_type,
             template<typename> typename set_type>
-    class RawCompressedBHTHashDiagonal<diag_depth, depth, false, key_part_type, map_type, set_type, std::enable_if_t<(
-            depth == diag_depth and depth > 2)>> {
+    class RawCompressedBHTHashDiagonal<diag_depth, depth, false, key_part_type, map_type, set_type, std::enable_if_t<(depth == diag_depth and depth > 2)>> {
 
         // It happens when for one operand X we have all key part position resolve to the same label (a). Ex. X[a,a]
         template<pos_type depth_>
@@ -149,8 +148,8 @@ namespace hypertrie::internal::compressed {
         bool inCompressedMode;
 
     public:
-        explicit RawCompressedBHTHashDiagonal(const BHTNode<depth> &compressedboolhypertrie) :
-                rawCompressedboolhypertrie{compressedboolhypertrie} {}
+        explicit RawCompressedBHTHashDiagonal(const BHTNode<depth> *compressedboolhypertrie) :
+                rawCompressedboolhypertrie{*compressedboolhypertrie} {}
 
         static void init(void *diag_ptr) {
             auto &diag = *static_cast<RawCompressedBHTHashDiagonal *>(diag_ptr);
@@ -259,8 +258,7 @@ namespace hypertrie::internal::compressed {
 
     template<pos_type diag_depth, pos_type depth, typename key_part_type, template<typename, typename> typename map_type,
             template<typename> typename set_type>
-    class RawCompressedBHTHashDiagonal<diag_depth, depth, false, key_part_type, map_type, set_type, std::enable_if_t<(
-            depth == diag_depth and depth <= 2 and depth >= 1)>> {
+    class RawCompressedBHTHashDiagonal<diag_depth, depth, false, key_part_type, map_type, set_type, std::enable_if_t<(depth == diag_depth and depth <= 2 and depth >= 1)>> {
         // It happens when for one operand X we have all key part position resolve to the same label (a). Ex. X[a,a]
         template<pos_type depth_>
         using BHTNode = RawCompressedBoolHypertrie<depth_, key_part_type, map_type, set_type, false>;
@@ -273,8 +271,8 @@ namespace hypertrie::internal::compressed {
         typename children_type::const_iterator end;
 
     public:
-        explicit RawCompressedBHTHashDiagonal(const BHTNode<depth> &boolhypertrie) :
-                rawCompressedboolhypertrie{boolhypertrie} {}
+        explicit RawCompressedBHTHashDiagonal(const BHTNode<depth> *boolhypertrie) :
+                rawCompressedboolhypertrie{*boolhypertrie} {}
 
         static void init(void *diag_ptr) {
             auto &diag = *static_cast<RawCompressedBHTHashDiagonal *>(diag_ptr);
@@ -352,8 +350,7 @@ namespace hypertrie::internal::compressed {
     // When depth != diag_depth
     template<pos_type diag_depth, pos_type depth, typename key_part_type, template<typename, typename> typename map_type,
             template<typename> typename set_type>
-    class RawCompressedBHTHashDiagonal<diag_depth, depth, false, key_part_type, map_type, set_type, std::enable_if_t<(
-            depth > diag_depth and depth > 2)>> {
+    class RawCompressedBHTHashDiagonal<diag_depth, depth, false, key_part_type, map_type, set_type, std::enable_if_t<(depth > diag_depth and depth > 2)>> {
         // It happens when for one operand X we have all key part position resolve to the same label (a). Ex. X[a,a]
         template<pos_type depth_>
         using Node = RawCompressedBoolHypertrie<depth_, key_part_type, map_type, set_type, false>;
@@ -385,7 +382,7 @@ namespace hypertrie::internal::compressed {
 
     public:
         RawCompressedBHTHashDiagonal(Node<depth> const *const compressedBoolHypertrie, std::vector<pos_type> positions)
-                : rawCompressedboolhypertrie{&compressedBoolHypertrie}, diag_poss{std::move(positions)} {}
+                : rawCompressedboolhypertrie{*compressedBoolHypertrie}, diag_poss{std::move(positions)} {}
 
         RawCompressedBHTHashDiagonal(Node<depth> const &compressedBoolHypertrie, const std::vector<pos_type> &positions)
                 : rawCompressedboolhypertrie(compressedBoolHypertrie, positions) {}

@@ -98,18 +98,19 @@ namespace hypertrie::internal::compressed {
         template<pos_type diag_depth_, pos_type depth, bool compressed>
         static inline std::shared_ptr<void>
         getRawDiagonal(const const_CompressedBoolHypertrie &CBHT, [[maybe_unused]]const poss_type &positions) {
+            NodePointer<depth> node_ptr{CBHT.hypertrie};
             if constexpr (depth == diag_depth_) {
                 if constexpr (compressed) {
-                    return std::make_shared<RawCompressedHashDiagonal<diag_depth_, depth, true>>(CBHT.hypertrie);
+                    return std::make_shared<RawCompressedHashDiagonal<diag_depth_, depth, true>>(node_ptr.getCompressedNode());
                 } else {
-                    return std::make_shared<RawCompressedHashDiagonal<diag_depth_, depth, false>>(CBHT.hypertrie);
+                    return std::make_shared<RawCompressedHashDiagonal<diag_depth_, depth, false>>(node_ptr.getNode());
                 }
             } else {
                 if constexpr(compressed) {
-                    return std::make_shared<RawCompressedHashDiagonal<diag_depth_, depth, true>>(CBHT.hypertrie,
+                    return std::make_shared<RawCompressedHashDiagonal<diag_depth_, depth, true>>(node_ptr.getCompressedNode(),
                                                                                                  positions);
                 } else {
-                    return std::make_shared<RawCompressedHashDiagonal<diag_depth_, depth, false>>(CBHT.hypertrie,
+                    return std::make_shared<RawCompressedHashDiagonal<diag_depth_, depth, false>>(node_ptr.getNode(),
                                                                                                   positions);
                 }
             }

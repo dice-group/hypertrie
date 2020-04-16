@@ -25,13 +25,7 @@ namespace einsum::internal {
 	namespace {
 		template<typename key_part_type, template<typename, typename> class map_type,
 				template<typename> class set_type>
-		using const_BoolHypertrie = typename ::hypertrie::internal::interface::boolhypertrie<key_part_type, map_type, set_type>::const_BoolHypertrie;
-		template<typename key_part_type, template<typename, typename> class map_type,
-				template<typename> class set_type>
 		using Join = typename ::hypertrie::internal::interface::join<key_part_type, map_type, set_type>::HashJoin;
-		template<typename key_part_type, template<typename, typename> class map_type,
-				template<typename> class set_type>
-		using Diagonal = typename ::hypertrie::internal::interface::boolhypertrie<key_part_type, map_type, set_type>::RawDiagonal;
 	}
 
 	template<typename key_part_type>

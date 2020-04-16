@@ -6,11 +6,14 @@
 namespace einsum::internal {
 
 	template<typename value_type, typename key_part_type, template<typename, typename> class map_type,
-			template<typename> class set_type>
-	class CountOperator : public Operator<value_type, key_part_type, map_type, set_type> {
+			template<typename> class set_type, template<typename, template<typename, typename> class map_type_a,
+            template<typename> class set_type_a> class const_BoolHypertrie >
+	class CountOperator : public Operator<value_type, key_part_type, map_type, set_type,const_BoolHypertrie> {
 #include "Dice/einsum/internal/OperatorMemberTypealiases.hpp"
 
-		using CountOperator_t = CountOperator<value_type, key_part_type, map_type, set_type>;
+		using CountOperator_t = CountOperator<value_type, key_part_type, map_type, set_type, const_BoolHypertrie>;
+		using Operator_t = Operator<value_type, key_part_type, map_type, set_type, const_BoolHypertrie>;
+		using const_BoolHypertrie_t = const_BoolHypertrie<key_part_type, map_type, set_type>;
 		bool _ended;
 	public:
 		CountOperator(const std::shared_ptr<Subscript> &subscript, const std::shared_ptr<Context> &context)

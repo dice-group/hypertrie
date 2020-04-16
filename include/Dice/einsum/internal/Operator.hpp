@@ -14,13 +14,14 @@ namespace einsum::internal {
 
 
 	template<typename value_type, typename key_part_type, template<typename, typename> class map_type,
-			template<typename> class set_type>
+			template<typename> class set_type, template<typename, template<typename, typename> class map_type_a,
+            template<typename> class set_type_a> class const_BoolHypertrie>
 	class Operator {
 	protected:
 		constexpr static const bool bool_value_type = std::is_same_v<value_type, bool>;
 		using const_BoolHypertrie_t = const_BoolHypertrie<key_part_type, map_type, set_type>;
-		typedef Operator<value_type, key_part_type, map_type, set_type> Operator_t;
-		using CardinalityEstimation_t = CardinalityEstimation<key_part_type, map_type, set_type>;
+		typedef Operator<value_type, key_part_type, map_type, set_type, const_BoolHypertrie> Operator_t;
+		using CardinalityEstimation_t = CardinalityEstimation<key_part_type, map_type, set_type, const_BoolHypertrie>;
 		static constexpr key_part_type default_key_part = []() {
 			if constexpr (std::is_pointer_v<key_part_type>) return nullptr;
 			else return std::numeric_limits<key_part_type>::max();

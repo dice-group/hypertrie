@@ -9,7 +9,8 @@ namespace einsum::internal {
 
 
 	template<typename key_part_type, template<typename, typename> class map_type,
-			template<typename> class set_type>
+			template<typename> class set_type,  template<typename, template<typename, typename> class map_type_a,
+            template<typename> class set_type_a> class const_BoolHypertrie>
 	struct CardinalityEstimation {
 		using const_BoolHypertrie_t = const_BoolHypertrie<key_part_type, map_type, set_type>;
 

@@ -16,6 +16,7 @@
 #include "Dice/hypertrie/internal/util/FrontSkipIterator.hpp"
 
 #include "Dice/einsum/internal/Einsum.hpp"
+#include "Dice/einsum/internal/Einsum_interface.hpp"
 
 namespace hypertrie {
     using Subscript =  ::einsum::internal::Subscript;
@@ -25,7 +26,9 @@ namespace hypertrie {
             template<typename> class set_type = hypertrie::internal::container::boost_flat_set>
     struct boolhypertrie {
         using pos_type = hypertrie::internal::pos_type;
-
+        /**
+         * Non-Compressed Data Structures
+         */
         using BoolHypertrie = typename ::hypertrie::internal::interface::boolhypertrie<key_part_type, map_type, set_type>::BoolHypertrie;
 
         using const_BoolHypertrie = typename ::hypertrie::internal::interface::boolhypertrie<key_part_type, map_type, set_type>::const_BoolHypertrie;
@@ -37,7 +40,10 @@ namespace hypertrie {
         using HashJoin = typename ::hypertrie::internal::interface::join<key_part_type, map_type, set_type>::HashJoin;
 
         template<typename value_type>
-        using Einsum = typename ::einsum::internal::Einsum<value_type, key_part_type, map_type, set_type>;
+        using Einsum = typename ::einsum::internal::interface::einsum_interface<key_part_type, map_type, set_type>::template Einsum<value_type>;
+
+        template<typename value_type>
+        using CompressedEinsum = typename ::einsum::internal::interface::einsum_interface<key_part_type, map_type, set_type>::template CompressedEinsum<value_type>;
 
         template<pos_type depth>
         using RawBoolhypertrie = typename ::hypertrie::internal::interface::rawboolhypertrie<key_part_type, map_type, set_type>::template RawBoolHypertrie<depth>;
@@ -50,7 +56,7 @@ namespace hypertrie {
         using TimePoint = ::einsum::internal::TimePoint;
 
         /**
-         * Compressed Version
+         * Compressed Data Structure
          */
         using CompressedBoolHypertrie = typename ::hypertrie::internal::compressed::interface::compressedboolhypertrie<key_part_type, map_type, set_type>::CompressedBoolHypertrie;
 

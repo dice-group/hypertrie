@@ -137,12 +137,12 @@ namespace hypertrie::internal::compressed {
             return false;
         }
 
-        key_part_type currentKeyPart(const pos_type &pos) const {
+        key_part_type currentKeyPart([[maybe_unused]] const pos_type &pos) const {
             return key_part;
         }
-
+        template<pos_type depth_t>
         static auto &const_emtpy_instance() {
-            static thread_local NodePointer<depth> inst{};
+            static thread_local NodePointer<depth_t> inst{};
             return inst;
         }
     };
@@ -173,6 +173,8 @@ namespace hypertrie::internal::compressed {
         typedef RawKey<1, key_part_type_t> Key;
         typedef RawSliceKey<1, key_part_type_t> SliceKey;
         typedef bool child_type;
+        typedef bool compressed_child_type;
+
     protected:
         typedef set_type_t<key_part_type_t> children_type;
 
@@ -185,8 +187,9 @@ namespace hypertrie::internal::compressed {
         template<typename key>
         using set_type = set_type_t<key>;
 
+        template<pos_type depth_t>
         static auto &const_emtpy_instance() {
-            static thread_local std::shared_ptr<boolhypertrie_c<depth>> inst{};
+            static thread_local std::shared_ptr<boolhypertrie_c<depth_t>> inst{};
             return inst;
         }
 
@@ -400,7 +403,7 @@ namespace hypertrie::internal::compressed {
 
         RawCompressedBoolHypertrie() = delete;
 
-        RawCompressedBoolHypertrie(children_type const &children) : edges(children) {}
+        RawCompressedBoolHypertrie(edges_type const &children) : edges(children) {}
 
         [[nodiscard]]
         inline bool operator[](const Key &key) const {
@@ -425,8 +428,9 @@ namespace hypertrie::internal::compressed {
             return this->template diagonal_rek<diag_depth>(positions, done, key_part);
         }
 
+        template<pos_type depth_t>
         static auto &const_emtpy_instance() {
-            static thread_local NodePointer<depth> inst{};
+            static thread_local NodePointer<depth_t> inst{};
             return inst;
         }
 
@@ -462,7 +466,7 @@ namespace hypertrie::internal::compressed {
                 }
             }
 
-            if constexpr (depth != diag_depth) return CompressedNode<depth - diag_depth>::const_emtpy_instance();
+            if constexpr (depth != diag_depth) return CompressedNode<depth - diag_depth>::template const_emtpy_instance<depth - diag_depth>();
             else return false;
         }
 

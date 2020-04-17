@@ -7,11 +7,11 @@ namespace einsum::internal {
 
 	template<typename value_type, typename key_part_type, template<typename, typename> class map_type,
 			template<typename> class set_type, template<typename, template<typename, typename> class map_type_a,
-            template<typename> class set_type_a> class const_BoolHypertrie>
-	class ResolveOperator : public Operator<value_type, key_part_type, map_type, set_type, const_BoolHypertrie> {
+            template<typename> class set_type_a> class const_BoolHypertrie, typename Diagonal>
+	class ResolveOperator : public Operator<value_type, key_part_type, map_type, set_type, const_BoolHypertrie, Diagonal> {
 #include "Dice/einsum/internal/OperatorMemberTypealiases.hpp"
-		using ResolveOperator_t = ResolveOperator<value_type, key_part_type, map_type, set_type, const_BoolHypertrie>;
-        using Operator_t = Operator<value_type, key_part_type, map_type, set_type, const_BoolHypertrie>;
+		using ResolveOperator_t = ResolveOperator<value_type, key_part_type, map_type, set_type, const_BoolHypertrie, Diagonal>;
+        using Operator_t = Operator<value_type, key_part_type, map_type, set_type, const_BoolHypertrie, Diagonal>;
         constexpr static const key_part_type default_key_part = Operator_t::default_key_part;
         constexpr static const bool bool_value_type = Operator_t::bool_value_type;
         using const_BoolHypertrie_t = const_BoolHypertrie<key_part_type, map_type, set_type>;

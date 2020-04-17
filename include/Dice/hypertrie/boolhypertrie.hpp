@@ -37,7 +37,7 @@ namespace hypertrie {
         using HashDiagonal = typename ::hypertrie::internal::interface::boolhypertrie<key_part_type, map_type, set_type>::HashDiagonal;
 
         using OrderedJoin = typename ::hypertrie::internal::interface::join<key_part_type, map_type, set_type>::OrderedJoin;
-        using HashJoin = typename ::hypertrie::internal::interface::join<key_part_type, map_type, set_type>::HashJoin;
+        using HashJoin = typename ::hypertrie::internal::interface::join<key_part_type, map_type, set_type>::template HashJoin<const_BoolHypertrie, HashDiagonal>;
 
         template<typename value_type>
         using Einsum = typename ::einsum::internal::interface::einsum_interface<key_part_type, map_type, set_type>::template Einsum<value_type>;
@@ -48,7 +48,6 @@ namespace hypertrie {
         template<pos_type depth>
         using RawBoolhypertrie = typename ::hypertrie::internal::interface::rawboolhypertrie<key_part_type, map_type, set_type>::template RawBoolHypertrie<depth>;
 
-
         template<typename value_type = size_t>
         using EinsumEntry = ::einsum::internal::Entry<key_part_type, value_type>;
 
@@ -58,12 +57,16 @@ namespace hypertrie {
         /**
          * Compressed Data Structure
          */
+        using CompressedHashDiagonal = typename ::hypertrie::internal::compressed::interface::compressedboolhypertrie<key_part_type, map_type, set_type>::CompressedHashDiagonal;
+
         using CompressedBoolHypertrie = typename ::hypertrie::internal::compressed::interface::compressedboolhypertrie<key_part_type, map_type, set_type>::CompressedBoolHypertrie;
 
         using const_CompressedBoolHypertrie = typename ::hypertrie::internal::compressed::interface::compressedboolhypertrie<key_part_type, map_type, set_type>::const_CompressedBoolHypertrie;
 
         template<pos_type depth, bool compressed>
         using RawCompressedBoolhypertrie = typename ::hypertrie::internal::compressed::interface::rawcompressedboolhypertrie<key_part_type, map_type, set_type>::template RawCompressedBoolHypertrie<depth, compressed>;
+
+        using CompressedHashJoin = typename ::hypertrie::internal::interface::join<key_part_type, map_type, set_type>::template HashJoin<const_CompressedBoolHypertrie, CompressedHashDiagonal>;
 
 
         template<typename value_type = std::size_t>

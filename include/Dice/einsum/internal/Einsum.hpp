@@ -15,26 +15,33 @@
 namespace einsum::internal {
 
     template<typename value_type, typename key_part_type, template<typename, typename> class map_type,
-            template<typename> class set_type, template<typename, template<typename, typename> class map_type_a,
-            template<typename> class set_type_a> class const_BoolHypertrie>
-    std::shared_ptr<Operator<value_type, key_part_type, map_type, set_type, const_BoolHypertrie>>
-    Operator<value_type, key_part_type, map_type, set_type, const_BoolHypertrie>::construct(const std::shared_ptr<Subscript> &subscript,
-                                                                       const std::shared_ptr<Context> &context) {
+            template<typename> class set_type,
+            template<typename, template<typename, typename> class map_type_a,
+            template<typename> class set_type_a> class const_BoolHypertrie,
+            typename Diagonal>
+    std::shared_ptr<Operator<value_type, key_part_type, map_type, set_type, const_BoolHypertrie, Diagonal>>
+    Operator<value_type, key_part_type, map_type, set_type, const_BoolHypertrie, Diagonal>::construct(
+            const std::shared_ptr<Subscript> &subscript,
+            const std::shared_ptr<Context> &context) {
         switch (subscript->type) {
             case Subscript::Type::Join:
-                return std::make_shared<JoinOperator<value_type, key_part_type, map_type, set_type, const_BoolHypertrie>>(subscript,
-                                                                                                     context);
+                return std::make_shared<JoinOperator<value_type, key_part_type, map_type, set_type, const_BoolHypertrie, Diagonal>>(
+                        subscript,
+                        context);
             case Subscript::Type::Resolve:
-                return std::make_shared<ResolveOperator<value_type, key_part_type, map_type, set_type, const_BoolHypertrie>>(subscript,
-                                                                                                        context);
+                return std::make_shared<ResolveOperator<value_type, key_part_type, map_type, set_type, const_BoolHypertrie, Diagonal>>(
+                        subscript,
+                        context);
             case Subscript::Type::Count:
-                return std::make_shared<CountOperator<value_type, key_part_type, map_type, set_type, const_BoolHypertrie>>(subscript,
-                                                                                                      context);
+                return std::make_shared<CountOperator<value_type, key_part_type, map_type, set_type, const_BoolHypertrie, Diagonal>>(
+                        subscript,
+                        context);
             case Subscript::Type::Cartesian:
-                return std::make_shared<CartesianOperator<value_type, key_part_type, map_type, set_type, const_BoolHypertrie>>(subscript,
-                                                                                                          context);
+                return std::make_shared<CartesianOperator<value_type, key_part_type, map_type, set_type, const_BoolHypertrie, Diagonal>>(
+                        subscript,
+                        context);
             case Subscript::Type::EntryGenerator:
-                return std::make_shared<EntryGeneratorOperator<value_type, key_part_type, map_type, set_type, const_BoolHypertrie>>(
+                return std::make_shared<EntryGeneratorOperator<value_type, key_part_type, map_type, set_type, const_BoolHypertrie, Diagonal>>(
                         subscript, context);
             default:
                 throw std::invalid_argument{"subscript is of an undefined type."};
@@ -44,12 +51,12 @@ namespace einsum::internal {
     template<typename value_type, typename key_part_type, template<typename, typename> class map_type,
             template<typename> class set_type,
             template<typename, template<typename, typename> class map_type_a,
-            template<typename> class set_type_a> class const_BoolHypertrie>
+            template<typename> class set_type_a> class const_BoolHypertrie, typename Diagonal>
     class Einsum {
 
         using const_BoolHypertrie_t = const_BoolHypertrie<key_part_type, map_type, set_type>;
-        using Join_t = Join<key_part_type, map_type, set_type>;
-        using Operator_t = Operator<value_type, key_part_type, map_type, set_type, const_BoolHypertrie>;
+        using Join_t = Join<key_part_type, map_type, set_type, const_BoolHypertrie_t, Diagonal>;
+        using Operator_t = Operator<value_type, key_part_type, map_type, set_type, const_BoolHypertrie, Diagonal>;
         using Entry_t = Entry<key_part_type, value_type>;
         using Key_t = typename Entry_t::key_type;
 
@@ -132,13 +139,14 @@ namespace einsum::internal {
     template<typename key_part_type, template<typename, typename> class map_type,
             template<typename> class set_type,
             template<typename, template<typename, typename> class map_type_a,
-            template<typename> class set_type_a> class const_BoolHypertrie>
-    class Einsum<bool, key_part_type, map_type, set_type, const_BoolHypertrie> {
+            template<typename> class set_type_a> class const_BoolHypertrie,
+            typename Diagonal>
+    class Einsum<bool, key_part_type, map_type, set_type, const_BoolHypertrie, Diagonal> {
         using value_type = bool;
 
         using const_BoolHypertrie_t = const_BoolHypertrie<key_part_type, map_type, set_type>;
-        using Join_t = Join<key_part_type, map_type, set_type>;
-        using Operator_t = Operator<value_type, key_part_type, map_type, set_type, const_BoolHypertrie>;
+        using Join_t = Join<key_part_type, map_type, set_type, const_BoolHypertrie_t, Diagonal>;
+        using Operator_t = Operator<value_type, key_part_type, map_type, set_type, const_BoolHypertrie, Diagonal>;
         using Entry_t = Entry<key_part_type, bool>;
         using Key_t = typename Entry_t::key_type;
 

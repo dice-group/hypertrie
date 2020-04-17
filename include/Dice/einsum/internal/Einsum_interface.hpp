@@ -16,11 +16,15 @@ namespace einsum::internal::interface {
                 template<typename> class set_type_a>
         using const_CompressedBoolHypertrie = hypertrie::internal::compressed::const_CompressedBoolHypertrie<key_part_type_a, map_type_a, set_type_a>;
 
-        template <typename value_type>
-        using Einsum = einsum::internal::Einsum<value_type, key_part_type, map_type, set_type, const_BoolHypertrie>;
+        using CompressedHashDiagonal = typename hypertrie::internal::compressed::interface::compressedboolhypertrie<key_part_type, map_type, set_type>::CompressedHashDiagonal;
+
+        using HashDiagonal = typename hypertrie::internal::interface::boolhypertrie<key_part_type, map_type, set_type>::HashDiagonal;
 
         template <typename value_type>
-        using CompressedEinsum = einsum::internal::Einsum<value_type, key_part_type, map_type, set_type, const_CompressedBoolHypertrie>;
+        using Einsum = einsum::internal::Einsum<value_type, key_part_type, map_type, set_type, const_BoolHypertrie, HashDiagonal>;
+
+        template <typename value_type>
+        using CompressedEinsum = einsum::internal::Einsum<value_type, key_part_type, map_type, set_type, const_CompressedBoolHypertrie, CompressedHashDiagonal>;
     };
 }
 #endif //HYPERTRIE_EINSUM_ITERFACE_HPP

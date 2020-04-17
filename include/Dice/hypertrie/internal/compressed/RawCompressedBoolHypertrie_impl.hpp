@@ -504,7 +504,7 @@ namespace hypertrie::internal::compressed {
         std::vector<size_t> getCards(const std::vector<pos_type> &positions) const {
             std::vector<size_t> cards(positions.size());
             for (auto i : iter::range(positions.size()))
-                cards[i] = edges[positions[i]].size();
+                cards[i] = 1;
             return cards;
         }
 

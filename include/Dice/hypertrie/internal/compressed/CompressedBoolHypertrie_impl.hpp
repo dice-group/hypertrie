@@ -78,8 +78,7 @@ namespace hypertrie::internal::compressed {
 
         const_CompressedBoolHypertrie(const_CompressedBoolHypertrie &&) noexcept = default;
 
-        const_CompressedBoolHypertrie &
-        operator=(const CompressedBoolHypertrie<key_part_type, map_type, set_type> &other) {
+        const_CompressedBoolHypertrie &operator=(const CompressedBoolHypertrie<key_part_type, map_type, set_type> &other) {
             this->depth_ = other.depth_;
             this->hypertrie = other.hypertrie;
             return *this;

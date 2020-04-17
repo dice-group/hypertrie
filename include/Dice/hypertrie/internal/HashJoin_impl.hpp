@@ -18,12 +18,14 @@ namespace hypertrie::internal {
 
 	template<typename key_part_type,
 			template<typename, typename> class map_type,
-			template<typename> class set_type>
+			template<typename> class set_type,
+			typename const_BoolHypertrie_t,
+			typename Diagonal_t>
 	class HashJoin {
 
 	public:
-		using const_BoolHypertrie = typename interface::boolhypertrie<key_part_type, map_type, set_type>::const_BoolHypertrie;
-		using Diagonal = typename interface::boolhypertrie<key_part_type, map_type, set_type>::HashDiagonal;
+		using const_BoolHypertrie = const_BoolHypertrie_t;
+		using Diagonal = Diagonal_t;
 		using poss_type = std::vector<pos_type>;
 
 	private:

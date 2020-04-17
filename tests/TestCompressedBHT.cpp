@@ -24,7 +24,7 @@ namespace hypertrie::tests::compressedboolhypertrie {
     template<int depth>
     void test_single_write() {
         std::array<std::size_t, depth> ranges{};
-        ranges.fill(15);
+        ranges.fill(123412);
         auto tuples = utils::generateNTuples<unsigned long, 500, depth, Key>(ranges, 8);
         SECTION("CompressedBoolHypertrie depth {}"_format(depth)) {
             for (const auto &key: tuples) {
@@ -38,6 +38,27 @@ namespace hypertrie::tests::compressedboolhypertrie {
     TEST_CASE("test_single write/read", "[CompressedBoolHypertrie]") {
         utils::resetDefaultRandomNumberGenerator();
         test_single_write<3>();
+    }
+
+    template<int depth, int range_ = 12342, int count = depth * range_ * 2>
+    void test_multi_write_read() {
+        std::array<std::size_t, depth> ranges{};
+        ranges.fill(range_);
+        auto write_entries = utils::generateNTuples<unsigned long, count, depth, Key>(ranges, 8);
+
+        SECTION("Boolhypertrie depth {}"_format(depth)) {
+            BH t{depth};
+            for (const auto &key: write_entries)
+                t.set(key, true);
+            for (const auto &key: write_entries)
+                REQUIRE(t[key] == true);
+
+        }
+    }
+
+    TEST_CASE(" multi_write/read_delete", "[CompressedBoolHypertrie]") {
+        utils::resetDefaultRandomNumberGenerator();
+        test_multi_write_read<3>();
     }
 
     void print_key(const Key &key) {

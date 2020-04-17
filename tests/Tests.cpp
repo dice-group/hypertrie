@@ -9,6 +9,7 @@
 #include "TestHashJoin.cpp"
 #include "TestCompressedBoolHypertrie.cpp"
 #include "TestCompressedBHT.cpp"
+#include "TestCompressedRawDiagonal.cpp"
 
 #ifdef HYPERTRIE_ENABLE_LIBTORCH
 #include "TestEinsum.cpp"

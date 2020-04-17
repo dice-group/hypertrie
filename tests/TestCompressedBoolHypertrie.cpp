@@ -18,7 +18,7 @@ namespace hypertrie::tests::raw_compressedboolhypertrie {
     namespace {
         using namespace hypertrie::internal;
         template<pos_type depth, bool compressed>
-        using RCompressedBH = hypertrie::internal::compressed::RawCompressedBoolHypertrie<depth, unsigned long, container::boost_flat_map, container::boost_flat_set, compressed>;
+        using RCompressedBH = hypertrie::internal::compressed::RawCompressedBoolHypertrie<depth, unsigned long, container::tsl_sparse_map, container::boost_flat_set, compressed>;
         template<pos_type depth>
         using Node = RCompressedBH<depth, false>;
         template<pos_type depth>

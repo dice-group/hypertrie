@@ -856,8 +856,7 @@ namespace hypertrie::internal::compressed {
     // Node type (depth == 3).
     template<pos_type depth_t, typename key_part_type_t, template<typename, typename> typename map_type_t,
             template<typename> typename set_type_t>
-    class RawCompressedBoolHypertrie<depth_t, key_part_type_t, map_type_t, set_type_t, true, typename std::enable_if_t<(
-            depth_t > 2)>> {
+    class RawCompressedBoolHypertrie<depth_t, key_part_type_t, map_type_t, set_type_t, true, typename std::enable_if_t<(depth_t > 2)>> {
     protected:
         template<pos_type depth_tt, bool compressed_tt>
         using rawCompressedboolhypertrie_c = RawCompressedBoolHypertrie<depth_tt, key_part_type_t, map_type_t, set_type_t, compressed_tt>;
@@ -1006,7 +1005,8 @@ namespace hypertrie::internal::compressed {
         // normal edges
 
         // compressed edges
-
+        static constexpr bool is_tsl_map = std::is_same_v<map_type<int, int>, container::tsl_sparse_map<int, int>>;
+        static constexpr bool is_tsl_set = std::is_same_v<set_type<int>, container::tsl_sparse_set<int>>;
         size_t _size;
     public:
         edges_type edges;
@@ -1424,7 +1424,13 @@ namespace hypertrie::internal::compressed {
                     auto child_it = current->edges[subkey_pos].find(key_part);
                     // current->get
                     if (child_it != current->edges[subkey_pos].end()) {
-                        compressed_child_type_t &child = child_it->second;
+                        compressed_child_type_t *child_pptr;
+                        if constexpr (is_tsl_map) {
+                            child_pptr = &child_it.value();
+                        } else {
+                            child_pptr = &child_it->second;
+                        }
+                        compressed_child_type_t &child = *child_pptr;
                         if (child.getTag() == compressed_child_type_t::POINTER_TAG) {
                             child_::setRek(child.getPointer(), key, created_nodes, next_pos_calc);
                         } else if (child.getTag() == compressed_child_type_t::INT_TAG) {

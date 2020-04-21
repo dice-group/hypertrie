@@ -101,14 +101,16 @@ namespace hypertrie::internal::compressed {
             NodePointer<depth> node_ptr{CBHT.hypertrie};
             if constexpr (depth == diag_depth_) {
                 if constexpr (compressed) {
-                    return std::make_shared<RawCompressedHashDiagonal<diag_depth_, depth, true>>(node_ptr.getCompressedNode());
+                    return std::make_shared<RawCompressedHashDiagonal<diag_depth_, depth, true>>(
+                            node_ptr.getCompressedNode());
                 } else {
                     return std::make_shared<RawCompressedHashDiagonal<diag_depth_, depth, false>>(node_ptr.getNode());
                 }
             } else {
                 if constexpr(compressed) {
-                    return std::make_shared<RawCompressedHashDiagonal<diag_depth_, depth, true>>(node_ptr.getCompressedNode(),
-                                                                                                 positions);
+                    return std::make_shared<RawCompressedHashDiagonal<diag_depth_, depth, true>>(
+                            node_ptr.getCompressedNode(),
+                            positions);
                 } else {
                     return std::make_shared<RawCompressedHashDiagonal<diag_depth_, depth, false>>(node_ptr.getNode(),
                                                                                                   positions);
@@ -202,6 +204,7 @@ namespace hypertrie::internal::compressed {
                         this->raw_diag_funcs = &functions[boolhypertrie->depth() - 1][positions.size() - 1];
                         this->raw_diag = getRawDiagonal(*boolhypertrie, positions, false);
                     }
+                    break;
                 }
                 case 2: {
                     NodePointer<2> node_ptr{boolhypertrie->hypertrie};
@@ -212,10 +215,12 @@ namespace hypertrie::internal::compressed {
                         this->raw_diag_funcs = &functions[boolhypertrie->depth() - 1][positions.size() - 1];
                         this->raw_diag = getRawDiagonal(*boolhypertrie, positions, false);
                     }
+                    break;
                 }
                 case 3: {
                     this->raw_diag_funcs = &functions[boolhypertrie->depth() - 1][positions.size() - 1];
                     this->raw_diag = getRawDiagonal(*boolhypertrie, positions, false);
+                    break;
                 }
                 default:
                     throw std::logic_error{"not implemented."};

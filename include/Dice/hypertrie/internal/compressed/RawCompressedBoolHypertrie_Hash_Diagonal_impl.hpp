@@ -39,7 +39,7 @@ namespace hypertrie::internal::compressed {
             return diag.rawboolhypertrie.currentKeyPart(0);
         }
 
-        static bool contains(void const *diag_ptr, key_part_type key_part) {
+        static bool contains(void *diag_ptr, key_part_type key_part) {
             auto &diag = *static_cast<RawCompressedBHTHashDiagonal const *>(diag_ptr);
             return diag.rawboolhypertrie.diagonal(key_part);
         }
@@ -87,15 +87,15 @@ namespace hypertrie::internal::compressed {
                                      const std::vector<pos_type> &positions)
                 : rawboolhypertrie(&boolhypertrie, positions) {}
 
-        RawCompressedBHTHashDiagonal(CompressedNode<depth> *const &boolhypertrie,
-                                     const std::vector<pos_type> &positions)
-                : RawCompressedBHTHashDiagonal(boolhypertrie, positions) {}
-
+        /* RawCompressedBHTHashDiagonal(CompressedNode<depth> *const &boolhypertrie,
+                                      const std::vector<pos_type> &positions)
+                 : RawCompressedBHTHashDiagonal(boolhypertrie, positions) {}
+ */
         static void init(void *diag_ptr) {
             auto &diag = *static_cast<RawCompressedBHTHashDiagonal *>(diag_ptr);
             diag.pos = *diag.diag_poss.begin();
             diag.value = diag.rawboolhypertrie->get(diag.pos,
-                                                    diag.rawCompressedBoolhypertrie->currentKeyPart(diag.pos));
+                                                    diag.rawboolhypertrie->currentKeyPart(diag.pos));
             diag.isEmpty = false;
         }
 
@@ -356,6 +356,9 @@ namespace hypertrie::internal::compressed {
         template<pos_type depth_>
         using CompressedNode = RawCompressedBoolHypertrie<depth_, key_part_type, map_type, set_type, true>;
 
+        template<pos_type depth_t>
+        using NodePointer = util::CompressedBoolHyperTrieTaggedPointer<CompressedNode<depth_t> *, Node<depth_t> *, 8>;
+
         using compressed_children_type = typename Node<depth>::compressed_children_type;
         using compressed_child_type = typename Node<depth>::compressed_child_type;
 
@@ -363,18 +366,22 @@ namespace hypertrie::internal::compressed {
         using child_type = typename Node<depth>::ChildNode;
         using CurrentNodePointer = typename Node<depth>::template NodePointer<depth>;
     public:
-        using value_type = typename Node<depth>::template NodePointer<depth - diag_depth>;
+        using value_type = NodePointer<depth - diag_depth>;
 
     private:
+        static constexpr bool is_tsl_map = std::is_same_v<map_type<int, int>, container::tsl_sparse_map < int, int>>
+        ;
+        static constexpr bool is_tsl_set = std::is_same_v<set_type<int>, container::tsl_sparse_set < int>>
+        ;
         /*
          * @TODO Do I need to make it "mutable" pointer
          */
-        Node<depth> *rawboolhypertrie;
+        Node<depth> const *rawboolhypertrie;
         std::vector<pos_type> diag_poss;
-        typename compressed_children_type::iterator compressed_children_iter;
-        typename compressed_children_type::iterator compressed_children_end;
-        typename children_type::iterator iter;
-        typename children_type::iterator end;
+        typename compressed_children_type::const_iterator compressed_children_iter;
+        typename compressed_children_type::const_iterator compressed_children_end;
+        typename children_type::const_iterator iter;
+        typename children_type::const_iterator end;
         bool inCompressedMode;
 
         value_type value;
@@ -426,7 +433,11 @@ namespace hypertrie::internal::compressed {
                     if (diag.inCompressedMode) {
                         diag.value = value_type{new CompressedNode<depth - 1>{diag.compressed_children_iter->second}};
                     } else {
-                        diag.value = value_type{diag.iter->second};
+                        if constexpr (is_tsl_map) {
+                            diag.value = value_type{diag.iter.value()};
+                        } else {
+                            diag.value = value_type{diag.iter->second};
+                        }
                     }
                 }
             }
@@ -481,14 +492,14 @@ namespace hypertrie::internal::compressed {
 
         static size_t size(void const *diag_ptr) {
             auto &diag = *static_cast<RawCompressedBHTHashDiagonal const *>(diag_ptr);
-            const auto min_card_pos = diag.rawCompressedboolhypertrie.minCardPos();
+            const auto min_card_pos = diag.rawboolhypertrie->minCardPos();
             return diag.rawboolhypertrie->edges[min_card_pos].size()
                    + diag.rawboolhypertrie->compressed_edges[min_card_pos].size();
         }
 
     private:
         static bool diagonal(void *diag_ptr) {
-            auto &diag = *static_cast<RawCompressedBHTHashDiagonal const *>(diag_ptr);
+            auto &diag = *static_cast<RawCompressedBHTHashDiagonal *>(diag_ptr);
             if constexpr (diag_depth > 1) {
                 if (diag.inCompressedMode) {
                     auto const compressed_child = new CompressedNode<depth - 1>{
@@ -504,7 +515,11 @@ namespace hypertrie::internal::compressed {
                 if (diag.inCompressedMode) {
                     diag.value = value_type{new CompressedNode<depth - 1>{diag.compressed_children_iter->second}};
                 } else {
-                    diag.value = value_type{diag.iter->second};
+                    if constexpr (is_tsl_map) {
+                        diag.value = value_type{diag.iter.value()};
+                    } else {
+                        diag.value = value_type{diag.iter->second};
+                    }
                 }
                 return true;
             }
@@ -528,8 +543,8 @@ namespace hypertrie::internal::compressed {
     private:
         mutable BHTNode<depth> const *rawCompressedBoolhypertrie;
         std::vector<pos_type> diag_poss;
-        typename children_type::iterator iter;
-        typename children_type::iterator end;
+        typename children_type::const_iterator iter;
+        typename children_type::const_iterator end;
         value_type value;
 
     public:
@@ -539,11 +554,11 @@ namespace hypertrie::internal::compressed {
         RawCompressedBHTHashDiagonal(BHTNode<depth> const &boolhypertrie, const std::vector<pos_type> &positions)
                 : rawCompressedBoolhypertrie(&boolhypertrie, positions) {}
 
-        RawCompressedBHTHashDiagonal(BHTNode<depth> *const &boolhypertrie, const std::vector<pos_type> &positions)
-                : RawCompressedBHTHashDiagonal(boolhypertrie, positions) {}
+        /*RawCompressedBHTHashDiagonal(BHTNode<depth> *const &boolhypertrie, const std::vector<pos_type> &positions)
+                : RawCompressedBHTHashDiagonal(boolhypertrie, positions) {}*/
 
         static void init(void *diag_ptr) {
-            auto const &diag = *static_cast<RawCompressedBHTHashDiagonal *>(diag_ptr);
+            auto &diag = *static_cast<RawCompressedBHTHashDiagonal *>(diag_ptr);
             auto min_card_pos_it = diag.rawCompressedBoolhypertrie->minCardPos(diag.diag_poss);
             auto &min_dim_edges = diag.rawCompressedBoolhypertrie->edges[*min_card_pos_it];
             diag.iter = min_dim_edges.begin();
@@ -573,7 +588,7 @@ namespace hypertrie::internal::compressed {
             auto &diag = *static_cast<RawCompressedBHTHashDiagonal *>(diag_ptr);
             auto min_card_pos_it = diag.rawCompressedBoolhypertrie->minCardPos(diag.diag_poss);
             ++diag.iter;
-            diag.value = diag.rawCompressedBoolhypertrie->get(min_card_pos_it, diag.iter->first);
+            diag.value = diag.rawCompressedBoolhypertrie->get(*min_card_pos_it, diag.iter->first);
         }
 
         static bool empty(void const *diag_ptr) {
@@ -584,8 +599,8 @@ namespace hypertrie::internal::compressed {
         static size_t size(void const *diag_ptr) {
             auto &diag = *static_cast<RawCompressedBHTHashDiagonal const *>(diag_ptr);
             if constexpr (depth > 1) {
-                const auto min_card_pos = diag.rawboolhypertrie->minCardPos(diag.diag_poss);
-                return diag.rawCompressedBoolhypertrie->edges[min_card_pos].size();
+                const auto min_card_pos_it = diag.rawCompressedBoolhypertrie->minCardPos(diag.diag_poss);
+                return diag.rawCompressedBoolhypertrie->edges[*min_card_pos_it].size();
             } else {
                 return diag.rawCompressedBoolhypertrie->size();
             }

@@ -96,9 +96,8 @@ namespace hypertrie::internal::compressed {
 
         const_CompressedBoolHypertrie &operator=(const_CompressedBoolHypertrie &&other) noexcept = default;
 
-        template<pos_type depth_t>
-        inline static const_CompressedBoolHypertrie instance(pos_type depth, NodePointer<depth_t> nodePointer) {
-            return const_CompressedBoolHypertrie(depth, nodePointer.getPointer());
+        inline static const_CompressedBoolHypertrie instance(const pos_type depth, void * hypertrie) {
+            return const_CompressedBoolHypertrie(depth, hypertrie);
         }
 
     protected:
@@ -225,14 +224,14 @@ namespace hypertrie::internal::compressed {
                 if (node_ptr.getTag() == NodePointer<depth>::COMPRESSED_TAG) {
                     auto result = node_ptr.getCompressedNode()->template operator[]<result_depth>(raw_slice_key);
                     if (!result.isEmpty()) {
-                        return instance<result_depth>(depth_val, result);
+                        return instance(depth_val, result.getPointer());
                     } else {
                         return std::nullopt;
                     }
                 } else {
                     auto result = node_ptr.getNode()->template operator[]<result_depth>(raw_slice_key);
                     if (!result.isEmpty()) {
-                        return instance<result_depth>(depth_val, result);
+                        return instance(depth_val, result.getPointer());
                     } else {
                         return std::nullopt;
                     }

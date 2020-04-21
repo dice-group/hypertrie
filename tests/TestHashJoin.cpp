@@ -15,9 +15,9 @@ namespace hypertrie::tests::hashjoin {
 	namespace {
 		using namespace fmt::literals;
 		using namespace hypertrie;
-		using BH = hypertrie::boolhypertrie<>::BoolHypertrie;
-		using const_BH = hypertrie::boolhypertrie<>::const_BoolHypertrie;
-		using Join = hypertrie::boolhypertrie<>::HashJoin;
+		using BH = hypertrie::boolhypertrie<>::CompressedBoolHypertrie ;
+		using const_BH = hypertrie::boolhypertrie<>::const_CompressedBoolHypertrie;
+		using Join = hypertrie::boolhypertrie<>::CompressedHashJoin;
 		using Key = BH::Key;
 		using SliceKey = BH::SliceKey;
 		using pos_type = hypertrie::boolhypertrie<>::pos_type;
@@ -54,9 +54,10 @@ namespace hypertrie::tests::hashjoin {
 
 	TEST_CASE("test many combinations", "[HashJoin]") {
 
-		std::size_t max = 15;
+		std::size_t const max = 15;
 		std::vector<std::pair<pos_type, std::vector<pos_type >>> op_poss_pool;
-		for (auto depth : ::iter::range(1, 5)) {
+		// @TODO change so to control the slicing positions
+		for (auto depth : ::iter::range(1, 3)) {
 
 			std::vector<pos_type> positions{iter::range(depth).begin(), iter::range(depth).end()};
 			for (const auto &op_poss : iter::powerset(positions)) {

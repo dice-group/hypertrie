@@ -673,7 +673,7 @@ namespace hypertrie::internal::compressed {
         }
 
         [[nodiscard]]
-        std::vector<pos_type>::iterator minCardPos(std::vector<pos_type> &positions) const {
+        std::vector<pos_type>::const_iterator minCardPos(std::vector<pos_type> const &positions) const {
             auto pos_it = positions.begin();
             auto min_pos = pos_it;
             auto min_card = std::numeric_limits<typename children_type::size_type>::max();
@@ -822,7 +822,7 @@ namespace hypertrie::internal::compressed {
             }
         }
 
-        child_type const get(const pos_type edge_index, const key_part_type_t key_part) const {
+        child_type get(const pos_type edge_index, const key_part_type_t key_part) const {
             auto child_it = edges[edge_index].find(key_part);
             if (child_it != edges[edge_index].end()) {
                 if (child_it->second.getTag() == compressed_child_type::INT_TAG) {

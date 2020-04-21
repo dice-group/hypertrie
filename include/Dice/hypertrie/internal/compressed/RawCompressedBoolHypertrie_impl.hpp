@@ -237,18 +237,12 @@ namespace hypertrie::internal::compressed {
             return edges.count(key_part);
         }
 
-        void set(const SliceKey &key, bool value) {
-            if (value)
-                edges.insert(key[0]);
-            else
-                edges.erase(key[0]);
+        void set(const Key &key) {
+            edges.insert(key[0]);
         }
 
-        void set(key_part_type_t key, bool value) {
-            if (value)
-                edges.insert(key);
-            else
-                edges.erase(key);
+        void set(key_part_type_t key) {
+            edges.insert(key);
         }
 
         [[nodiscard]]
@@ -601,7 +595,8 @@ namespace hypertrie::internal::compressed {
         using size_t = std::size_t;
     protected:
         // The node holds one edge type, the one whose children are tagged pointers to node(depth = 1)
-
+        static constexpr bool is_tsl_map = std::is_same_v<map_type<int, int>, container::tsl_sparse_map<int, int>>;
+        static constexpr bool is_tsl_set = std::is_same_v<set_type<int>, container::tsl_sparse_set<int>>;
         size_t _size;
 
     public:
@@ -851,6 +846,130 @@ namespace hypertrie::internal::compressed {
                 return {};
             }
         }
+
+        // Set a new key in the CompressedBoolHypertrie - ignoring the bool value here
+        void set(const Key &key) {
+            if (!this->operator[](key)) {
+                // Prepare a starting point for recusive insetion of key
+                const PosCalc *posCalc = PosCalc::getInstance(depth);
+
+                static tsl::hopscotch_map<subkey_mask_t, void *> created_nodes(factorial(2));
+
+                _<2>::setRek(this, key, created_nodes, posCalc);
+                created_nodes.clear();
+            }
+        }
+    protected:
+        template<pos_type current_depth, typename = typename std::enable_if_t<(current_depth <=
+                                                                                                2)>, typename DUMMY = void>
+        struct _;
+
+        template<pos_type current_depth, typename DUMMY>
+        struct _<current_depth, typename std::enable_if_t<(current_depth == 2)>, DUMMY> {
+            using child_ = typename Node<2>::template _<1>;
+            using CurrentHypertrie = Node<current_depth>;
+            using ChildNode = typename CurrentHypertrie::ChildNode;
+
+            inline static void setRek(CurrentHypertrie *current, const Key &key,
+                                      tsl::hopscotch_map<subkey_mask_t, void *> &created_nodes,
+                                      PosCalc const *posCalc) {
+                // CurrentHypertrie current = curre
+                using compressed_child_type_t = typename CurrentHypertrie::compressed_child_type;
+                current->_size += 1;
+                created_nodes[posCalc->getSubKeyMask()] = current;
+
+                for (pos_type key_pos: posCalc->getKeyPoss()) {
+                    const key_part_type_t key_part = key[key_pos];
+                    const PosCalc *next_pos_calc = posCalc->use(key_pos);
+                    auto subkey_pos = posCalc->key_to_subkey_pos(key_pos);
+
+                    auto child_it = current->edges[subkey_pos].find(key_part);
+                    // current->get
+                    if (child_it != current->edges[subkey_pos].end()) {
+                        compressed_child_type_t *child_pptr;
+                        if constexpr (is_tsl_map) {
+                            child_pptr = &child_it.value();
+                        } else {
+                            child_pptr = &child_it->second;
+                        }
+                        compressed_child_type_t &child = *child_pptr;
+                        if (child.getTag() == compressed_child_type_t::POINTER_TAG) {
+                            child_::setRek(child.getPointer(), key, created_nodes, next_pos_calc);
+                        } else if (child.getTag() == compressed_child_type_t::INT_TAG) {
+                            const auto &created_child_node = created_nodes.find(next_pos_calc->getSubKeyMask());
+                            if (created_child_node != created_nodes.end()) {
+                                auto created_child_node_ptr = static_cast<ChildNode *>(
+                                        created_child_node->second);
+                                child.setPointer(created_child_node_ptr);
+                            } else {
+                                Key reconstructed_key{};
+                                for (size_t i = 0; i < reconstructed_key.size(); ++i) {
+                                    if (posCalc->getSubKeyMask().at(i)) {
+                                        reconstructed_key[i] = key[i];
+                                    } else if (i == key_pos) {
+                                        reconstructed_key[i] = key_part;
+                                    } else {
+                                        // std::cout << child.getInt();
+                                        reconstructed_key[i] = child.getInt();
+                                    }
+                                }
+                                auto child_node = new ChildNode{};
+                                child.setPointer(child_node);
+                                //std::cout << "Key: " << key[0] << "," << key[1] << "," << key[2] << "," << std::endl;
+                                // std::cout << "Reconstructed Key: " << reconstructed_key[0] << ","
+                                //           << reconstructed_key[1] << "," << reconstructed_key[2] << std::endl;
+                                child_::setRek(child_node, key, reconstructed_key, created_nodes, next_pos_calc);
+                            }
+                        }
+                    } else {
+                        // a new compressed child node can be added
+                        // we get the remaining key part first
+                        key_part_type_t child_key_part = key[next_pos_calc->getKeyPoss()[0]];
+                        // we set the compressed child
+                        compressed_child_type_t compressed_child{child_key_part};
+                        current->edges[subkey_pos].insert(std::make_pair(key_part, compressed_child));
+                    }
+                }
+            }
+        };
+
+        template<typename DUMMY>
+        struct _<1, typename std::enable_if_t<(true)>, DUMMY> {
+            using CurrentHypertrie = Node<1>;
+
+            inline static void setRek(CurrentHypertrie *current, const Key &key,
+                                      tsl::hopscotch_map<subkey_mask_t, void *> &created_nodes,
+                                      PosCalc const *posCalc) {
+                // add it to the finished ( means updated ) nodes.
+                if (created_nodes.find(posCalc->getSubKeyMask()) == created_nodes.end()) {
+                    created_nodes[posCalc->getSubKeyMask()] = current;
+                }
+                //std::cout << "Key1(depth=1): " << key[0] << "," << key[1] << "," << key[2] << "," << std::endl;
+                // set the entry in the set
+                key_part_type_t key_part = key[posCalc->subkey_to_key_pos(0)];
+
+                current->set(key_part);
+            }
+
+            inline static void
+            setRek(CurrentHypertrie *current, const Key &key, const Key &reconstruced_key,
+                   tsl::hopscotch_map<subkey_mask_t, void *> &created_nodes,
+                   PosCalc const *posCalc) {
+                // add it to the finished ( means updated ) nodes.
+                if (created_nodes.find(posCalc->getSubKeyMask()) == created_nodes.end()) {
+                    created_nodes[posCalc->getSubKeyMask()] = current;
+                }
+                //std::cout << "Key(depth=1): " << key[0] << "," << key[1] << "," << key[2] << "," << std::endl;
+                //std::cout << "Reconstruced Key(depth=1): " << reconstruced_key[0] << "," << reconstruced_key[1] << "," << reconstruced_key[2] << "," << std::endl;
+                // set the entry in the set
+                key_part_type_t key_part = key[posCalc->subkey_to_key_pos(0)];
+                key_part_type_t reconstruced_key_part = reconstruced_key[posCalc->subkey_to_key_pos(0)];
+
+                current->set(key_part);
+                current->set(reconstruced_key_part);
+            }
+        };
+
     };
 
     // Node type (depth == 3).
@@ -1486,7 +1605,7 @@ namespace hypertrie::internal::compressed {
                 // set the entry in the set
                 key_part_type_t key_part = key[posCalc->subkey_to_key_pos(0)];
 
-                current->set(key_part, true);
+                current->set(key_part);
             }
 
             inline static void
@@ -1503,8 +1622,8 @@ namespace hypertrie::internal::compressed {
                 key_part_type_t key_part = key[posCalc->subkey_to_key_pos(0)];
                 key_part_type_t reconstruced_key_part = reconstruced_key[posCalc->subkey_to_key_pos(0)];
 
-                current->set(key_part, true);
-                current->set(reconstruced_key_part, true);
+                current->set(key_part);
+                current->set(reconstruced_key_part);
             }
         };
 

@@ -78,7 +78,8 @@ namespace hypertrie::internal::compressed {
 
         const_CompressedBoolHypertrie(const_CompressedBoolHypertrie &&) noexcept = default;
 
-        const_CompressedBoolHypertrie &operator=(const CompressedBoolHypertrie<key_part_type, map_type, set_type> &other) {
+        const_CompressedBoolHypertrie &
+        operator=(const CompressedBoolHypertrie<key_part_type, map_type, set_type> &other) {
             this->depth_ = other.depth_;
             this->hypertrie = other.hypertrie;
             return *this;
@@ -96,7 +97,7 @@ namespace hypertrie::internal::compressed {
 
         const_CompressedBoolHypertrie &operator=(const_CompressedBoolHypertrie &&other) noexcept = default;
 
-        inline static const_CompressedBoolHypertrie instance(const pos_type depth, void * hypertrie) {
+        inline static const_CompressedBoolHypertrie instance(const pos_type depth, void *hypertrie) {
             return const_CompressedBoolHypertrie(depth, hypertrie);
         }
 
@@ -159,7 +160,7 @@ namespace hypertrie::internal::compressed {
                     }
                 }
                 case 3: {
-                    Node<3>* node_ptr = static_cast<Node<3>*>(hypertrie);
+                    Node<3> *node_ptr = static_cast<Node<3> *>(hypertrie);
                     return node_ptr->size();
                 }
                 default:
@@ -360,17 +361,13 @@ namespace hypertrie::internal::compressed {
         template<pos_type depth>
         inline static void rawSet(void *hypertrie, const Key &key, [[maybe_unused]] bool value) {
             NodePointer<depth> node_ptr{hypertrie};
-            if constexpr (depth == 3) {
-                typename Node<depth>::Key raw_key;
-                std::copy_n(key.begin(), depth, raw_key.begin());
+            typename Node<depth>::Key raw_key;
+            std::copy_n(key.begin(), depth, raw_key.begin());
 
-                if (node_ptr.getTag() == NodePointer<depth>::COMPRESSED_TAG) {
-                    node_ptr.getCompressedNode()->set(raw_key);
-                } else {
-                    node_ptr.getNode()->set(raw_key);
-                }
-            } else {
+            if (node_ptr.getTag() == NodePointer<depth>::COMPRESSED_TAG) {
                 throw std::logic_error{"not implemented."};
+            } else {
+                node_ptr.getNode()->set(raw_key);
             }
         }
 
@@ -380,6 +377,14 @@ namespace hypertrie::internal::compressed {
             switch (this->depth()) {
                 case 3: {
                     rawSet<3>(hypertrie, key, value);
+                    break;
+                }
+                case 2: {
+                    rawSet<2>(hypertrie, key, value);
+                    break;
+                }
+                case 1: {
+                    rawSet<1>(hypertrie, key, value);
                     break;
                 }
                 default:

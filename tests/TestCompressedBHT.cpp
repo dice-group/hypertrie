@@ -24,6 +24,13 @@ namespace hypertrie::tests::compressedboolhypertrie {
     template<int depth>
     void test_single_write() {
         std::array<std::size_t, depth> ranges{};
+
+        BH t{depth};
+
+        BH t1{2};
+        BH::Key k = {8, 64};
+        t1.set(k, true);
+        REQUIRE(t1[k]);
         ranges.fill(123412);
         auto tuples = utils::generateNTuples<unsigned long, 500, depth, Key>(ranges, 8);
         SECTION("CompressedBoolHypertrie depth {}"_format(depth)) {

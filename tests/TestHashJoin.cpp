@@ -16,8 +16,8 @@ namespace hypertrie::tests::hashjoin {
 		using namespace fmt::literals;
 		using namespace hypertrie;
 		using BH = hypertrie::boolhypertrie<>::CompressedBoolHypertrie ;
-		using const_BH = hypertrie::boolhypertrie<>::const_CompressedBoolHypertrie;
-		using Join = hypertrie::boolhypertrie<>::CompressedHashJoin;
+		using const_BH = hypertrie::boolhypertrie<>::const_CompressedBoolHypertrie ;
+		using Join = hypertrie::boolhypertrie<>::CompressedHashJoin ;
 		using Key = BH::Key;
 		using SliceKey = BH::SliceKey;
 		using pos_type = hypertrie::boolhypertrie<>::pos_type;
@@ -113,7 +113,6 @@ namespace hypertrie::tests::hashjoin {
 			std::vector<std::size_t> sizes;
 			for (const DiagonalTestData<> &diagonal : diagonals)
 				sizes.push_back(diagonal.depth);
-
 			{
 				SECTION("diagonal positions {}; operand depths {}; n {}"_format(
 						fmt::join(position_strings.begin(), position_strings.end(), ", "),

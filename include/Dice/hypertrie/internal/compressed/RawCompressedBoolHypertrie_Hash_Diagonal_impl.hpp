@@ -588,6 +588,7 @@ namespace hypertrie::internal::compressed {
             auto &diag = *static_cast<RawCompressedBHTHashDiagonal *>(diag_ptr);
             auto min_card_pos_it = diag.rawCompressedBoolhypertrie->minCardPos(diag.diag_poss);
             ++diag.iter;
+            if (empty(diag_ptr)) return;
             diag.value = diag.rawCompressedBoolhypertrie->get(*min_card_pos_it, diag.iter->first);
         }
 

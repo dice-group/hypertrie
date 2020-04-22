@@ -280,9 +280,10 @@ namespace hypertrie::internal::compressed {
                 diag.iter = min_dim_edges.begin();
                 diag.end = min_dim_edges.end();
                 if (not empty(diag_ptr)) {
-                    if (diag.iter->second.getTag() == compressed_child_type::INT_TAG and
-                        diag.iter->second.getInt() != diag.iter->first) {
-                        inc(diag_ptr);
+                    if (diag.iter->second.getTag() == compressed_child_type::INT_TAG) {
+                        if (diag.iter->second.getInt() != diag.iter->first) {
+                            inc(diag_ptr);
+                        }
                     } else if (not diag.iter->second.getPointer()->diagonal(diag.iter->first)) {
                         inc(diag_ptr);
                     }
@@ -336,12 +337,11 @@ namespace hypertrie::internal::compressed {
     private:
         static bool diagonal(void const *diag_ptr) {
             auto const &diag = *static_cast<RawCompressedBHTHashDiagonal const *>(diag_ptr);
-            if (diag.iter->second.getTag() == compressed_child_type::INT_TAG and
-                diag.iter->second.getInt() == diag.iter->first) {
-                return true;
-            } else if (diag.iter->second.getPointer()->diagonal(diag.iter->first)) {
-                return true;
-            } else return false;
+            if (diag.iter->second.getTag() == compressed_child_type::INT_TAG) {
+                return diag.iter->second.getInt() == diag.iter->first;
+            } else {
+                return diag.iter->second.getPointer()->diagonal(diag.iter->first);
+            }
         }
     };
 
@@ -418,8 +418,9 @@ namespace hypertrie::internal::compressed {
             if (not empty(diag_ptr)) {
                 if constexpr (diag_depth > 1) {
                     if (diag.inCompressedMode) {
+                        typename Node<depth>::compressed_child_type const &compressed_child_val = diag.compressed_children_iter->second;
                         CompressedNode<depth - 1> const *compressed_child = new CompressedNode<depth - 1>{
-                                diag.compressed_children_iter->second};
+                                compressed_child_val};
                         diag.value = compressed_child->template diagonal<diag_depth - 1>(diag.diag_poss,
                                                                                          diag.compressed_children_iter->first);
                     } else {
@@ -467,13 +468,13 @@ namespace hypertrie::internal::compressed {
             auto &diag = *static_cast<RawCompressedBHTHashDiagonal *>(diag_ptr);
             assert(not empty(diag_ptr));
             do {
-                if (diag.inCompressedMode and diag.compressed_children_iter != diag.compressed_children_end) {
+                if (diag.inCompressedMode) {
                     diag.compressed_children_iter++;
                     if (diag.compressed_children_iter == diag.compressed_children_end) {
+                        diag.inCompressedMode = false;
                         continue;
                     }
                 } else {
-                    diag.inCompressedMode = false;
                     diag.iter++;
                 }
             } while (not empty(diag_ptr) and not diagonal(diag_ptr));
@@ -502,8 +503,9 @@ namespace hypertrie::internal::compressed {
             auto &diag = *static_cast<RawCompressedBHTHashDiagonal *>(diag_ptr);
             if constexpr (diag_depth > 1) {
                 if (diag.inCompressedMode) {
-                    auto const compressed_child = new CompressedNode<depth - 1>{
-                            diag.compressed_children_iter->second};
+                    typename Node<depth>::compressed_child_type const &compressed_child_val = diag.compressed_children_iter->second;
+                    CompressedNode<depth - 1> const *compressed_child = new CompressedNode<depth - 1>{
+                            compressed_child_val};
                     diag.value = compressed_child->template diagonal<diag_depth - 1>(diag.diag_poss,
                                                                                      diag.compressed_children_iter->first);
                 } else {

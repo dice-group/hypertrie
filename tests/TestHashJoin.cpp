@@ -15,9 +15,9 @@ namespace hypertrie::tests::hashjoin {
 	namespace {
 		using namespace fmt::literals;
 		using namespace hypertrie;
-		using BH = hypertrie::boolhypertrie<>::CompressedBoolHypertrie ;
-		using const_BH = hypertrie::boolhypertrie<>::const_CompressedBoolHypertrie ;
-		using Join = hypertrie::boolhypertrie<>::CompressedHashJoin ;
+		using BH = hypertrie::boolhypertrie<>::CompressedBoolHypertrie;
+		using const_BH = hypertrie::boolhypertrie<>::const_CompressedBoolHypertrie;
+		using Join = hypertrie::boolhypertrie<>::CompressedHashJoin;
 		using Key = BH::Key;
 		using SliceKey = BH::SliceKey;
 		using pos_type = hypertrie::boolhypertrie<>::pos_type;
@@ -57,7 +57,7 @@ namespace hypertrie::tests::hashjoin {
 		std::size_t const max = 15;
 		std::vector<std::pair<pos_type, std::vector<pos_type >>> op_poss_pool;
 		// @TODO change so to control the slicing positions
-		for (auto depth : ::iter::range(1, 3)) {
+		for (auto depth : ::iter::range(1, 4)) {
 
 			std::vector<pos_type> positions{iter::range(depth).begin(), iter::range(depth).end()};
 			for (const auto &op_poss : iter::powerset(positions)) {
@@ -110,6 +110,7 @@ namespace hypertrie::tests::hashjoin {
 			for (auto &poss: join_positions)
 				position_strings.push_back(fmt::format("({})", fmt::join(poss.begin(), poss.end(), ", ")));
 
+
 			std::vector<std::size_t> sizes;
 			for (const DiagonalTestData<> &diagonal : diagonals)
 				sizes.push_back(diagonal.depth);
@@ -144,7 +145,9 @@ namespace hypertrie::tests::hashjoin {
 					DiagonalTestData<> &first_diag = diagonals[0];
 					tsl::sparse_set<std::size_t> actual_key_parts;
 					if (first_diag.join_positions.empty()) {
-						actual_key_parts = {iter::range(max + 1).begin(), iter::range(max + 1).end()};
+                        std::vector<std::size_t> temp = {iter::range(max +1).begin(), iter::range(max +1).end()};
+                        for (auto &x: temp) x *= 8;
+						actual_key_parts = {temp.begin(), temp.end()};
 					} else {
 						for (auto &[key_part, _] : first_diag.expected_entries)
 							actual_key_parts.insert(key_part);
@@ -154,7 +157,9 @@ namespace hypertrie::tests::hashjoin {
 					for (DiagonalTestData<> &diagonal_data : hypertrie::internal::util::skip<1>(diagonals)) {
 						tsl::sparse_set<std::size_t> current_key_parts;
 						if (diagonal_data.join_positions.empty()) {
-							current_key_parts = {iter::range(max + 1).begin(), iter::range(max + 1).end()}; // TODO: continue
+                            std::vector<std::size_t> temp = {iter::range(max +1).begin(), iter::range(max +1).end()};
+                            for (auto &x: temp) x *= 8;
+							current_key_parts = {temp.begin(), temp.end()}; // TODO: continue
 						} else {
 							for (auto &[key_part, _] : diagonal_data.expected_entries)
 								current_key_parts.insert(key_part);

@@ -14,10 +14,10 @@ namespace hypertrie::internal::node_based {
 	struct NodeStorage {
 		using tri = tri_t;
 		using CompressedNode = Node<depth, true, tri>;
-		using Node = Node<depth, true, tri>;
+		using UncompressedNode = Node<depth, true, tri>;
 
-		typename tri::template map_type<NodeHash, CompressedNode> compressed_nodes_;
-		typename tri::template map_type<NodeHash, Node> uncompressed_nodes_;
+		typename tri::template map_type<TaggedNodeHash, CompressedNode> compressed_nodes_;
+		typename tri::template map_type<TaggedNodeHash, UncompressedNode> uncompressed_nodes_;
 	};
 }
 

@@ -21,7 +21,8 @@ namespace hypertrie::internal::node_based {
 	)>> {
 		using tri = tri_t;
 
-		std::array<typename tri::key_part, depth> children_;
+		std::array<typename tri::key_part, depth> key_;
+		size_t ref_count_ = 1;
 
 		[[nodiscard]] constexpr size_t size() const noexcept { return 1; }
 	};
@@ -33,8 +34,9 @@ namespace hypertrie::internal::node_based {
 	)>> {
 		using tri = tri_t;
 
-		std::array<typename tri::key_part, depth> children_;
+		std::array<typename tri::key_part, depth> key_;
 		typename tri::value_type value_;
+		size_t ref_count_;
 
 		[[nodiscard]] constexpr size_t size() const noexcept { return 1; }
 	};
@@ -50,6 +52,7 @@ namespace hypertrie::internal::node_based {
 
 		EdgesType edges_;
 		size_t size_ = 0;
+		size_t ref_count_;
 
 		[[nodiscard]] inline size_t size() const noexcept { return size_; }
 	};
@@ -61,12 +64,14 @@ namespace hypertrie::internal::node_based {
 	)>> {
 		using tri = tri_t;
 		// use a set to for value_type bool, otherwise a map
-		using EdgesType = std::conditional_t<std::is_same_v<typename tri_t::value_type, bool>
-				,typename tri::template set_type<typename tri::key_part_type>,
-				typename tri::template map_type<typename tri::key_part_type, typename tri::value_type>>;
+		using EdgesType = std::conditional_t<std::is_same_v<typename tri_t::value_type, bool>,
+				typename tri::template set_type<typename tri::key_part_type>,
+				typename tri::template map_type<typename tri::key_part_type, typename tri::value_type>
+		>;
 
 
 		EdgesType edges_;
+		size_t ref_count_;
 
 		[[nodiscard]] inline size_t size() const noexcept { return edges_.size(); }
 	};

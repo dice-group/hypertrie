@@ -17,10 +17,12 @@ namespace hypertrie::internal::node_based {
 		using set_type = typename tr::template set_type_t<key>;
 
 		using SliceKey = typename tr::SliceKey;
-		using Key =  typename tr::Key;
+		using Key = typename tr::Key;
 		/// internal definitions
 		template<pos_type depth>
 		using RawKey = std::array<typename tr::key_part_type, depth>;
+
+		constexpr static bool is_bool = std::is_same_v<value_type, bool>;
 
 		template<pos_type depth>
 		using RawSliceKey = std::array<std::optional<typename tr::key_part_type>, depth>;

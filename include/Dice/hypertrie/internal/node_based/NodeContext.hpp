@@ -13,9 +13,9 @@ namespace hypertrie::internal::node_based {
 	template<pos_type depth,
 			typename tri_t = Hypertrie_internal_t<>>
 	struct NodeContainer {
-		TaggedNodeHash thash_;
+		TaggedNodeHash thash_{};
 	private:
-		void *node_;
+		void *node_ = nullptr;
 	public:
 		NodeContainer(const TaggedNodeHash &thash, void *node) : thash_(thash), node_(node) {}
 
@@ -26,6 +26,8 @@ namespace hypertrie::internal::node_based {
 		Node<depth, false, tri_t> *uncompressed_node() {
 			return static_cast<Node<depth, false, tri_t> *>(node_);
 		}
+
+		[[nodiscard]] bool empty() const { return node_ == nullptr; }
 	};
 
 	template<pos_type max_depth,
@@ -63,30 +65,39 @@ namespace hypertrie::internal::node_based {
 		template<pos_type depth>
 		NodeContainer<depth, tri> newPrimaryNode() {
 			TaggedNodeHash base_hash{depth};
-			// TODO: increment counter
 			primary_nodes_.push_front(base_hash);
 			auto node_storage = getNodeStorage<depth>();
 			auto found = node_storage.uncompressed_nodes_.find(base_hash);
 			if (found) {
-				return NodeContainer{base_hash, &found.value()};
+				auto &node = found.value();
+				++node.ref_count_;
+				return NodeContainer{base_hash, &node};
 			} else {
 				auto nodec_inserted = node_storage.uncompressed_nodes_.insert(base_hash, Node<depth, false, tri>{});
+				auto &node = nodec_inserted.first.value();
+				++node.ref_count_;
 				return NodeContainer{base_hash, &nodec_inserted.first.value()};
 			}
 		}
 
 		template<pos_type depth>
+		void removeNode(TaggedNodeHash hash) {
+
+			// TODO: decrement counter
+			// TODO: remove from NodeStorage if counter is 0
+			// TODO: remove recursively if this counter AND their counter is 0
+		}
+
+		template<pos_type depth>
 		bool deletePrimaryNode(TaggedNodeHash thash) {
-			TaggedNodeHash base_hash{depth};
-			{ // remove from primary nodes list
+			{ // remove the hash from primary nodes list
 				auto found = std::find(primary_nodes_.begin(), primary_nodes_.end(), thash);
 				if (found == primary_nodes_.end())
 					return false;
 				primary_nodes_.erase(found);
 			}
-			// TODO: increment counter
-			// TODO: remove from NodeStorage if counter is 0
-			// TODO: remove recursively if this counter AND their counter is 0
+			removeNode<depth>(thash);
+
 			return true;
 		}
 
@@ -96,9 +107,74 @@ namespace hypertrie::internal::node_based {
 			return false;
 		}
 
+		/**
+		 * Resolves a keypart by a given position
+		 * @tparam depth the depth of the node container
+		 * @param nodec the node container, must be a uncompressed node
+		 * @param pos the position at which the key_part should be resolved
+		 * @param key_part the key part
+		 * @return an NodeContainer of depth - 1. It might be empty if there is no child for the given pos and key part. <br/>
+		 * If depth is 1, a value_type is return
+		 */
 		template<pos_type depth>
-		value_type get(NodeContainer<depth, tri> &nodec, RawKey<depth>) {
-			return false;
+		inline auto get(NodeContainer<depth, tri> &nodec, pos_type pos, key_part_type key_part)
+		-> std::conditional<(depth > 1), NodeContainer<depth - 1, tri>, value_type> {
+			assert (nodec.thash_.isUncompressed());
+			assert(pos < depth);
+			if constexpr(depth > 1) {
+				auto found = nodec.compressed_node->edges_[pos].find(key_part);
+				if (found) {
+					TaggedNodeHash child_hash = found.second;
+					auto &child_node_storage = getNodeStorage<depth - 1>();
+					if (child_hash.isCompressed()) {
+						auto &child_node = child_node_storage.compressed_nodes_[child_hash];
+						return NodeContainer<depth - 1, tri>{child_hash, &child_node};
+					}
+				} else
+					return NodeContainer<depth - 1, tri>{};
+			} else { // depth == 1
+				auto found = nodec->compressed_node->edges_.find(key_part);
+				if (found) {
+					if constexpr(tri::is_bool)
+						return true;
+					else
+						return found.second;
+				} else
+					return {}; // false, 0, 0.0
+			}
+		}
+
+		/**
+		 * Retrieves the value for a key.
+		 * @tparam depth the depth of the node container
+		 * @param nodec the node container
+		 * @param key the key
+		 * @return the value associated to the key.
+		 */
+		template<pos_type depth>
+		auto get(NodeContainer<depth, tri> &nodec, RawKey<depth> key) -> value_type {
+			if (nodec.thash_.isCompressed()) {
+				auto *node = nodec.compressed_node();
+				if (node->key_ == key) {
+					if constexpr(tri::is_bool) return true;
+					else return node->value_;
+				} else
+					return {};
+			} else if constexpr(depth > 1) {
+				// TODO: implement minCardPos();
+				auto pos = 0;//minCardPos();
+				NodeContainer<depth - 1, tri> child = get<depth>(nodec, pos, key[pos]);
+				if (not child.empty()) {
+					RawKey<depth - 1> next_key;
+					for (auto i = 0, j = 0; i < depth; ++i)
+						if (i != pos) next_key[j++] = key[i];
+					return get<depth - 1>(child, next_key);
+				} else {
+					return {}; // false, 0, 0.0
+				}
+			} else {
+				return get<1>(nodec, 0, key[0]);
+			}
 		}
 
 		template<pos_type depth>

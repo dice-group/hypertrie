@@ -8,15 +8,17 @@ namespace hypertrie::internal::node_based {
 	using NodeHash = size_t;
 
 	class TaggedNodeHash {
-		NodeHash thash_;
+		NodeHash thash_{};
 
 		static constexpr size_t tag_mask = size_t(1);
-		static constexpr size_t nontag_mask = ~size_t(1);
+		static constexpr size_t notag_mask = ~size_t(1);
 		static constexpr size_t uncompressed_tag = size_t(0);
 		static constexpr size_t compressed_tag = size_t(1);
 
 	public:
-		TaggedNodeHash(NodeHash thash) : thash_(thash) {}
+		TaggedNodeHash() = default;
+
+		explicit TaggedNodeHash(NodeHash thash) : thash_(thash) {}
 
 		/**
 		 * Create an initial hash for an empty hypertrie. Empty tensors are stored in uncompressed nodes.
@@ -33,13 +35,22 @@ namespace hypertrie::internal::node_based {
 			return (thash_ & tag_mask) == uncompressed_tag;
 		}
 
-		template<pos_type depth,
-				typename tri = Hypertrie_internal_t<>>
-		inline void addKey(const typename tri::template RawKey<depth> &key) {
-			size_t key_hash = absl::Hash<pos_type>()(depth)(key);
+		template<typename T>
+		inline void addToHash(const T &hashable) {
+			size_t key_hash = absl::Hash<pos_type>()(hashable);
 			thash_ = (thash_ ^ key_hash) // xor for combining the hash
 					 | compressed_tag;  // or for setting compressed tag
 		}
+
+		template<typename T>
+		inline void removeFromHash(const T &hashable, bool has2entries) {
+			size_t key_hash = absl::Hash<pos_type>()(hashable);
+			thash_ = (thash_ ^ key_hash); // xor for combining the hash
+			if (has2entries)
+				thash_ &= notag_mask; // for setting uncompressed tag
+		}
+
+
 	};
 
 

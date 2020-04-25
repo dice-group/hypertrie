@@ -26,6 +26,9 @@ namespace hypertrie::internal::node_based {
 		 */
 		explicit TaggedNodeHash(pos_type depth) : thash_(absl::Hash<pos_type>()(depth) | uncompressed_tag) {}
 
+		template<typename K, typename V>
+		TaggedNodeHash(const K &key ,const V &value) : thash_((absl::Hash<pos_type>()(key) ^ absl::Hash<pos_type>()(value)) & notag_mask) {}
+
 
 		[[nodiscard]] inline bool isCompressed() const {
 			return (thash_ & tag_mask) == compressed_tag;

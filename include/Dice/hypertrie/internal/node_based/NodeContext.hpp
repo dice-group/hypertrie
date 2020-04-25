@@ -7,6 +7,7 @@
 #include "TaggedNodeHash.hpp"
 
 #include <Dice/hypertrie/internal/util/CountDownNTuple.hpp>
+#include <range.hpp>
 
 namespace hypertrie::internal::node_based {
 
@@ -81,11 +82,19 @@ namespace hypertrie::internal::node_based {
 		}
 
 		template<pos_type depth>
-		void removeNode(TaggedNodeHash hash) {
+		void removeNode(NodeContainer<depth, tri> &nodec) {
+			if (nodec.compressed_node) {
+				auto *node = nodec.compressed_node();
+				if (--node->ref_count_ == 0)
+					getNodeStorage<depth>().compressed_nodes_.erase(nodec.thash_);
+			} else {
+				// TODO: first implement set
+				// TODO: decrement counter
+				// TODO: remove from NodeStorage if counter is 0
+				// TODO: remove recursively if this counter AND their counter is 0
+			}
 
-			// TODO: decrement counter
-			// TODO: remove from NodeStorage if counter is 0
-			// TODO: remove recursively if this counter AND their counter is 0
+
 		}
 
 		template<pos_type depth>
@@ -145,6 +154,84 @@ namespace hypertrie::internal::node_based {
 		}
 
 		/**
+		 *
+		 * @tparam depth
+		 * @param nodec
+		 * @param key
+		 * @return old value
+		 */
+		template<pos_type depth>
+		auto set(NodeContainer<depth, tri> &nodec, RawKey<depth> key, value_type value) -> value_type {
+			value_type old_value;
+			if constexpr (depth > 1)
+				for (auto pos : iter::range(depth)) {
+					auto child = get<depth>(nodec, pos, key[pos]);
+					if (child.empty()) {
+						if (value == value_type{})
+							return value; // TODO: in this case we can cancel all further traversal
+						// insert child
+						old_value = value_type{};
+						RawKey<depth -1> sub_key = subkey(key, pos);
+						// next hash
+						TaggedNodeHash child_hash(sub_key, value);
+						// register it with the node
+						nodec.uncompressed_node->edges_[pos].insert(key[pos], child_hash);
+						// check if there is already a node for that hash
+						auto &compressed_child_nodes = getNodeStorage<depth - 1>().compressed_nodes_;
+						auto found = compressed_child_nodes.find(child_hash);
+						if (found != compressed_child_nodes.end()) { // if there is, increase the counter
+							++found.value().ref_count_;
+						} else { // if not, create it and add it to the storage
+							if constexpr(tri::is_bool)
+								compressed_child_nodes.insert(child_hash, {sub_key, 1});
+							else compressed_child_nodes.insert(child_hash, {sub_key, value, 1});
+						}
+					} else {
+						RawKey<depth - 1> sub_key = subkey(key, pos);
+						if (child.thash_.isUncompressed()) {
+							// go on recursively
+							old_value = set(child, sub_key, value);
+						} else {
+							// check if it is there
+							if (child.compressed_node().key_ == sub_key) {
+								if (value == value_type{}) {
+									// TODO: remove compressed node
+								} else {
+									if constexpr(tri::is_bool)
+										return value; // TODO: we are done
+									else {
+										// change the value
+										auto &node_value = child.compressed_node().value_;
+										if (node_value == value)
+											return value; // TODO: we are done
+										old_value = node_value;
+										node_value = value;
+									}
+								}
+							} else {
+								// subkeys are different. We need to expand the node to a uncompressed one
+								// TODO create a node with two keys, recursively
+								// TODO remove existing child
+								// TODO add the new child
+							}
+						}
+					}
+				}
+			else {
+
+			}
+			return old_value;
+		}
+
+		template<pos_type depth>
+		auto subkey(const RawKey<depth> &key, pos_type remove_pos) -> RawKey<depth - 1> {
+			RawKey<depth - 1> sub_key;
+			for (auto i = 0, j = 0; i < depth; ++i)
+				if (i != remove_pos) sub_key[j++] = key[i];
+			return sub_key;
+		}
+
+		/**
 		 * Retrieves the value for a key.
 		 * @tparam depth the depth of the node container
 		 * @param nodec the node container
@@ -165,10 +252,7 @@ namespace hypertrie::internal::node_based {
 				auto pos = 0;//minCardPos();
 				NodeContainer<depth - 1, tri> child = get<depth>(nodec, pos, key[pos]);
 				if (not child.empty()) {
-					RawKey<depth - 1> next_key;
-					for (auto i = 0, j = 0; i < depth; ++i)
-						if (i != pos) next_key[j++] = key[i];
-					return get<depth - 1>(child, next_key);
+					return get<depth - 1>(child, subkey(key, pos));
 				} else {
 					return {}; // false, 0, 0.0
 				}

@@ -24,6 +24,10 @@ namespace hypertrie::internal::node_based {
 		std::array<typename tri::key_part, depth> key_;
 		size_t ref_count_ = 1;
 
+		Node(const std::array<typename tri::key_part, depth> &key,
+			 size_t refCount = 0)
+				: key_(key), ref_count_(refCount) {}
+
 		[[nodiscard]] constexpr size_t size() const noexcept { return 1; }
 	};
 
@@ -37,6 +41,11 @@ namespace hypertrie::internal::node_based {
 		std::array<typename tri::key_part, depth> key_;
 		typename tri::value_type value_;
 		size_t ref_count_;
+
+		Node(const std::array<typename tri::key_part, depth> &key,
+			 typename tri::value_type value,
+			 size_t refCount = 0)
+				: key_(key), value_(value), ref_count_(refCount) {}
 
 		[[nodiscard]] constexpr size_t size() const noexcept { return 1; }
 	};

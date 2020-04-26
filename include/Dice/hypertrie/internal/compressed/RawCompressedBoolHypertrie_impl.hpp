@@ -146,6 +146,70 @@ namespace hypertrie::internal::compressed {
             static thread_local NodePointer<depth_t> inst{};
             return inst;
         }
+
+        class iterator {
+        public:
+            using self_type =  iterator;
+            using value_type = std::vector<key_part_type>;
+        protected:
+            mutable value_type value_;
+            bool done;
+        public:
+
+            iterator(CompressedNode<1> const *const boolhypertrie) : value_(1), done(false) {
+                value[0] = boolhypertrie->key_part;
+            }
+
+            iterator(CompressedNode<1> const &boolhypertrie) : iterator(&boolhypertrie) {}
+
+            inline self_type &operator++() {
+                done = true;
+                return *this;
+            }
+
+            static void inc(void *it_ptr) {
+                auto &it = *static_cast<iterator *>(it_ptr);
+                ++it;
+            }
+
+            [[nodiscard]]
+            inline const value_type &operator*() const {
+                if (done) {
+                    throw std::logic_error{"iteration ended."};
+                }
+                return value_;
+            }
+
+            [[nodiscard]]
+            static const value_type &value(void const *it_ptr) {
+                auto &it = *static_cast<iterator const *>(it_ptr);
+                return *it;
+            }
+
+            [[nodiscard]]
+            inline operator bool() const { return not done; }
+
+            [[nodiscard]]
+            static bool ended(void const *it_ptr) {
+                auto &it = *static_cast<iterator const *>(it_ptr);
+                return not it;
+            }
+        };
+
+        using const_iterator = iterator;
+
+        [[nodiscard]]
+        iterator begin() const noexcept { return {this}; }
+
+        [[nodiscard]]
+        const_iterator cbegin() const noexcept { return {this}; }
+
+
+        [[nodiscard]]
+        bool end() const noexcept { return false; }
+
+        [[nodiscard]]
+        bool cend() const noexcept { return false; }
     };
 
     template<typename key_part_type_t, template<typename, typename> typename map_type_t,
@@ -538,6 +602,71 @@ namespace hypertrie::internal::compressed {
             return std::pair{positions, key_parts};
         }
 
+    public:
+        class iterator {
+        public:
+            using self_type =  iterator;
+            using value_type = std::vector<key_part_type>;
+        protected:
+            mutable value_type value_;
+            bool done;
+        public:
+
+            iterator(CompressedNode<2> const *const boolhypertrie) : value_(2), done(false) {
+                value_[0] = boolhypertrie->edges[0];
+                value_[1] = boolhypertrie->edges[1];
+            }
+
+            iterator(CompressedNode<2> const &boolhypertrie) : iterator(&boolhypertrie) {}
+
+            inline self_type &operator++() {
+                done = true;
+                return *this;
+            }
+
+            static void inc(void *it_ptr) {
+                auto &it = *static_cast<iterator *>(it_ptr);
+                ++it;
+            }
+
+            [[nodiscard]]
+            inline const value_type &operator*() const {
+                if (done) {
+                    throw std::logic_error{"iteration ended."};
+                }
+                return value_;
+            }
+
+            [[nodiscard]]
+            static const value_type &value(void const *it_ptr) {
+                auto &it = *static_cast<iterator const *>(it_ptr);
+                return *it;
+            }
+
+            [[nodiscard]]
+            inline operator bool() const { return not done; }
+
+            [[nodiscard]]
+            static bool ended(void const *it_ptr) {
+                auto &it = *static_cast<iterator const *>(it_ptr);
+                return not it;
+            }
+        };
+
+        using const_iterator = iterator;
+
+        [[nodiscard]]
+        iterator begin() const noexcept { return {this}; }
+
+        [[nodiscard]]
+        const_iterator cbegin() const noexcept { return {this}; }
+
+
+        [[nodiscard]]
+        bool end() const noexcept { return false; }
+
+        [[nodiscard]]
+        bool cend() const noexcept { return false; }
     };
 
     // Node type (depth == 2) . Here the solo child of a key is compressed in the same node using pointer tagging

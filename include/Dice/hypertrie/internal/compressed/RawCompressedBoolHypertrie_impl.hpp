@@ -506,6 +506,11 @@ namespace hypertrie::internal::compressed {
             return cards;
         }
 
+        // The wrapper should never return empty
+        [[nodiscard]]
+        bool empty() const {
+            return false;
+        }
     protected:
         template<pos_type slice_count>
         [[nodiscard]] auto
@@ -807,6 +812,11 @@ namespace hypertrie::internal::compressed {
             return _size;
         }
 
+        [[nodiscard]]
+        bool empty() const {
+            return _size == 0;
+        }
+
         // This method hold the information on which edge to look at (in this case, compressed_edges)
         key_part_type_t get_compressed_child(const pos_type edge_index, const key_part_type_t key_part) const {
             auto child_it = edges[edge_index].find(key_part);
@@ -1026,6 +1036,11 @@ namespace hypertrie::internal::compressed {
 
         [[nodiscard]]
         inline bool operator[](const Key &key) const {
+            return false;
+        }
+
+        [[nodiscard]]
+        bool empty() const {
             return false;
         }
 
@@ -1327,6 +1342,11 @@ namespace hypertrie::internal::compressed {
             assert(positions.size() == diag_depth);
             std::vector<bool> done(positions.size(), false);
             return this->template diagonal_rek<diag_depth>(positions, done, key_part);
+        }
+
+        [[nodiscard]]
+        bool empty() const {
+            return _size == 0;
         }
 
     protected:

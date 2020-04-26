@@ -138,7 +138,9 @@ namespace hypertrie::tests::raw_compressedboolhypertrie {
         Depth3CompressedBoolHypertrie x{};
         Depth3CompressedBoolHypertrie::Key key1{16, 16, 16};
 
+        REQUIRE(x.empty());
         x.set(key1);
+        REQUIRE(not x.empty());
         // x.set(key2);
         REQUIRE(x.diagonal(16) == true);
         REQUIRE(x.diagonal(8) == false);
@@ -210,19 +212,22 @@ namespace hypertrie::tests::raw_compressedboolhypertrie {
         Key key5{16, 80, 80};
         Key key6{80, 80, 80};
 
+        REQUIRE(x->empty());
         x->set(key1);
         x->set(key2);
         x->set(key3);
         x->set(key4);
         x->set(key5);
         x->set(key6);
+        REQUIRE(not x->empty());
 
         REQUIRE(x->diagonal(80));
         std::vector<pos_type> positions = {0};
         NodePointer<2> pointer1 = x->diagonal<1>(positions, 80);
-        REQUIRE(!pointer1.isEmpty());
+        REQUIRE(not pointer1.isEmpty());
         REQUIRE(pointer1.getTag() == NodePointer<2>::COMPRESSED_TAG);
         BHT2CompressedNode *child1 = pointer1.getCompressedNode();
+        REQUIRE(not child1->empty());
         REQUIRE(!child1->diagonal(81));
         REQUIRE(child1->diagonal(80));
 
@@ -273,7 +278,7 @@ namespace hypertrie::tests::raw_compressedboolhypertrie {
         NodePointer<1> pointer10 = child8->diagonal<1>({0}, 16);
         REQUIRE(pointer10.getNode()->diagonal(80));
         REQUIRE(pointer10.getNode()->diagonal(48));
-
+        REQUIRE(not pointer10.getNode()->empty());
         NodePointer<1> pointer11 = x->get(0, 16).getNode()->get(0, 16);
         REQUIRE(pointer10.getNode() == pointer11.getNode());
     }

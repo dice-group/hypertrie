@@ -140,6 +140,7 @@ namespace hypertrie::internal::compressed {
         key_part_type currentKeyPart([[maybe_unused]] const pos_type &pos) const {
             return key_part;
         }
+
         template<pos_type depth_t>
         static auto &const_emtpy_instance() {
             static thread_local NodePointer<depth_t> inst{};
@@ -460,7 +461,8 @@ namespace hypertrie::internal::compressed {
                 }
             }
 
-            if constexpr (depth != diag_depth) return CompressedNode<depth - diag_depth>::template const_emtpy_instance<depth - diag_depth>();
+            if constexpr (depth != diag_depth)
+                return CompressedNode<depth - diag_depth>::template const_emtpy_instance<depth - diag_depth>();
             else return false;
         }
 
@@ -511,6 +513,7 @@ namespace hypertrie::internal::compressed {
         bool empty() const {
             return false;
         }
+
     protected:
         template<pos_type slice_count>
         [[nodiscard]] auto
@@ -869,9 +872,10 @@ namespace hypertrie::internal::compressed {
                 created_nodes.clear();
             }
         }
+
     protected:
         template<pos_type current_depth, typename = typename std::enable_if_t<(current_depth <=
-                                                                                                2)>, typename DUMMY = void>
+                                                                               2)>, typename DUMMY = void>
         struct _;
 
         template<pos_type current_depth, typename DUMMY>
@@ -980,12 +984,148 @@ namespace hypertrie::internal::compressed {
             }
         };
 
+        class iterator {
+            template<pos_type depth_>
+            using childen_t  = typename Node<depth_>::children_type::const_iterator;
+
+            util::CountDownNTuple<childen_t, depth> iters;
+            util::CountDownNTuple<childen_t, depth> ends;
+        public:
+            using self_type =  iterator;
+            using value_type = std::vector<key_part_type>;
+        protected:
+            Node<depth> const *const raw_boolhypertrie;
+
+            std::vector<key_part_type> key;
+            bool ended_;
+        public:
+
+            iterator(Node<depth> const *const raw_boolhypertrie)
+                    : raw_boolhypertrie(raw_boolhypertrie),
+                      key(depth),
+                      ended_{raw_boolhypertrie->empty()} {
+                if (not ended_)
+                    init_rek();
+            }
+
+            iterator(Node<depth> const &raw_boolhypertrie) : iterator(&raw_boolhypertrie) {}
+
+            inline self_type &operator++() {
+                inc_rek();
+                return *this;
+            }
+
+            static void inc(void *it_ptr) {
+                auto &it = *static_cast<iterator *>(it_ptr);
+                ++it;
+            }
+
+            inline const value_type &operator*() const { return key; }
+
+            static const value_type &value(void const *it_ptr) {
+                auto &it = *static_cast<iterator const *>(it_ptr);
+                return *it;
+            }
+
+            inline operator bool() const { return not ended_; }
+
+            static bool ended(void const *it_ptr) {
+                auto &it = *static_cast<iterator const *>(it_ptr);
+                return it.ended_;
+            }
+
+        protected:
+
+            inline void init_rek() {
+                // get the iterator
+                auto &iter = std::get<depth - 1>(iters);
+                iter = raw_boolhypertrie->edges[0].cbegin();
+                auto &end = std::get<depth - 1>(ends);
+                end = raw_boolhypertrie->edges[0].cend();
+
+                // set the key_part in the key
+                key[0] = std::get<depth - 1>(iters)->first;
+                init_rek < depth - 1 > ();
+            }
+
+            template<pos_type current_depth,
+                    typename =std::enable_if_t<(current_depth < depth and current_depth >= 1)> >
+            inline void init_rek() {
+                // get parent iterator
+                auto &iter = std::get<current_depth - 1>(iters);
+                auto &end = std::get<current_depth - 1>(ends);
+                childen_t<current_depth + 1> &parent_it = std::get<current_depth>(iters);
+
+
+                compressed_child_type current_child = parent_it->second;
+
+                if (current_child.getTag() == compressed_child_type::INT_TAG) {
+                    key[depth - 1] = current_child.getInt();
+                } else {
+                    Node<1> *current_boolhypertrie = current_child.getPointer();
+                    iter = current_boolhypertrie->edges.cbegin();
+                    end = current_boolhypertrie->edges.cend();
+                    key[depth - 1] = *iter;
+                }
+            }
+
+            inline void inc_rek() {
+                bool inc_done = inc_rek < 1 > ();
+                if (not inc_done) {
+                    auto &iter = std::get<depth - 1>(iters);
+                    auto &end = std::get<depth - 1>(ends);
+                    ++iter;
+                    if (iter != end) {
+                        key[0] = iter->first;
+                        init_rek<depth - 1>();
+                    } else {
+                        ended_ = true;
+                    }
+                }
+            }
+
+            template<pos_type current_depth,
+                    typename =std::enable_if_t<(current_depth == 1)> >
+            inline bool inc_rek() {
+                childen_t<current_depth + 1> &parent_it = std::get<current_depth>(iters);
+                compressed_child_type current_parent_child = parent_it->second;
+                if (current_parent_child.getTag() == compressed_child_type::INT_TAG) {
+                    return false;
+                } else {
+                    // get the iterator
+                    auto &iter = std::get<0>(iters);
+                    auto &end = std::get<0>(ends);
+                    // increment it
+                    ++iter;
+                    // check if it is still valid
+                    if (iter != end) {
+                        key[depth - 1] = *iter;
+                        return true;
+                    } else {
+                        return false;
+                    }
+                }
+            }
+        };
+
+        using const_iterator = iterator;
+
+        iterator begin() const noexcept { return {this}; }
+
+        const_iterator cbegin() const noexcept { return {this}; }
+
+
+        bool end() const noexcept { return false; }
+
+        bool cend() const noexcept { return false; }
+
     };
 
     // Node type (depth == 3).
     template<pos_type depth_t, typename key_part_type_t, template<typename, typename> typename map_type_t,
             template<typename> typename set_type_t>
-    class RawCompressedBoolHypertrie<depth_t, key_part_type_t, map_type_t, set_type_t, true, typename std::enable_if_t<(depth_t > 2)>> {
+    class RawCompressedBoolHypertrie<depth_t, key_part_type_t, map_type_t, set_type_t, true, typename std::enable_if_t<(
+            depth_t > 2)>> {
     protected:
         template<pos_type depth_tt, bool compressed_tt>
         using rawCompressedboolhypertrie_c = RawCompressedBoolHypertrie<depth_tt, key_part_type_t, map_type_t, set_type_t, compressed_tt>;

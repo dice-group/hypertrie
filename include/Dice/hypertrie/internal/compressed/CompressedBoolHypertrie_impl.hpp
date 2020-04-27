@@ -318,6 +318,163 @@ namespace hypertrie::internal::compressed {
                 template<typename> class>
         friend
         class CompressedHashDiagonal;
+
+        class iterator {
+        protected:
+            struct RawMethods {
+
+                void (*destruct)(const void *);
+
+                void *(*begin)(const const_CompressedBoolHypertrie &boolHypertrie);
+
+                const Key &(*value)(void const *);
+
+                void (*inc)(void *);
+
+                bool (*ended)(void const *);
+
+            };
+
+            template<pos_type depth>
+            inline static RawMethods generateRawMethods() {
+                return RawMethods{
+                        [](const void *rawboolhypertrie_iterator) {
+                            using T = const typename Node<depth>::iterator;
+                            if (rawboolhypertrie_iterator != nullptr){
+                                delete static_cast<T *>(rawboolhypertrie_iterator);
+                            }
+                        },
+                        [](const const_CompressedBoolHypertrie &boolHypertrie) -> void * {
+                            NodePointer<depth> hypertrie_ptr{boolHypertrie.hypertrie};
+                            return new typename Node<depth>::iterator(*hypertrie_ptr.getNode());
+                        },
+                        &Node<depth>::iterator::value,
+                        &Node<depth>::iterator::inc,
+                        &Node<depth>::iterator::ended};
+            }
+
+            template<pos_type depth>
+            inline static RawMethods generateCompressedRawMethods() {
+                return RawMethods{
+                        [](const void *rawboolhypertrie_iterator) {
+                            using T = const typename CompressedNode<depth>::iterator;
+                            if (rawboolhypertrie_iterator != nullptr){
+                                delete static_cast<T *>(rawboolhypertrie_iterator);
+                            }
+                        },
+                        [](const const_CompressedBoolHypertrie &boolHypertrie) -> void * {
+                            NodePointer<depth> hypertrie_ptr{boolHypertrie.hypertrie};
+                            return new typename CompressedNode<depth>::iterator(*hypertrie_ptr.getCompressedNode());
+                        },
+                        &CompressedNode<depth>::iterator::value,
+                        &CompressedNode<depth>::iterator::inc,
+                        &CompressedNode<depth>::iterator::ended};
+            }
+
+            inline static const std::vector<RawMethods> RawMethodsCache{
+                    generateRawMethods<1>(),
+                    generateRawMethods<2>(),
+                    generateRawMethods<3>()
+            };
+
+            inline static const std::vector<RawMethods> CompressedRawMethodsCache{
+                    generateCompressedRawMethods<1>(),
+                    generateCompressedRawMethods<2>()
+            };
+
+            static RawMethods const &getRawMethods(pos_type depth) {
+                return RawMethodsCache[depth - 1];
+            };
+
+            static RawMethods const &getCompressedRawMethods(pos_type depth) {
+                return CompressedRawMethodsCache[depth - 1];
+            };
+
+
+        protected:
+            RawMethods const *raw_methods = nullptr;
+            void *raw_iterator = nullptr;
+
+        public:
+            using self_type =  iterator;
+            using value_type = Key;
+
+            iterator() = default;
+
+            iterator(iterator &) = delete;
+
+            iterator(const iterator &) = delete;
+
+            iterator(iterator &&) = delete;
+
+            iterator &operator=(iterator &&other) noexcept {
+                if (this->raw_methods != nullptr)
+                    this->raw_methods->destruct(this->raw_iterator);
+                this->raw_methods = other.raw_methods;
+                this->raw_iterator = other.raw_iterator;
+                other.raw_iterator = nullptr;
+                other.raw_methods = nullptr;
+                return *this;
+            }
+
+            iterator &operator=(iterator &) = delete;
+
+            iterator &operator=(const iterator &) = delete;
+
+            iterator(const_CompressedBoolHypertrie const *const boolHypertrie) :
+                    raw_methods(&getRawMethods(boolHypertrie->depth())),
+                    raw_iterator(raw_methods->begin(*boolHypertrie)) {
+                switch (boolHypertrie->depth()) {
+                    case 1:{
+                        NodePointer<1> node_ptr{boolHypertrie->hypertrie};
+                        if (node_ptr.getTag() == NodePointer<1>::COMPRESSED_TAG) {
+                            raw_methods(&getCompressedRawMethods(1));
+                            raw_iterator(raw_methods->begin(boolHypertrie));
+                        } else {
+                            raw_methods(&getRawMethods(1));
+                            raw_iterator(raw_methods->begin(boolHypertrie));
+                        }
+                        break;
+                    }
+                    case 2:{
+                        NodePointer<2> node_ptr{boolHypertrie->hypertrie};
+                        if (node_ptr.getTag() == NodePointer<2>::COMPRESSED_TAG) {
+                            raw_methods(&getCompressedRawMethods(2));
+                            raw_iterator(raw_methods->begin(boolHypertrie));
+                        } else {
+                            raw_methods(&getRawMethods(2));
+                            raw_iterator(raw_methods->begin(boolHypertrie));
+                        }
+                        break;
+                    };
+                    case 3: {
+                        NodePointer<3> node_ptr{boolHypertrie->hypertrie};
+                        raw_methods(&getRawMethods(3));
+                        raw_iterator(raw_methods->begin(boolHypertrie));
+                        break;
+                    }
+                }
+            }
+
+            iterator(const_CompressedBoolHypertrie &boolHypertrie) : iterator(&boolHypertrie) {}
+
+            ~iterator() {
+                if (raw_methods != nullptr)
+                    raw_methods->destruct(raw_iterator);
+                raw_methods = nullptr;
+                raw_iterator = nullptr;
+            }
+
+            self_type &operator++() {
+                raw_methods->inc(raw_iterator);
+                return *this;
+            }
+
+            value_type operator*() const { return raw_methods->value(raw_iterator); }
+
+            operator bool() const { return not raw_methods->ended(raw_iterator); }
+
+        };
     };
 
     template<typename key_part_type, template<typename, typename> class map_type,

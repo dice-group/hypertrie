@@ -153,17 +153,17 @@ namespace hypertrie::internal::compressed {
             using value_type = std::vector<key_part_type>;
         protected:
             mutable value_type value_;
-            bool done;
+            bool ended_;
         public:
 
-            iterator(CompressedNode<1> const *const boolhypertrie) : value_(1), done(false) {
+            iterator(CompressedNode<1> const *const boolhypertrie) : value_(1), ended_(false) {
                 value[0] = boolhypertrie->key_part;
             }
 
             iterator(CompressedNode<1> const &boolhypertrie) : iterator(&boolhypertrie) {}
 
             inline self_type &operator++() {
-                done = true;
+                this->ended_ = true;
                 return *this;
             }
 
@@ -174,7 +174,7 @@ namespace hypertrie::internal::compressed {
 
             [[nodiscard]]
             inline const value_type &operator*() const {
-                if (done) {
+                if (ended_) {
                     throw std::logic_error{"iteration ended."};
                 }
                 return value_;
@@ -187,12 +187,12 @@ namespace hypertrie::internal::compressed {
             }
 
             [[nodiscard]]
-            inline operator bool() const { return not done; }
+            inline operator bool() const { return not ended_; }
 
             [[nodiscard]]
             static bool ended(void const *it_ptr) {
                 auto &it = *static_cast<iterator const *>(it_ptr);
-                return not it;
+                return it.ended_;
             }
         };
 
@@ -609,10 +609,10 @@ namespace hypertrie::internal::compressed {
             using value_type = std::vector<key_part_type>;
         protected:
             mutable value_type value_;
-            bool done;
+            bool ended_;
         public:
 
-            iterator(CompressedNode<2> const *const boolhypertrie) : value_(2), done(false) {
+            iterator(CompressedNode<2> const *const boolhypertrie) : value_(2), ended_(false) {
                 value_[0] = boolhypertrie->edges[0];
                 value_[1] = boolhypertrie->edges[1];
             }
@@ -620,7 +620,7 @@ namespace hypertrie::internal::compressed {
             iterator(CompressedNode<2> const &boolhypertrie) : iterator(&boolhypertrie) {}
 
             inline self_type &operator++() {
-                done = true;
+                ended_ = true;
                 return *this;
             }
 
@@ -631,7 +631,7 @@ namespace hypertrie::internal::compressed {
 
             [[nodiscard]]
             inline const value_type &operator*() const {
-                if (done) {
+                if (ended_) {
                     throw std::logic_error{"iteration ended."};
                 }
                 return value_;
@@ -644,12 +644,12 @@ namespace hypertrie::internal::compressed {
             }
 
             [[nodiscard]]
-            inline operator bool() const { return not done; }
+            inline operator bool() const { return not ended_; }
 
             [[nodiscard]]
             static bool ended(void const *it_ptr) {
                 auto &it = *static_cast<iterator const *>(it_ptr);
-                return not it;
+                return it.ended_;
             }
         };
 
@@ -1916,6 +1916,210 @@ namespace hypertrie::internal::compressed {
             }
         };
 
+    public:
+        class iterator {
+            template<pos_type depth_>
+            using childen_t  = typename Node<depth_>::children_type::const_iterator;
+
+        public:
+            using self_type =  iterator;
+            using value_type = std::vector<key_part_type>;
+        protected:
+            Node<depth> const *const raw_boolhypertrie;
+
+            typename Node<depth_t>::compressed_children_type compressed_iter;
+            typename Node<depth_t>::compressed_children_type compressed_end;
+            bool compressed_mode;
+            util::CountDownNTuple<childen_t, depth> iters;
+            util::CountDownNTuple<childen_t, depth> ends;
+            std::vector<key_part_type> key;
+            bool ended_;
+            bool non_compressed_empty;
+        public:
+
+            iterator(Node<depth> const *const boolhypertrie)
+                    : raw_boolhypertrie(boolhypertrie),
+                      key(depth),
+                      compressed_mode(false),
+                      non_compressed_empty(false),
+                      ended_{boolhypertrie->empty()} {
+                if (not ended_)
+                    init_rek();
+            }
+
+            iterator(Node<depth> const &raw_boolhypertrie) : iterator(&raw_boolhypertrie) {}
+
+            inline self_type &operator++() {
+                inc_rek();
+                return *this;
+            }
+
+            static void inc(void *it_ptr) {
+                auto &it = *static_cast<iterator *>(it_ptr);
+                ++it;
+            }
+
+            inline const value_type &operator*() const { return key; }
+
+            static const value_type &value(void const *it_ptr) {
+                auto &it = *static_cast<iterator const *>(it_ptr);
+                return *it;
+            }
+
+            inline operator bool() const { return not ended_; }
+
+            static bool ended(void const *it_ptr) {
+                auto &it = *static_cast<iterator const *>(it_ptr);
+                return it.ended_;
+            }
+
+        protected:
+
+            inline void init_rek() {
+                // get the iterator
+                auto &iter = std::get<depth - 1>(iters);
+                iter = raw_boolhypertrie->edges[0].cbegin();
+                auto &end = std::get<depth - 1>(ends);
+                end = raw_boolhypertrie->edges[0].cend();
+
+                compressed_iter = raw_boolhypertrie->compressed_edges[0].cbegin();
+                compressed_end = raw_boolhypertrie->compressed_edges[0].cend();
+                if (compressed_iter != compressed_end) {
+                    compressed_mode = true;
+                }
+                if (iter == end) {
+                    non_compressed_empty = true;
+                }
+                if (compressed_mode) {
+                    key[0] = compressed_iter->first;
+                    compressed_child_type compressed_child = compressed_iter->second;
+                    std::copy(compressed_child.begin(), compressed_child.end(), key.begin() + 1);
+                } else {
+                    key[0] = std::get<depth - 1>(iters)->first;
+                    init_rek<depth - 1>();
+                }
+            }
+
+            template<pos_type current_depth,
+                    typename =std::enable_if_t<(current_depth < depth and current_depth >= 1)> >
+            inline void init_rek() {
+                // get parent iterator
+                auto &iter = std::get<current_depth - 1>(iters);
+                auto &end = std::get<current_depth - 1>(ends);
+                childen_t<current_depth + 1> &parent_it = std::get<current_depth>(iters);
+
+                if constexpr (current_depth > 2) {
+                    throw std::logic_error{"not implemented"};
+                }
+                if constexpr (current_depth == 2) {
+                    Node<current_depth> const *current_rawBoolhypertrie = parent_it->second;
+                    iter = current_rawBoolhypertrie->edges[0].cbegin();
+                    end = current_rawBoolhypertrie->edges[0].cend();
+                    key[depth - current_depth] = iter->first;
+                    // set the key_part in the key
+                    init_rek<current_depth - 1>();
+                }
+                if constexpr (current_depth == 1) {
+                    using depth_2_compressed_child = typename Node<current_depth + 1>::compressed_child_type;
+                    depth_2_compressed_child const &current_child = parent_it->second;
+                    if (current_child.getTag() == depth_2_compressed_child::INT_TAG) {
+                        key[depth - current_depth] = current_child.getInt();
+                    } else {
+                        Node<current_depth> *current_boolhypertrie = current_child.getPointer();
+                        iter = current_boolhypertrie->edges.cbegin();
+                        end = current_boolhypertrie->edges.cend();
+                        key[depth - current_depth] = *iter;
+                    }
+                }
+            }
+
+            inline void inc_rek() {
+                if (compressed_mode) {
+                    compressed_iter++;
+                    if (compressed_iter != compressed_end) {
+                        key[0] = compressed_iter->first;
+                        compressed_child_type compressed_child = compressed_iter->second;
+                        std::copy(compressed_child.begin(), compressed_child.end(), key.begin() + 1);
+                    } else {
+                        compressed_mode = false;
+                        if (not non_compressed_empty) {
+                            key[0] = std::get<depth - 1>(iters)->first;
+                            init_rek<depth - 1>();
+                        } else {
+                            ended_ = true;
+                        }
+                    }
+                } else {
+                    bool inc_done = inc_rek<depth - 1>();
+                    if (not inc_done) {
+                        auto &iter = std::get<depth - 1>(iters);
+                        auto &end = std::get<depth - 1>(ends);
+                        ++iter;
+                        if (iter != end) {
+                            key[0] = iter->first;
+                            init_rek<depth - 1>();
+                        } else {
+                            ended_ = true;
+                        }
+                    }
+                }
+            }
+
+            template<pos_type current_depth,
+                    typename =std::enable_if_t<(current_depth < depth and current_depth >= 1)> >
+            inline bool inc_rek() {
+                if constexpr (current_depth == 2) {
+                    bool inc_done = inc_rek<current_depth - 1>();
+                    if (inc_done) {
+                        return true;
+                    } else {
+                        auto &iter = std::get<current_depth - 1>(iters);
+                        auto &end = std::get<current_depth - 1>(ends);
+                        ++iter;
+                        if (iter != end) {
+                            init_rek<current_depth - 1>();
+                            key[depth - current_depth] = iter->first;
+                            return true;
+                        } else {
+                            return false;
+                        }
+                    }
+                } else if constexpr (current_depth == 1) {
+                    childen_t<current_depth + 1> &parent_it = std::get<current_depth>(iters);
+                    using depth_2_compressed_child = typename Node<current_depth + 1>::compressed_child_type;
+                    depth_2_compressed_child current_parent_child = parent_it->second;
+                    if (current_parent_child.getTag() == depth_2_compressed_child::INT_TAG) {
+                        return false;
+                    } else {
+                        // get the iterator
+                        auto &iter = std::get<0>(iters);
+                        auto &end = std::get<0>(ends);
+                        // increment it
+                        ++iter;
+                        // check if it is still valid
+                        if (iter != end) {
+                            key[depth - 1] = *iter;
+                            return true;
+                        } else {
+                            return false;
+                        }
+                    }
+                } else {
+                    throw std::logic_error{"not implemented"};
+                }
+            }
+        };
+
+        using const_iterator = iterator;
+
+        iterator begin() const noexcept { return {this}; }
+
+        const_iterator cbegin() const noexcept { return {this}; }
+
+
+        bool end() const noexcept { return false; }
+
+        bool cend() const noexcept { return false; }
     };
 
 

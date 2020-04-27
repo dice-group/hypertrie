@@ -38,8 +38,8 @@ namespace hypertrie::internal::compressed {
         using NodePointer = util::CompressedBoolHyperTrieTaggedPointer<CompressedNode<depth_t> *, Node<depth_t> *, 8>;
 
     public:
-        typedef std::vector<std::optional<key_part_type>> SliceKey;
-        typedef std::vector<key_part_type> Key;
+        typedef std::vector <std::optional<key_part_type>> SliceKey;
+        typedef std::vector <key_part_type> Key;
 
     protected:
 
@@ -107,7 +107,7 @@ namespace hypertrie::internal::compressed {
 
     public:
         [[nodiscard]]
-        std::vector<size_t> getCards(const std::vector<pos_type> &positions) const {
+        std::vector <size_t> getCards(const std::vector <pos_type> &positions) const {
             assert(positions.size() <= depth());
             switch (depth_) {
                 case 1: {
@@ -128,11 +128,7 @@ namespace hypertrie::internal::compressed {
                 }
                 case 3: {
                     NodePointer<3> node_ptr = NodePointer<3>{hypertrie};
-                    if (node_ptr.getTag() == NodePointer<3>::COMPRESSED_TAG) {
-                        return node_ptr.getCompressedNode()->getCards(positions);
-                    } else {
-                        return node_ptr.getNode()->getCards(positions);
-                    }
+                    return node_ptr.getNode()->getCards(positions);
                 }
                 default:
                     throw std::logic_error{"not implemented."};
@@ -160,8 +156,8 @@ namespace hypertrie::internal::compressed {
                     }
                 }
                 case 3: {
-                    Node<3> *node_ptr = static_cast<Node<3> *>(hypertrie);
-                    return node_ptr->size();
+                    NodePointer<3> node_ptr = NodePointer<3>{hypertrie};
+                    return node_ptr.getNode()->size();
                 }
                 default:
                     throw std::logic_error{"not implemented."};
@@ -268,7 +264,7 @@ namespace hypertrie::internal::compressed {
                         }
                     } else {
                         if (this->size()) return {*this};
-                        else return {std::optional<const_CompressedBoolHypertrie>{}};
+                        else return {std::optional < const_CompressedBoolHypertrie > {}};
                     }
                 }
 
@@ -277,7 +273,7 @@ namespace hypertrie::internal::compressed {
                     switch (count) {
                         case 2: {
                             if (this->size()) return {*this};
-                            else return {std::optional<const_CompressedBoolHypertrie>{}};
+                            else return {std::optional < const_CompressedBoolHypertrie > {}};
                         }
                         case 1:
                             return executeRawSlice<2, 1>(hypertrie, std::move(raw_slice_key));
@@ -292,7 +288,7 @@ namespace hypertrie::internal::compressed {
                     switch (count) {
                         case 3: {
                             if (this->size()) return {*this};
-                            else return {std::optional<const_CompressedBoolHypertrie>{}};
+                            else return {std::optional < const_CompressedBoolHypertrie > {}};
                         }
 
                         case 2:
@@ -340,7 +336,7 @@ namespace hypertrie::internal::compressed {
                 return RawMethods{
                         [](const void *rawboolhypertrie_iterator) {
                             using T = const typename Node<depth>::iterator;
-                            if (rawboolhypertrie_iterator != nullptr){
+                            if (rawboolhypertrie_iterator != nullptr) {
                                 delete static_cast<T *>(rawboolhypertrie_iterator);
                             }
                         },
@@ -358,7 +354,7 @@ namespace hypertrie::internal::compressed {
                 return RawMethods{
                         [](const void *rawboolhypertrie_iterator) {
                             using T = const typename CompressedNode<depth>::iterator;
-                            if (rawboolhypertrie_iterator != nullptr){
+                            if (rawboolhypertrie_iterator != nullptr) {
                                 delete static_cast<T *>(rawboolhypertrie_iterator);
                             }
                         },
@@ -371,13 +367,13 @@ namespace hypertrie::internal::compressed {
                         &CompressedNode<depth>::iterator::ended};
             }
 
-            inline static const std::vector<RawMethods> RawMethodsCache{
+            inline static const std::vector <RawMethods> RawMethodsCache{
                     generateRawMethods<1>(),
                     generateRawMethods<2>(),
                     generateRawMethods<3>()
             };
 
-            inline static const std::vector<RawMethods> CompressedRawMethodsCache{
+            inline static const std::vector <RawMethods> CompressedRawMethodsCache{
                     generateCompressedRawMethods<1>(),
                     generateCompressedRawMethods<2>()
             };
@@ -421,36 +417,33 @@ namespace hypertrie::internal::compressed {
 
             iterator &operator=(const iterator &) = delete;
 
-            iterator(const_CompressedBoolHypertrie const *const boolHypertrie) :
-                    raw_methods(&getRawMethods(boolHypertrie->depth())),
-                    raw_iterator(raw_methods->begin(*boolHypertrie)) {
+            iterator(const_CompressedBoolHypertrie const *const boolHypertrie) {
                 switch (boolHypertrie->depth()) {
-                    case 1:{
+                    case 1: {
                         NodePointer<1> node_ptr{boolHypertrie->hypertrie};
                         if (node_ptr.getTag() == NodePointer<1>::COMPRESSED_TAG) {
-                            raw_methods(&getCompressedRawMethods(1));
-                            raw_iterator(raw_methods->begin(boolHypertrie));
+                            raw_methods = &getCompressedRawMethods(1);
+                            raw_iterator = raw_methods->begin(*boolHypertrie);
                         } else {
-                            raw_methods(&getRawMethods(1));
-                            raw_iterator(raw_methods->begin(boolHypertrie));
+                            raw_methods = &getRawMethods(1);
+                            raw_iterator = raw_methods->begin(*boolHypertrie);
                         }
                         break;
                     }
-                    case 2:{
+                    case 2: {
                         NodePointer<2> node_ptr{boolHypertrie->hypertrie};
                         if (node_ptr.getTag() == NodePointer<2>::COMPRESSED_TAG) {
-                            raw_methods(&getCompressedRawMethods(2));
-                            raw_iterator(raw_methods->begin(boolHypertrie));
+                            raw_methods = &getCompressedRawMethods(2);
+                            raw_iterator = raw_methods->begin(*boolHypertrie);
                         } else {
-                            raw_methods(&getRawMethods(2));
-                            raw_iterator(raw_methods->begin(boolHypertrie));
+                            raw_methods = &getRawMethods(2);
+                            raw_iterator = raw_methods->begin(*boolHypertrie);
                         }
                         break;
                     };
                     case 3: {
-                        NodePointer<3> node_ptr{boolHypertrie->hypertrie};
-                        raw_methods(&getRawMethods(3));
-                        raw_iterator(raw_methods->begin(boolHypertrie));
+                        raw_methods = &getRawMethods(3);
+                        raw_iterator = raw_methods->begin(*boolHypertrie);
                         break;
                     }
                 }
@@ -475,6 +468,20 @@ namespace hypertrie::internal::compressed {
             operator bool() const { return not raw_methods->ended(raw_iterator); }
 
         };
+
+        using const_iterator = iterator;
+
+        [[nodiscard]]
+        iterator begin() const { return iterator{this}; }
+
+        [[nodiscard]]
+        const_iterator cbegin() const { return iterator{this}; }
+
+        [[nodiscard]]
+        bool end() const { return false; }
+
+        [[nodiscard]]
+        bool cend() const { return false; }
     };
 
     template<typename key_part_type, template<typename, typename> class map_type,

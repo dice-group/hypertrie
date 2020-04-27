@@ -157,7 +157,7 @@ namespace hypertrie::internal::compressed {
         public:
 
             iterator(CompressedNode<1> const *const boolhypertrie) : value_(1), ended_(false) {
-                value[0] = boolhypertrie->key_part;
+                value_[0] = boolhypertrie->key_part;
             }
 
             iterator(CompressedNode<1> const &boolhypertrie) : iterator(&boolhypertrie) {}
@@ -1113,6 +1113,7 @@ namespace hypertrie::internal::compressed {
             }
         };
 
+    public:
         class iterator {
             template<pos_type depth_>
             using childen_t  = typename Node<depth_>::children_type::const_iterator;
@@ -1927,8 +1928,8 @@ namespace hypertrie::internal::compressed {
         protected:
             Node<depth> const *const raw_boolhypertrie;
 
-            typename Node<depth_t>::compressed_children_type compressed_iter;
-            typename Node<depth_t>::compressed_children_type compressed_end;
+            typename Node<depth_t>::compressed_children_type::const_iterator compressed_iter;
+            typename Node<depth_t>::compressed_children_type::const_iterator compressed_end;
             bool compressed_mode;
             util::CountDownNTuple<childen_t, depth> iters;
             util::CountDownNTuple<childen_t, depth> ends;

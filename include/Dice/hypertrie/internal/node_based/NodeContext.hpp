@@ -1,13 +1,15 @@
 #ifndef HYPERTRIE_NODECONTEXT_HPP
 #define HYPERTRIE_NODECONTEXT_HPP
 
+#include <compare>
+
 #include "Dice/hypertrie/internal/util/CONSTANTS.hpp"
 #include "Dice/hypertrie/internal/node_based/Hypertrie_traits.hpp"
 #include "Dice/hypertrie/internal/node_based/NodeStorage.hpp"
 #include "TaggedNodeHash.hpp"
 
 #include <Dice/hypertrie/internal/util/CountDownNTuple.hpp>
-#include <range.hpp>
+#include <itertools.hpp>
 
 namespace hypertrie::internal::node_based {
 
@@ -28,7 +30,7 @@ namespace hypertrie::internal::node_based {
 			return static_cast<Node<depth, false, tri_t> *>(node_);
 		}
 
-		[[nodiscard]] bool empty() const { return node_ == nullptr; }
+		[[nodiscard]] bool empty() const { return thash_ == TaggedNodeHash{}; }
 	};
 
 	template<pos_type max_depth,
@@ -59,6 +61,28 @@ namespace hypertrie::internal::node_based {
 		template<pos_type depth>
 		NodeStorage_t<depth> &getNodeStorage() {
 			return std::get<depth - 1>(node_storages_);
+		}
+
+		template<pos_type depth>
+		NodeContainer<depth, tri> &getCompressedNode(const TaggedNodeHash &node_hash) {
+			assert(node_hash.isCompressed());
+			auto compressed_nodes = getNodeStorage<depth>().compressed_nodes_;
+			auto found = compressed_nodes.find(node_hash);
+			if (found != compressed_nodes.end())
+				return {node_hash, &found.value()};
+			else
+				return {};
+		}
+
+		template<pos_type depth>
+		NodeContainer<depth, tri> &getUncompressedNode(const TaggedNodeHash &node_hash) {
+			assert(node_hash.isUncompressed());
+			auto uncompressed_nodes = getNodeStorage<depth>().uncompressed_nodes_;
+			auto found = uncompressed_nodes.find(node_hash);
+			if (found != uncompressed_nodes.end())
+				return {node_hash, &found.value()};
+			else
+				return {};
 		}
 
 	public:
@@ -117,6 +141,30 @@ namespace hypertrie::internal::node_based {
 			return false;
 		}
 
+		template<pos_type depth>
+		inline auto getChildHash(NodeContainer<depth, tri> &nodec, pos_type pos, key_part_type key_part)
+		-> std::optional<std::conditional<(depth > 1), TaggedNodeHash, value_type>> {
+			assert (nodec.thash_.isUncompressed());
+			assert(pos < depth);
+			auto &edges = nodec.compressed_node->edges_[pos];
+			if constexpr(depth > 1) {
+				auto found = edges.find(key_part);
+				if (found != edges.end()) {
+					return found.second;
+				} else
+					return std::nullopt;
+			} else { // depth == 1
+				auto found = edges.find(key_part);
+				if (found != edges.end()) {
+					if constexpr(tri::is_bool)
+						return true;
+					else
+						return found.second;
+				} else
+					return {}; // false, 0, 0.0
+			}
+		}
+		
 		/**
 		 * Resolves a keypart by a given position
 		 * @tparam depth the depth of the node container
@@ -129,27 +177,26 @@ namespace hypertrie::internal::node_based {
 		template<pos_type depth>
 		inline auto getChild(NodeContainer<depth, tri> &nodec, pos_type pos, key_part_type key_part)
 		-> std::conditional<(depth > 1), NodeContainer<depth - 1, tri>, value_type> {
+			// TODO: use getChildHash
 			assert (nodec.thash_.isUncompressed());
 			assert(pos < depth);
 			auto &edges = nodec.compressed_node->edges_[pos];
 			if constexpr(depth > 1) {
-				auto found = edges.find(key_part);
-				if (found != edges.end()) {
-					TaggedNodeHash child_hash = found.second;
-					auto &child_node_storage = getNodeStorage<depth - 1>();
-					if (child_hash.isCompressed()) {
-						auto &child_node = child_node_storage.compressed_nodes_[child_hash];
-						return NodeContainer<depth - 1, tri>{child_hash, &child_node};
+				auto child_hash_opt = getChildHash<depth>(nodec, pos, key_part);
+				if(child_hash_opt.has_value()){
+					TaggedNodeHash child_hash = child_hash_opt.value();
+					if (child_hash.isCompressed()){
+						return getCompressedNode<depth>(child_hash);
+					} else {
+						return getUncompressedNode<depth>(child_hash);
 					}
-				} else
-					return NodeContainer<depth - 1, tri>{};
+				} else {
+					return {};
+				}
 			} else { // depth == 1
-				auto found = edges.find(key_part);
-				if (found != edges.end()) {
-					if constexpr(tri::is_bool)
-						return true;
-					else
-						return found.second;
+				auto value_opt = getChildHash<depth>(nodec, pos, key_part);
+				if (value_opt.has_value()) {
+					return value_opt.value();
 				} else
 					return {}; // false, 0, 0.0
 			}
@@ -171,7 +218,7 @@ namespace hypertrie::internal::node_based {
 		 * @return old value
 		 */template<pos_type depth>
 		auto set(NodeContainer<depth, tri> &nodec, RawKey<depth> key, value_type value) -> value_type {
-			auto[old_value, _] = set_rek<depth>(nodec, key, value);
+			auto[old_value, _] = set_rek<depth, depth>({nodec}, {{nodec, 1}}, key, value);
 			return old_value;
 		}
 
@@ -180,73 +227,72 @@ namespace hypertrie::internal::node_based {
 			bool done_ = false;
 		};
 
-		template<pos_type depth>
-		auto set_rek(NodeContainer<depth, tri> &nodec, RawKey<depth> key, value_type value) -> set_rek_result {
-			// TODO: that function must be changed such that it can take care of nodes owned by multiple tensors
-			value_type old_value;
-			if constexpr (depth > 1) {
-				auto &node = nodec.uncompressed_node();
-				for (auto pos : iter::range(depth)) {
-					auto child = getChild<depth>(nodec, pos, key[pos]);
-					if (child.empty()) {
-						if (value == value_type{})
-							return {value, true}; // we are done
-						// insert child
-						old_value = value_type{};
-						RawKey<depth - 1> sub_key = subkey(key, pos);
-						// next hash
-						TaggedNodeHash child_hash(sub_key, value);
-						// register it with the node
-						node->edges_[pos].insert(key[pos], child_hash);
-						// check if there is already a node for that hash
-						auto &compressed_child_nodes = getNodeStorage<depth - 1>().compressed_nodes_;
-						auto found = compressed_child_nodes.find(child_hash);
-						if (found != compressed_child_nodes.end()) { // if there is, increase the counter
-							++found.value().ref_count_;
-						} else { // if not, create it and add it to the storage
-							if constexpr(tri::is_bool)
-								compressed_child_nodes.insert(child_hash, {sub_key, 1});
-							else compressed_child_nodes.insert(child_hash, {sub_key, value, 1});
-						}
-					} else {
-						RawKey<depth - 1> sub_key = subkey(key, pos);
-						if (child.thash_.isUncompressed()) {
-							// go on recursively
-							auto[old_value, done] = set_rek(child, sub_key, value);
-							if (done)
-								return {old_value, done}; // we are done
-						} else {
-							// check if it is there
-							if (child.compressed_node().key_ == sub_key) {
-								if (value == value_type{}) {
-									getNodeStorage<depth - 1>().compressed_nodes_.erase(child.thash_);
-									node.remove(nodec, pos, key[pos]);
-									// TODO: remove compressed node
-								} else {
-									if constexpr(tri::is_bool)
-										return {value, true}; // we are done
-									else {
-										// change the value
-										auto &node_value = child.compressed_node().value_;
-										if (node_value == value)
-											return {value, true}; // we are done
-										old_value = node_value;
-										node_value = value;
-									}
-								}
-							} else {
-								// subkeys are different. We need to expand the node to a uncompressed one
-								// TODO create a node with two keys, recursively
-								// TODO remove existing child
-								// TODO add the new child
-							}
-						}
-					}
-				}
-			}else {
 
+		enum struct InsertOp : unsigned int {
+			CHANGE_VALUE = 0,
+			INSERT_C_NODE,
+			EXPAND_UC_NODE,
+			EXPAND_C_NODE
+		};
+		template<pos_type depth>
+		struct PlannedUpdate {
+			
+			RawKey<depth> sub_key{};
+			TaggedNodeHash hash_before{};
+			InsertOp insert_op{};
+
+			auto operator<=>(const PlannedUpdate<depth> &other) const = default;
+
+		};
+
+		template<class K, class V>
+		using Map = container::boost_flat_map<K, V>;
+		template<class K>
+		using Set = container::boost_flat_set<K>;
+
+		template<pos_type depth, pos_type total_depth>
+		auto set_rek(std::vector<NodeContainer<depth, tri>> node_cs, std::map<TaggedNodeHash, size_t> node_ref_count, bool &only_value_changes,
+					 RawKey<depth> key, value_type value) -> set_rek_result {
+			bool change_only_the_value = false;
+
+
+			Set<PlannedUpdate<depth -1>> planned_updates;
+
+			for (auto &[node_id, nodec] : iter::enumerate(node_cs)) {
+				for (pos_type pos: iter::range(depth)) {
+					RawKey<depth - 1> sub_key = subkey<depth>(key, pos);
+					PlannedUpdate<depth -1> planned_update{};
+					planned_update.sub_key = sub_key;
+					auto child_hash_opt = getChildHash(nodec, pos, key[pos]);
+					if (child_hash_opt.has_value()) {
+						TaggedNodeHash child_hash = child_hash_opt.value();
+						planned_update.hash_before = child_hash;
+							if (child_hash.isCompressed()){
+								NodeContainer<depth - 1, tri> childc = getCompressedNode<depth - 1>(child_hash);
+								auto *child = childc.uncompressed_node();
+								if (child->key_ == sub_key){
+									if(child->value_ == value) {
+										return {value, true}; // nothing left to be done. The value is already set.
+									} else { // child->value_ != value
+										planned_update.insert_op =InsertOp::CHANGE_VALUE;
+									}
+								} else { // child->key_ != sub_key
+									planned_update.insert_op =InsertOp::EXPAND_C_NODE;
+								}
+							} else { // child_hash.isUncompressed()
+								planned_update.insert_op = InsertOp::EXPAND_UC_NODE;
+							}
+					} else { // not child_hash_opt.has_value()
+						// no child exists for that key_part at that position
+						planned_update.insert_op = InsertOp::INSERT_C_NODE;
+					}
+
+					planned_updates.insert(std::move(planned_update));
+				}
 			}
-			return {old_value, false};
+
+
+
 		}
 
 		template<pos_type depth>

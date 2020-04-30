@@ -1,6 +1,8 @@
 #ifndef HYPERTRIE_TAGGEDNODEHASH_HPP
 #define HYPERTRIE_TAGGEDNODEHASH_HPP
 
+#include <compare>
+
 #include <absl/hash/hash.h>
 
 namespace hypertrie::internal::node_based {
@@ -52,6 +54,8 @@ namespace hypertrie::internal::node_based {
 			if (has2entries)
 				thash_ &= notag_mask; // for setting uncompressed tag
 		}
+
+		auto operator<=>(const TaggedNodeHash &other) const  = default;
 
 
 	};

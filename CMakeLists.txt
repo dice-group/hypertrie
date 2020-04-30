@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.13)
 project(hypertrie VERSION 0.5.2)
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 
 include(${CMAKE_BINARY_DIR}/conan_paths.cmake)
 
@@ -18,6 +18,10 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     set(CMAKE_USE_WIN32_THREADS_INIT 0)
     set(CMAKE_USE_PTHREADS_INIT 1)
     set(THREADS_PREFER_PTHREAD_FLAG ON)
+
+    # use libc++
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lc++ -lc++abi -lm -lc -lgcc_s -lgcc")
 else ()
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -fomit-frame-pointer")
 endif ()
@@ -39,10 +43,10 @@ target_include_directories(cppitertools INTERFACE
         $<INSTALL_INTERFACE:include>
         )
 
-find_package(abseil REQUIRED)
+find_package(absl REQUIRED)
 find_package(tsl-hopscotch-map REQUIRED)
 find_package(tsl-sparse-map REQUIRED)
-find_package(fmt CONFIG REQUIRED)
+find_package(fmt REQUIRED)
 
 SET(Boost_USE_STATIC_LIBS ON)
 find_package(Boost REQUIRED COMPONENTS)
@@ -59,10 +63,10 @@ target_include_directories(hypertrie INTERFACE
 
 target_link_libraries(hypertrie INTERFACE
         cppitertools
-        abseil::abseil
+        absl::absl
         tsl-hopscotch-map::tsl-hopscotch-map
         fmt::fmt
-        Boost::boost
+        Boost::Boost
         Threads::Threads
         tsl-sparse-map::tsl-sparse-map
         )

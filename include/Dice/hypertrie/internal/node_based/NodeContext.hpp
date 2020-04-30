@@ -164,7 +164,7 @@ namespace hypertrie::internal::node_based {
 					return {}; // false, 0, 0.0
 			}
 		}
-		
+
 		/**
 		 * Resolves a keypart by a given position
 		 * @tparam depth the depth of the node container
@@ -210,6 +210,11 @@ namespace hypertrie::internal::node_based {
 			edges.erase(key_part);
 		}
 
+		template<class K, class V>
+		using Map = container::boost_flat_map<K, V>;
+		template<class K>
+		using Set = container::boost_flat_set<K>;
+
 		/**
 		 *
 		 * @tparam depth
@@ -231,34 +236,40 @@ namespace hypertrie::internal::node_based {
 		enum struct InsertOp : unsigned int {
 			CHANGE_VALUE = 0,
 			INSERT_C_NODE,
+			INSERT_UC_NODE,
 			EXPAND_UC_NODE,
 			EXPAND_C_NODE
 		};
 		template<pos_type depth>
 		struct PlannedUpdate {
-			
+
 			RawKey<depth> sub_key{};
 			TaggedNodeHash hash_before{};
 			InsertOp insert_op{};
-
+		private:
+			TaggedNodeHash hash_after_{};
+		public:
 			auto operator<=>(const PlannedUpdate<depth> &other) const = default;
 
 		};
 
-		template<class K, class V>
-		using Map = container::boost_flat_map<K, V>;
-		template<class K>
-		using Set = container::boost_flat_set<K>;
 
 		template<pos_type depth, pos_type total_depth>
-		auto set_rek(std::vector<NodeContainer<depth, tri>> node_cs, std::map<TaggedNodeHash, size_t> node_ref_count, bool &only_value_changes,
-					 RawKey<depth> key, value_type value) -> set_rek_result {
+		auto set_rek(
+				std::vector<std::tuple<NodeContainer<depth, tri>, RawKey<depth>>> node_cs,
+				std::vector<std::tuple<NodeContainer<depth -1, tri>, std::vector<std::tuple<RawKey<depth - 1>, value_type>>>> exp_node_cs,
+				bool &only_value_changes, value_type value
+				) -> set_rek_result {
 			bool change_only_the_value = false;
 
 
-			Set<PlannedUpdate<depth -1>> planned_updates;
+			Set<PlannedUpdate<depth -1>> planned_updates{};
 
-			for (auto &[node_id, nodec] : iter::enumerate(node_cs)) {
+			std::vector<std::tuple<NodeContainer<depth -1 , tri>, RawKey<depth - 1>>> next_node_cs{};
+
+			std::vector<std::tuple<NodeContainer<depth -1, tri>, std::vector<std::tuple<RawKey<depth - 1>, value_type>>>> next_exp_node_cs{};
+
+			for (auto &[nodec, key] : node_cs) {
 				for (pos_type pos: iter::range(depth)) {
 					RawKey<depth - 1> sub_key = subkey<depth>(key, pos);
 					PlannedUpdate<depth -1> planned_update{};
@@ -269,25 +280,40 @@ namespace hypertrie::internal::node_based {
 						planned_update.hash_before = child_hash;
 							if (child_hash.isCompressed()){
 								NodeContainer<depth - 1, tri> childc = getCompressedNode<depth - 1>(child_hash);
-								auto *child = childc.uncompressed_node();
+								auto *child = childc.compressed_node();
 								if (child->key_ == sub_key){
 									if(child->value_ == value) {
 										return {value, true}; // nothing left to be done. The value is already set.
 									} else { // child->value_ != value
+										only_value_changes = true;
 										planned_update.insert_op =InsertOp::CHANGE_VALUE;
 									}
 								} else { // child->key_ != sub_key
+									next_exp_node_cs.push_back(
+											{std::move(childc), {{child->key_, child->value_}, {sub_key, value}}});
 									planned_update.insert_op =InsertOp::EXPAND_C_NODE;
 								}
 							} else { // child_hash.isUncompressed()
+								next_node_cs.push_back({getUncompressedNode<depth - 1>(child_hash), sub_key});
 								planned_update.insert_op = InsertOp::EXPAND_UC_NODE;
 							}
 					} else { // not child_hash_opt.has_value()
 						// no child exists for that key_part at that position
 						planned_update.insert_op = InsertOp::INSERT_C_NODE;
 					}
-
 					planned_updates.insert(std::move(planned_update));
+				}
+
+				// creating uncompressed nodes with two keys (expanded compressed nodes)
+				for(auto &[node_c, entries] : exp_node_cs){
+					for (pos_type pos: iter::range(depth)) {
+						// TODO: go on here
+					}
+				}
+
+				Map<TaggedNodeHash, PlannedUpdate<depth -1>> required_updates;
+				for (auto & planned_update : planned_updates){
+
 				}
 			}
 

@@ -260,7 +260,8 @@ namespace hypertrie::internal::node_based {
 		auto set_rek(
 				std::vector<std::tuple<NodeContainer<depth, tri>, RawKey<depth>, value_type>> node_cs,
 				std::vector<std::tuple<RawKey<depth>, value_type, RawKey<depth>, value_type>> expand_uc,
-				bool &only_value_changes, value_type new_value
+				bool &only_value_changes,
+				const value_type new_value
 		) -> set_rek_result {
 			bool change_only_the_value = false;
 
@@ -340,6 +341,13 @@ namespace hypertrie::internal::node_based {
 					}
 				}
 
+				set_rek<depth - 1, total_depth> (next_node_cs, next_expand_uc, only_value_changes, new_value);
+				// TODO: add recursion end.
+
+
+				// TODO: find required changes.
+				// TODO: do required changes.
+				// TODO: update references in nodes accordingly
 				Map<TaggedNodeHash, PlannedUpdate<depth - 1>> required_updates;
 				for (auto &planned_update : planned_updates) {
 

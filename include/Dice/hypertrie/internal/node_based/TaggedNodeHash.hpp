@@ -4,21 +4,27 @@
 #include <compare>
 
 #include <absl/hash/hash.h>
+#include <bitset>
 
 namespace hypertrie::internal::node_based {
 
 	using NodeHash = size_t;
 
 	class TaggedNodeHash {
-		NodeHash thash_{};
+		union {
+			NodeHash thash_{};
+			std::bitset<sizeof(NodeHash)*8> thash_bits_;
+		};
+
 
 		static constexpr size_t tag_mask = size_t(1);
 		static constexpr size_t notag_mask = ~size_t(1);
 		static constexpr size_t uncompressed_tag = size_t(0);
 		static constexpr size_t compressed_tag = size_t(1);
+		static constexpr size_t compression_tag_pos = 0;
 
 	public:
-		TaggedNodeHash() = default;
+		TaggedNodeHash() {}
 
 		explicit TaggedNodeHash(NodeHash thash) : thash_(thash) {}
 
@@ -33,31 +39,58 @@ namespace hypertrie::internal::node_based {
 
 
 		[[nodiscard]] inline bool isCompressed() const {
-			return (thash_ & tag_mask) == compressed_tag;
+			return thash_bits_[compression_tag_pos];
 		}
 
 		[[nodiscard]] inline bool isUncompressed() const {
-			return (thash_ & tag_mask) == uncompressed_tag;
+			return not thash_bits_[compression_tag_pos];
 		}
 
-		template<typename T>
-		inline void addToHash(const T &hashable) {
-			size_t key_hash = absl::Hash<pos_type>()(hashable);
-			thash_ = (thash_ ^ key_hash) // xor for combining the hash
-					 | compressed_tag;  // or for setting compressed tag
+		template<typename V>
+		inline void changeValue(const V &old_value, const V & new_value) {
+			const bool tag = thash_bits_[compression_tag_pos];
+			thash_ = thash_ ^ absl::Hash<pos_type>()(old_value) ^ absl::Hash<pos_type>()(new_value);
+			thash_bits_[compression_tag_pos] = tag;
 		}
 
-		template<typename T>
-		inline void removeFromHash(const T &hashable, bool has2entries) {
-			size_t key_hash = absl::Hash<pos_type>()(hashable);
-			thash_ = (thash_ ^ key_hash); // xor for combining the hash
-			if (has2entries)
-				thash_ &= notag_mask; // for setting uncompressed tag
+		template<typename K, typename V>
+		inline void addFirstEntry(const K &key, const V & value) {
+			thash_ = thash_ ^ absl::Hash<pos_type>()(key) ^ absl::Hash<pos_type>()(value);
+			thash_bits_[compression_tag_pos] = true;
 		}
 
-		auto operator<=>(const TaggedNodeHash &other) const  = default;
+		template<typename K, typename V>
+		inline void addEntry(const K &key, const V & value) {
+			thash_ = thash_ ^ absl::Hash<pos_type>()(key) ^ absl::Hash<pos_type>()(value);
+			thash_bits_[compression_tag_pos] = false;
+		}
 
+		template<typename K, typename V>
+		inline void removeEntry(const K &key, const V & value, bool has_exactly_2_entries) {
+			assert(isUncompressed());
+			thash_ = thash_ ^ absl::Hash<pos_type>()(key) ^ absl::Hash<pos_type>()(value);
+			thash_bits_[compression_tag_pos] = has_exactly_2_entries;
+		}
 
+		auto operator<=>(const TaggedNodeHash &other) const {
+			return this->thash_ <=> other.thash_;
+		}
+
+		auto operator<(const TaggedNodeHash &other) const {
+			return this->thash_ < other.thash_;
+		}
+
+		auto operator==(const TaggedNodeHash &other) const {
+			return this->thash_ == other.thash_;
+		}
+
+		auto operator!=(const TaggedNodeHash &other) const {
+			return this->thash_ != other.thash_;
+		}
+
+		operator bool() const {
+			return this->thash_ != NodeHash{};
+		}
 	};
 
 

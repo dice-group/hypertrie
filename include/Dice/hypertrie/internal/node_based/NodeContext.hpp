@@ -64,7 +64,7 @@ namespace hypertrie::internal::node_based {
 		}
 
 		template<pos_type depth>
-		NodeContainer<depth, tri> &getCompressedNode(const TaggedNodeHash &node_hash) {
+		NodeContainer<depth, tri> getCompressedNode(const TaggedNodeHash &node_hash) {
 			assert(node_hash.isCompressed());
 			auto compressed_nodes = getNodeStorage<depth>().compressed_nodes_;
 			auto found = compressed_nodes.find(node_hash);
@@ -75,7 +75,7 @@ namespace hypertrie::internal::node_based {
 		}
 
 		template<pos_type depth>
-		NodeContainer<depth, tri> &getUncompressedNode(const TaggedNodeHash &node_hash) {
+		NodeContainer<depth, tri> getUncompressedNode(const TaggedNodeHash &node_hash) {
 			assert(node_hash.isUncompressed());
 			auto uncompressed_nodes = getNodeStorage<depth>().uncompressed_nodes_;
 			auto found = uncompressed_nodes.find(node_hash);
@@ -83,6 +83,60 @@ namespace hypertrie::internal::node_based {
 				return {node_hash, &found.value()};
 			else
 				return {};
+		}
+
+		template<pos_type depth>
+		void deleteCompressedNode(const TaggedNodeHash &node_hash) {
+			assert(node_hash.isCompressed());
+			auto compressed_nodes = getNodeStorage<depth>().compressed_nodes_;
+			compressed_nodes.erase(node_hash);
+		}
+
+		template<pos_type depth>
+		void deleteCompressedNode(const NodeContainer<depth, tri> &node_container) {
+			deleteCompressedNode<depth>(node_container.thash_);
+		}
+
+		template<pos_type depth>
+		void deleteUncompressedNode(const TaggedNodeHash &node_hash) {
+			assert(node_hash.isUncompressed());
+			auto uncompressed_nodes = getNodeStorage<depth>().uncompressed_nodes_;
+			uncompressed_nodes.erase(node_hash);
+		}
+
+		template<pos_type depth>
+		void deleteUncompressedNode(const NodeContainer<depth, tri> &node_container) {
+			deleteUncompressedNode<depth>(node_container.thash_);
+		}
+
+		template<pos_type depth>
+		void deleteNode(const TaggedNodeHash &node_hash) {
+			if (node_hash.isCompressed()) {
+				deleteCompressedNode<depth>(node_hash);
+			} else {
+				deleteUncompressedNode<depth>(node_hash);
+			}
+		}
+
+		template<pos_type depth>
+		NodeContainer<depth, tri> newCompressedNode(RawKey<depth> key, value_type value, size_t count, TaggedNodeHash hash) {
+			const auto [it, success] = getNodeStorage<depth>().compressed_nodes_.insert({hash, Node<depth, true, tri>{key, value, count}});
+			assert(success);
+			return NodeContainer<depth, tri>{hash, it.value()};
+		}
+
+		template<pos_type depth>
+		NodeContainer<depth, tri> newUnompressedNode(RawKey<depth> key, value_type value, size_t count, TaggedNodeHash hash) {
+			// TODO: complete here
+		}
+
+		template<pos_type depth>
+		NodeContainer<depth, tri> &getNode(const TaggedNodeHash &node_hash) {
+			if (node_hash.isCompressed()) {
+				getCompressedNode<depth>(node_hash);
+			} else {
+				getUncompressedNode<depth>(node_hash);
+			}
 		}
 
 	public:
@@ -183,9 +237,9 @@ namespace hypertrie::internal::node_based {
 			auto &edges = nodec.compressed_node->edges_[pos];
 			if constexpr(depth > 1) {
 				auto child_hash_opt = getChildHashOrValue<depth>(nodec, pos, key_part);
-				if(child_hash_opt.has_value()){
+				if (child_hash_opt.has_value()) {
 					TaggedNodeHash child_hash = child_hash_opt.value();
-					if (child_hash.isCompressed()){
+					if (child_hash.isCompressed()) {
 						return getCompressedNode<depth>(child_hash);
 					} else {
 						return getUncompressedNode<depth>(child_hash);
@@ -235,8 +289,8 @@ namespace hypertrie::internal::node_based {
 
 		enum struct InsertOp : unsigned int {
 			CHANGE_VALUE = 0,
-			INSERT_C_NODE,
 			INSERT_TWO_KEY_UC_NODE,
+			INSERT_C_NODE,
 			EXPAND_UC_NODE,
 			EXPAND_C_NODE
 		};
@@ -252,6 +306,34 @@ namespace hypertrie::internal::node_based {
 			value_type second_value{};
 
 		public:
+			auto hashAfter(const value_type &old_value) const -> TaggedNodeHash {
+				TaggedNodeHash next_hash = (hash_before != TaggedNodeHash{}) ? TaggedNodeHash(depth) : hash_before;
+				switch (insert_op) {
+					case InsertOp::CHANGE_VALUE:
+						assert(next_hash != TaggedNodeHash(depth));
+						next_hash.changeValue(old_value, value);
+						break;
+					case InsertOp::INSERT_TWO_KEY_UC_NODE:
+						assert(next_hash == TaggedNodeHash(depth));
+						next_hash.addFirstEntry(sub_key, value);
+						next_hash.addEntry(second_sub_key, second_value);
+						break;
+					case InsertOp::INSERT_C_NODE:
+						assert(next_hash == TaggedNodeHash(depth));
+						next_hash.addFirstEntry(sub_key, value);
+						break;
+					case InsertOp::EXPAND_UC_NODE:
+						assert(next_hash != TaggedNodeHash(depth) and next_hash.isUncompressed());
+						next_hash.addEntry(sub_key, value);
+						break;
+					case InsertOp::EXPAND_C_NODE:
+						assert(next_hash != TaggedNodeHash(depth) and next_hash.isCompressed());
+						next_hash.addEntry(sub_key, value);
+						break;
+				}
+				return next_hash;
+			}
+
 			auto operator<=>(const PlannedUpdate<depth> &other) const = default;
 
 		};
@@ -262,6 +344,7 @@ namespace hypertrie::internal::node_based {
 				std::vector<std::tuple<NodeContainer<depth, tri>, RawKey<depth>, value_type>> node_cs,
 				std::vector<std::tuple<RawKey<depth>, value_type, RawKey<depth>, value_type>> expand_uc,
 				bool &only_value_changes,
+				const value_type &old_value,
 				const value_type new_value
 		) -> set_rek_result {
 			bool change_only_the_value = false;
@@ -272,6 +355,7 @@ namespace hypertrie::internal::node_based {
 			std::vector<std::tuple<NodeContainer<depth - 1, tri>, RawKey<depth - 1>, value_type>> next_node_cs{};
 
 			std::vector<std::tuple<RawKey<depth - 1>, value_type, RawKey<depth - 1>, value_type>> next_expand_uc{};
+			// descending
 			if constexpr(depth > 1) { // we only need to look at what to do with subtries for a depth > 1.
 				for (auto &[nodec, key, value] : node_cs) {
 					for (pos_type pos: iter::range(depth)) {
@@ -345,9 +429,60 @@ namespace hypertrie::internal::node_based {
 						}
 					}
 				}
-				set_rek_result result = set_rek<depth - 1, total_depth>(next_node_cs, next_expand_uc, only_value_changes, new_value);
+				set_rek_result result = set_rek<depth - 1, total_depth>(next_node_cs, next_expand_uc,
+																		only_value_changes, new_value);
 				if (result.done_)
 					return result;
+			}
+
+			// ascending
+			std::map<TaggedNodeHash, long> count_changes{};
+			for (PlannedUpdate<depth - 1> &planned_update : planned_updates) {
+				count_changes[planned_update.hash_before]--;
+				count_changes[planned_update.hashAfter(old_value)]++;
+			}
+
+			Set<TaggedNodeHash> nodes_to_remove{};
+
+			for (PlannedUpdate<depth - 1> &planned_update : planned_updates) {
+				bool update_old_node = false;
+				long count_change = 0;
+				if (auto has_changes = count_changes.find(planned_update.hash_before); has_changes !=
+																					   count_changes.end()) {
+					update_old_node = true;
+					count_change = has_changes.second;
+					count_changes.erase(has_changes);
+				}
+
+				if (planned_update.hash_before) { // not empty
+					NodeContainer<depth - 1, tri> nc = getNode<depth - 1>(planned_update.hash_before);
+					TaggedNodeHash hash_after = planned_update.hashAfter(old_value);
+					if (planned_update.hash_before.isCompressed()){
+						auto *node = nc.compressed_node();
+						node->ref_count_ += count_change;
+						NodeContainer<depth - 1, tri> nc_after = getNode<depth - 1>(planned_update.hash_before);
+						if(nc_after.empty()) { // hashafter doesn't exists
+							// create new node and add entry from compressed and from planned update
+							// add node to storage
+						}
+						if (node->ref_count_ == 0)
+							removeNode(nc);
+					} else {
+						auto *node = nc.uncompressed_node();
+						node->ref_count_ += count_change;
+						if (node->ref_count_ == 0)
+							removeNode(nc);
+					}
+				}
+
+
+				}
+
+			for (auto &node_hash : nodes_to_remove)
+				deleteNode(node_hash);
+
+			if constexpr(depth == 1) {
+
 			}
 
 			// TODO: find required changes.

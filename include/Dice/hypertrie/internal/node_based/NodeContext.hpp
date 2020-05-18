@@ -191,15 +191,17 @@ namespace hypertrie::internal::node_based {
 		/**
 		 * creates a new node with the value changed. The old node is NOT deleted and must eventually be deleted afterwards.
 		 */
-		template<pos_type depth, bool compressed>
+		template<pos_type depth, bool compressed, bool keep_old = true>
 		NodeContainer<depth, tri> changeNodeValue(NodeContainer<depth, tri> nc, value_type value, TaggedNodeHash new_hash) {
 			auto nc_ = nc.template specific<compressed>();
 			if constexpr(compressed) nc_.node()->value_ = value;
 			auto &nodes = getNodeStorage<depth, compressed>();
 			const auto[it, success] = nodes.insert({new_hash, *nc_.node()});
 			assert(success);
-			// const auto removed = nodes.erase(nc_->thash_);
-			// assert(removed);
+			if constexpr(not keep_old){
+				const auto removed = nodes.erase(nc_->thash_);
+				assert(removed);
+			}
 			return NodeContainer<depth, tri>{new_hash, it.value()};
 		}
 
@@ -559,7 +561,7 @@ namespace hypertrie::internal::node_based {
 								if (reuse_node_before){  // node before ref_count is zero -> maybe reused
 									if ( nc_after.empty() ) { // node_after doesn't exit already
 										nc_before.node()->ref_count_ += node_after_count_diff;
-										changeNodeValue<true>(nc_before, planned_update.value, planned_update.new_hash);
+										changeNodeValue<depth - 1, true>(nc_before, planned_update.value, planned_update.new_hash);
 										nodes_to_remove.insert(hash_before);
 									} else {
 										// reinsert hash_before, so that node_before con be reused by another change later
@@ -570,10 +572,8 @@ namespace hypertrie::internal::node_based {
 										newCompressedNode<depth - 1>(nc_before.node()->key_, planned_update.value,
 																	 node_after_count_diff, hash_after);
 									}else {
-										nc_after.node()->ref_count_ +=
-										}
+										nc_after.node()->ref_count_ += node_after_count_diff;
 									}
-
 								}
 						} else { // uncompressed
 

@@ -15,9 +15,12 @@ namespace hypertrie::internal::node_based {
 		using tri = tri_t;
 		using CompressedNode = Node<depth, true, tri>;
 		using UncompressedNode = Node<depth, true, tri>;
+		using CompressedNodeMap = typename tri::template map_type<TaggedNodeHash, CompressedNode>;
+		using UncompressedNodeMap = typename tri::template map_type<TaggedNodeHash, UncompressedNode>;
 
-		typename tri::template map_type<TaggedNodeHash, CompressedNode> compressed_nodes_;
-		typename tri::template map_type<TaggedNodeHash, UncompressedNode> uncompressed_nodes_;
+
+		CompressedNodeMap compressed_nodes_;
+		UncompressedNodeMap uncompressed_nodes_;
 	};
 }
 

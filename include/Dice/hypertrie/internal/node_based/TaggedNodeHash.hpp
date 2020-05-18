@@ -72,6 +72,22 @@ namespace hypertrie::internal::node_based {
 			thash_bits_[compression_tag_pos] = has_exactly_2_entries;
 		}
 
+		template<typename K, typename V>
+		static auto getCompressedNodeHash(const pos_type  &depth, const K &key, const V & value) -> TaggedNodeHash{
+			auto hash = TaggedNodeHash(depth);
+			hash.addEntry(key, value);
+			return hash;
+		}
+
+		template<typename K, typename V>
+		static auto getTwoEntriesNodeHash(const pos_type  &depth, const K &key, const V & value,
+										  const K &second_key, const V & second_value) -> TaggedNodeHash{
+			auto hash = TaggedNodeHash(depth);
+			hash.addEntry(key, value);
+			hash.addEntry(second_key, second_value);
+			return hash;
+		}
+
 		auto operator<=>(const TaggedNodeHash &other) const {
 			return this->thash_ <=> other.thash_;
 		}

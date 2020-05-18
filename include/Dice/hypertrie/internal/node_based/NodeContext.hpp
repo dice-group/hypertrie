@@ -41,7 +41,7 @@ namespace hypertrie::internal::node_based {
 		using tri = tri_t;
 		/// public definitions
 		using key_part_type = typename tri::key_part_type_t;
-		using value_type = typename tri::key_part_type_t;
+		using value_type = typename tri::value_type_t;
 		template<typename key, typename value>
 		using map_type = typename tri::template map_type_t<key, value>;
 		template<typename key>
@@ -119,15 +119,15 @@ namespace hypertrie::internal::node_based {
 		}
 
 		template<pos_type depth>
-		NodeContainer<depth, tri> newCompressedNode(RawKey<depth> key, value_type value, size_t count, TaggedNodeHash hash) {
-			const auto [it, success] = getNodeStorage<depth>().compressed_nodes_.insert({hash, Node<depth, true, tri>{key, value, count}});
+		NodeContainer<depth, tri> newCompressedNode(RawKey<depth> key, value_type value, size_t ref_count, TaggedNodeHash hash) {
+			const auto [it, success] = getNodeStorage<depth>().compressed_nodes_.insert({hash, Node<depth, true, tri>{key, value, ref_count}});
 			assert(success);
 			return NodeContainer<depth, tri>{hash, it.value()};
 		}
 
 		template<pos_type depth>
-		NodeContainer<depth, tri> newUnompressedNode(RawKey<depth> key, value_type value, size_t count, TaggedNodeHash hash) {
-			// TODO: complete here
+		NodeContainer<depth, tri> newUncompressedNode(RawKey<depth> key, value_type value, RawKey<depth> second_key, value_type second_value, size_t ref_count, TaggedNodeHash hash) {
+			const auto [it, success] = getNodeStorage<depth>().uncompressed_nodes_.insert({hash, Node<depth, false, tri>{key, value, second_key, second_value, ref_count}});
 		}
 
 		template<pos_type depth>
@@ -453,25 +453,26 @@ namespace hypertrie::internal::node_based {
 					count_change = has_changes.second;
 					count_changes.erase(has_changes);
 				}
-
+				// TODO: work in progress
 				if (planned_update.hash_before) { // not empty
-					NodeContainer<depth - 1, tri> nc = getNode<depth - 1>(planned_update.hash_before);
+					NodeContainer<depth - 1, tri> nc_before = getNode<depth - 1>(planned_update.hash_before);
 					TaggedNodeHash hash_after = planned_update.hashAfter(old_value);
 					if (planned_update.hash_before.isCompressed()){
-						auto *node = nc.compressed_node();
-						node->ref_count_ += count_change;
-						NodeContainer<depth - 1, tri> nc_after = getNode<depth - 1>(planned_update.hash_before);
+						auto *node_before = nc_before.compressed_node();
+						node_before->ref_count_ += count_change;
+
+						NodeContainer<depth - 1, tri> nc_after = getUncompressedNode<depth - 1>(planned_update.hash_before);
 						if(nc_after.empty()) { // hashafter doesn't exists
-							// create new node and add entry from compressed and from planned update
-							// add node to storage
-						}
-						if (node->ref_count_ == 0)
-							removeNode(nc);
+
+							nc_after = newUncompressedNode<depth - 1>(node_before->key_, node_before->value_, planned_update.sub_key, planned_update.value, hash_after);
+						} else
+						if (node_before->ref_count_ == 0)
+							removeNode(nc_before);
 					} else {
-						auto *node = nc.uncompressed_node();
+						auto *node = nc_before.uncompressed_node();
 						node->ref_count_ += count_change;
 						if (node->ref_count_ == 0)
-							removeNode(nc);
+							removeNode(nc_before);
 					}
 				}
 
@@ -497,12 +498,7 @@ namespace hypertrie::internal::node_based {
 		}
 
 		template<pos_type depth>
-		auto subkey(const RawKey<depth> &key, pos_type remove_pos) -> RawKey<depth - 1> {
-			RawKey<depth - 1> sub_key;
-			for (auto i = 0, j = 0; i < depth; ++i)
-				if (i != remove_pos) sub_key[j++] = key[i];
-			return sub_key;
-		}
+		static auto subkey = &tri::subkey;
 
 		/**
 		 * Retrieves the value for a key.
@@ -525,7 +521,7 @@ namespace hypertrie::internal::node_based {
 				auto pos = 0;//minCardPos();
 				NodeContainer<depth - 1, tri> child = get<depth>(nodec, pos, key[pos]);
 				if (not child.empty()) {
-					return get<depth - 1>(child, subkey(key, pos));
+					return get<depth - 1>(child, subkey<depth>(key, pos));
 				} else {
 					return {}; // false, 0, 0.0
 				}

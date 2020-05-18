@@ -26,6 +26,14 @@ namespace hypertrie::internal::node_based {
 
 		template<pos_type depth>
 		using RawSliceKey = std::array<std::optional<typename tr::key_part_type>, depth>;
+
+		template<pos_type depth>
+		static auto subkey(const RawKey<depth> &key, pos_type remove_pos) -> RawKey<depth - 1> {
+			RawKey<depth - 1> sub_key;
+			for (auto i = 0, j = 0; i < depth; ++i)
+				if (i != remove_pos) sub_key[j++] = key[i];
+			return sub_key;
+		}
 	};
 };
 

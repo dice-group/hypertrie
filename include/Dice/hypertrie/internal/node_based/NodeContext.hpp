@@ -547,7 +547,7 @@ namespace hypertrie::internal::node_based {
 				deleteNode(node_hash);
 		}
 
-		template<pos_type depth, bool is_before_compressed>
+		template<pos_type depth, bool is_before_compressed, bool keep_before>
 		auto updateNode(const PlannedUpdate<depth> &planned_update,
 						const TaggedNodeHash hash_before, const bool update_before_node, const long before_count_diff,
 						const TaggedNodeHash hash_after, const bool update_after_node, const long after_count_diff,
@@ -555,26 +555,22 @@ namespace hypertrie::internal::node_based {
 						Set<TaggedNodeHash> &nodes_to_remove) {
 			switch (planned_update.insert_op) {
 				case InsertOp::CHANGE_VALUE: {
-
 					if (update_after_node) {
 						bool reuse_node_before = false;
-						CompressedNodeContainer<depth, tri_t> nc_before = getCompressedNode<depth>(
-								planned_update.hash_before).compressed();
+						auto nc_before = getNode<depth, is_before_compressed>(hash_before);
 						assert(not nc_before.empty());
 						if (update_before_node) {
-
-							Node<depth, true, tri_t> *node_before = nc_before.node();
+							auto *node_before = nc_before.node();
 							node_before->ref_count_ += before_count_diff;
 							if (node_before->ref_count_ == 0)
 								reuse_node_before = true;
 						}
 
-						CompressedNodeContainer<depth, tri_t> nc_after = getCompressedNode<depth>(
-								planned_update.hash_after).compressed();
+						auto nc_after = getNode<depth, is_before_compressed>(hash_after);
 						if (reuse_node_before) {  // node before ref_count is zero -> maybe reused
 							if (nc_after.empty()) { // node_after doesn't exit already
 								nc_before.node()->ref_count_ += after_count_diff;
-								changeNodeValue<depth, true>(nc_before, planned_update.value, planned_update.new_hash);
+								changeNodeValue<depth, is_before_compressed, keep_before>(nc_before, planned_update.value, hash_after);
 								nodes_to_remove.insert(hash_before);
 							} else {
 								// reinsert hash_before, so that node_before con be reused by another change later
@@ -582,16 +578,16 @@ namespace hypertrie::internal::node_based {
 							}
 						} else {
 							if (nc_after.empty()) { // node_after doesn't exit already
-								newCompressedNode<depth - 1>(nc_before.node()->key_, planned_update.value,
+								if constexpr(is_before_compressed)
+									newCompressedNode<depth>(nc_before.node()->key_, planned_update.value,
 															 after_count_diff, hash_after);
+								else
+									changeNodeValue<depth, is_before_compressed, true>(nc_before, planned_update.value, hash_after);
 							} else {
 								nc_after.node()->ref_count_ += after_count_diff;
 							}
 						}
-
 					}
-
-
 				}
 					break;
 				case InsertOp::INSERT_TWO_KEY_UC_NODE:

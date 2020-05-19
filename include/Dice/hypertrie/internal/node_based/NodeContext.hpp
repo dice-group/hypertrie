@@ -184,9 +184,13 @@ namespace hypertrie::internal::node_based {
 			auto nc_ = nc.template specific<compressed>();
 			if constexpr(compressed) nc_.node()->value_ = value;
 			auto &nodes = getNodeStorage<depth, compressed>();
-			const auto[it, success] = nodes.insert({new_hash, *nc_.node()});
+
+			const auto[it, success] = [&]() {
+				if constexpr(keep_old) return nodes.insert({new_hash, *nc_.node()});
+				else return nodes.insert({new_hash, std::move(*nc_.node())}); // if the old is not kept it is moved
+			}();
 			assert(success);
-			if constexpr(not keep_old){
+			if constexpr(not keep_old) {
 				const auto removed = nodes.erase(nc_->thash_);
 				assert(removed);
 			}
@@ -424,7 +428,7 @@ namespace hypertrie::internal::node_based {
 			bool change_only_the_value = false;
 
 
-			Set<PlannedUpdate<depth - 1>> planned_updates{};
+			std::vector<PlannedUpdate<depth - 1>> planned_updates{};
 
 			std::vector<std::tuple<NodeContainer<depth - 1, tri>, RawKey<depth - 1>, value_type>> next_node_cs{};
 
@@ -471,7 +475,7 @@ namespace hypertrie::internal::node_based {
 							// no child exists for that key_part at that position
 							planned_update.insert_op = InsertOp::INSERT_C_NODE;
 						}
-						planned_updates.insert(std::move(planned_update));
+						planned_updates.push_back(std::move(planned_update));
 					}
 				}
 				// creating uncompressed nodes with two keys (expanded compressed nodes)
@@ -486,20 +490,20 @@ namespace hypertrie::internal::node_based {
 							planned_update.second_sub_key = second_sub_key;
 							planned_update.second_value = second_value;
 							planned_update.insert_op = InsertOp::INSERT_TWO_KEY_UC_NODE;
-							planned_updates.insert(std::move(planned_update));
+							planned_updates.push_back(std::move(planned_update));
 							expand_uc.insert({sub_key, value, second_sub_key, second_value});
 						} else {
 							PlannedUpdate<depth - 1> planned_update{};
 							planned_update.sub_key = sub_key;
 							planned_update.value = value;
 							planned_update.insert_op = InsertOp::INSERT_C_NODE;
-							planned_updates.insert(std::move(planned_update));
+							planned_updates.push_back(std::move(planned_update));
 
 							PlannedUpdate<depth - 1> second_planned_update{};
 							second_planned_update.sub_key = second_sub_key;
 							second_planned_update.value = second_value;
 							second_planned_update.insert_op = InsertOp::INSERT_C_NODE;
-							planned_updates.insert(std::move(second_planned_update));
+							planned_updates.push_back(std::move(second_planned_update));
 						}
 					}
 				}
@@ -528,19 +532,48 @@ namespace hypertrie::internal::node_based {
 
 			Set<TaggedNodeHash> nodes_to_remove{};
 
-			for (PlannedUpdate<depth - 1> &planned_update : planned_updates) {
+			std::vector<std::vector<PlannedUpdate<depth - 1>>> grouped_updates = [&]() { // group by hash before
+				std::sort(grouped_updates.begin(), grouped_updates.end(),
+						  [](auto a, auto b) { return a.hash_before < b.hash_before; });
+				std::vector<std::vector<PlannedUpdate<depth - 1>>> grouped_updates;
+				auto first = std::size(grouped_updates);
+				for (auto current : iter::range(std::size(grouped_updates))) {
+					if (grouped_updates[first].hash_before != grouped_updates[current].hash_before) {
+						grouped_updates.push_back({begin(grouped_updates) + first, begin(grouped_updates) + current});
+						first = current;
+					}
+				}
+				return grouped_updates;
+			}();
 
-				const TaggedNodeHash hash_before = planned_update.hash_before;
+			for (std::vector<PlannedUpdate<depth - 1>> &updated_group : grouped_updates) {
+				const TaggedNodeHash hash_before = updated_group[0].hash_before;
 				const auto[update_node_before, node_before_count_diff] = pop_count_change(hash_before);
+
+				for (auto iter = updated_group.begin(); iter != updated_group.rbegin(); iter++) {
+					auto &planned_update = *iter;
+					const TaggedNodeHash hash_after = planned_update.hashAfter(old_value);
+					const auto[update_node_after, node_after_count_diff] = pop_count_change(hash_after);
+					if (hash_before.isCompressed())
+						updateNode<depth - 1, true, false>(
+								planned_update, hash_before, update_node_before, node_before_count_diff, hash_after,
+								update_node_after, node_after_count_diff, count_changes, nodes_to_remove);
+					else
+						updateNode<depth - 1, false, false>(
+								planned_update, hash_before, update_node_before, node_before_count_diff, hash_after,
+								update_node_after, node_after_count_diff, count_changes, nodes_to_remove);
+				}
+				auto &planned_update = *updated_group.rbegin();
 				const TaggedNodeHash hash_after = planned_update.hashAfter(old_value);
 				const auto[update_node_after, node_after_count_diff] = pop_count_change(hash_after);
-				// TODO: work in progress
-
-
-
-				updateNode<depth - 1, false>(planned_update, hash_before, update_node_before, node_before_count_diff,
-											 hash_after, update_node_after, node_after_count_diff, count_changes,
-											 nodes_to_remove);
+				if (hash_before.isCompressed())
+					updateNode<depth - 1, true, true>(
+							planned_update, hash_before, update_node_before, node_before_count_diff, hash_after,
+							update_node_after, node_after_count_diff, count_changes, nodes_to_remove);
+				else
+					updateNode<depth - 1, false, true>(
+							planned_update, hash_before, update_node_before, node_before_count_diff, hash_after,
+							update_node_after, node_after_count_diff, count_changes, nodes_to_remove);
 			}
 
 			for (auto &node_hash : nodes_to_remove)
@@ -570,7 +603,9 @@ namespace hypertrie::internal::node_based {
 						if (reuse_node_before) {  // node before ref_count is zero -> maybe reused
 							if (nc_after.empty()) { // node_after doesn't exit already
 								nc_before.node()->ref_count_ += after_count_diff;
-								changeNodeValue<depth, is_before_compressed, keep_before>(nc_before, planned_update.value, hash_after);
+								changeNodeValue<depth, is_before_compressed, keep_before>(nc_before,
+																						  planned_update.value,
+																						  hash_after);
 								nodes_to_remove.insert(hash_before);
 							} else {
 								// reinsert hash_before, so that node_before con be reused by another change later
@@ -582,7 +617,8 @@ namespace hypertrie::internal::node_based {
 									newCompressedNode<depth>(nc_before.node()->key_, planned_update.value,
 															 after_count_diff, hash_after);
 								else
-									changeNodeValue<depth, is_before_compressed, true>(nc_before, planned_update.value, hash_after);
+									changeNodeValue<depth, is_before_compressed, true>(nc_before, planned_update.value,
+																					   hash_after);
 							} else {
 								nc_after.node()->ref_count_ += after_count_diff;
 							}

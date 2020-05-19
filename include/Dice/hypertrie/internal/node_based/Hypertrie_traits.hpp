@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <optional>
+#include <Dice/hypertrie/internal/container/AllContainer.hpp>
 
 namespace hypertrie::internal::node_based {
 

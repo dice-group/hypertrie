@@ -70,7 +70,7 @@ namespace hypertrie::internal::node_based {
 
 		Node() : edges_{}, ref_count_{}{}
 
-		Node(RawKey key, value_type value, RawKey second_key, value_type second_value, size_t ref_count)
+		Node(const RawKey & key, value_type value, const RawKey & second_key, value_type second_value, size_t ref_count)
 				: size_{2}, ref_count_{ref_count} {
 			for (const pos_type pos : iter::range(depth))
 				edges_[pos] = (key[pos] != second_key[pos]) ?
@@ -82,6 +82,18 @@ namespace hypertrie::internal::node_based {
 							  ChildrenType{
 									  {key[pos], TaggedNodeHash::getTwoEntriesNodeHash(pos, key, value, second_key,
 																					   second_value)}};
+		}
+		
+		void insertEntry(const RawKey & key, value_type value) {
+			for (const pos_type pos : iter::range(depth)){
+				auto &children = edges_[pos];
+				auto key_part = key[pos];
+				if (auto found = children.find(key_part); found != children.end()){
+					found.value().addEntry(subkey(key, pos), value);
+				} else {
+					children[key_part] = TaggedNodeHash::getCompressedNodeHash(pos, key, value);
+				}
+			}
 		}
 
 		[[nodiscard]] inline size_t size() const noexcept { return size_; }
@@ -108,7 +120,7 @@ namespace hypertrie::internal::node_based {
 		EdgesType edges_;
 		size_t ref_count_;
 
-		Node(RawKey key, [[maybe_unused]]value_type value, RawKey second_key, [[maybe_unused]]value_type second_value, size_t ref_count) : ref_count_{ref_count} {
+		Node(const RawKey & key, [[maybe_unused]]value_type value, const RawKey & second_key, [[maybe_unused]]value_type second_value, size_t ref_count) : ref_count_{ref_count} {
 			if constexpr(std::is_same_v<value_type, bool>)
 				edges_ = EdgesType{
 						{key[0]},
@@ -119,6 +131,10 @@ namespace hypertrie::internal::node_based {
 						{key[0],        value},
 						{second_key[0], value}
 				};
+		}
+
+		void insertEntry(const RawKey &key, value_type value) {
+			edges_[key[0]] = value;
 		}
 
 		[[nodiscard]] inline size_t size() const noexcept { return edges_.size(); }

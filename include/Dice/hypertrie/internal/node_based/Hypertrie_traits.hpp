@@ -24,7 +24,7 @@ namespace hypertrie::internal::node_based {
 		using Key = hypertrie::Key<key_part_type>;
 	};
 
-	namespace internal_hypertrie_trait {
+	namespace internal::hypertrie_trait {
 		template<typename T, template<typename,
 				typename,
 				template<typename, typename> class,
@@ -52,7 +52,7 @@ namespace hypertrie::internal::node_based {
 
 
 	template<class T>
-	concept HypertrieTrait = internal_hypertrie_trait::is_instance<T, Hypertrie_t>::value;
+	concept HypertrieTrait = internal::hypertrie_trait::is_instance<T, Hypertrie_t>::value;
 
 	using default_bool_Hypertrie_t = Hypertrie_t<unsigned long,
 			bool,

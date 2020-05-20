@@ -23,22 +23,46 @@ namespace hypertrie::internal::node_based {
 		using SliceKey = typename tr::SliceKey;
 		using Key = typename tr::Key;
 		/// internal definitions
-		template<pos_type depth>
+		template<size_t depth>
 		using RawKey = hypertrie::internal::RawKey<depth, typename tr::key_part_type>;
 
-		template<pos_type depth>
+		template<size_t depth>
 		using RawSliceKey = hypertrie::internal::RawSliceKey<depth, typename tr::key_part_type>;
 
 		constexpr static bool is_bool_valued = std::is_same_v<value_type, bool>;
 
-		template<pos_type depth>
-		static auto subkey(const RawKey<depth> &key, pos_type remove_pos) -> RawKey<depth - 1> {
+		template<size_t depth>
+		static auto subkey(const RawKey<depth> &key, size_t remove_pos) -> RawKey<depth - 1> {
 			RawKey<depth - 1> sub_key;
-			for (auto i = 0, j = 0; i < depth; ++i)
+			for (size_t i = 0, j = 0; i < depth; ++i)
 				if (i != remove_pos) sub_key[j++] = key[i];
 			return sub_key;
 		}
 	};
+
+	namespace internal::hypertrie_internal_trait {
+		template<typename T, template<HypertrieTrait> typename U>
+		struct is_instance_impl : public std::false_type {
+		};
+
+		template<template <HypertrieTrait> typename U,
+		HypertrieTrait tr_t>
+		struct is_instance_impl<U<tr_t>, U> : public std::true_type {
+		};
+
+		template<typename T, template<HypertrieTrait> typename U>
+		using is_instance = is_instance_impl<std::decay_t<T>, U>;
+	}
+
+
+	template<class T>
+	concept HypertrieInternalTrait = internal::hypertrie_internal_trait::is_instance<T, Hypertrie_internal_t>::value;
+
+	using default_bool_Hypertrie_internal_t = Hypertrie_internal_t<default_bool_Hypertrie_t>;
+
+	using default_long_Hypertrie_internal_t = Hypertrie_internal_t<default_long_Hypertrie_t>;
+
+	using default_double_Hypertrie_internal_t = Hypertrie_internal_t<default_double_Hypertrie_t>;
 };
 
 #endif //HYPERTRIE_HYPERTRIE_INTERNAL_TRAITS_HPP

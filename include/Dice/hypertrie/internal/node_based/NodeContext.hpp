@@ -241,7 +241,7 @@ namespace hypertrie::internal::node_based {
 
 		template<pos_type depth>
 		NodeContainer<depth, tri> newPrimaryNode() {
-			TaggedNodeHash base_hash{depth};
+			TaggedNodeHash base_hash = TaggedNodeHash::getEmptyNodeHash<depth>();
 			primary_nodes_.push_front(base_hash);
 			auto node_storage = getNodeStorage<depth>();
 			auto found = node_storage.uncompressed_nodes_.find(base_hash);
@@ -446,7 +446,7 @@ namespace hypertrie::internal::node_based {
 				const value_type new_value
 		) -> set_rek_result {
 			bool change_only_the_value = false;
-
+			// TODO: think about how to handle primary nodes
 
 			std::vector<PlannedUpdate<depth - 1>> planned_updates{};
 

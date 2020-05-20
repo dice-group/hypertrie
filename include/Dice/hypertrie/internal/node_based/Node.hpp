@@ -2,7 +2,7 @@
 #define HYPERTRIE_NODE_HPP
 
 #include <range.hpp>
-#include "Dice/hypertrie/internal/util/CONSTANTS.hpp"
+#include "Dice/hypertrie/internal/util/PosType.hpp"
 #include "Dice/hypertrie/internal/node_based/Hypertrie_traits.hpp"
 #include "TaggedNodeHash.hpp"
 
@@ -75,12 +75,12 @@ namespace hypertrie::internal::node_based {
 			for (const pos_type pos : iter::range(depth))
 				edges_[pos] = (key[pos] != second_key[pos]) ?
 							  ChildrenType{
-									  {key[pos],        TaggedNodeHash::getCompressedNodeHash(pos, key, value)},
-									  {second_key[pos], TaggedNodeHash::getCompressedNodeHash(pos, second_key,
+									  {key[pos],        TaggedNodeHash::getCompressedNodeHash<depth>(subkey(key, pos), value)},
+									  {second_key[pos], TaggedNodeHash::getCompressedNodeHash<depth>(subkey(second_key, pos),
 																							  second_value)},
 							  } :
 							  ChildrenType{
-									  {key[pos], TaggedNodeHash::getTwoEntriesNodeHash(pos, key, value, second_key,
+									  {key[pos], TaggedNodeHash::getTwoEntriesNodeHash<depth>(subkey(key, pos), value, subkey(second_key, pos),
 																					   second_value)}};
 		}
 		
@@ -91,7 +91,7 @@ namespace hypertrie::internal::node_based {
 				if (auto found = children.find(key_part); found != children.end()){
 					found.value().addEntry(subkey(key, pos), value);
 				} else {
-					children[key_part] = TaggedNodeHash::getCompressedNodeHash(pos, key, value);
+					children[key_part] = TaggedNodeHash::getCompressedNodeHash<depth>(subkey(key, pos), value);
 				}
 			}
 		}

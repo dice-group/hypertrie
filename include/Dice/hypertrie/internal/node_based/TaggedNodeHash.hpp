@@ -2,9 +2,11 @@
 #define HYPERTRIE_TAGGEDNODEHASH_HPP
 
 #include <compare>
+#include <bitset>
 
 #include <absl/hash/hash.h>
-#include <bitset>
+
+#include "Dice/hypertrie/internal/util/CONSTANTS.hpp"
 
 namespace hypertrie::internal::node_based {
 
@@ -13,7 +15,7 @@ namespace hypertrie::internal::node_based {
 	class TaggedNodeHash {
 		union {
 			NodeHash thash_{};
-			std::bitset<sizeof(NodeHash)*8> thash_bits_;
+			std::bitset<sizeof(NodeHash) * 8> thash_bits_;
 		};
 
 
@@ -28,15 +30,14 @@ namespace hypertrie::internal::node_based {
 
 		explicit TaggedNodeHash(NodeHash thash) : thash_(thash) {}
 
+	private:
 		/**
 		 * Create an initial hash for an empty hypertrie. Empty tensors are stored in uncompressed nodes.
 		 * @param depth depth of the hypertrie
 		 */
 		explicit TaggedNodeHash(pos_type depth) : thash_(absl::Hash<pos_type>()(depth) | uncompressed_tag) {}
 
-		template<typename K, typename V>
-		TaggedNodeHash(const K &key ,const V &value) : thash_((absl::Hash<pos_type>()(key) ^ absl::Hash<pos_type>()(value)) & notag_mask) {}
-
+	public:
 
 		[[nodiscard]] inline bool isCompressed() const {
 			return thash_bits_[compression_tag_pos];
@@ -49,26 +50,26 @@ namespace hypertrie::internal::node_based {
 		template<typename V>
 		inline void changeValue(const V &old_value, const V & new_value) {
 			const bool tag = thash_bits_[compression_tag_pos];
-			thash_ = thash_ ^ absl::Hash<pos_type>()(old_value) ^ absl::Hash<pos_type>()(new_value);
+			thash_ = thash_ ^ absl::Hash<V>()(old_value) ^ absl::Hash<V>()(new_value);
 			thash_bits_[compression_tag_pos] = tag;
 		}
 
 		template<typename K, typename V>
 		inline void addFirstEntry(const K &key, const V & value) {
-			thash_ = thash_ ^ absl::Hash<pos_type>()(key) ^ absl::Hash<pos_type>()(value);
+			thash_ = thash_ ^ absl::Hash<K>()(key) ^ absl::Hash<V>()(value);
 			thash_bits_[compression_tag_pos] = true;
 		}
 
 		template<typename K, typename V>
 		inline void addEntry(const K &key, const V & value) {
-			thash_ = thash_ ^ absl::Hash<pos_type>()(key) ^ absl::Hash<pos_type>()(value);
+			thash_ = thash_ ^ absl::Hash<K>()(key) ^ absl::Hash<V>()(value);
 			thash_bits_[compression_tag_pos] = false;
 		}
 
 		template<typename K, typename V>
 		inline void removeEntry(const K &key, const V & value, bool has_exactly_2_entries) {
 			assert(isUncompressed());
-			thash_ = thash_ ^ absl::Hash<pos_type>()(key) ^ absl::Hash<pos_type>()(value);
+			thash_ = thash_ ^ absl::Hash<K>()(key) ^ absl::Hash<V>()(value);
 			thash_bits_[compression_tag_pos] = has_exactly_2_entries;
 		}
 
@@ -79,8 +80,33 @@ namespace hypertrie::internal::node_based {
 			return hash;
 		}
 
+		template<pos_type depth, typename K, typename V>
+		static auto getCompressedNodeHash(const K &key, const V & value) -> TaggedNodeHash{
+			auto hash = TaggedNodeHash(depth);
+			hash.addEntry(key, value);
+			return hash;
+		}
+
+		static auto getEmptyNodeHash(const pos_type  &depth) -> TaggedNodeHash{
+			return  TaggedNodeHash(depth);
+		}
+
+		template<pos_type depth>
+		static auto getEmptyNodeHash() -> TaggedNodeHash{
+			return  TaggedNodeHash(depth);
+		}
+
 		template<typename K, typename V>
 		static auto getTwoEntriesNodeHash(const pos_type  &depth, const K &key, const V & value,
+										  const K &second_key, const V & second_value) -> TaggedNodeHash{
+			auto hash = TaggedNodeHash(depth);
+			hash.addEntry(key, value);
+			hash.addEntry(second_key, second_value);
+			return hash;
+		}
+
+		template<typename K, typename V, pos_type depth>
+		static auto getTwoEntriesNodeHash(const K &key, const V & value,
 										  const K &second_key, const V & second_value) -> TaggedNodeHash{
 			auto hash = TaggedNodeHash(depth);
 			hash.addEntry(key, value);
@@ -104,8 +130,16 @@ namespace hypertrie::internal::node_based {
 			return this->thash_ != other.thash_;
 		}
 
-		operator bool() const {
+		[[nodiscard]] bool empty() const noexcept {
+			return this->operator bool();
+		}
+
+		operator bool() const noexcept {
 			return this->thash_ != NodeHash{};
+		}
+
+		[[nodiscard]] const NodeHash &hash() const noexcept  {
+			return this->thash_;
 		}
 	};
 

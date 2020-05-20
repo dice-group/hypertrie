@@ -1,7 +1,8 @@
 #ifndef HYPERTRIE_CONSTANTS_HPP
 #define HYPERTRIE_CONSTANTS_HPP
 
-namespace hypertrie::internal {
+// TODO: deprecate
+namespace hypertrie {
 	using pos_type = uint8_t;
 }
 

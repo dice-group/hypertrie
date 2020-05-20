@@ -6,116 +6,225 @@
 
 #include <absl/hash/hash.h>
 
-#include "Dice/hypertrie/internal/util/CONSTANTS.hpp"
+#include "Dice/hypertrie/internal/util/PosType.hpp"
+#include "Dice/hypertrie/internal/util/RawKey.hpp"
 
 namespace hypertrie::internal::node_based {
 
 	using NodeHash = size_t;
 
+	/**
+	 * The hash of a node of a hypertrie is stored in a TaggedNodeHash. It hashes all (key, value) of non-zero entries.
+	 * Entries can be added or removed iteratively. The hash stores an additional tag that determines if it stores a
+	 * compressed node.
+	 */
 	class TaggedNodeHash {
 		union {
+			/**
+			 * The hash.
+			 */
 			NodeHash thash_{};
+			/**
+			 * Bitset representation of the hash.
+			 */
 			std::bitset<sizeof(NodeHash) * 8> thash_bits_;
 		};
 
+		template<size_t depth, typename key_part_type, typename V>
+		using EntryHash = absl::Hash<std::tuple<RawKey<depth, key_part_type>, V>>;
 
-		static constexpr size_t tag_mask = size_t(1);
-		static constexpr size_t notag_mask = ~size_t(1);
-		static constexpr size_t uncompressed_tag = size_t(0);
-		static constexpr size_t compressed_tag = size_t(1);
+
+	public:
+		/**
+		 * Tag value if the hash represents an uncompressed node.
+		 */
+		static constexpr bool uncompressed_tag = false;
+		/**
+		 * Tag value if the hash represents a compressed node.
+		 */
+		static constexpr bool compressed_tag = true;
+		/**
+		 * Position of the tag in thash_bits_
+		 */
 		static constexpr size_t compression_tag_pos = 0;
 
-	public:
+		/**
+		 * Default constructor returning an empty hash (all zero).
+		 */
 		TaggedNodeHash() {}
 
-		explicit TaggedNodeHash(NodeHash thash) : thash_(thash) {}
+		TaggedNodeHash(const TaggedNodeHash &other) : thash_(other.thash_) {}
 
-	private:
-		/**
-		 * Create an initial hash for an empty hypertrie. Empty tensors are stored in uncompressed nodes.
-		 * @param depth depth of the hypertrie
-		 */
-		explicit TaggedNodeHash(pos_type depth) : thash_(absl::Hash<pos_type>()(depth) | uncompressed_tag) {}
+		TaggedNodeHash(TaggedNodeHash &&other) = default;
+
+		TaggedNodeHash &operator=(TaggedNodeHash &&) = default;
 
 	public:
 
+		/**
+		 * Checks if hash is tagged as representing a compressed node.
+		 * @return
+		 */
 		[[nodiscard]] inline bool isCompressed() const {
 			return thash_bits_[compression_tag_pos];
 		}
 
+		/**
+		 * Checks if hash is tagged as representing an uncompressed node.
+		 * @return
+		 */
 		[[nodiscard]] inline bool isUncompressed() const {
 			return not thash_bits_[compression_tag_pos];
 		}
 
-		template<typename V>
-		inline void changeValue(const V &old_value, const V & new_value) {
+		/**
+		 * Changes the value of an entry.
+		 * In this function it is not checked whether the given key and old_value was added to this hash before.
+		 * This must be checked before.
+		 * @tparam depth key depth/length
+		 * @tparam key_part_type type of the parts of the key
+		 * @tparam value_type type of the value
+		 * @param key key to be changed
+		 * @param old_value the old value the key had
+		 * @param new_value the new value the key will have
+		 * @return reference to slef
+		 */
+		template<size_t depth, typename key_part_type, typename value_type>
+		inline auto
+		changeValue(const RawKey<depth, key_part_type> &key, const value_type &old_value, const value_type &new_value) {
 			const bool tag = thash_bits_[compression_tag_pos];
-			thash_ = thash_ ^ absl::Hash<V>()(old_value) ^ absl::Hash<V>()(new_value);
+			thash_ = thash_ xor EntryHash<depth, key_part_type, value_type>()({key, old_value})
+					 xor EntryHash<depth, key_part_type, value_type>()({key, new_value});
 			thash_bits_[compression_tag_pos] = tag;
+			return *this;
 		}
 
-		template<typename K, typename V>
-		inline void addFirstEntry(const K &key, const V & value) {
-			thash_ = thash_ ^ absl::Hash<K>()(key) ^ absl::Hash<V>()(value);
-			thash_bits_[compression_tag_pos] = true;
+		/**
+		 * Adds a first entry (key, value) to an empty, compressed node.
+		 * Must only be called an empty, compressed nodes.
+		 * @tparam depth  key depth/length
+		 * @tparam key_part_type type of the parts of the key
+		 * @tparam value_type type of the value
+		 * @param key key to be added
+		 * @param value value to be added
+		 * @return reference to slef
+		 */
+		template<size_t depth, typename key_part_type, typename value_type>
+		inline auto addFirstEntry(const RawKey<depth, key_part_type> &key, const value_type &value) {
+			thash_ = thash_ xor EntryHash<depth, key_part_type, value_type>()({key, value});
+			thash_bits_[compression_tag_pos] = compressed_tag;
+			return *this;
 		}
 
-		template<typename K, typename V>
-		inline void addEntry(const K &key, const V & value) {
-			thash_ = thash_ ^ absl::Hash<K>()(key) ^ absl::Hash<V>()(value);
-			thash_bits_[compression_tag_pos] = false;
+		/**
+		 * Adds an entry (key, value).
+		 * @tparam depth  key depth/length
+		 * @tparam key_part_type type of the parts of the key
+		 * @tparam value_type type of the value
+		 * @param key key to be added
+		 * @param value value to be added
+		 * @return reference to slef
+		 */
+		template<size_t depth, typename key_part_type, typename value_type>
+		inline auto addEntry(const RawKey<depth, key_part_type> &key, const value_type &value) {
+			thash_ = thash_ xor EntryHash<depth, key_part_type, value_type>()({key, value});
+			thash_bits_[compression_tag_pos] = uncompressed_tag;
+			return *this;
 		}
 
-		template<typename K, typename V>
-		inline void removeEntry(const K &key, const V & value, bool has_exactly_2_entries) {
+		/**
+		 * Adds an entry (key, value).
+		 * @tparam depth  key depth/length
+		 * @tparam key_part_type type of the parts of the key
+		 * @tparam value_type type of the value
+		 * @param key key to be removed
+		 * @param value value to be removed
+		 * @param make_compressed if the node should be compressed afterwards
+		 * @return reference to slef
+		 */
+		template<size_t depth, typename key_part_type, typename value_type>
+		inline auto
+		removeEntry(const RawKey<depth, key_part_type> &key, const value_type &value, bool make_compressed) {
 			assert(isUncompressed());
-			thash_ = thash_ ^ absl::Hash<K>()(key) ^ absl::Hash<V>()(value);
-			thash_bits_[compression_tag_pos] = has_exactly_2_entries;
+			thash_ = thash_ xor EntryHash<depth, key_part_type, value_type>()({key, value});
+			thash_bits_[compression_tag_pos] = make_compressed;
+			return *this;
 		}
 
-		template<typename K, typename V>
-		static auto getCompressedNodeHash(const pos_type  &depth, const K &key, const V & value) -> TaggedNodeHash{
-			auto hash = TaggedNodeHash(depth);
-			hash.addEntry(key, value);
+		/**
+		 * Creates a hash for a compressed node containing one entry.
+		 * @tparam depth  key depth/length
+		 * @tparam key_part_type type of the parts of the key
+		 * @tparam value_type type of the value
+		 * @param key key to be added
+		 * @param value value to be added
+		 * @return
+		 */
+		template<size_t depth, typename key_part_type, typename value_type>
+		static auto
+		getCompressedNodeHash(const RawKey<depth, key_part_type> &key, const value_type &value) -> TaggedNodeHash {
+			auto hash = getRawEmptyNodeHash<depth>();
+			hash.addFirstEntry(key, value);
 			return hash;
 		}
 
-		template<pos_type depth, typename K, typename V>
-		static auto getCompressedNodeHash(const K &key, const V & value) -> TaggedNodeHash{
-			auto hash = TaggedNodeHash(depth);
-			hash.addEntry(key, value);
+	private:
+		/**
+		 * Creates an empty node hash. Does not initialize compression tag.
+		 * @tparam depth  key depth/length
+		 * @return
+		 */
+		template<size_t depth>
+		static auto getRawEmptyNodeHash() -> TaggedNodeHash {
+			auto hash = TaggedNodeHash();
+			hash.thash_ = absl::Hash<pos_type>()(depth);
 			return hash;
 		}
 
-		static auto getEmptyNodeHash(const pos_type  &depth) -> TaggedNodeHash{
-			return  TaggedNodeHash(depth);
+	public:
+		/**
+		 * Creates an empty, compressed node hash.
+		 * @tparam depth  key depth/length
+		 * @return
+		 */
+		template<size_t depth>
+		static auto getCompressedEmptyNodeHash() -> TaggedNodeHash {
+			auto hash = getRawEmptyNodeHash<depth>();
+			hash.thash_bits_[compression_tag_pos] = compressed_tag;
+			return hash;
 		}
 
-		template<pos_type depth>
-		static auto getEmptyNodeHash() -> TaggedNodeHash{
-			return  TaggedNodeHash(depth);
+		/**
+		 * Creates an empty, uncompressed node hash.
+		 * @tparam depth  key depth/length
+		 * @return
+		 */
+		template<size_t depth>
+		static auto getUncompressedEmptyNodeHash() -> TaggedNodeHash {
+			auto hash = getRawEmptyNodeHash<depth>();
+			hash.thash_bits_[compression_tag_pos] = uncompressed_tag;
+			return hash;
 		}
 
-		template<typename K, typename V>
-		static auto getTwoEntriesNodeHash(const pos_type  &depth, const K &key, const V & value,
-										  const K &second_key, const V & second_value) -> TaggedNodeHash{
-			auto hash = TaggedNodeHash(depth);
+		/**
+		 * Creates a hash for a compressed node containing two entry.
+		 * @tparam depth  key depth/length
+		 * @tparam key_part_type type of the parts of the key
+		 * @tparam value_type type of the value
+		 * @param key key to be added
+		 * @param value value to be added
+	  	 * @param second_key 2. key to be added
+		 * @param second_value 2. value to be added
+		 * @return
+		 */
+		template<size_t depth, typename key_part_type, typename V>
+		static auto getTwoEntriesNodeHash(const RawKey<depth, key_part_type> &key, const V &value,
+										  const RawKey<depth, key_part_type> &second_key,
+										  const V &second_value) -> TaggedNodeHash {
+			auto hash = getUncompressedEmptyNodeHash<depth>();
 			hash.addEntry(key, value);
 			hash.addEntry(second_key, second_value);
 			return hash;
-		}
-
-		template<typename K, typename V, pos_type depth>
-		static auto getTwoEntriesNodeHash(const K &key, const V & value,
-										  const K &second_key, const V & second_value) -> TaggedNodeHash{
-			auto hash = TaggedNodeHash(depth);
-			hash.addEntry(key, value);
-			hash.addEntry(second_key, second_value);
-			return hash;
-		}
-
-		auto operator<=>(const TaggedNodeHash &other) const {
-			return this->thash_ <=> other.thash_;
 		}
 
 		auto operator<(const TaggedNodeHash &other) const {
@@ -130,16 +239,37 @@ namespace hypertrie::internal::node_based {
 			return this->thash_ != other.thash_;
 		}
 
+		/**
+		 * A hash is emtpy if it does not represent any node, i.e. it is all zero.
+		 * @return
+		 */
 		[[nodiscard]] bool empty() const noexcept {
-			return this->operator bool();
+			return not this->operator bool();
 		}
 
+		/**
+		 * A hash is false if it does not represent any node, i.e. it is all zero.
+		 * @see empty()
+		 * @return
+		 */
 		operator bool() const noexcept {
 			return this->thash_ != NodeHash{};
 		}
 
-		[[nodiscard]] const NodeHash &hash() const noexcept  {
+		/**
+		 * The internally used hash.
+		 * @return
+		 */
+		[[nodiscard]] const NodeHash &hash() const noexcept {
 			return this->thash_;
+		}
+
+		/**
+		 * The union bitset of the internally used hash.
+		 * @return
+		 */
+		[[nodiscard]] const auto &bitset() const noexcept {
+			return this->thash_bits_;
 		}
 	};
 

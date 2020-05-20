@@ -241,7 +241,7 @@ namespace hypertrie::internal::node_based {
 
 		template<pos_type depth>
 		NodeContainer<depth, tri> newPrimaryNode() {
-			TaggedNodeHash base_hash = TaggedNodeHash::getEmptyNodeHash<depth>();
+			TaggedNodeHash base_hash = TaggedNodeHash::getCompressedEmptyNodeHash<depth>();
 			primary_nodes_.push_front(base_hash);
 			auto node_storage = getNodeStorage<depth>();
 			auto found = node_storage.uncompressed_nodes_.find(base_hash);
@@ -405,7 +405,7 @@ namespace hypertrie::internal::node_based {
 
 		public:
 			auto hashAfter(const value_type &old_value) const -> TaggedNodeHash {
-				TaggedNodeHash next_hash = (hash_before != TaggedNodeHash{}) ? TaggedNodeHash(depth) : hash_before;
+				TaggedNodeHash next_hash = hash_before;
 				switch (insert_op) {
 					case InsertOp::CHANGE_VALUE:
 						assert(next_hash != TaggedNodeHash(depth));
@@ -413,19 +413,18 @@ namespace hypertrie::internal::node_based {
 						break;
 					case InsertOp::INSERT_TWO_KEY_UC_NODE:
 						assert(next_hash == TaggedNodeHash(depth));
-						next_hash.addFirstEntry(sub_key, value);
-						next_hash.addEntry(second_sub_key, second_value);
+						next_hash = TaggedNodeHash::getTwoEntriesNodeHash(sub_key, value, second_sub_key, second_value);
 						break;
 					case InsertOp::INSERT_C_NODE:
 						assert(next_hash == TaggedNodeHash(depth));
-						next_hash.addFirstEntry(sub_key, value);
+						next_hash = TaggedNodeHash::getCompressedNodeHash(sub_key, value);
 						break;
 					case InsertOp::EXPAND_UC_NODE:
-						assert(next_hash != TaggedNodeHash(depth) and next_hash.isUncompressed());
+						assert(next_hash.isUncompressed());
 						next_hash.addEntry(sub_key, value);
 						break;
 					case InsertOp::EXPAND_C_NODE:
-						assert(next_hash != TaggedNodeHash(depth) and next_hash.isCompressed());
+						assert(next_hash.isCompressed());
 						next_hash.addEntry(sub_key, value);
 						break;
 				}

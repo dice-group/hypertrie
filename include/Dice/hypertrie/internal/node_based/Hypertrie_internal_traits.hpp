@@ -24,10 +24,10 @@ namespace hypertrie::internal::node_based {
 		using Key = typename tr::Key;
 		/// internal definitions
 		template<pos_type depth>
-		using RawKey = hypertrie::RawKey<depth, typename tr::key_part_type>;
+		using RawKey = hypertrie::internal::RawKey<depth, typename tr::key_part_type>;
 
 		template<pos_type depth>
-		using RawSliceKey = hypertrie::RawSliceKey<depth, typename tr::key_part_type>;
+		using RawSliceKey = hypertrie::internal::RawSliceKey<depth, typename tr::key_part_type>;
 
 		constexpr static bool is_bool_valued = std::is_same_v<value_type, bool>;
 

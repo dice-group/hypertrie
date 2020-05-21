@@ -29,6 +29,14 @@ namespace hypertrie::internal::node_based {
 		Node(const RawKey &key, size_t refCount = 0)
 				: key_(key), ref_count_(refCount) {}
 
+		RawKey &key() { return this->key_; }
+
+		const RawKey &key() const { return this->key_; }
+
+		size_t &ref_count() { return this->ref_count_; }
+
+		const size_t &ref_count() const { return this->ref_count_; }
+
 		[[nodiscard]] constexpr size_t size() const noexcept { return 1; }
 	};
 
@@ -44,10 +52,22 @@ namespace hypertrie::internal::node_based {
 
 		RawKey key_;
 		value_type value_;
-		size_t ref_count_;
+		size_t ref_count_ = 0;
 
 		Node(const RawKey &key, value_type value, size_t refCount = 0)
 				: key_(key), value_(value), ref_count_(refCount) {}
+
+		RawKey &key() { return this->key_; }
+
+		const RawKey &key() const { return this->key_; }
+
+		value_type &value() { return this->value_; }
+
+		const value_type &value() const { return this->value_; }
+
+		size_t &ref_count() { return this->ref_count_; }
+
+		const size_t &ref_count() const { return this->ref_count_; }
 
 		[[nodiscard]] constexpr size_t size() const noexcept { return 1; }
 	};
@@ -59,37 +79,40 @@ namespace hypertrie::internal::node_based {
 	)>> {
 		using tri = tri_t;
 		using RawKey = typename tri::template RawKey<depth>;
-		using value_type = typename tri::value_type_t;
-		static auto subkey = &tri::template subkey<depth>;
+		using value_type = typename tri::value_type;
+		static constexpr const auto subkey = &tri::template subkey<depth>;
 
 		using ChildrenType = typename tri::template map_type<typename tri::key_part_type, TaggedNodeHash>;
 		using EdgesType = std::array<ChildrenType, depth>;
 
 		EdgesType edges_;
 		size_t size_ = 0;
-		size_t ref_count_;
+		size_t ref_count_ = 0;
 
-		Node() : edges_{}, ref_count_{}{}
+		Node() : edges_{}, ref_count_{} {}
 
-		Node(const RawKey & key, value_type value, const RawKey & second_key, value_type second_value, size_t ref_count)
+		Node(const RawKey &key, value_type value, const RawKey &second_key, value_type second_value, size_t ref_count)
 				: size_{2}, ref_count_{ref_count} {
 			for (const size_t pos : iter::range(depth))
 				edges_[pos] = (key[pos] != second_key[pos]) ?
 							  ChildrenType{
-									  {key[pos],        TaggedNodeHash::getCompressedNodeHash<depth>(subkey(key, pos), value)},
-									  {second_key[pos], TaggedNodeHash::getCompressedNodeHash<depth>(subkey(second_key, pos),
-																							  second_value)},
+									  {key[pos],        TaggedNodeHash::getCompressedNodeHash<depth>(subkey(key, pos),
+																									 value)},
+									  {second_key[pos], TaggedNodeHash::getCompressedNodeHash<depth>(
+											  subkey(second_key, pos),
+											  second_value)},
 							  } :
 							  ChildrenType{
-									  {key[pos], TaggedNodeHash::getTwoEntriesNodeHash<depth>(subkey(key, pos), value, subkey(second_key, pos),
-																					   second_value)}};
+									  {key[pos], TaggedNodeHash::getTwoEntriesNodeHash<depth>(subkey(key, pos), value,
+																							  subkey(second_key, pos),
+																							  second_value)}};
 		}
-		
-		void insertEntry(const RawKey & key, value_type value) {
-			for (const size_t pos : iter::range(depth)){
+
+		void insertEntry(const RawKey &key, value_type value) {
+			for (const size_t pos : iter::range(depth)) {
 				auto &children = edges_[pos];
 				auto key_part = key[pos];
-				if (auto found = children.find(key_part); found != children.end()){
+				if (auto found = children.find(key_part); found != children.end()) {
 					found.value().addEntry(subkey(key, pos), value);
 				} else {
 					children[key_part] = TaggedNodeHash::getCompressedNodeHash<depth>(subkey(key, pos), value);
@@ -97,31 +120,46 @@ namespace hypertrie::internal::node_based {
 			}
 		}
 
+		EdgesType &edges() { return this->edges_; }
+
+		const EdgesType &edges() const { return this->edges_; }
+
+		ChildrenType &edges(pos_type pos) { return this->edges_[pos]; }
+
+		const ChildrenType &edges(pos_type pos) const { return this->edges_[pos]; }
+
+		size_t &ref_count() { return this->ref_count_; }
+
+		const size_t &ref_count() const { return this->ref_count_; }
+
 		[[nodiscard]] inline size_t size() const noexcept { return size_; }
 	};
 
 	// uncompressed depth == 1
 	template<size_t depth, HypertrieInternalTrait tri_t>
 	struct Node<depth, false, tri_t, typename std::enable_if_t<(
-			(depth == 1) and not std::is_same_v<typename tri_t::value_type, bool>
+			(depth == 1)
 	)>> {
 		using tri = tri_t;
 
-		using key_part_type = typename tri::key_part_type_t;
+		using key_part_type = typename tri::key_part_type;
 		using RawKey = typename tri::template RawKey<depth>;
-		using value_type = typename tri::value_type_t;
-		static auto subkey = &tri::template subkey<depth>;
+		using value_type = typename tri::value_type;
+		static constexpr const auto subkey = &tri::template subkey<depth>;
 		// use a set to for value_type bool, otherwise a map
-		using EdgesType = std::conditional_t<std::is_same_v<value_type, bool>,
+		using EdgesType = std::conditional_t<tri::is_bool_valued,
 				typename tri::template set_type<key_part_type>,
 				typename tri::template map_type<key_part_type, value_type>
 		>;
 
 
 		EdgesType edges_;
-		size_t ref_count_;
+		size_t ref_count_ = 0;
 
-		Node(const RawKey & key, [[maybe_unused]]value_type value, const RawKey & second_key, [[maybe_unused]]value_type second_value, size_t ref_count) : ref_count_{ref_count} {
+		Node() = default;
+
+		Node(const RawKey &key, [[maybe_unused]]value_type value, const RawKey &second_key,
+			 [[maybe_unused]]value_type second_value, size_t ref_count) : ref_count_{ref_count} {
 			if constexpr(std::is_same_v<value_type, bool>)
 				edges_ = EdgesType{
 						{key[0]},
@@ -137,6 +175,18 @@ namespace hypertrie::internal::node_based {
 		void insertEntry(const RawKey &key, value_type value) {
 			edges_[key[0]] = value;
 		}
+
+		EdgesType &edges() { return this->edges_; }
+
+		const EdgesType &edges() const { return this->edges_; }
+
+		EdgesType &edges([[maybe_unused]] pos_type pos) { return this->edges_; }
+
+		const EdgesType &edges([[maybe_unused]] pos_type pos) const { return this->edges_; }
+
+		size_t &ref_count() { return this->ref_count_; }
+
+		const size_t &ref_count() const { return this->ref_count_; }
 
 		[[nodiscard]] inline size_t size() const noexcept { return edges_.size(); }
 	};

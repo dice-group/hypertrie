@@ -8,23 +8,30 @@
 
 namespace hypertrie::internal::node_based {
 
+	using NodeCompression = bool;
+	constexpr NodeCompression COMPRESSED = true;
+	constexpr NodeCompression UNCOMPRESSED = false;
+
 
 	template<size_t depth,
-			bool compressed,
+			NodeCompression compressed,
 			HypertrieInternalTrait tri_t = Hypertrie_internal_t<>,
 			typename  = typename std::enable_if_t<(depth >= 1)>>
 	struct Node;
 
 	// compressed nodes with boolean value_type
 	template<size_t depth, HypertrieInternalTrait tri_t>
-	struct Node<depth, true, tri_t, typename std::enable_if_t<(
+	struct Node<depth, COMPRESSED, tri_t, typename std::enable_if_t<(
 			(depth >= 1) and std::is_same_v<typename tri_t::value_type, bool>
 	)>> {
 		using tri = tri_t;
 		using RawKey = typename tri::template RawKey<depth>;
-
+		using value_type = typename tri::value_type;
+	private:
 		RawKey key_;
-		size_t ref_count_ = 1;
+		size_t ref_count_ = 0;
+	public:
+		Node() = default;
 
 		Node(const RawKey &key, size_t refCount = 0)
 				: key_(key), ref_count_(refCount) {}
@@ -42,18 +49,17 @@ namespace hypertrie::internal::node_based {
 
 	// compressed nodes with non-boolean value_type
 	template<size_t depth, HypertrieInternalTrait tri_t>
-	struct Node<depth, true, tri_t, typename std::enable_if_t<(
+	struct Node<depth, COMPRESSED, tri_t, typename std::enable_if_t<(
 			(depth >= 1) and not std::is_same_v<typename tri_t::value_type, bool>
 	)>> {
 		using tri = tri_t;
-
 		using RawKey = typename tri::template RawKey<depth>;
 		using value_type = typename tri::value_type;
-
+	private:
 		RawKey key_;
 		value_type value_;
 		size_t ref_count_ = 0;
-
+	public:
 		Node(const RawKey &key, value_type value, size_t refCount = 0)
 				: key_(key), value_(value), ref_count_(refCount) {}
 
@@ -74,24 +80,26 @@ namespace hypertrie::internal::node_based {
 
 	// uncompressed depth >= 2
 	template<size_t depth, HypertrieInternalTrait tri_t>
-	struct Node<depth, false, tri_t, typename std::enable_if_t<(
+	struct Node<depth, UNCOMPRESSED, tri_t, typename std::enable_if_t<(
 			(depth >= 2)
 	)>> {
 		using tri = tri_t;
 		using RawKey = typename tri::template RawKey<depth>;
 		using value_type = typename tri::value_type;
-		static constexpr const auto subkey = &tri::template subkey<depth>;
-
 		using ChildrenType = typename tri::template map_type<typename tri::key_part_type, TaggedNodeHash>;
 		using EdgesType = std::array<ChildrenType, depth>;
+
+	private:
+		static constexpr const auto subkey = &tri::template subkey<depth>;
 
 		EdgesType edges_;
 		size_t size_ = 0;
 		size_t ref_count_ = 0;
+	public:
 
-		Node() : edges_{}, ref_count_{} {}
+		Node(size_t ref_count = 0) : edges_{}, ref_count_{ref_count} {}
 
-		Node(const RawKey &key, value_type value, const RawKey &second_key, value_type second_value, size_t ref_count)
+		Node(const RawKey &key, value_type value, const RawKey &second_key, value_type second_value, size_t ref_count = 0)
 				: size_{2}, ref_count_{ref_count} {
 			for (const size_t pos : iter::range(depth))
 				edges_[pos] = (key[pos] != second_key[pos]) ?
@@ -137,7 +145,7 @@ namespace hypertrie::internal::node_based {
 
 	// uncompressed depth == 1
 	template<size_t depth, HypertrieInternalTrait tri_t>
-	struct Node<depth, false, tri_t, typename std::enable_if_t<(
+	struct Node<depth, UNCOMPRESSED, tri_t, typename std::enable_if_t<(
 			(depth == 1)
 	)>> {
 		using tri = tri_t;
@@ -156,10 +164,10 @@ namespace hypertrie::internal::node_based {
 		EdgesType edges_;
 		size_t ref_count_ = 0;
 
-		Node() = default;
+		Node(size_t ref_count = 0) : edges_{}, ref_count_{ref_count} {}
 
 		Node(const RawKey &key, [[maybe_unused]]value_type value, const RawKey &second_key,
-			 [[maybe_unused]]value_type second_value, size_t ref_count) : ref_count_{ref_count} {
+			 [[maybe_unused]]value_type second_value, size_t ref_count = 0) : ref_count_{ref_count} {
 			if constexpr(std::is_same_v<value_type, bool>)
 				edges_ = EdgesType{
 						{key[0]},
@@ -190,6 +198,14 @@ namespace hypertrie::internal::node_based {
 
 		[[nodiscard]] inline size_t size() const noexcept { return edges_.size(); }
 	};
+
+	template<size_t depth,
+			HypertrieInternalTrait tri = Hypertrie_internal_t<>>
+	using CompressedNode = Node<depth, COMPRESSED, tri>;
+
+	template<size_t depth,
+			HypertrieInternalTrait tri = Hypertrie_internal_t<>>
+	using UncompressedNode = Node<depth, UNCOMPRESSED, tri>;
 
 
 }

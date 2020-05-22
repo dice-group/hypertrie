@@ -71,6 +71,30 @@ namespace hypertrie::tests::node_based::node {
 		createEmptyUncompressed<default_double_Hypertrie_internal_t, 3>();
 	}
 
+	template<HypertrieInternalTrait tr, pos_type depth>
+	void fillEmptyUncompressed() {
+		using key_part_type = typename tr::key_part_type;
+		using value_type = typename tr::value_type;
+		using Key = Key<depth, key_part_type>;
+
+		utils::RawGenerator<depth, key_part_type, value_type> gen{};
+
+		// TODO: implement
+	}
+
+
+	TEST_CASE("fill empty uncompressed node", "[Node]") {
+		fillEmptyUncompressed<default_bool_Hypertrie_internal_t, 1>();
+		fillEmptyUncompressed<default_long_Hypertrie_internal_t, 1>();
+		fillEmptyUncompressed<default_double_Hypertrie_internal_t, 1>();
+		fillEmptyUncompressed<default_bool_Hypertrie_internal_t, 2>();
+		fillEmptyUncompressed<default_long_Hypertrie_internal_t, 2>();
+		fillEmptyUncompressed<default_double_Hypertrie_internal_t, 2>();
+		fillEmptyUncompressed<default_bool_Hypertrie_internal_t, 3>();
+		fillEmptyUncompressed<default_long_Hypertrie_internal_t, 3>();
+		fillEmptyUncompressed<default_double_Hypertrie_internal_t, 3>();
+	}
+
 };
 
 #endif //HYPERTRIE_TESTNODE_HPP

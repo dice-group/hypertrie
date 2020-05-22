@@ -19,6 +19,18 @@ namespace hypertrie::tests::utils {
 		}
 	};
 
+	class LongGenerator : public AssetGenerator {
+		std::uniform_int_distribution<long> dist;
+
+	public:
+		explicit LongGenerator(long max ) : dist{0, max} {}
+		LongGenerator(long min, long max ) : dist{min, max} {}
+
+		auto operator()(){
+			return dist(rand);
+		}
+	};
+
 	template<size_t depth, typename key_part_type, typename value_type,
 			key_part_type min = std::numeric_limits<key_part_type>::min(),
 			key_part_type max = std::numeric_limits<key_part_type>::max()>
@@ -37,6 +49,7 @@ namespace hypertrie::tests::utils {
 		}
 
 		auto value() {
+			if constexpr(std::is_same_v<key_part_type, bool>) return true;
 			value_type value_;
 			do {
 				value_ = value_dist(rand);
@@ -46,6 +59,14 @@ namespace hypertrie::tests::utils {
 
 		auto entry() {
 			return std::pair{key(), value()};
+		}
+
+		auto entries(size_t size) {
+			std::set<std::pair<RawKey, value_type>> entry_set;
+			while (entry_set.size() < size) {
+				entry_set.insert(this->entry());
+			}
+			return entry_set;
 		}
 	};
 }

@@ -100,12 +100,22 @@ namespace hypertrie::internal::node_based {
 			if constexpr(depth > 1) return this->edges_[pos]; else return this->edges_;
 		}
 
+		std::pair<bool, typename ChildrenType::iterator> find(pos_type pos, key_part_type key_part) {
+			auto found = this->edges(pos).find(key_part);
+			return {found != this->edges(pos).end(), found};
+		}
+
+		std::pair<bool, typename ChildrenType::const_iterator> find(pos_type pos, key_part_type key_part) const{
+			auto found = this->edges(pos).find(key_part);
+			return {found != this->edges(pos).end(), found};
+		}
+
 		ChildType child(pos_type pos, key_part_type key_part) const {
-			if (auto found = this->edges(pos).find(key_part); found != edges(pos).end()) {
+			if (auto [found, iter] = this->find(pos, key_part); found) {
 				if constexpr ((depth == 1) and tri::is_bool_valued)
 					return true;
 				else
-					return found->second;
+					return iter->second;
 			} else {
 				return ChildType{}; // 0, 0.0, false
 			}

@@ -66,11 +66,13 @@ namespace hypertrie::internal::node_based {
 		template<typename K, typename V>
 		using map_type = typename tri::template map_type<K, V>;
 
-		using ChildrenType = std::conditional_t<(depth > 1),
-				typename tri::template map_type<typename tri::key_part_type, TaggedNodeHash>,
-				std::conditional_t<tri::is_bool_valued,
-						typename tri::template set_type<key_part_type>,
-						typename tri::template map_type<key_part_type, value_type>>
+		using ChildType = std::conditional_t<(depth > 1),
+				TaggedNodeHash,
+				value_type>;
+
+		using ChildrenType = std::conditional_t<((depth == 1) and tri::is_bool_valued),
+				typename tri::template set_type<key_part_type>,
+				typename tri::template map_type<typename tri::key_part_type, ChildType>
 		>;
 
 		using EdgesType = std::conditional_t<(depth > 1),
@@ -96,6 +98,17 @@ namespace hypertrie::internal::node_based {
 
 		const ChildrenType &edges(pos_type pos) const {
 			if constexpr(depth > 1) return this->edges_[pos]; else return this->edges_;
+		}
+
+		ChildType child(pos_type pos, key_part_type key_part) const {
+			if (auto found = this->edges(pos).find(key_part); found != edges(pos).end()) {
+				if constexpr ((depth == 1) and tri::is_bool_valued)
+					return true;
+				else
+					return found->second;
+			} else {
+				return ChildType{}; // 0, 0.0, false
+			}
 		}
 	};
 
@@ -179,7 +192,7 @@ namespace hypertrie::internal::node_based {
 				if (auto found = children.find(key_part); found != children.end()) {
 					found.value().addEntry(subkey(key, pos), value);
 				} else {
-					children[key_part] = TaggedNodeHash::getCompressedNodeHash<depth>(subkey(key, pos), value);
+					children[key_part] = TaggedNodeHash::getCompressedNodeHash(subkey(key, pos), value);
 				}
 			}
 		}
@@ -224,7 +237,7 @@ namespace hypertrie::internal::node_based {
 			if constexpr(tri::is_bool_valued)
 				this->edges().insert(key[0]);
 			else
-			this->edges()[key[0]] = value;
+				this->edges()[key[0]] = value;
 		}
 
 		[[nodiscard]] inline size_t size() const noexcept { return this->edges().size(); }

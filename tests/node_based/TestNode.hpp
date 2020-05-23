@@ -72,27 +72,40 @@ namespace hypertrie::tests::node_based::node {
 	}
 
 	template<HypertrieInternalTrait tr, pos_type depth>
-	void fillEmptyUncompressed() {
+	void insertSingleEntryIntoEmptyUncompressed() {
 		using key_part_type = typename tr::key_part_type;
 		using value_type = typename tr::value_type;
 		using Key = Key<depth, key_part_type>;
 
 		utils::RawGenerator<depth, key_part_type, value_type> gen{};
 
-		// TODO: implement
+		UncompressedNode<depth, tr> node{};
+
+		auto[key, value] = gen.entry();
+
+		node.insertEntry(key, value);
+
+		if constexpr(depth == 1) {
+			REQUIRE(node.child(0, key[0]) == value);
+		} else {
+			for (auto pos : iter::range(depth)) {
+				auto expected_hash = TaggedNodeHash::getCompressedNodeHash(tr::subkey(key, pos), value);
+				REQUIRE(node.edges(pos)[key[pos]] == expected_hash);
+			}
+		}
 	}
 
 
-	TEST_CASE("fill empty uncompressed node", "[Node]") {
-		fillEmptyUncompressed<default_bool_Hypertrie_internal_t, 1>();
-		fillEmptyUncompressed<default_long_Hypertrie_internal_t, 1>();
-		fillEmptyUncompressed<default_double_Hypertrie_internal_t, 1>();
-		fillEmptyUncompressed<default_bool_Hypertrie_internal_t, 2>();
-		fillEmptyUncompressed<default_long_Hypertrie_internal_t, 2>();
-		fillEmptyUncompressed<default_double_Hypertrie_internal_t, 2>();
-		fillEmptyUncompressed<default_bool_Hypertrie_internal_t, 3>();
-		fillEmptyUncompressed<default_long_Hypertrie_internal_t, 3>();
-		fillEmptyUncompressed<default_double_Hypertrie_internal_t, 3>();
+	TEST_CASE("insert single entry into uncompressed node", "[Node]") {
+		insertSingleEntryIntoEmptyUncompressed<default_bool_Hypertrie_internal_t, 1>();
+		insertSingleEntryIntoEmptyUncompressed<default_long_Hypertrie_internal_t, 1>();
+		insertSingleEntryIntoEmptyUncompressed<default_double_Hypertrie_internal_t, 1>();
+		insertSingleEntryIntoEmptyUncompressed<default_bool_Hypertrie_internal_t, 2>();
+		insertSingleEntryIntoEmptyUncompressed<default_long_Hypertrie_internal_t, 2>();
+		insertSingleEntryIntoEmptyUncompressed<default_double_Hypertrie_internal_t, 2>();
+		insertSingleEntryIntoEmptyUncompressed<default_bool_Hypertrie_internal_t, 3>();
+		insertSingleEntryIntoEmptyUncompressed<default_long_Hypertrie_internal_t, 3>();
+		insertSingleEntryIntoEmptyUncompressed<default_double_Hypertrie_internal_t, 3>();
 	}
 
 };

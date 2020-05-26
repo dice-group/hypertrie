@@ -12,48 +12,108 @@ namespace hypertrie::internal::node_based {
 	constexpr NodeCompression COMPRESSED = true;
 	constexpr NodeCompression UNCOMPRESSED = false;
 
+	/**
+	 * A super class to provide counting references in a Node.
+	 */
 	struct ReferenceCounted {
 	protected:
 		size_t ref_count_ = 0;
 	public:
+		/**
+		 * Default constructor. ref_count is set to 0.
+		 */
 		ReferenceCounted() {}
 
+		/**
+		 * ref_count is set to the given value.
+		 * @param ref_count ref_count value
+		 */
 		ReferenceCounted(size_t ref_count) : ref_count_(ref_count) {}
-
+		/**
+		 * Modifiable reference to ref_count.
+		 * @return
+		 */
 		size_t &ref_count() { return this->ref_count_; }
 
+		/**
+		 * Constant reference to ref_count.
+		 * @return
+		 */
 		const size_t &ref_count() const { return this->ref_count_; }
 	};
 
+	/**
+	 * A super class to provide a single key in a Node.
+	 * @tparam depth depth of the key
+	 * @tparam tri HypertrieInternalTrait that defines node parameters
+	 */
 	template<size_t depth, HypertrieInternalTrait tri>
 	struct Compressed {
 		using RawKey = typename tri::template RawKey<depth>;
 	protected:
-		RawKey key_{};
+		RawKey key_;
 	public:
-		Compressed() {}
+		/**
+		 * Default constructor fills the key with 0, 0.0, true (value initialization)
+		 */
+		Compressed() : key_{} {}
 
+		/**
+		 * Uses the provided RawKey as key.
+		 * @param key
+		 */
 		Compressed(RawKey key) : key_(key) {}
 
+		/**
+		 * Modifiable reference to key.
+		 * @return
+		 */
 		RawKey &key() { return this->key_; }
 
+		/**
+		 * Constant reference to key.
+		 * @return
+		 */
 		const RawKey &key() const { return this->key_; }
 
+		/**
+		 * Size of this node (It is always 1).
+		 * @return
+		 */
 		[[nodiscard]] constexpr size_t size() const noexcept { return 1; }
 	};
 
+	/**
+	 * A super class to provide a single value in a Node.
+	 * @tparam tri HypertrieInternalTrait that defines node parameters
+	 */
 	template<HypertrieInternalTrait tri>
 	struct Valued {
 		using value_type = typename tri::value_type;
 	protected:
 		value_type value_;
 	public:
-		Valued() {}
+		/**
+		 * Default constructor sets value to 0, 0.0, true (value initialization)
+		 */
+		Valued() : value_{} {}
 
+		/**
+		 * Uses the provided value.
+		 * @param key
+		 */
 		Valued(value_type value) : value_(value) {}
 
+		/**
+		 * Modifiable reference to value.
+		 * @return
+		 */
 		value_type &value() { return this->value_; }
 
+		/**
+		 * Constant reference to value.
+		 * @return
+		 */
 		const value_type &value() const { return this->value_; }
 	};
 

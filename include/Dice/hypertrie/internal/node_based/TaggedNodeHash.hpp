@@ -57,6 +57,7 @@ namespace hypertrie::internal::node_based {
 
 		TaggedNodeHash(TaggedNodeHash &&other) = default;
 
+		TaggedNodeHash &operator=(const TaggedNodeHash &) = default;
 		TaggedNodeHash &operator=(TaggedNodeHash &&) = default;
 
 	public:

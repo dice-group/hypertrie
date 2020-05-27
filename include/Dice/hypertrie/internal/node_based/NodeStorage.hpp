@@ -8,7 +8,7 @@
 
 namespace hypertrie::internal::node_based {
 
-	template<pos_type depth,
+	template<size_t depth,
 			 typename tri_t = Hypertrie_internal_t<>,
 			 typename = typename std::enable_if_t<(depth >= 1)>>
 	struct NodeStorage {

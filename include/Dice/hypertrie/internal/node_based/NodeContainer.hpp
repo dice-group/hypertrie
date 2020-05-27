@@ -6,18 +6,18 @@
 
 namespace hypertrie::internal::node_based {
 
-	template<pos_type depth, NodeCompression compressed, typename tri_t = Hypertrie_internal_t<>>
+	template<size_t depth, NodeCompression compressed, typename tri_t = Hypertrie_internal_t<>>
 	struct SpecificNodeContainer;
 
-	template<pos_type depth,
+	template<size_t depth,
 			 typename tri_t = Hypertrie_internal_t<>>
 	using CompressedNodeContainer = SpecificNodeContainer<depth, NodeCompression::compressed, tri_t>;
 
-	template<pos_type depth,
+	template<size_t depth,
 			 typename tri_t = Hypertrie_internal_t<>>
 	using UncompressedNodeContainer = SpecificNodeContainer<depth, NodeCompression::uncompressed, tri_t>;
 
-	template<pos_type depth, typename tri_t = Hypertrie_internal_t<>>
+	template<size_t depth, typename tri_t = Hypertrie_internal_t<>>
 	struct NodeContainer {
 		TaggedNodeHash thash_{};
 
@@ -51,7 +51,7 @@ namespace hypertrie::internal::node_based {
 		[[nodiscard]] bool empty() const { return thash_ == TaggedNodeHash{}; }
 	};
 
-	template<pos_type depth, typename tri_t>
+	template<size_t depth, typename tri_t>
 	struct SpecificNodeContainer<depth, NodeCompression::compressed, tri_t> : public NodeContainer<depth, tri_t> {
 
 		SpecificNodeContainer(const TaggedNodeHash &thash, void *node) : NodeContainer<depth, tri_t>(thash, node) {}
@@ -65,7 +65,7 @@ namespace hypertrie::internal::node_based {
 	};
 
 
-	template<pos_type depth,
+	template<size_t depth,
 			 typename tri_t>
 	struct SpecificNodeContainer<depth, NodeCompression::uncompressed, tri_t> : public NodeContainer<depth, tri_t> {
 

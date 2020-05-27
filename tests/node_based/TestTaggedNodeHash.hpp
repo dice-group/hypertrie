@@ -26,16 +26,15 @@ namespace hypertrie::tests::node_based::tagged_node_hash {
 		REQUIRE(TNS::getCompressedEmptyNodeHash<2>() != TNS::getCompressedEmptyNodeHash<3>());
 		REQUIRE(TNS::getCompressedEmptyNodeHash<2>() != TNS::getCompressedEmptyNodeHash<4>());
 		REQUIRE(TNS::getCompressedEmptyNodeHash<3>() != TNS::getCompressedEmptyNodeHash<4>());
-
 	}
 
 	template<pos_type depth>
-	void singleEntryCompressed(){
+	void singleEntryCompressed() {
 		auto key = Key<depth>{};
 		auto compressed_hash = TNS::getCompressedNodeHash(key, 1.3);
 		REQUIRE(compressed_hash.isCompressed());
 		REQUIRE(not compressed_hash.empty());
-		REQUIRE(compressed_hash); // inverse of above
+		REQUIRE(compressed_hash);// inverse of above
 	}
 
 	TEST_CASE("construct hash for single entry compressed node", "[TaggedNodeHash]") {
@@ -45,11 +44,10 @@ namespace hypertrie::tests::node_based::tagged_node_hash {
 		singleEntryCompressed<4>();
 
 		// key and value must be hashed together
-		using IntKey = internal::RawKey<1, int>;
+		using IntKey = hypertrie::internal::RawKey<1, int>;
 		REQUIRE(TNS::getCompressedNodeHash(IntKey{1}, int(2)) != TNS::getCompressedNodeHash(IntKey{2}, int(1)));
 		// different order of the key_parts in a key must lead to different hash
-		REQUIRE(TNS::getCompressedNodeHash<2> (Key<2>{1,2}, 1.3) != TNS::getCompressedNodeHash<2> (Key<2>{2,1}, 1.3));
-
+		REQUIRE(TNS::getCompressedNodeHash<2>(Key<2>{1, 2}, 1.3) != TNS::getCompressedNodeHash<2>(Key<2>{2, 1}, 1.3));
 	}
 
 	TEST_CASE("construct hash for two entries uncompressed node", "[TaggedNodeHash]") {
@@ -65,7 +63,7 @@ namespace hypertrie::tests::node_based::tagged_node_hash {
 		REQUIRE(hash.isUncompressed());
 		// order must not matter
 		REQUIRE(hash == TNS::getTwoEntriesNodeHash(key2, value2, key1, value1));
-		
+
 		// creating it manually must be equal
 		TaggedNodeHash hash2 = TNS::getCompressedNodeHash(key1, value1);
 		REQUIRE(hash2.isCompressed());
@@ -81,9 +79,9 @@ namespace hypertrie::tests::node_based::tagged_node_hash {
 		constexpr auto depth = 2;
 		using value_type = double;
 		const auto keys = std::vector<Key<depth>>{{4.3, 7.1},
-											{13,2},
-											{11,2},
-											{-3,0}};
+												  {13, 2},
+												  {11, 2},
+												  {-3, 0}};
 		const auto values = std::vector<value_type>{4.2, 7.0, -100, 15.75};
 
 		const TaggedNodeHash hash = TNS::getCompressedNodeHash(keys[0], values[0]);
@@ -108,16 +106,15 @@ namespace hypertrie::tests::node_based::tagged_node_hash {
 						.removeEntry(keys[2], values[2], false)
 						.removeEntry(keys[1], values[1], false)
 						.removeEntry(keys[3], values[3], true) == hash);
-
 	}
 
 	TEST_CASE("add and remove starting with uncompressed", "[TaggedNodeHash]") {
 		constexpr auto depth = 2;
 		using value_type = double;
 		const auto keys = std::vector<Key<depth>>{{4.3, 7.1},
-												  {13,2},
-												  {11,2},
-												  {-3,0}};
+												  {13, 2},
+												  {11, 2},
+												  {-3, 0}};
 		const auto values = std::vector<value_type>{4.2, 7.0, -100, 15.75};
 
 		const TaggedNodeHash hash = TNS::getUncompressedEmptyNodeHash<depth>().addEntry(keys[0], values[0]);
@@ -142,28 +139,27 @@ namespace hypertrie::tests::node_based::tagged_node_hash {
 						.removeEntry(keys[2], values[2], false)
 						.removeEntry(keys[1], values[1], false)
 						.removeEntry(keys[3], values[3], false) == hash);
-
 	}
 
 	TEST_CASE("use default sorting", "[TaggedNodeHash]") {
 		constexpr auto depth = 2;
 		using value_type = double;
 		const auto keys = std::vector<Key<depth>>{{4.3, 7.1},
-												  {13,2},
-												  {11,2},
-												  {-3,0}};
+												  {13, 2},
+												  {11, 2},
+												  {-3, 0}};
 		const auto values = std::vector<value_type>{4.2, 7.0, -100, 15.75};
 
 		const TaggedNodeHash hash = TNS::getCompressedNodeHash(keys[0], values[0]);
-		const TaggedNodeHash hash1 = TaggedNodeHash{hash}.addEntry(keys[1], values[1]);;
-		const TaggedNodeHash hash2 = TaggedNodeHash{hash1}.addEntry(keys[2], values[2]);;
-		const TaggedNodeHash hash3 = TaggedNodeHash{hash2}.addEntry(keys[3], values[3]);;
+		const TaggedNodeHash hash1 = TaggedNodeHash{hash}.addEntry(keys[1], values[1]);
+		const TaggedNodeHash hash2 = TaggedNodeHash{hash1}.addEntry(keys[2], values[2]);
+		const TaggedNodeHash hash3 = TaggedNodeHash{hash2}.addEntry(keys[3], values[3]);
 
-		std::vector<TaggedNodeHash> hashes{ hash, hash1, hash2, hash3};
+		std::vector<TaggedNodeHash> hashes{hash, hash1, hash2, hash3};
 
 		std::sort(hashes.begin(), hashes.end());
 	}
 
-};
+};// namespace hypertrie::tests::node_based::tagged_node_hash
 
-#endif //HYPERTRIE_TESTTAGGEDNODEHASH_HPP
+#endif//HYPERTRIE_TESTTAGGEDNODEHASH_HPP

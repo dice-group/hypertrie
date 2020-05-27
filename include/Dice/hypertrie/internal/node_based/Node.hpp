@@ -1,16 +1,13 @@
 #ifndef HYPERTRIE_NODE_HPP
 #define HYPERTRIE_NODE_HPP
 
-#include <range.hpp>
-#include "Dice/hypertrie/internal/util/PosType.hpp"
 #include "Dice/hypertrie/internal/node_based/Hypertrie_internal_traits.hpp"
+#include "Dice/hypertrie/internal/node_based/NodeCompression.hpp"
 #include "Dice/hypertrie/internal/node_based/TaggedNodeHash.hpp"
+#include "Dice/hypertrie/internal/util/PosType.hpp"
+#include <range.hpp>
 
 namespace hypertrie::internal::node_based {
-
-	using NodeCompression = bool;
-	constexpr NodeCompression COMPRESSED = true;
-	constexpr NodeCompression UNCOMPRESSED = false;
 
 	/**
 	 * A super class to provide counting references in a Node.
@@ -18,6 +15,7 @@ namespace hypertrie::internal::node_based {
 	struct ReferenceCounted {
 	protected:
 		size_t ref_count_ = 0;
+
 	public:
 		/**
 		 * Default constructor. ref_count is set to 0.
@@ -191,36 +189,32 @@ namespace hypertrie::internal::node_based {
 
 	// compressed nodes with boolean value_type
 	template<size_t depth, HypertrieInternalTrait tri_t>
-	struct Node<depth, COMPRESSED, tri_t, typename std::enable_if_t<(
-			(depth >= 1) and tri_t::is_bool_valued
-	)>> : public ReferenceCounted, public Compressed<depth, tri_t> {
+	struct Node<depth, NodeCompression::compressed, tri_t, typename std::enable_if_t<((depth >= 1) and tri_t::is_bool_valued)>> : public ReferenceCounted, public Compressed<depth, tri_t> {
 		using tri = tri_t;
 		using RawKey = typename Compressed<depth, tri_t>::RawKey;
+
 	public:
 		Node() = default;
 
 		Node(const RawKey &key, size_t ref_count = 0)
-				: ReferenceCounted(ref_count), Compressed<depth, tri_t>(key) {}
+			: ReferenceCounted(ref_count), Compressed<depth, tri_t>(key) {}
 	};
 
 	// compressed nodes with non-boolean value_type
 	template<size_t depth, HypertrieInternalTrait tri_t>
-	struct Node<depth, COMPRESSED, tri_t, std::enable_if_t<(
-			(depth >= 1) and not tri_t::is_bool_valued
-	)>> : public ReferenceCounted, public Compressed<depth, tri_t>, Valued<tri_t> {
+	struct Node<depth, NodeCompression::compressed, tri_t, std::enable_if_t<((depth >= 1) and not tri_t::is_bool_valued)>> : public ReferenceCounted, public Compressed<depth, tri_t>, Valued<tri_t> {
 		using tri = tri_t;
 		using RawKey = typename tri::template RawKey<depth>;
 		using value_type = typename tri::value_type;
+
 	public:
 		Node(const RawKey &key, value_type value, size_t ref_count = 0)
-				: ReferenceCounted(ref_count), Compressed<depth, tri_t>(key), Valued<tri_t>(value) {}
+			: ReferenceCounted(ref_count), Compressed<depth, tri_t>(key), Valued<tri_t>(value) {}
 	};
 
 	// uncompressed depth >= 2
 	template<size_t depth, HypertrieInternalTrait tri_t>
-	struct Node<depth, UNCOMPRESSED, tri_t, typename std::enable_if_t<(
-			(depth >= 2)
-	)>> : public ReferenceCounted, public WithEdges<depth, tri_t> {
+	struct Node<depth, NodeCompression::uncompressed, tri_t, typename std::enable_if_t<((depth >= 2))>> : public ReferenceCounted, public WithEdges<depth, tri_t> {
 		using tri = tri_t;
 		using RawKey = typename tri::template RawKey<depth>;
 		using value_type = typename tri::value_type;
@@ -230,8 +224,8 @@ namespace hypertrie::internal::node_based {
 	private:
 		static constexpr const auto subkey = &tri::template subkey<depth>;
 		size_t size_ = 0;
-	public:
 
+	public:
 		Node(size_t ref_count = 0) : ReferenceCounted(ref_count) {}
 
 		Node(const RawKey &key, value_type value, const RawKey &second_key, value_type second_value,
@@ -256,6 +250,7 @@ namespace hypertrie::internal::node_based {
 		}
 
 		void insertEntry(const RawKey &key, value_type value) {
+			this->size_++;
 			for (const size_t pos : iter::range(depth)) {
 				auto &children = this->edges(pos);
 				auto key_part = key[pos];
@@ -272,9 +267,7 @@ namespace hypertrie::internal::node_based {
 
 	// uncompressed depth == 1
 	template<size_t depth, HypertrieInternalTrait tri_t>
-	struct Node<depth, UNCOMPRESSED, tri_t, typename std::enable_if_t<(
-			(depth == 1)
-	)>> : public ReferenceCounted, public WithEdges<depth, tri_t> {
+	struct Node<depth, NodeCompression::uncompressed, tri_t, typename std::enable_if_t<((depth == 1))>> : public ReferenceCounted, public WithEdges<depth, tri_t> {
 		using tri = tri_t;
 
 		using key_part_type = typename tri::key_part_type;
@@ -314,12 +307,12 @@ namespace hypertrie::internal::node_based {
 	};
 
 	template<size_t depth,
-			HypertrieInternalTrait tri = Hypertrie_internal_t<>>
-	using CompressedNode = Node<depth, COMPRESSED, tri>;
+			 HypertrieInternalTrait tri = Hypertrie_internal_t<>>
+	using CompressedNode = Node<depth, NodeCompression::compressed, tri>;
 
 	template<size_t depth,
-			HypertrieInternalTrait tri = Hypertrie_internal_t<>>
-	using UncompressedNode = Node<depth, UNCOMPRESSED, tri>;
+			 HypertrieInternalTrait tri = Hypertrie_internal_t<>>
+	using UncompressedNode = Node<depth, NodeCompression::uncompressed, tri>;
 
 
 }

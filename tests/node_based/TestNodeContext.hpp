@@ -25,9 +25,9 @@ namespace hypertrie::tests::node_based::node_context {
 		utils::RawGenerator<depth, key_part_type, value_type> gen{};
 
 		// create context
-		NodeContext<depth> context{};
+		NodeContext<depth, tr> context{};
 		// create emtpy primary node
-		NodeContainer<depth> nc = context.newPrimaryNode<depth>();
+		NodeContainer<depth, tr> nc = context.newPrimaryNode<depth>();
 
 		auto entries = gen.entries(2);
 		auto [key, value] = *entries.begin();

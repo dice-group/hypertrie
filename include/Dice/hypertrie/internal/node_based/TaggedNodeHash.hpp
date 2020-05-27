@@ -273,6 +273,14 @@ namespace hypertrie::internal::node_based {
 		}
 	};
 
+}// namespace hypertrie::internal::node_based
 
-}
-#endif //HYPERTRIE_TAGGEDNODEHASH_HPP
+namespace std {
+	template<>
+	struct hash<::hypertrie::internal::node_based::TaggedNodeHash> {
+		size_t operator()(const ::hypertrie::internal::node_based::TaggedNodeHash &hash) const {
+			return hash.hash();
+		}
+	};
+}// namespace std
+#endif//HYPERTRIE_TAGGEDNODEHASH_HPP

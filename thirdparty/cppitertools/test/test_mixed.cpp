@@ -75,8 +75,8 @@ TEST_CASE("filtering doesn't dereference multiple times", "[imap][filter]") {
 }
 
 TEST_CASE("dropwhile doesn't dereference multiple times", "[imap][dropwhile]") {
-  using iter::imap;
   using iter::dropwhile;
+  using iter::imap;
 
   std::array<MyUnMovable, 3> arr = {{{41}, {42}, {43}}};
 
@@ -128,9 +128,9 @@ TEST_CASE("sorted(chain.from_iterable)", "[sorted][chain.from_iterable]") {
 }
 
 TEST_CASE("filter into enumerate with pipe", "[filter][enumerate]") {
-  using iter::imap;
-  using iter::filter;
   using iter::enumerate;
+  using iter::filter;
+  using iter::imap;
 
   std::array<MyUnMovable, 4> arr = {{{41}, {42}, {43}, {44}}};
   auto seq =
@@ -144,8 +144,93 @@ TEST_CASE("filter into enumerate with pipe", "[filter][enumerate]") {
   REQUIRE(v == vc);
 }
 
+TEST_CASE("enumerate(filter(chunked()))", "[filter][enumerate][chunked]") {
+  using iter::chunked;
+  using iter::enumerate;
+  using iter::filter;
+  std::vector<int16_t> v(500);
+  auto chunks = chunked(v, 100);
+  auto filtered = filter([](auto&) { return true; }, chunks);
+  for (auto&& [i, chunk] : enumerate(filtered)) {
+    (void)i;
+    REQUIRE(chunk.size() == 100);
+  }
+}
+
+TEST_CASE("zip(filter(chunked()))", "[filter][chunked][zip]") {
+  using iter::chunked;
+  using iter::filter;
+  using iter::zip;
+  std::vector<int16_t> v(500);
+  auto chunks = chunked(v, 100);
+  auto filtered = filter([](auto&) { return true; }, chunks);
+  for (auto&& [chunk] : zip(filtered)) {
+    REQUIRE(chunk.size() == 100);
+  }
+}
+
+TEST_CASE("zip(filter(sliding_window()))", "[filter][sliding_window][zip]") {
+  using iter::filter;
+  using iter::sliding_window;
+  using iter::zip;
+  std::vector<int16_t> v(15);
+  auto windows = sliding_window(v, 10);
+  auto filtered = filter([](auto&) { return true; }, windows);
+  for (auto&& [window] : zip(filtered)) {
+    REQUIRE(window.size() == 10);
+  }
+}
+
+TEST_CASE("imap(filter(groupby()))", "[filter][groupby][imap])") {
+  using iter::filter;
+  using iter::groupby;
+  using iter::imap;
+
+  std::vector<int> v{true, true, true, false, false, true, true};
+  auto a = groupby(v, [](bool b) { return b; });
+  auto b = filter([](auto& g) { return g.first; }, a);
+  auto c = imap(
+      [](auto& g) { return std::distance(g.second.begin(), g.second.end()); },
+      b);
+  for (auto x : c) {
+    (void)x;
+  }
+}
+
+TEST_CASE("imap(dropwhile(groupby()))", "[dropwhile][groupby][imap])") {
+  using iter::dropwhile;
+  using iter::groupby;
+  using iter::imap;
+
+  std::vector<int> v{false, false, true, true, false, true, true};
+  auto a = groupby(v, [](bool b) { return b; });
+  auto b = dropwhile([](auto& g) { return g.first; }, a);
+  auto c = imap(
+      [](auto& g) { return std::distance(g.second.begin(), g.second.end()); },
+      b);
+  for (auto x : c) {
+    (void)x;
+  }
+}
+
+TEST_CASE("imap(takewhile(groupby()))", "[takewhile][groupby][imap])") {
+  using iter::groupby;
+  using iter::imap;
+  using iter::takewhile;
+
+  std::vector<int> v{true, true, true, false, false};
+  auto a = groupby(v, [](bool b) { return b; });
+  auto b = takewhile([](auto& g) { return g.first; }, a);
+  auto c = imap(
+      [](auto& g) { return std::distance(g.second.begin(), g.second.end()); },
+      b);
+  for (auto x : c) {
+    (void)x;
+  }
+}
+
 TEST_CASE("chain.from_iterable: accept imap result that yields rvalues",
-          "[chain.from_iterable][imap]") {
+    "[chain.from_iterable][imap]") {
   using iter::chain;
   using iter::imap;
   const std::vector<std::vector<char>> ns = {{'a'}, {'q'}, {'x', 'z'}};
@@ -153,6 +238,21 @@ TEST_CASE("chain.from_iterable: accept imap result that yields rvalues",
   const std::vector<char> v(std::begin(ch), std::end(ch));
 
   const std::vector<char> vc = {'a', 'q', 'x', 'z'};
+
+  REQUIRE(v == vc);
+}
+
+TEST_CASE(
+    "filter(enumerate()), DerefHolder works correctly (see github issue #62",
+    "[filter][enumerate]") {
+  using iter::enumerate;
+  using iter::filter;
+  std::vector<int> ns = {50, 55, 60, 65};
+  auto f =
+      iter::filter([](auto& i) { return std::get<0>(i) > 1; }, enumerate(ns));
+  const std::vector<std::pair<int, int>> v(std::begin(f), std::end(f));
+
+  const std::vector<std::pair<int, int>> vc = {{2, 60}, {3, 65}};
 
   REQUIRE(v == vc);
 }

@@ -20,8 +20,8 @@ namespace hypertrie::internal::node_based {
 		template<typename key>
 		using set_type = set_type_t<key>;
 
-		using SliceKey = SliceKey<key_part_type>;
-		using Key = hypertrie::Key<key_part_type>;
+		using SliceKey = ::hypertrie::SliceKey<key_part_type>;
+		using Key = ::hypertrie::Key<key_part_type>;
 	};
 
 	namespace internal::hypertrie_trait {

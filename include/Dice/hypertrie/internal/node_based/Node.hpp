@@ -232,21 +232,11 @@ namespace hypertrie::internal::node_based {
 			 size_t ref_count = 0)
 				: size_{2}, ReferenceCounted(ref_count) {
 			for (const size_t pos : iter::range(depth))
-				this->edges(pos) = (key[pos] != second_key[pos]) ?
-								   ChildrenType{
-										   {key[pos],        TaggedNodeHash::getCompressedNodeHash<depth>(
-												   subkey(key, pos),
-												   value)},
-										   {second_key[pos], TaggedNodeHash::getCompressedNodeHash<depth>(
-												   subkey(second_key, pos),
-												   second_value)},
-								   } :
-								   ChildrenType{
-										   {key[pos], TaggedNodeHash::getTwoEntriesNodeHash<depth>(subkey(key, pos),
-																								   value,
-																								   subkey(second_key,
-																										  pos),
-																								   second_value)}};
+				this->edges(pos) = (key[pos] != second_key[pos])
+										   ? ChildrenType{
+													 {key[pos], TaggedNodeHash::getCompressedNodeHash(subkey(key, pos), value)},
+													 {second_key[pos], TaggedNodeHash::getCompressedNodeHash(subkey(second_key, pos), second_value)}}
+										   : ChildrenType{{key[pos], TaggedNodeHash::getTwoEntriesNodeHash(subkey(key, pos), value, subkey(second_key, pos), second_value)}};
 		}
 
 		void insertEntry(const RawKey &key, value_type value) {

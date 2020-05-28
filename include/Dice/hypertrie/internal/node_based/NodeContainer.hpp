@@ -30,7 +30,7 @@ namespace hypertrie::internal::node_based {
 		NodeContainer(const TaggedNodeHash &thash, void *node) : thash_(thash), node_(node) {}
 
 		template<NodeCompression compressed>
-		NodeContainer(const SpecificNodeContainer<depth, compressed, tri_t> &other) : thash_{other.thash_}, node_{other.node()} {}
+		NodeContainer(const SpecificNodeContainer<depth, compressed, tri_t> &other) : thash_{other.thash_}, node_{other.node_} {}
 		template<NodeCompression compressed>
 		NodeContainer(SpecificNodeContainer<depth, compressed, tri_t> &&other) : thash_{other.thash_}, node_{other.node_} {}
 

@@ -20,7 +20,7 @@ namespace hypertrie::tests::node_based::node_context {
 
 		using key_part_type = typename tr::key_part_type;
 		using value_type = typename tr::value_type;
-		using Key = Key<depth, key_part_type>;
+		using Key = typename tr::template RawKey<depth>;
 
 		utils::RawGenerator<depth, key_part_type, value_type> gen{};
 
@@ -33,7 +33,7 @@ namespace hypertrie::tests::node_based::node_context {
 		auto [key, value] = *entries.begin();
 
 		// insert value
-		context.set(nc, key, value);
+		context.set<depth>(nc, key, value);
 
 		// get value
 		{

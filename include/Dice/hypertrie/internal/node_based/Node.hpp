@@ -277,9 +277,9 @@ namespace hypertrie::internal::node_based {
 			: ReferenceCounted(ref_count),
 			  WithEdges<depth, tri_t>([&]() {
 				  if constexpr (std::is_same_v<value_type, bool>)
-					  return EdgesType{
+					  return EdgesType{{
 							  {key[0]},
-							  {second_key[0]}};
+							  {second_key[0]}}};
 				  else
 					  return EdgesType{{{key[0], value},
 										{second_key[0], value}}};

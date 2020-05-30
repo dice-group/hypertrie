@@ -8,13 +8,11 @@
 #include <Dice/hypertrie/internal/node_based/Node.hpp>
 
 #include "../utils/AssetGenerator.hpp"
+#include "../utils/NameOfType.hpp"
 
 namespace hypertrie::tests::node_based::node {
 
-	template<typename T>
-	auto nameOfType() {
-		return std::string{boost::typeindex::type_id_with_cvr<T>().pretty_name()};
-	}
+	using namespace hypertrie::tests::utils;
 
 	using namespace hypertrie::internal::node_based;
 

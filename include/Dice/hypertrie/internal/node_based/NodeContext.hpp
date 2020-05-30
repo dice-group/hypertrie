@@ -99,16 +99,19 @@ namespace hypertrie::internal::node_based {
 
 		template<size_t depth>
 		NodeContainer<depth, tri> newCompressedNode(RawKey<depth> key, value_type value, size_t ref_count, TaggedNodeHash hash) {
-			auto [it, success] = getNodeStorage<depth, NodeCompression::compressed>().insert({hash, CompressedNode<depth, tri>{key, value, ref_count}});
+			auto &node_storage = getNodeStorage<depth, NodeCompression::compressed>();
+			auto [it, success] = [&]() {
+				if constexpr(tri::is_bool_valued) return node_storage.insert({hash, CompressedNode<depth, tri>{key, ref_count}});
+				else return node_storage.insert({hash, CompressedNode<depth, tri>{key, value, ref_count}}); }();
 			assert(success);
-			return NodeContainer<depth, tri>{hash, &NodeStorage<depth, tri>::template deref<>(it)};
+			return NodeContainer<depth, tri>{hash, &NodeStorage<depth, tri>::template deref<NodeCompression::compressed>(it)};
 		}
 
 		template<size_t depth>
 		NodeContainer<depth, tri> newUncompressedNode(RawKey<depth> key, value_type value, RawKey<depth> second_key, value_type second_value, size_t ref_count, TaggedNodeHash hash) {
 			auto [it, success] = getNodeStorage<depth, NodeCompression::uncompressed>().insert({hash, UncompressedNode<depth, tri>{key, value, second_key, second_value, ref_count}});
 			assert(success);
-			return NodeContainer<depth, tri>{hash, &NodeStorage<depth, tri>::template deref<>(it)};
+			return NodeContainer<depth, tri>{hash, &NodeStorage<depth, tri>::template deref<NodeCompression::uncompressed>(it)};
 		}
 
 		/**
@@ -117,7 +120,7 @@ namespace hypertrie::internal::node_based {
 		template<size_t depth, NodeCompression compressed, bool keep_old = true>
 		NodeContainer<depth, tri> changeNodeValue(NodeContainer<depth, tri> nc, value_type value, long count_diff, TaggedNodeHash new_hash) {
 			auto nc_ = nc.template specific<compressed>();
-			if constexpr (compressed == NodeCompression::compressed) nc_.node()->value() = value;
+			if constexpr (compressed == NodeCompression::compressed and not tri::is_bool_valued) nc_.node()->value() = value;
 			auto &nodes = getNodeStorage<depth, compressed>();
 
 			auto [it, success] = [&]() {
@@ -147,8 +150,6 @@ namespace hypertrie::internal::node_based {
 			assert(success);
 			if constexpr (not keep_old) {
 				const auto removed = nodes.erase(nc_.thash_);
-				for (auto [a, b] : nodes)
-					std::cout << a << " -> " << b.size() << std::endl;
 				assert(removed);
 			}
 			auto &node = NodeStorage<depth, tri>::template deref<NodeCompression::uncompressed>(it);
@@ -172,7 +173,7 @@ namespace hypertrie::internal::node_based {
 			auto &nodes = getNodeStorage<depth, compressed>();
 			auto found = nodes.find(node_hash);
 			if (found != nodes.end())
-				return {node_hash, &NodeStorage<depth, tri>::template deref<>(found)};
+				return {node_hash, &NodeStorage<depth, tri>::template deref<compressed>(found)};
 			else
 				return {};
 		}
@@ -360,23 +361,20 @@ namespace hypertrie::internal::node_based {
 				TaggedNodeHash next_hash = hash_before;
 				switch (insert_op) {
 					case InsertOp::CHANGE_VALUE:
-						assert(next_hash != TaggedNodeHash::getCompressedEmptyNodeHash<depth>());
 						next_hash.changeValue(sub_key, old_value, value);
 						break;
 					case InsertOp::INSERT_TWO_KEY_UC_NODE:
-						assert(next_hash == TaggedNodeHash::getCompressedEmptyNodeHash<depth>());
 						next_hash = TaggedNodeHash::getTwoEntriesNodeHash(sub_key, value, second_sub_key, second_value);
 						break;
 					case InsertOp::INSERT_C_NODE:
-						assert(next_hash == TaggedNodeHash::getCompressedEmptyNodeHash<depth>());
 						next_hash = TaggedNodeHash::getCompressedNodeHash(sub_key, value);
 						break;
 					case InsertOp::EXPAND_UC_NODE:
-						assert(next_hash.isUncompressed());
+						assert(hash_before.isUncompressed());
 						next_hash.addEntry(sub_key, value);
 						break;
 					case InsertOp::EXPAND_C_NODE:
-						assert(next_hash.isCompressed());
+						assert(hash_before.isCompressed());
 						next_hash.addEntry(sub_key, value);
 						break;
 				}
@@ -447,21 +445,26 @@ namespace hypertrie::internal::node_based {
 									NodeContainer<depth - 1, tri> childc = getCompressedNode<depth - 1>(child_hash);
 									auto *child = childc.compressed_node();
 									if (child->key() == sub_key) {
-										if (child->value() == value) {
-											if (value == new_value) {
-												return true;// nothing left to be done. The value is already set.
+										if constexpr (tri::is_bool_valued)
+											return true;// nothing left to be done. The value is already set.
+										else {
+											if (child->value() == value) {
+												if (value == new_value) {
+													return true;// nothing left to be done. The value is already set.
+												}
+											} else {// child->value() != value
+												if (value == new_value) {
+													only_value_changes = true;
+												}
+												planned_update.insert_op = InsertOp::CHANGE_VALUE;
 											}
-										} else {// child->value() != value
-											if (value == new_value) {
-												only_value_changes = true;
-											}
-											planned_update.insert_op = InsertOp::CHANGE_VALUE;
 										}
 									} else {// child->key_ != sub_key
 										planned_update.second_sub_key = child->key();
-										planned_update.second_value = child->value();
+										if constexpr (not tri::is_bool_valued)
+											planned_update.second_value = child->value();
 										next_expand_uc.push_back(
-												{child->key(), child->value(), sub_key, value});
+												{sub_key, value, planned_update.second_sub_key, planned_update.second_value});
 										planned_update.insert_op = InsertOp::EXPAND_C_NODE;
 									}
 								} else {// child_hash.isUncompressed()
@@ -686,8 +689,9 @@ namespace hypertrie::internal::node_based {
 						auto nc_after = getUncompressedNode<depth>(hash_after);
 						if (nc_after.empty()) {// node_after doesn't exit already
 							auto node_before = nc_before.compressed().node();
+							value_type existing_value = [&]() { if constexpr (tri::is_bool_valued) return true; else return node_before->value(); }();
 							newUncompressedNode<depth>(
-									node_before->key(), node_before->value(), planned_update.second_sub_key,
+									node_before->key(), existing_value, planned_update.second_sub_key,
 									planned_update.second_value, after_count_diff, hash_after);
 						} else {
 							nc_after.node()->ref_count() += after_count_diff;

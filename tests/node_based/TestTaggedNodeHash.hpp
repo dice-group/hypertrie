@@ -58,7 +58,6 @@ namespace hypertrie::tests::node_based::tagged_node_hash {
 		auto key2 = Key<depth>{4.2, 7.0};
 		value_type value2 = 21.1;
 		auto hash = TNS::getTwoEntriesNodeHash(key1, value1, key2, value2);
-		std::cout << hash.bitset() << std::endl;
 		// must be uncompressd
 		REQUIRE(hash.isUncompressed());
 		// order must not matter

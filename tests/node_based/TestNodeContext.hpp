@@ -15,7 +15,7 @@ namespace hypertrie::tests::node_based::node_context {
 
 	TEST_CASE("Basic Example", "[NodeContext]") {
 
-		constexpr size_t depth = 5;
+		constexpr size_t depth = 1;
 		using tr = default_long_Hypertrie_internal_t;
 
 		using key_part_type = typename tr::key_part_type;
@@ -43,6 +43,8 @@ namespace hypertrie::tests::node_based::node_context {
 
 		// insert another value
 		auto [second_key, second_value] = *entries.rbegin();
+
+        context.set<depth>(nc, second_key, second_value);
 
 		// get both values
 		{

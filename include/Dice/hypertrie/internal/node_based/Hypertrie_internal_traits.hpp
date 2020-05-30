@@ -8,7 +8,6 @@
 namespace hypertrie::internal::node_based {
 
 
-
 	template<HypertrieTrait tr_t = default_bool_Hypertrie_t>
 	struct Hypertrie_internal_t {
 		using tr = tr_t;
@@ -30,13 +29,35 @@ namespace hypertrie::internal::node_based {
 		using RawSliceKey = hypertrie::internal::RawSliceKey<depth, typename tr::key_part_type>;
 
 		constexpr static bool is_bool_valued = std::is_same_v<value_type, bool>;
+		constexpr static bool is_tsl_map = std::is_same_v<map_type<int, int>, container::tsl_sparse_map<int, int>>;
 
+		/**
+		 * Generates a subkey by removing a key_part at the given position
+		 * @tparam depth length of the key
+		 * @param key the key
+		 * @param remove_pos position to be removed from key
+		 * @return a new subkey
+		 */
 		template<size_t depth>
 		static auto subkey(const RawKey<depth> &key, size_t remove_pos) -> RawKey<depth - 1> {
 			RawKey<depth - 1> sub_key;
 			for (size_t i = 0, j = 0; i < depth; ++i)
 				if (i != remove_pos) sub_key[j++] = key[i];
 			return sub_key;
+		}
+
+		/**
+		 * Different maps use different methods to provide access to non-constant mapped_type references. This method provides an abstraction.
+		 * @tparam K key_type of the map
+		 * @tparam V mapped_type of the map
+		 * @param map_it a valid iterator pointing to an entry
+		 * @return a reference to the mapped_type
+		 */
+		template<typename K, typename V>
+		static V &deref(typename map_type<K, V>::iterator &map_it) {
+			if constexpr (is_tsl_map) return map_it.value();
+			else
+				return map_it->second;
 		}
 	};
 
@@ -45,14 +66,14 @@ namespace hypertrie::internal::node_based {
 		struct is_instance_impl : public std::false_type {
 		};
 
-		template<template <HypertrieTrait> typename U,
-		HypertrieTrait tr_t>
+		template<template<HypertrieTrait> typename U,
+				 HypertrieTrait tr_t>
 		struct is_instance_impl<U<tr_t>, U> : public std::true_type {
 		};
 
 		template<typename T, template<HypertrieTrait> typename U>
 		using is_instance = is_instance_impl<std::decay_t<T>, U>;
-	}
+	}// namespace internal::hypertrie_internal_trait
 
 
 	template<class T>
@@ -63,6 +84,6 @@ namespace hypertrie::internal::node_based {
 	using default_long_Hypertrie_internal_t = Hypertrie_internal_t<default_long_Hypertrie_t>;
 
 	using default_double_Hypertrie_internal_t = Hypertrie_internal_t<default_double_Hypertrie_t>;
-};
+};// namespace hypertrie::internal::node_based
 
-#endif //HYPERTRIE_HYPERTRIE_INTERNAL_TRAITS_HPP
+#endif//HYPERTRIE_HYPERTRIE_INTERNAL_TRAITS_HPP

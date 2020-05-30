@@ -101,14 +101,14 @@ namespace hypertrie::internal::node_based {
 		NodeContainer<depth, tri> newCompressedNode(RawKey<depth> key, value_type value, size_t ref_count, TaggedNodeHash hash) {
 			auto [it, success] = getNodeStorage<depth, NodeCompression::compressed>().insert({hash, CompressedNode<depth, tri>{key, value, ref_count}});
 			assert(success);
-			return NodeContainer<depth, tri>{hash, &it.value()};
+			return NodeContainer<depth, tri>{hash, &NodeStorage<depth, tri>::template deref<>(it)};
 		}
 
 		template<size_t depth>
 		NodeContainer<depth, tri> newUncompressedNode(RawKey<depth> key, value_type value, RawKey<depth> second_key, value_type second_value, size_t ref_count, TaggedNodeHash hash) {
 			auto [it, success] = getNodeStorage<depth, NodeCompression::uncompressed>().insert({hash, UncompressedNode<depth, tri>{key, value, second_key, second_value, ref_count}});
 			assert(success);
-			return NodeContainer<depth, tri>{hash, &it.value()};
+			return NodeContainer<depth, tri>{hash, &NodeStorage<depth, tri>::template deref<>(it)};
 		}
 
 		/**
@@ -130,8 +130,9 @@ namespace hypertrie::internal::node_based {
 				const auto removed = nodes.erase(nc_.thash_);
 				assert(removed);
 			}
-			it.value().ref_count() += count_diff;
-			return NodeContainer<depth, tri>{new_hash, &it.value()};
+			auto &node = NodeStorage<depth, tri>::template deref<compressed>(it);
+			node.ref_count() += count_diff;
+			return NodeContainer<depth, tri>{new_hash, &node};
 		}
 
 		template<size_t depth, bool keep_old = true>
@@ -146,11 +147,14 @@ namespace hypertrie::internal::node_based {
 			assert(success);
 			if constexpr (not keep_old) {
 				const auto removed = nodes.erase(nc_.thash_);
+				for (auto [a, b] : nodes)
+					std::cout << a << " -> " << b.size() << std::endl;
 				assert(removed);
 			}
-			it.value().insertEntry(key, value);
-			it.value().ref_count() += count_diff;
-			return NodeContainer<depth, tri>{new_hash, &it.value()};
+			auto &node = NodeStorage<depth, tri>::template deref<NodeCompression::uncompressed>(it);
+			node.insertEntry(key, value);
+			node.ref_count() += count_diff;
+			return NodeContainer<depth, tri>{new_hash, &node};
 		}
 
 		template<size_t depth>
@@ -168,7 +172,7 @@ namespace hypertrie::internal::node_based {
 			auto &nodes = getNodeStorage<depth, compressed>();
 			auto found = nodes.find(node_hash);
 			if (found != nodes.end())
-				return {node_hash, &found.value()};
+				return {node_hash, &NodeStorage<depth, tri>::template deref<>(found)};
 			else
 				return {};
 		}
@@ -176,19 +180,19 @@ namespace hypertrie::internal::node_based {
 	public:
 		template<size_t depth>
 		NodeContainer<depth, tri> newPrimaryNode() {
-			TaggedNodeHash base_hash = TaggedNodeHash::getCompressedEmptyNodeHash<depth>();
+			TaggedNodeHash base_hash = TaggedNodeHash::getUncompressedEmptyNodeHash<depth>();
 			primary_nodes_.push_front(base_hash);
-			auto node_storage = getNodeStorage<depth, NodeCompression::uncompressed>();
+			auto &node_storage = getNodeStorage<depth, NodeCompression::uncompressed>();
 			auto found = node_storage.find(base_hash);
 			if (found != node_storage.end()) {
-				auto &node = found.value();
+				auto &node = NodeStorage<depth, tri>::template deref<NodeCompression::uncompressed>(found);
 				++node.ref_count();
 				return {base_hash, &node};
 			} else {
 				auto nodec_inserted = node_storage.insert({base_hash, UncompressedNode<depth, tri>{}});
-				auto &node = nodec_inserted.first.value();
+				auto &node = NodeStorage<depth, tri>::template deref<NodeCompression::uncompressed>(nodec_inserted.first);
 				++node.ref_count();
-				return {base_hash, &nodec_inserted.first.value()};
+				return {base_hash, &node};
 			}
 		}
 
@@ -451,135 +455,135 @@ namespace hypertrie::internal::node_based {
 											if (value == new_value) {
 												only_value_changes = true;
 											}
-										planned_update.insert_op = InsertOp::CHANGE_VALUE;
+											planned_update.insert_op = InsertOp::CHANGE_VALUE;
+										}
+									} else {// child->key_ != sub_key
+										planned_update.second_sub_key = child->key();
+										planned_update.second_value = child->value();
+										next_expand_uc.push_back(
+												{child->key(), child->value(), sub_key, value});
+										planned_update.insert_op = InsertOp::EXPAND_C_NODE;
 									}
-								} else {// child->key_ != sub_key
-									planned_update.second_sub_key = child->key();
-									planned_update.second_value = child->value();
-									next_expand_uc.push_back(
-											{child->key(), child->value(), sub_key, value});
-									planned_update.insert_op = InsertOp::EXPAND_C_NODE;
+								} else {// child_hash.isUncompressed()
+									next_node_cs.push_back(
+											{getUncompressedNode<depth - 1>(child_hash), sub_key, value});
+									planned_update.insert_op = InsertOp::EXPAND_UC_NODE;
 								}
-							} else {// child_hash.isUncompressed()
-								next_node_cs.push_back(
-										{getUncompressedNode<depth - 1>(child_hash), sub_key, value});
-								planned_update.insert_op = InsertOp::EXPAND_UC_NODE;
+							} else {// not child_hash_opt.has_value()
+								// no child exists for that key_part at that position
+								planned_update.insert_op = InsertOp::INSERT_C_NODE;
 							}
-						} else {// not child_hash_opt.has_value()
-							// no child exists for that key_part at that position
-							planned_update.insert_op = InsertOp::INSERT_C_NODE;
-						}
-						planned_updates.push_back(std::move(planned_update));
-					}
-				}
-				// creating uncompressed nodes with two keys (expanded compressed nodes)
-				for (auto &[key, value, second_key, second_value] : expand_uc) {
-					for (size_t pos : iter::range(depth)) {
-						RawKey<depth - 1> sub_key = subkey(key, pos);
-						RawKey<depth - 1> second_sub_key = subkey(second_key, pos);
-						if (key[pos] == second_key[pos]) {
-							PlannedUpdate<depth - 1> planned_update{};
-							planned_update.sub_key = sub_key;
-							planned_update.value = value;
-							planned_update.second_sub_key = second_sub_key;
-							planned_update.second_value = second_value;
-							planned_update.insert_op = InsertOp::INSERT_TWO_KEY_UC_NODE;
 							planned_updates.push_back(std::move(planned_update));
-							next_expand_uc.push_back({sub_key, value, second_sub_key, second_value});
-						} else {
-							PlannedUpdate<depth - 1> planned_update{};
-							planned_update.sub_key = sub_key;
-							planned_update.value = value;
-							planned_update.insert_op = InsertOp::INSERT_C_NODE;
-							planned_updates.push_back(std::move(planned_update));
-
-							PlannedUpdate<depth - 1> second_planned_update{};
-							second_planned_update.sub_key = second_sub_key;
-							second_planned_update.value = second_value;
-							second_planned_update.insert_op = InsertOp::INSERT_C_NODE;
-							planned_updates.push_back(std::move(second_planned_update));
 						}
 					}
-				}
-				bool done = set_rek<depth - 1, total_depth>(next_node_cs, next_expand_uc, only_value_changes, old_value, new_value);
-				if (done)
-					return true;
-			}
+					// creating uncompressed nodes with two keys (expanded compressed nodes)
+					for (auto &[key, value, second_key, second_value] : expand_uc) {
+						for (size_t pos : iter::range(depth)) {
+							RawKey<depth - 1> sub_key = subkey(key, pos);
+							RawKey<depth - 1> second_sub_key = subkey(second_key, pos);
+							if (key[pos] == second_key[pos]) {
+								PlannedUpdate<depth - 1> planned_update{};
+								planned_update.sub_key = sub_key;
+								planned_update.value = value;
+								planned_update.second_sub_key = second_sub_key;
+								planned_update.second_value = second_value;
+								planned_update.insert_op = InsertOp::INSERT_TWO_KEY_UC_NODE;
+								planned_updates.push_back(std::move(planned_update));
+								next_expand_uc.push_back({sub_key, value, second_sub_key, second_value});
+							} else {
+								PlannedUpdate<depth - 1> planned_update{};
+								planned_update.sub_key = sub_key;
+								planned_update.value = value;
+								planned_update.insert_op = InsertOp::INSERT_C_NODE;
+								planned_updates.push_back(std::move(planned_update));
 
-			// ascending
-			std::map<TaggedNodeHash, long> count_changes{};
-			for (PlannedUpdate<depth - 1> &planned_update : planned_updates) {
-				if (planned_update.hash_before)
-					count_changes[planned_update.hash_before]--;
-				if (auto hash_after = planned_update.hashAfter(old_value); hash_after)
-					count_changes[hash_after]++;
-			}
-
-			auto pop_count_change = [&](TaggedNodeHash hash) -> std::tuple<bool, long> {
-				if (auto changed = count_changes.find(hash); changed != count_changes.end()) {
-					auto diff = changed->second;
-					count_changes.erase(changed);
-					return {true, diff};
-				} else
-					return {false, 0};
-			};
-
-			Set<TaggedNodeHash> nodes_to_remove{};
-
-			std::vector<std::vector<PlannedUpdate<depth - 1>>> grouped_updates = [&]() {// group by hash before
-				std::sort(planned_updates.begin(), planned_updates.end(),
-						  [](auto a, auto b) { return a.hash_before < b.hash_before; });
-				std::vector<std::vector<PlannedUpdate<depth - 1>>> grouped_updates;
-				auto first = std::size(planned_updates);
-				for (auto current : iter::range(std::size(planned_updates))) {
-					if (planned_updates[first].hash_before != planned_updates[current].hash_before) {
-						grouped_updates.push_back({begin(planned_updates) + first, begin(planned_updates) + current});
-						first = current;
+								PlannedUpdate<depth - 1> second_planned_update{};
+								second_planned_update.sub_key = second_sub_key;
+								second_planned_update.value = second_value;
+								second_planned_update.insert_op = InsertOp::INSERT_C_NODE;
+								planned_updates.push_back(std::move(second_planned_update));
+							}
+						}
 					}
+					bool done = set_rek<depth - 1, total_depth>(next_node_cs, next_expand_uc, only_value_changes, old_value, new_value);
+					if (done)
+						return true;
 				}
-				return grouped_updates;
-			}();
 
-			for (std::vector<PlannedUpdate<depth - 1>> &updated_group : grouped_updates) {
-				const TaggedNodeHash hash_before = updated_group[0].hash_before;
-				const auto [update_node_before, node_before_count_diff] = pop_count_change(hash_before);
+				// ascending
+				std::map<TaggedNodeHash, long> count_changes{};
+				for (PlannedUpdate<depth - 1> &planned_update : planned_updates) {
+					if (planned_update.hash_before)
+						count_changes[planned_update.hash_before]--;
+					if (auto hash_after = planned_update.hashAfter(old_value); hash_after)
+						count_changes[hash_after]++;
+				}
 
-				for (long i = 0; i < (long(updated_group.size()) - 1); ++i) {
-					auto &planned_update = updated_group[i];
+				auto pop_count_change = [&](TaggedNodeHash hash) -> std::tuple<bool, long> {
+					if (auto changed = count_changes.find(hash); changed != count_changes.end()) {
+						auto diff = changed->second;
+						count_changes.erase(changed);
+						return {true, diff};
+					} else
+						return {false, 0};
+				};
+
+				Set<TaggedNodeHash> nodes_to_remove{};
+
+				std::vector<std::vector<PlannedUpdate<depth - 1>>> grouped_updates = [&]() {// group by hash before
+					std::sort(planned_updates.begin(), planned_updates.end(),
+							  [](auto a, auto b) { return a.hash_before < b.hash_before; });
+					std::vector<std::vector<PlannedUpdate<depth - 1>>> grouped_updates;
+					auto first = std::size(planned_updates);
+					for (auto current : iter::range(std::size(planned_updates))) {
+						if (planned_updates[first].hash_before != planned_updates[current].hash_before) {
+							grouped_updates.push_back({begin(planned_updates) + first, begin(planned_updates) + current});
+							first = current;
+						}
+					}
+					return grouped_updates;
+				}();
+
+				for (std::vector<PlannedUpdate<depth - 1>> &updated_group : grouped_updates) {
+					const TaggedNodeHash hash_before = updated_group[0].hash_before;
+					const auto [update_node_before, node_before_count_diff] = pop_count_change(hash_before);
+
+					for (long i = 0; i < (long(updated_group.size()) - 1); ++i) {
+						auto &planned_update = updated_group[i];
+						const TaggedNodeHash hash_after = planned_update.hashAfter(old_value);
+						const auto [update_node_after, node_after_count_diff] = pop_count_change(hash_after);
+						if (hash_before.isCompressed())
+							updateNode<depth - 1, NodeCompression::compressed, true>(
+									planned_update, hash_before, update_node_before, node_before_count_diff, hash_after,
+									update_node_after, node_after_count_diff, nodes_to_remove);
+						else
+							updateNode<depth - 1, NodeCompression::uncompressed, true>(
+									planned_update, hash_before, update_node_before, node_before_count_diff, hash_after,
+									update_node_after, node_after_count_diff, nodes_to_remove);
+					}
+					auto &planned_update = *updated_group.rbegin();
 					const TaggedNodeHash hash_after = planned_update.hashAfter(old_value);
 					const auto [update_node_after, node_after_count_diff] = pop_count_change(hash_after);
+					bool reused_node_before = false;
 					if (hash_before.isCompressed())
-						updateNode<depth - 1, NodeCompression::compressed, true>(
+						reused_node_before = updateNode<depth - 1, NodeCompression::compressed, false>(
 								planned_update, hash_before, update_node_before, node_before_count_diff, hash_after,
 								update_node_after, node_after_count_diff, nodes_to_remove);
 					else
-						updateNode<depth - 1, NodeCompression::uncompressed, true>(
+						reused_node_before = updateNode<depth - 1, NodeCompression::uncompressed, false>(
 								planned_update, hash_before, update_node_before, node_before_count_diff, hash_after,
 								update_node_after, node_after_count_diff, nodes_to_remove);
+
+					// TODO: that is not yet optimal as we cannot be sure that a change will be the last which actually
+					//  reuses the node_before
+					if (not reused_node_before)
+						count_changes[hash_before] = 0;
 				}
-				auto &planned_update = *updated_group.rbegin();
-				const TaggedNodeHash hash_after = planned_update.hashAfter(old_value);
-				const auto [update_node_after, node_after_count_diff] = pop_count_change(hash_after);
-				bool reused_node_before = false;
-				if (hash_before.isCompressed())
-					reused_node_before = updateNode<depth - 1, NodeCompression::compressed, false>(
-							planned_update, hash_before, update_node_before, node_before_count_diff, hash_after,
-							update_node_after, node_after_count_diff, nodes_to_remove);
-				else
-					reused_node_before = updateNode<depth - 1, NodeCompression::uncompressed, false>(
-							planned_update, hash_before, update_node_before, node_before_count_diff, hash_after,
-							update_node_after, node_after_count_diff, nodes_to_remove);
 
-				// TODO: that is not yet optimal as we cannot be sure that a change will be the last which actually
-				//  reuses the node_before
-				if (not reused_node_before)
-					count_changes[hash_before] = 0;
-			}
+				for (auto &node_hash : nodes_to_remove)
+					deleteNode<depth - 1>(node_hash);
 
-			for (auto &node_hash : nodes_to_remove)
-				deleteNode<depth - 1>(node_hash);
-
-			return false;
+				return false;
 			}
 		}
 

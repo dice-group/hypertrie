@@ -28,6 +28,11 @@ namespace hypertrie::internal::node_based {
 
 		const UncompressedNodeMap &uncompressedNodes() const { return this->uncompressed_nodes_; }
 		UncompressedNodeMap &uncompressedNodes() { return this->uncompressed_nodes_; }
+
+		template<NodeCompression compressed>
+		static Node<depth, compressed, tri> &deref(typename map_type<TaggedNodeHash, Node<depth, compressed, tri>>::iterator &map_it) {
+			return tri::template deref<TaggedNodeHash, Node<depth, compressed, tri>>(map_it);
+		}
 	};
 }// namespace hypertrie::internal::node_based
 

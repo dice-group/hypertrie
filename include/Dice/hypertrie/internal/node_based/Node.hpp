@@ -223,6 +223,7 @@ namespace hypertrie::internal::node_based {
 
 	private:
 		static constexpr const auto subkey = &tri::template subkey<depth>;
+		static constexpr const auto deref = &tri::template deref<typename ChildrenType::key_type, typename ChildrenType::mapped_type>;
 		size_t size_ = 0;
 
 	public:
@@ -230,13 +231,14 @@ namespace hypertrie::internal::node_based {
 
 		Node(const RawKey &key, value_type value, const RawKey &second_key, value_type second_value,
 			 size_t ref_count = 0)
-				: size_{2}, ReferenceCounted(ref_count) {
+			: size_{2}, ReferenceCounted(ref_count) {
 			for (const size_t pos : iter::range(depth))
 				this->edges(pos) = (key[pos] != second_key[pos])
-										   ? ChildrenType{
-													 {key[pos], TaggedNodeHash::getCompressedNodeHash(subkey(key, pos), value)},
-													 {second_key[pos], TaggedNodeHash::getCompressedNodeHash(subkey(second_key, pos), second_value)}}
-										   : ChildrenType{{key[pos], TaggedNodeHash::getTwoEntriesNodeHash(subkey(key, pos), value, subkey(second_key, pos), second_value)}};
+										   ? ChildrenType{{{key[pos], TaggedNodeHash::getCompressedNodeHash(subkey(key, pos), value)},
+														   {second_key[pos], TaggedNodeHash::getCompressedNodeHash(subkey(second_key, pos), second_value)}}}
+										   : ChildrenType{{{key[pos], TaggedNodeHash::getTwoEntriesNodeHash(
+																			  subkey(key, pos), value,
+																			  subkey(second_key, pos), second_value)}}};
 		}
 
 		void insertEntry(const RawKey &key, value_type value) {
@@ -244,8 +246,8 @@ namespace hypertrie::internal::node_based {
 			for (const size_t pos : iter::range(depth)) {
 				auto &children = this->edges(pos);
 				auto key_part = key[pos];
-				if (auto found = children.find(key_part); found != children.end()) {
-					found.value().addEntry(subkey(key, pos), value);
+				if (typename ChildrenType::iterator found = children.find(key_part); found != children.end()) {
+					deref(found).addEntry(subkey(key, pos), value);
 				} else {
 					children[key_part] = TaggedNodeHash::getCompressedNodeHash(subkey(key, pos), value);
 				}
@@ -270,21 +272,18 @@ namespace hypertrie::internal::node_based {
 
 		Node(size_t ref_count = 0) : ReferenceCounted(ref_count) {}
 
-		Node(const RawKey &key, [[maybe_unused]]value_type value, const RawKey &second_key,
-			 [[maybe_unused]]value_type second_value, size_t ref_count = 0)
-				: ReferenceCounted(ref_count),
-				  WithEdges<depth, tri_t>([&]() {
-					  if constexpr(std::is_same_v<value_type, bool>)
-						  return EdgesType{
-								  {key[0]},
-								  {second_key[0]}
-						  };
-					  else
-						  return EdgesType{
-								  {key[0],        value},
-								  {second_key[0], value}
-						  };
-				  }()) {}
+		Node(const RawKey &key, [[maybe_unused]] value_type value, const RawKey &second_key,
+			 [[maybe_unused]] value_type second_value, size_t ref_count = 0)
+			: ReferenceCounted(ref_count),
+			  WithEdges<depth, tri_t>([&]() {
+				  if constexpr (std::is_same_v<value_type, bool>)
+					  return EdgesType{
+							  {key[0]},
+							  {second_key[0]}};
+				  else
+					  return EdgesType{{{key[0], value},
+										{second_key[0], value}}};
+			  }()) {}
 
 		void insertEntry(const RawKey &key, [[maybe_unused]] value_type value) {
 			if constexpr(tri::is_bool_valued)
@@ -305,6 +304,6 @@ namespace hypertrie::internal::node_based {
 	using UncompressedNode = Node<depth, NodeCompression::uncompressed, tri>;
 
 
-}
+}// namespace hypertrie::internal::node_based
 
 #endif //HYPERTRIE_NODE_HPP

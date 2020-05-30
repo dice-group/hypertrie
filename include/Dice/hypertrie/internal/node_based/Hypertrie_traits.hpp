@@ -56,18 +56,18 @@ namespace hypertrie::internal::node_based {
 
 	using default_bool_Hypertrie_t = Hypertrie_t<unsigned long,
 			bool,
-			hypertrie::internal::container::tsl_sparse_map,
-			hypertrie::internal::container::tsl_sparse_set>;
+			hypertrie::internal::container::std_map,
+			hypertrie::internal::container::std_set>;
 
 	using default_long_Hypertrie_t = Hypertrie_t<unsigned long,
 			long,
-			hypertrie::internal::container::tsl_sparse_map,
-			hypertrie::internal::container::tsl_sparse_set>;
+			hypertrie::internal::container::std_map,
+			hypertrie::internal::container::std_set>;
 
 	using default_double_Hypertrie_t = Hypertrie_t<unsigned long,
 			double,
-			hypertrie::internal::container::tsl_sparse_map,
-			hypertrie::internal::container::tsl_sparse_set>;
+			hypertrie::internal::container::std_map,
+			hypertrie::internal::container::std_set>;
 
 };
 

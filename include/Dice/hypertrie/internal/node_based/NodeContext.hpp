@@ -530,7 +530,7 @@ namespace hypertrie::internal::node_based {
 					std::sort(planned_updates.begin(), planned_updates.end(),
 							  [](auto a, auto b) { return a.hash_before < b.hash_before; });
 					std::vector<std::vector<PlannedUpdate<depth - 1>>> grouped_updates;
-					auto first = std::size(planned_updates);
+					auto first = 0;
 					for (auto current : iter::range(std::size(planned_updates))) {
 						if (planned_updates[first].hash_before != planned_updates[current].hash_before) {
 							grouped_updates.push_back({begin(planned_updates) + first, begin(planned_updates) + current});

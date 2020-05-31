@@ -236,22 +236,14 @@ namespace hypertrie::internal::node_based {
 				-> std::optional<std::conditional_t<(depth > 1), TaggedNodeHash, value_type>> {
 			assert(nodec.thash_.isUncompressed());
 			assert(pos < depth);
-			auto &edges = nodec.uncompressed_node()->edges(pos);
-			if constexpr (depth > 1) {
-				auto found = edges.find(key_part);
-				if (found != edges.end())
-					return found->second;
+			auto [was_found, iter] = nodec.uncompressed_node()->find(pos, key_part);
+			if (was_found) {
+				if constexpr (depth == 1 and tri::is_bool_valued)
+					return true;
 				else
-					return std::nullopt;
-			} else {// depth == 1
-				auto found = edges.find(key_part);
-				if (found != edges.end()) {
-					if constexpr (tri::is_bool_valued)
-						return true;
-					else
-						return found->second;
-				} else
-					return std::nullopt;// false, 0, 0.0
+					return iter->second;
+			} else {
+				return std::nullopt;// false, 0, 0.0
 			}
 		}
 
@@ -423,6 +415,7 @@ namespace hypertrie::internal::node_based {
 				static constexpr const auto subkey = &tri::template subkey<depth>;
 				bool change_only_the_value = false;
 				// TODO: think about how to handle primary nodes
+				//  -> we don't need to handle them extra as they are always ref_count >= 1
 
 				std::vector<PlannedUpdate<depth - 1>> planned_updates{};
 

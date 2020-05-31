@@ -231,7 +231,7 @@ namespace hypertrie::internal::node_based {
 
 		Node(const RawKey &key, value_type value, const RawKey &second_key, value_type second_value,
 			 size_t ref_count = 0)
-			: size_{2}, ReferenceCounted(ref_count) {
+			: ReferenceCounted(ref_count), size_{2} {
 			for (const size_t pos : iter::range(depth))
 				this->edges(pos) = (key[pos] != second_key[pos])
 										   ? ChildrenType{{{key[pos], TaggedNodeHash::getCompressedNodeHash(subkey(key, pos), value)},

@@ -169,7 +169,7 @@ namespace hypertrie::internal::node_based {
 
 		template<size_t depth, NodeCompression compressed>
 		SpecificNodeContainer<depth, compressed, tri> getNode(const TaggedNodeHash &node_hash) {
-			assert(node_hash.isCompressed() == bool(compressed));
+			assert(node_hash.isCompressed() == bool(compressed) or node_hash); // TODO: check if that really makes sense here
 			auto &nodes = getNodeStorage<depth, compressed>();
 			auto found = nodes.find(node_hash);
 			if (found != nodes.end())
@@ -531,9 +531,11 @@ namespace hypertrie::internal::node_based {
 							  [](auto a, auto b) { return a.hash_before < b.hash_before; });
 					std::vector<std::vector<PlannedUpdate<depth - 1>>> grouped_updates;
 					auto first = 0;
+					const auto last = std::size(planned_updates) - 1;
 					for (auto current : iter::range(std::size(planned_updates))) {
-						if (planned_updates[first].hash_before != planned_updates[current].hash_before) {
-							grouped_updates.push_back({begin(planned_updates) + first, begin(planned_updates) + current});
+						if (planned_updates[first].hash_before != planned_updates[current].hash_before or current >= last) {
+							std::vector<PlannedUpdate<depth - 1>> next_group{begin(planned_updates) + first, begin(planned_updates) + current + 1};
+							grouped_updates.push_back(next_group);
 							first = current;
 						}
 					}
@@ -544,7 +546,7 @@ namespace hypertrie::internal::node_based {
 					const TaggedNodeHash hash_before = updated_group[0].hash_before;
 					const auto [update_node_before, node_before_count_diff] = pop_count_change(hash_before);
 
-					for (long i = 0; i < (long(updated_group.size()) - 1); ++i) {
+					for (long i : iter::range(updated_group.size() - 1)) {
 						auto &planned_update = updated_group[i];
 						const TaggedNodeHash hash_after = planned_update.hashAfter(old_value);
 						const auto [update_node_after, node_after_count_diff] = pop_count_change(hash_after);
@@ -592,8 +594,9 @@ namespace hypertrie::internal::node_based {
 
 			bool reuse_node_before = false;
 			bool reused_node_before = false;
-			auto nc_before = getNode<depth, is_before_compressed>(hash_before);
-			assert(not nc_before.empty());
+			auto nc_before = (hash_before)
+									 ? getNode<depth, is_before_compressed>(hash_before)
+									 : SpecificNodeContainer<depth, is_before_compressed, tri>{};
 			if (update_before_node) {
 				auto *node_before = nc_before.node();
 				node_before->ref_count() += before_count_diff;
@@ -694,8 +697,10 @@ namespace hypertrie::internal::node_based {
 			}
 
 			if constexpr (not keep_before) {
-				auto deleted = nodes_to_remove.erase(hash_before);
-				assert(deleted);
+				if (hash_before) {
+					auto deleted = nodes_to_remove.erase(hash_before);
+					assert(deleted);
+				}
 				return reused_node_before;
 			}
 		}

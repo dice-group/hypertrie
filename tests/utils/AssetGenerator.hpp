@@ -9,9 +9,19 @@
 
 namespace hypertrie::tests::utils {
 
+	/**
+	 * float / Integral independent uniform dist
+	 */
+	template<class T>
+	using uniform_dist = std::conditional_t<(std::is_floating_point<T>::value),
+											std::uniform_real_distribution<T>,
+											std::uniform_int_distribution<T>>;
+
 	class AssetGenerator {
 	protected:
 		std::mt19937_64 rand = std::mt19937_64{42};
+
+
 
 	public:
 		inline void reset() {
@@ -20,7 +30,7 @@ namespace hypertrie::tests::utils {
 	};
 
 	class LongGenerator : public AssetGenerator {
-		std::uniform_int_distribution<long> dist;
+		uniform_dist<long> dist;
 
 	public:
 		explicit LongGenerator(long max ) : dist{0, max} {}
@@ -39,8 +49,12 @@ namespace hypertrie::tests::utils {
 		using RawKey = hypertrie::internal::RawKey<depth, key_part_type>;
 		value_type value_min = std::numeric_limits<value_type>::min();
 		value_type value_max = std::numeric_limits<value_type>::max();
-		std::uniform_int_distribution<key_part_type> key_part_dist{min, max};
-		std::uniform_int_distribution<value_type> value_dist{value_min, value_max};
+
+
+		using dist_value_type = std::conditional_t<(std::is_same_v<value_type, bool>), unsigned char, value_type>;
+
+		uniform_dist<key_part_type> key_part_dist{min, max};
+		uniform_dist<dist_value_type> value_dist{value_min, value_max};
 	public:
 		auto key() {
 			RawKey key_{};

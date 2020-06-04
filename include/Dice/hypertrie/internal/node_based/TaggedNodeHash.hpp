@@ -1,10 +1,11 @@
 #ifndef HYPERTRIE_TAGGEDNODEHASH_HPP
 #define HYPERTRIE_TAGGEDNODEHASH_HPP
 
-#include <compare>
 #include <bitset>
+#include <compare>
 
 #include <absl/hash/hash.h>
+#include <fmt/ostream.h>
 
 #include "Dice/hypertrie/internal/util/PosType.hpp"
 #include "Dice/hypertrie/internal/util/RawKey.hpp"
@@ -61,7 +62,6 @@ namespace hypertrie::internal::node_based {
 		TaggedNodeHash &operator=(TaggedNodeHash &&) = default;
 
 	public:
-
 		/**
 		 * Checks if hash is tagged as representing a compressed node.
 		 * @return
@@ -94,8 +94,7 @@ namespace hypertrie::internal::node_based {
 		inline auto
 		changeValue(const RawKey<depth, key_part_type> &key, const value_type &old_value, const value_type &new_value) {
 			const bool tag = thash_bits_[compression_tag_pos];
-			thash_ = thash_ xor EntryHash<depth, key_part_type, value_type>()({key, old_value})
-					 xor EntryHash<depth, key_part_type, value_type>()({key, new_value});
+			thash_ = thash_ xor EntryHash<depth, key_part_type, value_type>()({key, old_value}) xor EntryHash<depth, key_part_type, value_type>()({key, new_value});
 			thash_bits_[compression_tag_pos] = tag;
 			return *this;
 		}
@@ -272,9 +271,32 @@ namespace hypertrie::internal::node_based {
 		[[nodiscard]] const auto &bitset() const noexcept {
 			return this->thash_bits_;
 		}
+
+		explicit operator std::string() const {
+			const char compression = (this->isCompressed()) ? 'c' : 'u';
+			return fmt::format("{}_{:#018x}", compression, size_t(this->thash_ & (~size_t(1))));
+		}
+
+		friend std::ostream &operator<<(std::ostream &os, const TaggedNodeHash &hash) {
+			os << (std::string) hash;
+			return os;
+		}
 	};
 
 }// namespace hypertrie::internal::node_based
+
+template<>
+struct ::fmt::formatter<hypertrie::internal::node_based::TaggedNodeHash> {
+	auto parse(format_parse_context &ctx) {
+		return ctx.begin();
+	}
+
+	template<typename FormatContext>
+	auto format(const hypertrie::internal::node_based::TaggedNodeHash &hash, FormatContext &ctx) {
+
+			return fmt::format_to(ctx.out(), "{}", (std::string) hash);
+	}
+};
 
 namespace std {
 	template<>

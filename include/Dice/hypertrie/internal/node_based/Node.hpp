@@ -48,8 +48,10 @@ namespace hypertrie::internal::node_based {
 	template<size_t depth, HypertrieInternalTrait tri>
 	struct Compressed {
 		using RawKey = typename tri::template RawKey<depth>;
+
 	protected:
 		RawKey key_;
+
 	public:
 		/**
 		 * Default constructor fills the key with 0, 0.0, true (value initialization)
@@ -88,8 +90,10 @@ namespace hypertrie::internal::node_based {
 	template<HypertrieInternalTrait tri>
 	struct Valued {
 		using value_type = typename tri::value_type;
+
 	protected:
 		value_type value_;
+
 	public:
 		/**
 		 * Default constructor sets value to 0, 0.0, true (value initialization)
@@ -125,20 +129,20 @@ namespace hypertrie::internal::node_based {
 		using map_type = typename tri::template map_type<K, V>;
 
 		using ChildType = std::conditional_t<(depth > 1),
-				TaggedNodeHash,
-				value_type>;
+											 TaggedNodeHash,
+											 value_type>;
 
 		using ChildrenType = std::conditional_t<((depth == 1) and tri::is_bool_valued),
-				typename tri::template set_type<key_part_type>,
-				typename tri::template map_type<typename tri::key_part_type, ChildType>
-		>;
+												typename tri::template set_type<key_part_type>,
+												typename tri::template map_type<typename tri::key_part_type, ChildType>>;
 
 		using EdgesType = std::conditional_t<(depth > 1),
-				std::array<ChildrenType, depth>,
-				ChildrenType>;
+											 std::array<ChildrenType, depth>,
+											 ChildrenType>;
 
 	protected:
 		EdgesType edges_;
+
 	public:
 		WithEdges() : edges_{} {}
 
@@ -151,11 +155,17 @@ namespace hypertrie::internal::node_based {
 		const EdgesType &edges() const { return this->edges_; }
 
 		ChildrenType &edges(size_t pos) {
-			if constexpr(depth > 1) return this->edges_[pos]; else return this->edges_;
+			if constexpr (depth > 1)
+				return this->edges_[pos];
+			else
+				return this->edges_;
 		}
 
 		const ChildrenType &edges(size_t pos) const {
-			if constexpr(depth > 1) return this->edges_[pos]; else return this->edges_;
+			if constexpr (depth > 1)
+				return this->edges_[pos];
+			else
+				return this->edges_;
 		}
 
 		std::pair<bool, typename ChildrenType::iterator> find(size_t pos, key_part_type key_part) {
@@ -163,7 +173,7 @@ namespace hypertrie::internal::node_based {
 			return {found != this->edges(pos).end(), found};
 		}
 
-		std::pair<bool, typename ChildrenType::const_iterator> find(size_t pos, key_part_type key_part) const{
+		std::pair<bool, typename ChildrenType::const_iterator> find(size_t pos, key_part_type key_part) const {
 			auto found = this->edges(pos).find(key_part);
 			return {found != this->edges(pos).end(), found};
 		}
@@ -175,16 +185,16 @@ namespace hypertrie::internal::node_based {
 				else
 					return iter->second;
 			} else {
-				return ChildType{}; // 0, 0.0, false
+				return ChildType{};// 0, 0.0, false
 			}
 		}
 	};
 
 
 	template<size_t depth,
-			NodeCompression compressed,
-			HypertrieInternalTrait tri_t = Hypertrie_internal_t<>,
-			typename  = typename std::enable_if_t<(depth >= 1)>>
+			 NodeCompression compressed,
+			 HypertrieInternalTrait tri_t = Hypertrie_internal_t<>,
+			 typename = typename std::enable_if_t<(depth >= 1)>>
 	struct Node;
 
 	// compressed nodes with boolean value_type
@@ -198,6 +208,13 @@ namespace hypertrie::internal::node_based {
 
 		Node(const RawKey &key, size_t ref_count = 0)
 			: ReferenceCounted(ref_count), Compressed<depth, tri_t>(key) {}
+
+		auto print() const {
+			return fmt::format("<Node depth = {}, compressed> {{\n"
+							   "\t{} }}",
+							   depth,
+							   this->key());
+		}
 	};
 
 	// compressed nodes with non-boolean value_type
@@ -210,6 +227,13 @@ namespace hypertrie::internal::node_based {
 	public:
 		Node(const RawKey &key, value_type value, size_t ref_count = 0)
 			: ReferenceCounted(ref_count), Compressed<depth, tri_t>(key), Valued<tri_t>(value) {}
+
+		auto print() const {
+			return fmt::format("<Node depth = {}, compressed> {{\n"
+							   "\t{} -> {} }}",
+							   depth,
+							   this->key(), this->value());
+		}
 	};
 
 	// uncompressed depth >= 2
@@ -255,6 +279,16 @@ namespace hypertrie::internal::node_based {
 		}
 
 		[[nodiscard]] inline size_t size() const noexcept { return size_; }
+
+		auto print() const {
+			fmt::memory_buffer out;
+			fmt::format_to(out, "<Node depth = {}, uncompressed> {{", depth);
+			for (size_t pos : iter::range(depth)) {
+				fmt::format_to(out, "\n\tedges[{}] = {}", pos, this->edges(pos));
+			}
+			fmt::format_to(out, " }}");
+			return fmt::to_string(out);
+		}
 	};
 
 	// uncompressed depth == 1
@@ -277,22 +311,28 @@ namespace hypertrie::internal::node_based {
 			: ReferenceCounted(ref_count),
 			  WithEdges<depth, tri_t>([&]() {
 				  if constexpr (std::is_same_v<value_type, bool>)
-					  return EdgesType{{
-							  {key[0]},
-							  {second_key[0]}}};
+					  return EdgesType{{{key[0]},
+										{second_key[0]}}};
 				  else
 					  return EdgesType{{{key[0], value},
 										{second_key[0], value}}};
 			  }()) {}
 
 		void insertEntry(const RawKey &key, [[maybe_unused]] value_type value) {
-			if constexpr(tri::is_bool_valued)
+			if constexpr (tri::is_bool_valued)
 				this->edges().insert(key[0]);
 			else
 				this->edges()[key[0]] = value;
 		}
 
 		[[nodiscard]] inline size_t size() const noexcept { return this->edges().size(); }
+
+		auto print() const {
+			return fmt::format("<Node depth = {}, uncompressed> {{\n"
+							   "\tedges[0] = {} }}",
+							   depth,
+							   this->edges(0));
+		}
 	};
 
 	template<size_t depth,
@@ -306,4 +346,21 @@ namespace hypertrie::internal::node_based {
 
 }// namespace hypertrie::internal::node_based
 
-#endif //HYPERTRIE_NODE_HPP
+template<size_t depth, NodeCompression compressed, hypertrie::internal::node_based::HypertrieInternalTrait tri_t, typename enabled>
+std::ostream &operator<<(std::ostream &os, const hypertrie::internal::node_based::Node<depth, compressed, tri_t, enabled> &node) {
+	return os << fmt::format("{}", node.print());
+}
+
+template<size_t depth, NodeCompression compressed, hypertrie::internal::node_based::HypertrieInternalTrait tri_t, typename enabled>
+struct ::fmt::formatter<hypertrie::internal::node_based::Node<depth, compressed, tri_t, enabled>> {
+private:
+	using node_type = hypertrie::internal::node_based::Node<depth, compressed, tri_t, enabled>;
+
+public:
+	auto parse(format_parse_context &ctx) { return ctx.begin(); }
+
+	template<typename FormatContext>
+	auto format(const node_type &node, FormatContext &ctx) { return fmt::format_to(ctx.out(), "{}", node.print()); }
+};
+
+#endif//HYPERTRIE_NODE_HPP

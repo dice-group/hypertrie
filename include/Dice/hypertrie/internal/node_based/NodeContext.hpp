@@ -148,9 +148,11 @@ namespace hypertrie::internal::node_based {
 					return nodes.insert({new_hash, std::move(*nc_.node())});// if the old is not kept it is moved
 			}();
 			assert(success);
+			assert(nc_.thash_ != new_hash);
 			if constexpr (not keep_old) {
 				const auto removed = nodes.erase(nc_.thash_);
 				assert(removed);
+				it = nodes.find(new_hash); // iterator was invalidates by modifying nodes. get a new one
 			}
 			auto &node = NodeStorage<depth, tri>::template deref<NodeCompression::uncompressed>(it);
 			node.insertEntry(key, value);

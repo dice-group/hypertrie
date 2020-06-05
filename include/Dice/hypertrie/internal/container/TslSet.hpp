@@ -27,7 +27,7 @@ std::ostream &operator<<(std::ostream &os, const hypertrie::internal::container:
 
 
 template<typename K>
-struct ::fmt::formatter<hypertrie::internal::container::tsl_sparse_set<K>> {
+struct fmt::formatter<hypertrie::internal::container::tsl_sparse_set<K>> {
 private:
 	using set_type = hypertrie::internal::container::tsl_sparse_set<K>;
 

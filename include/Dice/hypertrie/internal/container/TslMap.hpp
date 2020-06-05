@@ -25,7 +25,7 @@ std::ostream &operator<<(std::ostream &os, const hypertrie::internal::container:
 }
 
 template<typename K, typename V>
-struct ::fmt::formatter<hypertrie::internal::container::tsl_sparse_map<K, V>> {
+struct fmt::formatter<hypertrie::internal::container::tsl_sparse_map<K, V>> {
 private:
 	using map_type = hypertrie::internal::container::tsl_sparse_map<K, V>;
 

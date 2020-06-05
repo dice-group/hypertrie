@@ -286,7 +286,7 @@ namespace hypertrie::internal::node_based {
 }// namespace hypertrie::internal::node_based
 
 template<>
-struct ::fmt::formatter<hypertrie::internal::node_based::TaggedNodeHash> {
+struct fmt::formatter<hypertrie::internal::node_based::TaggedNodeHash> {
 	auto parse(format_parse_context &ctx) {
 		return ctx.begin();
 	}

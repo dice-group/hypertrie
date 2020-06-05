@@ -352,7 +352,7 @@ std::ostream &operator<<(std::ostream &os, const hypertrie::internal::node_based
 }
 
 template<size_t depth, NodeCompression compressed, hypertrie::internal::node_based::HypertrieInternalTrait tri_t, typename enabled>
-struct ::fmt::formatter<hypertrie::internal::node_based::Node<depth, compressed, tri_t, enabled>> {
+struct fmt::formatter<hypertrie::internal::node_based::Node<depth, compressed, tri_t, enabled>> {
 private:
 	using node_type = hypertrie::internal::node_based::Node<depth, compressed, tri_t, enabled>;
 

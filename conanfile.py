@@ -12,7 +12,7 @@ class Hypertrie(ConanFile):
     license = "AGPL"
     topics = "tensor", "data structure", "einsum", "einstein summation", "hypertrie"
     settings = "build_type", "compiler", "os", "arch"
-    requires = "boost/1.72.0", "tsl-hopscotch-map/2.2.1@tessil/stable", "fmt/6.2.0", "abseil/20200205", "Catch2/2.11.1@catchorg/stable", "tsl-sparse-map/0.6.2@tessil/stable"
+    requires = "boost/1.72.0", "tsl-hopscotch-map/2.2.1@tessil/stable", "fmt/6.2.1", "abseil/20200205", "Catch2/2.11.1@catchorg/stable", "tsl-sparse-map/0.6.2@tessil/stable"
     generators = "cmake", "cmake_find_package", "cmake_paths"
     exports = "LICENSE.txt"
     exports_sources = "include/*", "thirdparty/*", "CMakeLists.txt", "cmake/*"

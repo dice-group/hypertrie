@@ -17,7 +17,8 @@ namespace hypertrie::internal::node_based {
 		using map_type = typename tri::template map_type<K, V>;
 		using CompressedNodeMap = map_type<TaggedNodeHash, CompressedNode<depth, tri>>;
 		using UncompressedNodeMap = map_type<TaggedNodeHash, UncompressedNode<depth, tri>>;
-
+		// TODO: add "revision" for compressed_nodes_ and uncompressed_nodes_
+		// TODO: A node container must be updated if the revision does not fit the associated node storage
 	protected:
 		CompressedNodeMap compressed_nodes_;
 		UncompressedNodeMap uncompressed_nodes_;

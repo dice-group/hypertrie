@@ -173,7 +173,7 @@ namespace hypertrie::internal::node_based {
 
 		template<size_t depth, NodeCompression compressed>
 		SpecificNodeContainer<depth, compressed, tri> getNode(const TaggedNodeHash &node_hash) {
-			assert(node_hash.isCompressed() == bool(compressed) or node_hash); // TODO: check if that really makes sense here
+			assert(node_hash.isCompressed() == bool(compressed) or node_hash);// TODO: check if that really makes sense here
 			auto &nodes = getNodeStorage<depth, compressed>();
 			auto found = nodes.find(node_hash);
 			if (found != nodes.end())
@@ -402,7 +402,7 @@ namespace hypertrie::internal::node_based {
 				std::vector<std::tuple<NodeContainer<depth, tri>, RawKey<depth>, value_type>> node_cs,
 				std::vector<std::tuple<RawKey<depth>, value_type, RawKey<depth>, value_type>> expand_uc,
 				bool &only_value_changes,
-				const value_type &old_value,
+				value_type &old_value,
 				const value_type new_value) -> bool {
 			static_assert(depth >= 1);
 			if constexpr (depth == 1) {
@@ -411,7 +411,8 @@ namespace hypertrie::internal::node_based {
 						if (value == new_value) {// it is not just an expanded node
 							auto old_value_opt = getChildHashOrValue(nodec, 0, key[0]);
 							if (old_value_opt.has_value()) {
-								if (old_value_opt.value() == new_value)
+								old_value = old_value_opt.value();
+								if (old_value == new_value)
 									return true;
 								else
 									only_value_changes = true;
@@ -421,99 +422,98 @@ namespace hypertrie::internal::node_based {
 					}
 				return false;
 			} else {
+				// we only need to look at what to do with subtries for a depth > 1.
 				static constexpr const auto subkey = &tri::template subkey<depth>;
-				bool change_only_the_value = false;
-				// TODO: think about how to handle primary nodes
-				//  -> we don't need to handle them extra as they are always ref_count >= 1
 
 				std::vector<PlannedUpdate<depth - 1>> planned_updates{};
 
 				std::vector<std::tuple<NodeContainer<depth - 1, tri>, RawKey<depth - 1>, value_type>> next_node_cs{};
 
 				std::vector<std::tuple<RawKey<depth - 1>, value_type, RawKey<depth - 1>, value_type>> next_expand_uc{};
-				// descending
-				if constexpr (depth > 1) {// we only need to look at what to do with subtries for a depth > 1.
-					for (auto &[nodec, key, value] : node_cs) {
-						for (size_t pos : iter::range(depth)) {
-							RawKey<depth - 1> sub_key = subkey(key, pos);
+				for (auto &[nodec, key, value] : node_cs) {
+					for (size_t pos : iter::range(depth)) {
+						RawKey<depth - 1> sub_key = subkey(key, pos);
+						PlannedUpdate<depth - 1> planned_update{};
+						planned_update.sub_key = sub_key;
+						planned_update.value = value;
+						auto child_hash_opt = getChildHashOrValue(nodec, pos, key[pos]);
+						if (child_hash_opt.has_value()) {
+							TaggedNodeHash child_hash = child_hash_opt.value();
+							planned_update.hash_before = child_hash;
+							if (child_hash.isCompressed()) {
+								NodeContainer<depth - 1, tri> childc = getCompressedNode<depth - 1>(child_hash);
+								auto *child = childc.compressed_node();
+								if (child->key() == sub_key) {
+									if constexpr (tri::is_bool_valued) {
+										old_value = true;
+										return true;// nothing left to be done. The value is already set.
+									} else {
+										if (child->value() == value) {
+											if (value == new_value) {
+												old_value = value;
+												return true;// nothing left to be done. The value is already set.
+											}
+										} else {// child->value() != value
+											if (value == new_value) {
+												old_value = value;
+												only_value_changes = true;
+											}
+											planned_update.insert_op = InsertOp::CHANGE_VALUE;
+										}
+									}
+								} else {// child->key_ != sub_key
+									// TODO: it must be clear which entry is which
+									planned_update.second_sub_key = child->key();
+									if constexpr (not tri::is_bool_valued)
+										planned_update.second_value = child->value();
+									next_expand_uc.push_back(
+											{sub_key, value, planned_update.second_sub_key, planned_update.second_value});
+									planned_update.insert_op = InsertOp::EXPAND_C_NODE;
+								}
+							} else {// child_hash.isUncompressed()
+								next_node_cs.push_back(
+										{getUncompressedNode<depth - 1>(child_hash), sub_key, value});
+								planned_update.insert_op = InsertOp::EXPAND_UC_NODE;
+							}
+						} else {// not child_hash_opt.has_value()
+							// no child exists for that key_part at that position
+							planned_update.insert_op = InsertOp::INSERT_C_NODE;
+						}
+						planned_updates.push_back(std::move(planned_update));
+					}
+				}
+				// creating uncompressed nodes with two keys (expanded compressed nodes)
+				for (auto &[key, value, second_key, second_value] : expand_uc) {
+					for (size_t pos : iter::range(depth)) {
+						RawKey<depth - 1> sub_key = subkey(key, pos);
+						RawKey<depth - 1> second_sub_key = subkey(second_key, pos);
+						if (key[pos] == second_key[pos]) {
 							PlannedUpdate<depth - 1> planned_update{};
 							planned_update.sub_key = sub_key;
 							planned_update.value = value;
-							auto child_hash_opt = getChildHashOrValue(nodec, pos, key[pos]);
-							if (child_hash_opt.has_value()) {
-								TaggedNodeHash child_hash = child_hash_opt.value();
-								planned_update.hash_before = child_hash;
-								if (child_hash.isCompressed()) {
-									NodeContainer<depth - 1, tri> childc = getCompressedNode<depth - 1>(child_hash);
-									auto *child = childc.compressed_node();
-									if (child->key() == sub_key) {
-										if constexpr (tri::is_bool_valued)
-											return true;// nothing left to be done. The value is already set.
-										else {
-											if (child->value() == value) {
-												if (value == new_value) {
-													return true;// nothing left to be done. The value is already set.
-												}
-											} else {// child->value() != value
-												if (value == new_value) {
-													only_value_changes = true;
-												}
-												planned_update.insert_op = InsertOp::CHANGE_VALUE;
-											}
-										}
-									} else {// child->key_ != sub_key
-										planned_update.second_sub_key = child->key();
-										if constexpr (not tri::is_bool_valued)
-											planned_update.second_value = child->value();
-										next_expand_uc.push_back(
-												{sub_key, value, planned_update.second_sub_key, planned_update.second_value});
-										planned_update.insert_op = InsertOp::EXPAND_C_NODE;
-									}
-								} else {// child_hash.isUncompressed()
-									next_node_cs.push_back(
-											{getUncompressedNode<depth - 1>(child_hash), sub_key, value});
-									planned_update.insert_op = InsertOp::EXPAND_UC_NODE;
-								}
-							} else {// not child_hash_opt.has_value()
-								// no child exists for that key_part at that position
-								planned_update.insert_op = InsertOp::INSERT_C_NODE;
-							}
+							planned_update.second_sub_key = second_sub_key;
+							planned_update.second_value = second_value;
+							planned_update.insert_op = InsertOp::INSERT_TWO_KEY_UC_NODE;
 							planned_updates.push_back(std::move(planned_update));
-						}
-					}
-					// creating uncompressed nodes with two keys (expanded compressed nodes)
-					for (auto &[key, value, second_key, second_value] : expand_uc) {
-						for (size_t pos : iter::range(depth)) {
-							RawKey<depth - 1> sub_key = subkey(key, pos);
-							RawKey<depth - 1> second_sub_key = subkey(second_key, pos);
-							if (key[pos] == second_key[pos]) {
-								PlannedUpdate<depth - 1> planned_update{};
-								planned_update.sub_key = sub_key;
-								planned_update.value = value;
-								planned_update.second_sub_key = second_sub_key;
-								planned_update.second_value = second_value;
-								planned_update.insert_op = InsertOp::INSERT_TWO_KEY_UC_NODE;
-								planned_updates.push_back(std::move(planned_update));
-								next_expand_uc.push_back({sub_key, value, second_sub_key, second_value});
-							} else {
-								PlannedUpdate<depth - 1> planned_update{};
-								planned_update.sub_key = sub_key;
-								planned_update.value = value;
-								planned_update.insert_op = InsertOp::INSERT_C_NODE;
-								planned_updates.push_back(std::move(planned_update));
+							next_expand_uc.push_back({sub_key, value, second_sub_key, second_value});
+						} else {
+							PlannedUpdate<depth - 1> planned_update{};
+							planned_update.sub_key = sub_key;
+							planned_update.value = value;
+							planned_update.insert_op = InsertOp::INSERT_C_NODE;
+							planned_updates.push_back(std::move(planned_update));
 
-								PlannedUpdate<depth - 1> second_planned_update{};
-								second_planned_update.sub_key = second_sub_key;
-								second_planned_update.value = second_value;
-								second_planned_update.insert_op = InsertOp::INSERT_C_NODE;
-								planned_updates.push_back(std::move(second_planned_update));
-							}
+							PlannedUpdate<depth - 1> second_planned_update{};
+							second_planned_update.sub_key = second_sub_key;
+							second_planned_update.value = second_value;
+							second_planned_update.insert_op = InsertOp::INSERT_C_NODE;
+							planned_updates.push_back(std::move(second_planned_update));
 						}
 					}
-					bool done = set_rek<depth - 1, total_depth>(next_node_cs, next_expand_uc, only_value_changes, old_value, new_value);
-					if (done)
-						return true;
 				}
+				bool done = set_rek<depth - 1, total_depth>(next_node_cs, next_expand_uc, only_value_changes, old_value, new_value);
+				if (done)
+					return true;
 
 				// ascending
 				std::map<TaggedNodeHash, long> count_changes{};
@@ -551,7 +551,7 @@ namespace hypertrie::internal::node_based {
 							first_iter = iter;
 						}
 					}
-					if (first_iter != ended){
+					if (first_iter != ended) {
 						std::vector<PlannedUpdate<depth - 1>> next_group{first_iter, ended};
 						grouped_updates.push_back(next_group);
 					}

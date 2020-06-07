@@ -95,7 +95,12 @@ namespace hypertrie::tests::node_based::node_context {
 		context.template set<depth>(nc, {1,2,3}, 1.0);
 
 		// set second key with one common key part
-		context.template set<depth>(nc, {1,4,5}, 2.0);
+		value_type no_value = context.template set<depth>(nc, {1,4,5}, 2.0);
+		REQUIRE(no_value == 0.0);
+
+		// setting it a second time doesn't change a thing
+		value_type unchanged_value = context.template set<depth>(nc, {1,4,5}, 2.0);
+		REQUIRE(unchanged_value == 2.0);
 
 		UncompressedNode<3, tr> *node = nc.node();
 
@@ -110,17 +115,88 @@ namespace hypertrie::tests::node_based::node_context {
 		TaggedNodeHash childhash__5 = node->child(2, 5);
 		REQUIRE(childhash__5.isCompressed());
 
+		// < 1, :, : >
 		UncompressedNodeContainer<2, tr> child_c1__ = context.getUncompressedNode<2>(childhash1__);
 		UncompressedNode<2, tr> * child1__ = child_c1__.node();
+		REQUIRE(child1__->size() == 2);
+		REQUIRE(child1__->ref_count() == 1);
 		INFO(fmt::format("child1__ {}",*child1__));
 		TaggedNodeHash childhash12_ = child1__->child(0, 2);
+		TaggedNodeHash childhash1_3 = child1__->child(1, 3);
 
+		// < 1, 2, : >
 		CompressedNodeContainer<1, tr> child_c12_ = context.getCompressedNode<1>(childhash12_);
 		INFO(fmt::format("childhash12_ {}",childhash12_));
 		INFO(fmt::format("{}",context.getNodeStorage<1, NodeCompression::compressed>()));
 		CompressedNode<1, tr> * child12_  = child_c12_.node();
+		INFO(fmt::format("child12_ {}",*child12_));
 		REQUIRE(child12_->key() == tr::template RawKey<1>{3});
 		REQUIRE(child12_->value() == 1.0);
+		REQUIRE(child12_->ref_count() == 1);
+
+		// < 1, :, 3 >
+		CompressedNodeContainer<1, tr> child_c1_3 = context.getCompressedNode<1>(childhash1_3);
+		INFO(fmt::format("childhash1_3 {}",childhash1_3));
+		INFO(fmt::format("{}",context.getNodeStorage<1, NodeCompression::compressed>()));
+		CompressedNode<1, tr> * child1_3  = child_c1_3.node();
+		REQUIRE(child1_3->key() == tr::template RawKey<1>{2});
+		REQUIRE(child1_3->value() == 1.0);
+		REQUIRE(child1_3->ref_count() == 1);
+
+		// < 1, :, : >
+		TaggedNodeHash childhash14_ = child1__->child(0, 4);
+		TaggedNodeHash childhash1_5 = child1__->child(1, 5);
+
+		// < 1, 4, : >
+		CompressedNodeContainer<1, tr> child_c14_ = context.getCompressedNode<1>(childhash14_);
+		INFO(fmt::format("childhash14_ {}",childhash14_));
+		INFO(fmt::format("{}",context.getNodeStorage<1, NodeCompression::compressed>()));
+		CompressedNode<1, tr> * child14_  = child_c14_.node();
+		INFO(fmt::format("child14_ {}",*child14_));
+		REQUIRE(child14_->key() == tr::template RawKey<1>{5});
+		REQUIRE(child14_->value() == 2.0);
+		REQUIRE(child14_->ref_count() == 1);
+
+		// < 1, :, 5 >
+		CompressedNodeContainer<1, tr> child_c1_5 = context.getCompressedNode<1>(childhash1_5);
+		INFO(fmt::format("childhash1_5 {}",childhash1_5));
+		INFO(fmt::format("{}",context.getNodeStorage<1, NodeCompression::compressed>()));
+		CompressedNode<1, tr> * child1_5  = child_c1_5.node();
+		REQUIRE(child1_5->key() == tr::template RawKey<1>{4});
+		REQUIRE(child1_5->value() == 2.0);
+		REQUIRE(child1_5->ref_count() == 1);
+
+		// < :, 2, : >
+		CompressedNodeContainer<2, tr> child_c_2_ = context.getCompressedNode<2>(childhash_2_);
+		CompressedNode<2, tr> * child_2_  = child_c_2_.node();
+		INFO(fmt::format("child_2_ {}",*child_2_));
+		REQUIRE(child_2_->key() == tr::template RawKey<2>{1,3});
+		REQUIRE(child_2_->value() == 1.0);
+		REQUIRE(child_2_->ref_count() == 1);
+
+		// < :, :, 3 >
+		CompressedNodeContainer<2, tr> child_c__3 = context.getCompressedNode<2>(childhash__3);
+		CompressedNode<2, tr> * child__3  = child_c__3.node();
+		INFO(fmt::format("child__3 {}",*child__3));
+		REQUIRE(child__3->key() == tr::template RawKey<2>{1,2});
+		REQUIRE(child__3->value() == 1.0);
+		REQUIRE(child__3->ref_count() == 1);
+
+		// < :, 4, : >
+		CompressedNodeContainer<2, tr> child_c_4_ = context.getCompressedNode<2>(childhash_4_);
+		CompressedNode<2, tr> * child_4_  = child_c_4_.node();
+		INFO(fmt::format("child_4_ {}",*child_4_));
+		REQUIRE(child_4_->key() == tr::template RawKey<2>{1,5});
+		REQUIRE(child_4_->value() == 2.0);
+		REQUIRE(child_4_->ref_count() == 1);
+
+		// < :, :, 5 >
+		CompressedNodeContainer<2, tr> child_c__5 = context.getCompressedNode<2>(childhash__5);
+		CompressedNode<2, tr> * child__5  = child_c__5.node();
+		INFO(fmt::format("child__5 {}",*child__5));
+		REQUIRE(child__5->key() == tr::template RawKey<2>{1,4});
+		REQUIRE(child__5->value() == 2.0);
+		REQUIRE(child__5->ref_count() == 1);
 
 	}
 

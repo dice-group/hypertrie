@@ -173,7 +173,6 @@ namespace hypertrie::internal::node_based {
 
 		template<size_t depth, NodeCompression compressed>
 		SpecificNodeContainer<depth, compressed, tri> getNode(const TaggedNodeHash &node_hash) {
-			assert(node_hash.isCompressed() == bool(compressed) or node_hash);// TODO: check if that really makes sense here
 			auto &nodes = getNodeStorage<depth, compressed>();
 			auto found = nodes.find(node_hash);
 			if (found != nodes.end())
@@ -560,7 +559,11 @@ namespace hypertrie::internal::node_based {
 
 				for (std::vector<PlannedUpdate<depth - 1>> &updated_group : grouped_updates) {
 					const TaggedNodeHash hash_before = updated_group[0].hash_before;
-					const auto [update_node_before, node_before_count_diff] = pop_count_change(hash_before);
+					auto [update_node_before, node_before_count_diff] = pop_count_change(hash_before);
+					if (not bool(hash_before)){
+						update_node_before = false;
+						assert(node_before_count_diff == 0);
+					}
 
 					for (long i : iter::range(updated_group.size() - 1)) {
 						auto &planned_update = updated_group[i];
@@ -665,7 +668,7 @@ namespace hypertrie::internal::node_based {
 				} break;
 				case InsertOp::INSERT_C_NODE: {
 					if (update_after_node) {
-						auto nc_after = getNode<depth, is_before_compressed>(hash_after);
+						auto nc_after = getNode<depth, NodeCompression::compressed>(hash_after);
 						if (nc_after.empty()) {// node_after doesn't exit already
 							newCompressedNode<depth>(
 									planned_update.sub_key, planned_update.value, after_count_diff, hash_after);
@@ -676,7 +679,7 @@ namespace hypertrie::internal::node_based {
 				} break;
 				case InsertOp::EXPAND_UC_NODE: {
 					if (update_after_node) {
-						auto nc_after = getNode<depth, is_before_compressed>(hash_after);
+						auto nc_after = getNode<depth, NodeCompression::uncompressed>(hash_after);
 						if (reuse_node_before) {   // node before ref_count is zero -> maybe reused
 							if (nc_after.empty()) {// node_after doesn't exit already
 								// update the node_before with the after_count and value

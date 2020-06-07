@@ -200,6 +200,42 @@ namespace hypertrie::tests::node_based::node_context {
 
 	}
 
+	TEST_CASE("Test setting dependent keys 2", "[NodeContext]") {
+		using tr = default_bool_Hypertrie_internal_t;
+		constexpr pos_type depth = 3;
+
+		using key_part_type = typename tr::key_part_type;
+		using value_type = typename tr::value_type;
+		using Key = typename tr::template RawKey<depth>;
+
+		NodeContext<depth, tr> context{};
+		// create emtpy primary node
+		UncompressedNodeContainer<depth, tr> nc = context.template newPrimaryNode<depth>();
+
+		context.template set<depth>(nc, {1,2,3}, true);
+
+		// set second key with two common key part
+		value_type no_value = context.template set<depth>(nc, {1,2,4}, true);
+		REQUIRE(no_value == false);
+
+		UncompressedNode<3, tr> *node = nc.node();
+
+		TaggedNodeHash childhash1__ = node->child(0, 1);
+		REQUIRE(childhash1__.isUncompressed());
+		TaggedNodeHash childhash_2_ = node->child(1, 2);
+		REQUIRE(childhash_2_.isUncompressed());
+		TaggedNodeHash childhash__3 = node->child(2, 3);
+		REQUIRE(childhash__3.isCompressed());
+		TaggedNodeHash childhash__4 = node->child(2, 4);
+		INFO(fmt::format("{}", childhash__4));
+		REQUIRE(childhash__4.isCompressed());
+
+		// set third key with two common key part
+		no_value = context.template set<depth>(nc, {1,2,5}, true);
+		REQUIRE(no_value == false);
+
+	}
+
 };// namespace hypertrie::tests::node_based::node_context
 
 #endif//HYPERTRIE_TESTNODECONTEXT_H

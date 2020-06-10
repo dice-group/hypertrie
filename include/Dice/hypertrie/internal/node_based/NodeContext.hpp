@@ -110,8 +110,8 @@ namespace hypertrie::internal::node_based {
 		 */
 		template<size_t depth>
 		auto set(UncompressedNodeContainer<depth, tri> &nodec, const RawKey<depth> &key, value_type value) -> value_type {
-			NodeStorageUpdate<max_depth, depth, tri> update{this->storage};
-			update.plan(nodec, key, value);
+			NodeStorageUpdate<max_depth, depth, tri> update{this->storage, nodec};
+			update.plan(key, value);
 			update.apply();
 			return update.old_value;
 		}

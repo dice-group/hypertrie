@@ -84,12 +84,12 @@ namespace hypertrie::internal::node_based {
 				return std::get<depth - 1>(storage_).uncompressedNodes();
 		}
 
-		template<size_t depth, NodeCompression compressed>
-		SpecificNodeContainer<depth, compressed, tri> getNode(const TaggedNodeHash &node_hash) {
-			auto &nodes = getNodeStorage<depth, compressed>();
+		template<size_t depth, NodeCompression compression>
+		SpecificNodeContainer<depth, compression, tri> getNode(const TaggedNodeHash &node_hash) {
+			auto &nodes = getNodeStorage<depth, compression>();
 			auto found = nodes.find(node_hash);
 			if (found != nodes.end())
-				return {node_hash, &LevelNodeStorage<depth, tri>::template deref<compressed>(found)};
+				return {node_hash, &LevelNodeStorage<depth, tri>::template deref<compression>(found)};
 			else
 				return {};
 		}
@@ -166,25 +166,24 @@ namespace hypertrie::internal::node_based {
 		}
 
 		template<size_t depth, bool keep_old = true>
-		NodeContainer<depth, tri> insertEntryIntoUncompressedNode(NodeContainer<depth, tri> nc, RawKey<depth> key, value_type value, long count_diff, TaggedNodeHash new_hash) {
-			auto nc_ = nc.uncompressed();
+		UncompressedNodeContainer<depth, tri> insertEntryIntoUncompressedNode(UncompressedNodeContainer<depth, tri> nc, RawKey<depth> key, value_type value, long count_diff, TaggedNodeHash new_hash) {
 			auto &nodes = getNodeStorage<depth, NodeCompression::uncompressed>();
 			auto [it, success] = [&]() {
-				if constexpr (keep_old) return nodes.insert({new_hash, *nc_.node()});
+				if constexpr (keep_old) return nodes.insert({new_hash, *nc.node()});
 				else
-					return nodes.insert({new_hash, std::move(*nc_.node())});// if the old is not kept it is moved
+					return nodes.insert({new_hash, std::move(*nc.node())});// if the old is not kept it is moved
 			}();
 			assert(success);
-			assert(nc_.thash_ != new_hash);
+			assert(nc.thash_ != new_hash);
 			if constexpr (not keep_old) {
-				const auto removed = nodes.erase(nc_.thash_);
+				const auto removed = nodes.erase(nc.thash_);
 				assert(removed);
 				it = nodes.find(new_hash);// iterator was invalidates by modifying nodes. get a new one
 			}
 			auto &node = LevelNodeStorage<depth, tri>::template deref<NodeCompression::uncompressed>(it);
 			node.insertEntry(key, value);
 			node.ref_count() += count_diff;
-			return NodeContainer<depth, tri>{new_hash, &node};
+			return {new_hash, &node};
 		}
 
 		template<size_t depth, NodeCompression compressed>

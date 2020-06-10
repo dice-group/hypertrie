@@ -34,30 +34,25 @@ namespace hypertrie::internal::node_based {
 		template<size_t depth>
 		using RawSliceKey = typename tri::template RawSliceKey<depth>;
 
-		using NodeStorage_t = LevelNodeStorage<max_depth, tri>;
+		using NodeStorage_t = NodeStorage<max_depth, tri>;
 
 	private:
 		std::list<TaggedNodeHash> primary_nodes_{};
-		NodeStorage_t node_storage_{};
-
 
 	public:
+		NodeStorage_t storage{};
+
 		template<size_t depth>
 		UncompressedNodeContainer<depth, tri> newPrimaryNode() {
-			TaggedNodeHash base_hash = TaggedNodeHash::getUncompressedEmptyNodeHash<depth>();
+			static const TaggedNodeHash base_hash = TaggedNodeHash::getUncompressedEmptyNodeHash<depth>();
 			primary_nodes_.push_front(base_hash);
-			auto &node_storage = getNodeStorage<depth, NodeCompression::uncompressed>();
-			auto found = node_storage.find(base_hash);
-			if (found != node_storage.end()) {
-				auto &node = LevelNodeStorage<depth, tri>::template deref<NodeCompression::uncompressed>(found);
-				++node.ref_count();
-				return {base_hash, &node};
-			} else {
-				auto nodec_inserted = node_storage.insert({base_hash, UncompressedNode<depth, tri>{}});
-				auto &node = LevelNodeStorage<depth, tri>::template deref<NodeCompression::uncompressed>(nodec_inserted.first);
-				++node.ref_count();
-				return {base_hash, &node};
-			}
+			storage.template getUncompressedNode<depth>(base_hash);
+			UncompressedNodeContainer<depth, tri> nodec = storage.template getUncompressedNode<depth>(base_hash);
+			if (nodec.null())
+				nodec = storage.template newUncompressedNode<depth>(1);
+			else
+				nodec.node()->ref_count()++;
+			return nodec;
 		}
 
 		template<size_t depth, NodeCompression compression>
@@ -114,12 +109,75 @@ namespace hypertrie::internal::node_based {
 		 * @return old value
 		 */
 		template<size_t depth>
-		auto set(NodeContainer<depth, tri> &nodec, const RawKey<depth> &key, value_type value) -> value_type {
-			NodeStorageUpdate<max_depth, depth, tri> update{this->node_storage_};
+		auto set(UncompressedNodeContainer<depth, tri> &nodec, const RawKey<depth> &key, value_type value) -> value_type {
+			NodeStorageUpdate<max_depth, depth, tri> update{this->storage};
 			update.plan(nodec, key, value);
 			update.apply();
 			return update.old_value;
 		}
+
+		/**
+		 * Resolves a keypart by a given position
+		 * @tparam depth the depth of the node container
+		 * @param nodec the node container, must be a uncompressed node
+		 * @param pos the position at which the key_part should be resolved
+		 * @param key_part the key part
+		 * @return an NodeContainer of depth - 1. It might be empty if there is no child for the given pos and key part. <br/>
+		 * If depth is 1, a value_type is return
+		 */
+		template<size_t depth>
+		inline auto getChild(UncompressedNodeContainer<depth, tri> &nodec, size_t pos, key_part_type key_part)
+		-> std::conditional_t<(depth > 1), NodeContainer<depth - 1, tri>, value_type> {
+			assert(pos < depth);
+			auto child = nodec.getChildHashOrValue(pos, key_part);
+			if constexpr (depth > 1) {
+				if (not child.empty())
+					return storage.template getNode<depth - 1>(child);
+				else
+					return {};
+			} else {
+				return child;
+			}
+		}
+
+		/**
+		 * Retrieves the value for a key.
+		 * @tparam depth the depth of the node container
+		 * @param nodec the node container
+		 * @param key the key
+		 * @return the value associated to the key.
+		 */
+		template<size_t depth>
+		auto get(NodeContainer<depth, tri> &nodec, RawKey<depth> key) -> value_type {
+			static constexpr const auto subkey = &tri::template subkey<depth>;
+			if (nodec.isCompressed()) {
+				auto *node = nodec.compressed_node();
+				if (node->key() == key) {
+					if constexpr (tri::is_bool_valued) return true;
+					else
+						return node->value();
+				} else
+					return {};
+			} else {
+				UncompressedNodeContainer<depth, tri> nc = nodec.uncompressed();
+				if constexpr (depth > 1) {
+					// TODO: implement minCardPos();
+					auto pos = 0;//minCardPos();
+					NodeContainer<depth - 1, tri> child = this->template getChild<depth>(nc, pos, key[pos]);
+					if (not child.empty()) {
+						return get<depth - 1>(child, subkey(key, pos));
+					} else {
+						return {};// false, 0, 0.0
+					}
+				} else {
+
+					return this->template getChild<1>(nc, 0UL, key[0]);
+				}
+			}
+		}
+
+
+
 
 		template<size_t depth>
 		bool slice(NodeContainer<depth, tri> &nodec, RawSliceKey<depth>) {

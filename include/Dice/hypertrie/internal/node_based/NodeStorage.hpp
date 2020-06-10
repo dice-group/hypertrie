@@ -107,9 +107,9 @@ namespace hypertrie::internal::node_based {
 		template<size_t depth>
 		NodeContainer<depth, tri> getNode(const TaggedNodeHash &node_hash) {
 			if (node_hash.isCompressed()) {
-				getCompressedNode<depth>(node_hash);
+				return getCompressedNode<depth>(node_hash);
 			} else {
-				getUncompressedNode<depth>(node_hash);
+				return getUncompressedNode<depth>(node_hash);
 			}
 		}
 
@@ -127,6 +127,15 @@ namespace hypertrie::internal::node_based {
 		template<size_t depth>
 		UncompressedNodeContainer<depth, tri> newUncompressedNode(RawKey<depth> key, value_type value, RawKey<depth> second_key, value_type second_value, size_t ref_count, TaggedNodeHash hash) {
 			auto [it, success] = getNodeStorage<depth, NodeCompression::uncompressed>().insert({hash, UncompressedNode<depth, tri>{key, value, second_key, second_value, ref_count}});
+			assert(success);
+			return UncompressedNodeContainer<depth, tri>{hash, &LevelNodeStorage<depth, tri>::template deref<NodeCompression::uncompressed>(it)};
+		}
+
+
+		template<size_t depth>
+		UncompressedNodeContainer<depth, tri> newUncompressedNode(size_t ref_count) {
+			static const TaggedNodeHash hash = TaggedNodeHash::getUncompressedEmptyNodeHash<depth>();
+			auto [it, success] = getNodeStorage<depth, NodeCompression::uncompressed>().insert({hash, UncompressedNode<depth, tri>{ref_count}});
 			assert(success);
 			return UncompressedNodeContainer<depth, tri>{hash, &LevelNodeStorage<depth, tri>::template deref<NodeCompression::uncompressed>(it)};
 		}
@@ -153,7 +162,7 @@ namespace hypertrie::internal::node_based {
 			}
 			auto &node = LevelNodeStorage<depth, tri>::template deref<compression>(it);
 			node.ref_count() += count_diff;
-			return NodeContainer<depth, tri>{new_hash, &node};
+			return {new_hash, &node};
 		}
 
 		template<size_t depth, bool keep_old = true>
@@ -178,6 +187,21 @@ namespace hypertrie::internal::node_based {
 			return NodeContainer<depth, tri>{new_hash, &node};
 		}
 
+		template<size_t depth, NodeCompression compressed>
+		void deleteNode(const TaggedNodeHash &node_hash) {
+			auto &nodes = getNodeStorage<depth, compressed>();
+			assert(nodes.count(node_hash));
+			nodes.erase(node_hash);
+		}
+
+		template<size_t depth>
+		void deleteNode(const TaggedNodeHash &node_hash) {
+			if (node_hash.isCompressed()) {
+				deleteNode<depth, NodeCompression::compressed>(node_hash);
+			} else {
+				deleteNode<depth, NodeCompression::uncompressed>(node_hash);
+			}
+		}
 	};
 
 

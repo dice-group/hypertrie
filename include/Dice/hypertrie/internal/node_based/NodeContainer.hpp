@@ -55,6 +55,10 @@ namespace hypertrie::internal::node_based {
 			return specific<NodeCompression::uncompressed>();
 		}
 
+		[[nodiscard]] bool isCompressed() const { return thash_.isCompressed(); }
+
+		[[nodiscard]] bool isUncompressed() const { return thash_.isUncompressed(); }
+
 		[[nodiscard]] bool empty() const { return thash_ == TaggedNodeHash{}; }
 
 		[[nodiscard]] bool null() const { return node_ == nullptr; }
@@ -94,6 +98,14 @@ namespace hypertrie::internal::node_based {
 			return static_cast<CompressedNode<depth, tri_t> *>(this->node_);
 		}
 
+		[[nodiscard]] auto node() const{
+			return static_cast<CompressedNode<depth, tri_t> *>(this->node_);
+		}
+
+		[[nodiscard]] bool isCompressed() const { return true; }
+
+		[[nodiscard]] bool isUncompressed() const { return false; }
+
 		operator NodeContainer<depth, tri_t>() const { return {this->thash_, this->node_}; }
 		operator NodeContainer<depth, tri_t> &&() const { return {this->thash_, this->node_}; }
 	};
@@ -110,6 +122,14 @@ namespace hypertrie::internal::node_based {
 		[[nodiscard]] auto node() {
 			return static_cast<UncompressedNode<depth, tri_t> *>(this->node_);
 		}
+
+		[[nodiscard]] auto node() const {
+			return static_cast<UncompressedNode<depth, tri_t> *>(this->node_);
+		}
+
+		[[nodiscard]] bool isCompressed() const { return false; }
+
+		[[nodiscard]] bool isUncompressed() const { return true; }
 
 		inline auto getChildHashOrValue(size_t pos, typename tri_t::key_part_type key_part)
 				-> std::conditional_t<(depth > 1), TaggedNodeHash, typename tri_t::value_type> {

@@ -75,13 +75,13 @@ namespace hypertrie::internal::node_based {
 
 	public:
 		// TODO: private?
-		template<size_t depth, NodeCompression compressed>
-		auto getNodeStorage() -> std::conditional_t<bool(compressed),
+		template<size_t depth, NodeCompression compression>
+		auto getNodeStorage() -> std::conditional_t<bool(compression),
 													CompressedNodeMap<depth>, UncompressedNodeMap<depth>> & {
-			if constexpr (compressed == NodeCompression::compressed)
-				return std::get<depth - 1>(storage_).compressedNodes();
+			if constexpr (compression == NodeCompression::compressed)
+				return getStorage<depth>().compressedNodes();
 			else
-				return std::get<depth - 1>(storage_).uncompressedNodes();
+				return getStorage<depth>().uncompressedNodes();
 		}
 
 		template<size_t depth, NodeCompression compression>
@@ -115,7 +115,7 @@ namespace hypertrie::internal::node_based {
 
 	public:
 		template<size_t depth>
-		CompressedNodeContainer<depth, tri> newCompressedNode(RawKey<depth> key, value_type value, size_t ref_count, TaggedNodeHash hash) {
+		CompressedNodeContainer<depth, tri> newCompressedNode(const RawKey<depth> &key, value_type value, size_t ref_count, TaggedNodeHash hash) {
 			auto &node_storage = getNodeStorage<depth, NodeCompression::compressed>();
 			auto [it, success] = [&]() {
 			  if constexpr(tri::is_bool_valued) return node_storage.insert({hash, CompressedNode<depth, tri>{key, ref_count}});
@@ -146,7 +146,6 @@ namespace hypertrie::internal::node_based {
 		template<size_t depth, NodeCompression compression, bool keep_old = true>
 		auto changeNodeValue(SpecificNodeContainer<depth, compression, tri> nc, value_type value, long count_diff, TaggedNodeHash new_hash)
 				-> SpecificNodeContainer<depth, compression, tri> {
-			if constexpr (compression == NodeCompression::compressed and not tri::is_bool_valued) nc.node()->value() = value;
 			auto &nodes = getNodeStorage<depth, compression>();
 
 			auto [it, success] = [&]() {
@@ -161,6 +160,7 @@ namespace hypertrie::internal::node_based {
 				it = nodes.find(new_hash);// iterator was invalidates by modifying nodes. get a new one
 			}
 			auto &node = LevelNodeStorage<depth, tri>::template deref<compression>(it);
+			if constexpr (compression == NodeCompression::compressed and not tri::is_bool_valued) node.value() = value;
 			node.ref_count() += count_diff;
 			return {new_hash, &node};
 		}
@@ -186,9 +186,9 @@ namespace hypertrie::internal::node_based {
 			return {new_hash, &node};
 		}
 
-		template<size_t depth, NodeCompression compressed>
+		template<size_t depth, NodeCompression compression>
 		void deleteNode(const TaggedNodeHash &node_hash) {
-			auto &nodes = getNodeStorage<depth, compressed>();
+			auto &nodes = getNodeStorage<depth, compression>();
 			assert(nodes.count(node_hash));
 			nodes.erase(node_hash);
 		}

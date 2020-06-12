@@ -248,7 +248,7 @@ namespace hypertrie::internal::node_based {
 								}
 							} else {// child_hash.isUncompressed()
 								auto child_nc = node_storage.template getUncompressedNode<depth - 1>(child_hash);
-								assert(not child_nc.empty() and not child_nc.null()); // TODO: that fails sometimes.
+								assert(not child_nc.empty() and not child_nc.null());// TODO: that fails sometimes.
 								next_node_cs.push_back(
 										{child_nc,
 										 key, change.value, change.primary_change});
@@ -296,7 +296,8 @@ namespace hypertrie::internal::node_based {
 		}
 
 		void apply() {
-			apply_rek<update_depth>();
+			if (this->hash_changes())
+				apply_rek<update_depth>();
 			//			auto &updates = getPlannedUpdates<update_depth>();
 			//			TaggedNodeHash new_hash = updates[0].hash_after;
 			// TODO: update primary nodes list.

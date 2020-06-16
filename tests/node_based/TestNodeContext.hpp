@@ -7,6 +7,7 @@
 
 #include "../utils/AssetGenerator.hpp"
 #include "../utils/NameOfType.hpp"
+#include "TestTensor.hpp"
 
 
 namespace hypertrie::tests::node_based::node_context {
@@ -234,6 +235,24 @@ namespace hypertrie::tests::node_based::node_context {
 		no_value = context.template set<depth>(nc, {1,2,5}, true);
 		REQUIRE(no_value == false);
 
+	}
+
+	TEST_CASE("Test setting dependent keys 2 v2", "[NodeContext]") {
+		using tr = default_bool_Hypertrie_internal_t;
+		constexpr pos_type depth = 3;
+
+		using key_part_type = typename tr::key_part_type;
+		using value_type = typename tr::value_type;
+		using Key = typename tr::template RawKey<depth>;
+
+		NodeContext<depth, tr> context{};
+		// create emtpy primary node
+		UncompressedNodeContainer<depth, tr> nc = context.template newPrimaryNode<depth>();
+		auto tt = TestTensor<depth,tr>::getPrimary();
+
+		context.template set<depth>(nc, {1,2,3}, true);
+		tt.set({1,2,3}, true);
+		tt.checkContext(context);
 	}
 
 };// namespace hypertrie::tests::node_based::node_context

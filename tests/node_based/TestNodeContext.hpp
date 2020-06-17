@@ -327,15 +327,87 @@ namespace hypertrie::tests::node_based::node_context {
 		}
 	}
 
-	TEST_CASE("Write random keys", "[NodeContext]") {
-		using tr = default_bool_Hypertrie_internal_t;
+	TEST_CASE("Test Long valued", "[NodeContext]") {
+		using tr = default_long_Hypertrie_internal_t;
 		constexpr pos_type depth = 3;
 
 		using key_part_type = typename tr::key_part_type;
 		using value_type = typename tr::value_type;
 		using Key = typename tr::template RawKey<depth>;
 
+		NodeContext<depth, tr> context{};
+		// create emtpy primary node
+		UncompressedNodeContainer<depth, tr> nc = context.template newPrimaryNode<depth>();
+		auto tt = TestTensor<depth, tr>::getPrimary();
+
+		SECTION("write a single entry") {
+			context.template set<depth>(nc, {1, 2, 3}, 1);
+			tt.set({1, 2, 3}, 1);
+
+			tt.checkContext(context);
+
+			SECTION("twice") {
+				context.template set<depth>(nc, {1, 2, 3}, 1);
+				tt.set({1, 2, 3}, 1);
+
+				tt.checkContext(context);
+			}
+
+
+			SECTION("change it") {
+				//				std::cout << "before" << context.storage << std::endl;
+				context.template set<depth>(nc, {1, 2, 3}, 2);
+				tt.set({1, 2, 3}, 2);
+
+				tt.checkContext(context);
+			}
+		}
 	}
+
+	TEST_CASE("Test Randomized", "[NodeContext]") {
+		using tr = default_long_Hypertrie_internal_t;
+		constexpr pos_type depth = 3;
+
+		using key_part_type = typename tr::key_part_type;
+		using value_type = typename tr::value_type;
+		using Key = typename tr::template RawKey<depth>;
+
+		static utils::RawGenerator<depth, key_part_type, value_type, 0, 10> gen{0, 5};
+
+		NodeContext<depth, tr> context{};
+		// create emtpy primary node
+		UncompressedNodeContainer<depth, tr> nc = context.template newPrimaryNode<depth>();
+		auto tt = TestTensor<depth, tr>::getPrimary();
+
+
+		for (size_t count : iter::range(1,10))
+		SECTION("insert {} key "_format(count)) {
+			for (const auto i : iter::range(50)) {
+				SECTION("{}"_format(i)) {
+					// generate entries
+					std::vector<std::pair<Key, value_type>> entries(count);
+					for (auto &entry : entries)
+						entry = gen.entry();
+
+					// print entries
+					std::string print_entries{};
+					for (auto &[key, value] : entries)
+						print_entries += "{} → {}\n"_format(key, value);
+					WARN(print_entries);
+
+					// insert entries
+					for (auto &[key, value] : entries) {
+
+						context.template set<depth>(nc, key, value);
+						tt.set(key, value);
+
+						tt.checkContext(context);
+					}
+				}
+			}
+		}
+	}
+
 
 };// namespace hypertrie::tests::node_based::node_context
 

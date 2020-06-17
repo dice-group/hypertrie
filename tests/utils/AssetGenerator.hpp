@@ -47,15 +47,17 @@ namespace hypertrie::tests::utils {
 	class RawGenerator : public AssetGenerator {
 
 		using RawKey = hypertrie::internal::RawKey<depth, key_part_type>;
-		value_type value_min = std::numeric_limits<value_type>::min();
-		value_type value_max = std::numeric_limits<value_type>::max();
+		value_type value_min;
+		value_type value_max;
 
 
 		using dist_value_type = std::conditional_t<(std::is_same_v<value_type, bool>), unsigned char, value_type>;
 
-		uniform_dist<key_part_type> key_part_dist{min, max};
-		uniform_dist<dist_value_type> value_dist{value_min, value_max};
+		uniform_dist<key_part_type> key_part_dist;
+		uniform_dist<dist_value_type> value_dist;
 	public:
+		RawGenerator(value_type valueMin = std::numeric_limits<value_type>::min(), value_type valueMax = std::numeric_limits<value_type>::max()) : value_min(valueMin), value_max(valueMax), key_part_dist{min, max}, value_dist{value_min, value_max} {}
+
 		auto key() {
 			RawKey key_{};
 			std::generate(key_.begin(), key_.end(), [&]() { return key_part_dist(rand); });

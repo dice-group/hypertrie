@@ -156,7 +156,7 @@ namespace hypertrie::internal::node_based {
 		 * creates a new node with the value changed. The old node is NOT deleted if keep_old is true and must eventually be deleted afterwards.
 		 */
 		template<size_t depth, NodeCompression compression, bool keep_old = true>
-		auto changeNodeValue(SpecificNodeContainer<depth, compression, tri> nc, value_type value, long count_diff, TaggedNodeHash new_hash)
+		auto changeNodeValue(SpecificNodeContainer<depth, compression, tri> nc, RawKey<depth> key, value_type old_value, value_type new_value, long count_diff, TaggedNodeHash new_hash)
 				-> SpecificNodeContainer<depth, compression, tri> {
 			auto &nodes = getNodeStorage<depth, compression>();
 
@@ -172,7 +172,10 @@ namespace hypertrie::internal::node_based {
 				it = nodes.find(new_hash);// iterator was invalidates by modifying nodes. get a new one
 			}
 			auto &node = LevelNodeStorage<depth, tri>::template deref<compression>(it);
-			if constexpr (compression == NodeCompression::compressed and not tri::is_bool_valued) node.value() = value;
+			if constexpr (not tri::is_bool_valued)
+				if constexpr (compression == NodeCompression::compressed) node.value() = new_value;
+				else
+					node.change_value(key, old_value, new_value);
 			node.ref_count() += count_diff;
 			return {new_hash, &node};
 		}

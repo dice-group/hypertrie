@@ -219,13 +219,13 @@ namespace hypertrie::internal::node_based {
 									if constexpr (not tri::is_bool_valued) {
 										if (child->value() != change.value) {// child->value() != value
 											if (change.primary_change) {
-												this->old_value = change.value;
+												this->old_value = child->value();
 												this->only_value_changes = true;
 											}
 											planned_update.insert_op = InsertOp::CHANGE_VALUE;
 										} else {
 											if (change.primary_change) {
-												this->old_value = change.value;
+												this->old_value = child->value();
 												this->nothing_changes = true;
 												return;// nothing left to be done. The value is already set.
 											}
@@ -486,9 +486,13 @@ namespace hypertrie::internal::node_based {
 				const auto [update_node_after, node_after_count_diff] = pop_count_change(update.hash_after);
 				assert(update_node_after);
 				switch (update.insert_op) {
-					case InsertOp::CHANGE_VALUE:
-						changeValue<depth, NodeCompression ::compressed, true>(update, node_after_count_diff);
+					case InsertOp::CHANGE_VALUE:{
+						if (update.hash_before.isCompressed())
+							changeValue<depth, NodeCompression ::compressed, true>(update, node_after_count_diff);
+						else // TODO: may be removed when there is only one representation for nodes with one entry left.
+							changeValue<depth, NodeCompression ::uncompressed, true>(update, node_after_count_diff);
 						break;
+					}
 					case InsertOp::EXPAND_UC_NODE:
 						insertIntoUncompressed<depth, true>(update, node_after_count_diff);
 						break;
@@ -525,8 +529,9 @@ namespace hypertrie::internal::node_based {
 			if constexpr (reuse_node_before) {// node before ref_count is zero -> maybe reused
 				// update the node_before with the after_count and value
 				auto nc_before = node_storage.template getNode<depth, compression>(update.hash_before);
+				assert(not nc_before.null());
 				nc_after = node_storage.template changeNodeValue<depth, compression, false>(
-						nc_before, update.value, after_count_diff, update.hash_after);
+						nc_before, update.key, this->old_value, update.value, after_count_diff, update.hash_after);
 			} else {
 				nc_after = node_storage.template getNode<depth, compression>(update.hash_before);
 				if (nc_after.empty()) {
@@ -537,7 +542,7 @@ namespace hypertrie::internal::node_based {
 					else
 						// keeps the node_before
 						nc_after = node_storage.template changeNodeValue<depth, compression, true>(
-								nc_before, update.value, after_count_diff, update.hash_after);
+								nc_before, update.key, this->old_value, update.value, after_count_diff, update.hash_after);
 				} else {
 					assert(not reuse_node_before);
 					nc_after.node()->ref_count() += after_count_diff;

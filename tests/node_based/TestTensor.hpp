@@ -100,7 +100,8 @@ namespace hypertrie::tests::node_based::node_context {
 				for (const auto &[key_part, child] : expected_edges) {
 					INFO("key_part {} missing for depth {} and pos {}"_format(key_part, depth, pos));
 					REQUIRE(actual_edges.count(key_part));
-					INFO("Wrong hash for key_part {} missing for depth {} and pos {}"_format(key_part, depth, pos));
+					INFO("Wrong hash for key_part {} for depth {} and pos {}"_format(key_part, depth, pos));
+					INFO("actual_edges hash {}, expected hash {}"_format(actual_edges.at(key_part), child->hash()));
 					REQUIRE(actual_edges.at(key_part) == child->hash());
 				}
 			}
@@ -150,9 +151,11 @@ namespace hypertrie::tests::node_based::node_context {
 						for (const auto &[key_part, child] : expected_edges) {
 							INFO("key_part {} missing for depth {} and pos {}"_format(key_part, node_depth, pos));
 							REQUIRE(actual_edges.count(key_part));
-							INFO("Wrong hash for key_part {} for depth {} and pos {}"_format(key_part, node_depth, pos));
-							INFO("actual_edges hash {}, expected hash {}"_format(actual_edges.at(key_part), child->hash()));
-							REQUIRE(actual_edges.at(key_part) == child->hash());
+							if constexpr (node_depth == 1 and not tri::is_bool_valued) {
+								INFO("Wrong hash for key_part {} for depth {} and pos {}"_format(key_part, node_depth, pos));
+								INFO("actual_edges hash {}, expected hash {}"_format(actual_edges.at(key_part), child->hash()));
+								REQUIRE(actual_edges.at(key_part) == child->getEntries().at({}));
+							}
 						}
 					}
 				} else {
@@ -183,6 +186,9 @@ namespace hypertrie::tests::node_based::node_context {
 
 			REQUIRE(storage.template getNodeStorage<node_depth, NodeCompression::uncompressed>().size() == uncompressed_count);
 			REQUIRE(storage.template getNodeStorage<node_depth, NodeCompression::compressed>().size() == compressed_count);
+
+			if constexpr (node_depth > 1)
+				checkContext(context, existing_children);
 		}
 
 		auto getChildrenNodes(std::map<TaggedNodeHash, std::shared_ptr<TestTensor<depth - 1, tri>>> &existing_children) {

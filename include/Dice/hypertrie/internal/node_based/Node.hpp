@@ -267,6 +267,15 @@ namespace hypertrie::internal::node_based {
 																			  subkey(second_key, pos), second_value)}}};
 		}
 
+		void change_value(const RawKey &key, value_type old_value, value_type new_value) {
+			if constexpr (not tri::is_bool_valued)
+				for (const size_t pos : iter::range(depth)) {
+					auto sub_key = subkey(key, pos);
+					TaggedNodeHash &hash = this->edges(pos)[key[pos]];
+					hash.changeValue(sub_key, old_value, new_value);
+				}
+		}
+
 		void insertEntry(const RawKey &key, value_type value) {
 			this->size_++;
 			for (const size_t pos : iter::range(depth)) {
@@ -325,6 +334,11 @@ namespace hypertrie::internal::node_based {
 				this->edges().insert(key[0]);
 			else
 				this->edges()[key[0]] = value;
+		}
+
+		void change_value(const RawKey &key, [[maybe_unused]] value_type old_value, value_type new_value) {
+			if constexpr (not tri::is_bool_valued)
+				this->edges(0)[key[0]] = new_value;
 		}
 
 		[[nodiscard]] inline size_t size() const noexcept { return this->edges().size(); }

@@ -326,7 +326,7 @@ namespace hypertrie::internal::node_based {
 										{second_key[0]}}};
 				  else
 					  return EdgesType{{{key[0], value},
-										{second_key[0], value}}};
+										{second_key[0], second_value}}};
 			  }()) {}
 
 		void insertEntry(const RawKey &key, [[maybe_unused]] value_type value) {

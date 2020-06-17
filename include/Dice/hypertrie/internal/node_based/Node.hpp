@@ -209,6 +209,8 @@ namespace hypertrie::internal::node_based {
 		Node(const RawKey &key, size_t ref_count = 0)
 			: ReferenceCounted(ref_count), Compressed<depth, tri_t>(key) {}
 
+		constexpr bool value() const { return true; }
+
 		auto print() const {
 			return fmt::format("<Node depth = {}, compressed> {{\n"
 							   "\t{} }}",

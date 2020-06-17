@@ -153,6 +153,7 @@ namespace hypertrie::internal::node_based {
 						update.insert_op = InsertOp ::CHANGE_VALUE;
 					else// new entry (key + value)
 						update.insert_op = InsertOp ::EXPAND_UC_NODE;
+					assert(update.value);
 					getPlannedUpdates<update_depth>().push_back(std::move(update));
 				}
 			} else {
@@ -240,6 +241,8 @@ namespace hypertrie::internal::node_based {
 									planned_update.second_key = child->key();
 									if constexpr (not tri::is_bool_valued)
 										planned_update.second_value = child->value();
+									else
+										planned_update.second_value = true;
 									planned_update.insert_op = InsertOp::EXPAND_C_NODE;
 
 									next_expand_uc.push_back(
@@ -258,6 +261,7 @@ namespace hypertrie::internal::node_based {
 							// no child exists for that key_part at that position
 							planned_update.insert_op = InsertOp::INSERT_C_NODE;
 						}
+						assert(planned_update.value);
 						planned_updates.push_back(std::move(planned_update));
 					}
 				}
@@ -274,6 +278,8 @@ namespace hypertrie::internal::node_based {
 							planned_update.second_value = change.second_value;
 							planned_update.insert_op = InsertOp::INSERT_TWO_KEY_UC_NODE;
 							planned_updates.push_back(std::move(planned_update));
+							assert(planned_update.value);
+							assert(planned_update.second_value);
 							next_expand_uc.push_back({key, change.value,
 													  second_key, change.second_value});
 						} else {
@@ -281,12 +287,14 @@ namespace hypertrie::internal::node_based {
 							planned_update.key = key;
 							planned_update.value = change.value;
 							planned_update.insert_op = InsertOp::INSERT_C_NODE;
+							assert(planned_update.value);
 							planned_updates.push_back(std::move(planned_update));
 
 							AtomicUpdate<depth - 1> second_planned_update{};
 							second_planned_update.key = second_key;
 							second_planned_update.value = change.second_value;
 							second_planned_update.insert_op = InsertOp::INSERT_C_NODE;
+							assert(planned_update.value);
 							planned_updates.push_back(std::move(second_planned_update));
 						}
 					}
@@ -498,6 +506,7 @@ namespace hypertrie::internal::node_based {
 
 		template<size_t depth>
 		void insertCompressedNode(const AtomicUpdate<depth> &update, const long after_count_diff) {
+			std::cout << update.hash_after << std::endl;
 			auto nc_after = node_storage.template getCompressedNode<depth>(update.hash_after);
 			if (nc_after.empty()) {// node_after doesn't exit already
 				node_storage.template newCompressedNode<depth>(

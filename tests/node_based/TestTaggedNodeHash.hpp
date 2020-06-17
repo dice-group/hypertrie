@@ -20,12 +20,12 @@ namespace hypertrie::tests::node_based::tagged_node_hash {
 
 	TEST_CASE("construct hash for empty nodes", "[TaggedNodeHash]") {
 		// make sure the hashes are pairwise different
-		REQUIRE(TNS::getCompressedEmptyNodeHash<1>() != TNS::getCompressedEmptyNodeHash<2>());
-		REQUIRE(TNS::getCompressedEmptyNodeHash<1>() != TNS::getCompressedEmptyNodeHash<3>());
-		REQUIRE(TNS::getCompressedEmptyNodeHash<1>() != TNS::getCompressedEmptyNodeHash<4>());
-		REQUIRE(TNS::getCompressedEmptyNodeHash<2>() != TNS::getCompressedEmptyNodeHash<3>());
-		REQUIRE(TNS::getCompressedEmptyNodeHash<2>() != TNS::getCompressedEmptyNodeHash<4>());
-		REQUIRE(TNS::getCompressedEmptyNodeHash<3>() != TNS::getCompressedEmptyNodeHash<4>());
+		REQUIRE(TNS::getUncompressedEmptyNodeHash<1>() != TNS::getUncompressedEmptyNodeHash<2>());
+		REQUIRE(TNS::getUncompressedEmptyNodeHash<1>() != TNS::getUncompressedEmptyNodeHash<3>());
+		REQUIRE(TNS::getUncompressedEmptyNodeHash<1>() != TNS::getUncompressedEmptyNodeHash<4>());
+		REQUIRE(TNS::getUncompressedEmptyNodeHash<2>() != TNS::getUncompressedEmptyNodeHash<3>());
+		REQUIRE(TNS::getUncompressedEmptyNodeHash<2>() != TNS::getUncompressedEmptyNodeHash<4>());
+		REQUIRE(TNS::getUncompressedEmptyNodeHash<3>() != TNS::getUncompressedEmptyNodeHash<4>());
 	}
 
 	template<pos_type depth>

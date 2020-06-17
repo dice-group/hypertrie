@@ -182,17 +182,6 @@ namespace hypertrie::internal::node_based {
 		}
 
 	public:
-		/**
-		 * Creates an empty, compressed node hash.
-		 * @tparam depth  key depth/length
-		 * @return
-		 */
-		template<size_t depth>
-		static auto getCompressedEmptyNodeHash() -> TaggedNodeHash {
-			auto hash = getRawEmptyNodeHash<depth>();
-			hash.thash_bits_[compression_tag_pos] = compressed_tag;
-			return hash;
-		}
 
 		/**
 		 * Creates an empty, uncompressed node hash.

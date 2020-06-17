@@ -34,6 +34,13 @@ namespace hypertrie::internal::node_based {
 		static Node<depth, compressed, tri> &deref(typename map_type<TaggedNodeHash, Node<depth, compressed, tri>>::iterator &map_it) {
 			return tri::template deref<TaggedNodeHash, Node<depth, compressed, tri>>(map_it);
 		}
+
+		explicit operator std::string() const {
+			return fmt::format("{{ depth = {}\n"
+							   " uncompressed: {}\n"
+							   "  compressed: {} }}",
+							   depth, this->uncompressed_nodes_, this->compressed_nodes_);
+		}
 	};
 
 	template<size_t max_depth,
@@ -70,6 +77,11 @@ namespace hypertrie::internal::node_based {
 		// TODO: remove
 		template<size_t depth>
 		NodeStorage_t<depth> &getStorage() {
+			return std::get<depth - 1>(this->storage_);
+		}
+
+		template<size_t depth>
+		const NodeStorage_t<depth> &getStorage() const {
 			return std::get<depth - 1>(this->storage_);
 		}
 
@@ -200,6 +212,29 @@ namespace hypertrie::internal::node_based {
 			} else {
 				deleteNode<depth, NodeCompression::uncompressed>(node_hash);
 			}
+		}
+
+		explicit operator std::string() const {
+			return std::string(
+					fmt::format("[ NodeStorage \n"
+								"{}"
+								"]",
+								this->to_string_rek<max_depth>()));
+		}
+
+	private:
+		template<size_t str_depth>
+		std::string to_string_rek() const {
+			if constexpr (str_depth < 1)
+				return {};
+			else
+				return ((std::string) this->getStorage<str_depth>()) + "\n" + this->to_string_rek<str_depth -1>();
+		}
+
+	public:
+		friend std::ostream &operator<<(std::ostream &os, NodeStorage &storage) {
+			os << (std::string) storage;
+			return os;
 		}
 	};
 

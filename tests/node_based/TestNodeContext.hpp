@@ -248,11 +248,93 @@ namespace hypertrie::tests::node_based::node_context {
 		NodeContext<depth, tr> context{};
 		// create emtpy primary node
 		UncompressedNodeContainer<depth, tr> nc = context.template newPrimaryNode<depth>();
-		auto tt = TestTensor<depth,tr>::getPrimary();
+		auto tt = TestTensor<depth, tr>::getPrimary();
 
-		context.template set<depth>(nc, {1,2,3}, true);
-		tt.set({1,2,3}, true);
-		tt.checkContext(context);
+		SECTION("write a single entry") {
+			context.template set<depth>(nc, {1, 2, 3}, true);
+			tt.set({1, 2, 3}, true);
+
+			tt.checkContext(context);
+
+			SECTION("twice") {
+				context.template set<depth>(nc, {1, 2, 3}, true);
+				tt.set({1, 2, 3}, true);
+
+				tt.checkContext(context);
+			}
+
+			SECTION("write more entries (1 common)") {
+				SECTION("1") {
+					std::cout << "before" << context.storage << std::endl;
+					context.template set<depth>(nc, {1, 4, 5}, true);
+				//	std::cout << "after" << context.storage << std::endl;
+					tt.set({1, 4, 5}, true);
+					tt.checkContext(context);
+
+					SECTION("2") {
+						context.template set<depth>(nc, {1, 6, 7}, true);
+						tt.set({1, 6, 7}, true);
+
+						tt.checkContext(context);
+
+						SECTION("3") {
+							context.template set<depth>(nc, {1, 8, 9}, true);
+							tt.set({1, 8, 9}, true);
+
+							tt.checkContext(context);
+						}
+					}
+				}
+			}
+
+			SECTION("write more entries (2 common)") {
+				context.template set<depth>(nc, {1, 2, 4}, true);
+				tt.set({1, 2, 4}, true);
+				tt.checkContext(context);
+
+				SECTION("2") {
+					context.template set<depth>(nc, {1, 2, 5}, true);
+					tt.set({1, 2, 5}, true);
+
+					tt.checkContext(context);
+
+					SECTION("3") {
+						context.template set<depth>(nc, {1, 2, 6}, true);
+						tt.set({1, 2, 6}, true);
+
+						tt.checkContext(context);
+					}
+				}
+			}
+
+			SECTION("write symmetric (1 pair)") {
+				context.template set<depth>(nc, {3, 2, 1}, true);
+				tt.set({3, 2, 1}, true);
+				tt.checkContext(context);
+
+				SECTION("write symmetric (2 distinct pairs)") {
+					context.template set<depth>(nc, {4, 5, 6}, true);
+					tt.set({4, 5, 6}, true);
+
+					tt.checkContext(context);
+
+					context.template set<depth>(nc, {6, 5, 4}, true);
+					tt.set({6, 5, 4}, true);
+
+					tt.checkContext(context);
+				}
+			}
+		}
+	}
+
+	TEST_CASE("Write random keys", "[NodeContext]") {
+		using tr = default_bool_Hypertrie_internal_t;
+		constexpr pos_type depth = 3;
+
+		using key_part_type = typename tr::key_part_type;
+		using value_type = typename tr::value_type;
+		using Key = typename tr::template RawKey<depth>;
+
 	}
 
 };// namespace hypertrie::tests::node_based::node_context

@@ -66,11 +66,15 @@ namespace hypertrie::tests::node_based::node_context {
 		template<size_t context_depth>
 		void checkContext(NodeContext<context_depth, tri> &context) {
 			TaggedNodeHash hash = this->hash();
-			const UncompressedNodeContainer<depth, tri> &nc = context.storage.template getUncompressedNode<depth>(hash);
+			auto & storage = context.storage;
+			const UncompressedNodeContainer<depth, tri> &nc = storage.template getUncompressedNode<depth>(hash);
 			INFO("Storage doesn't contain the entry");
 			REQUIRE(not nc.null());
 			INFO("Storage doesn't contain the entry");
 			REQUIRE(not nc.empty());
+
+			REQUIRE(storage.template getNodeStorage<context_depth, NodeCompression::uncompressed>().size() == 1);
+			REQUIRE(storage.template getNodeStorage<context_depth, NodeCompression::compressed>().size() == 0);
 			const UncompressedNode<depth, tri> *node = nc.node();
 			INFO("ref count is not correct");
 			REQUIRE(node->ref_count() == this->ref_count());

@@ -213,9 +213,11 @@ namespace hypertrie::internal::node_based {
 
 		auto print() const {
 			return fmt::format("<Node depth = {}, compressed> {{\n"
-							   "\t{} }}",
+							   "\t{},\n"
+							   "\tref_count = {} }}",
 							   depth,
-							   this->key());
+							   this->key(),
+							   this->ref_count());
 		}
 	};
 
@@ -232,9 +234,11 @@ namespace hypertrie::internal::node_based {
 
 		auto print() const {
 			return fmt::format("<Node depth = {}, compressed> {{\n"
-							   "\t{} -> {} }}",
+							   "\t{} -> {},\n"
+							   "\tref_count = {} }}",
 							   depth,
-							   this->key(), this->value());
+							   this->key(), this->value(),
+							   this->ref_count());
 		}
 	};
 
@@ -297,6 +301,7 @@ namespace hypertrie::internal::node_based {
 			for (size_t pos : iter::range(depth)) {
 				fmt::format_to(out, "\n\tedges[{}] = {}", pos, this->edges(pos));
 			}
+			fmt::format_to(out, ",\n\tref_count = {}", this->ref_count());
 			fmt::format_to(out, " }}");
 			return fmt::to_string(out);
 		}
@@ -345,9 +350,11 @@ namespace hypertrie::internal::node_based {
 
 		auto print() const {
 			return fmt::format("<Node depth = {}, uncompressed> {{\n"
-							   "\tedges[0] = {} }}",
+							   "\tedges[0] = {},\n"
+							   "\tref_count = {} }}",
 							   depth,
-							   this->edges(0));
+							   this->edges(0),
+							   this->ref_count());
 		}
 	};
 

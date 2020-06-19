@@ -103,7 +103,7 @@ namespace hypertrie::internal::node_based {
 			bool primary_change;
 			auto operator<=>(const SingleEntryChange<depth> &other) const {
 				return std::make_tuple(this->nodec.thash_, this->key, this->value) <=>
-					   std::make_tuple(other.nodec.thash_, this->key, this->value);
+					   std::make_tuple(other.nodec.thash_, other.key, other.value);
 			}
 		};
 

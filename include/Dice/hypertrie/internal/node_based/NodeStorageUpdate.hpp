@@ -566,7 +566,7 @@ namespace hypertrie::internal::node_based {
 				nc_after = node_storage.template changeNodeValue<depth, compression, false>(
 						nc_before, update.key, this->old_value, update.value, after_count_diff, update.hash_after);
 			} else {
-				nc_after = node_storage.template getNode<depth, compression>(update.hash_before);
+				nc_after = node_storage.template getNode<depth, compression>(update.hash_after);
 				if (nc_after.empty()) {
 					auto nc_before = node_storage.template getNode<depth, compression>(update.hash_before);
 					if constexpr (compression == NodeCompression::compressed)

@@ -382,7 +382,7 @@ namespace hypertrie::tests::node_based::node_context {
 
 		for (size_t count : iter::range(1,10))
 		SECTION("insert {} key "_format(count)) {
-			for (const auto i : iter::range(500)) {
+			for (const auto i : iter::range(1000)) {
 				SECTION("{}"_format(i)) {
 					// generate entries
 					std::vector<std::pair<Key, value_type>> entries(count);
@@ -505,6 +505,126 @@ namespace hypertrie::tests::node_based::node_context {
 				{{1, 8, 6}, {4}},
 				{{6, 3, 6}, {4}},
 				{{1, 8, 6}, {5}}};
+
+		// print entries
+		std::string print_entries{};
+		for (auto &[key, value] : entries)
+			print_entries += "{} → {}\n"_format(key, value);
+		WARN(print_entries);
+
+		// insert entries
+		int i = 0;
+		for (auto &[key, value] : entries) {
+
+			context.template set<depth>(nc, key, value);
+			std::cout << "state " << i++ << " " << context.storage << std::endl;
+			tt.set(key, value);
+
+			tt.checkContext(context);
+		}
+	}
+
+	TEST_CASE("Test specific case 4", "[NodeContext]") {
+		using tr = default_long_Hypertrie_internal_t;
+		constexpr pos_type depth = 3;
+
+		using key_part_type = typename tr::key_part_type;
+		using value_type = typename tr::value_type;
+		using Key = typename tr::template RawKey<depth>;
+
+
+		NodeContext<depth, tr> context{};
+		// create emtpy primary node
+		UncompressedNodeContainer<depth, tr> nc = context.template newPrimaryNode<depth>();
+		auto tt = TestTensor<depth, tr>::getPrimary();
+
+
+		// generate entries
+		std::vector<std::pair<Key, value_type>> entries{
+				{{6, 5, 7}, {2}},
+				{{6, 5, 3}, {2}},
+				{{3, 7, 5}, {2}},
+				{{6, 5, 1}, {2}}};
+
+		// print entries
+		std::string print_entries{};
+		for (auto &[key, value] : entries)
+			print_entries += "{} → {}\n"_format(key, value);
+		WARN(print_entries);
+
+		// insert entries
+		int i = 0;
+		for (auto &[key, value] : entries) {
+
+			context.template set<depth>(nc, key, value);
+			std::cout << "state " << i++ << " " << context.storage << std::endl;
+			tt.set(key, value);
+
+			tt.checkContext(context);
+		}
+	}
+
+	TEST_CASE("Test specific case 5", "[NodeContext]") {
+		using tr = default_long_Hypertrie_internal_t;
+		constexpr pos_type depth = 3;
+
+		using key_part_type = typename tr::key_part_type;
+		using value_type = typename tr::value_type;
+		using Key = typename tr::template RawKey<depth>;
+
+
+		NodeContext<depth, tr> context{};
+		// create emtpy primary node
+		UncompressedNodeContainer<depth, tr> nc = context.template newPrimaryNode<depth>();
+		auto tt = TestTensor<depth, tr>::getPrimary();
+
+
+		// generate entries
+		std::vector<std::pair<Key, value_type>> entries{
+				{{3, 5, 8}, {2}},
+				{{8, 4, 5}, {2}},
+				{{8, 4, 8}, {3}},
+				{{8, 4, 3}, {3}}};
+
+		// print entries
+		std::string print_entries{};
+		for (auto &[key, value] : entries)
+			print_entries += "{} → {}\n"_format(key, value);
+		WARN(print_entries);
+
+		// insert entries
+		int i = 0;
+		for (auto &[key, value] : entries) {
+
+			context.template set<depth>(nc, key, value);
+			std::cout << "state " << i++ << " " << context.storage << std::endl;
+			tt.set(key, value);
+
+			tt.checkContext(context);
+		}
+	}
+
+	TEST_CASE("Test specific case 6", "[NodeContext]") {
+		using tr = default_long_Hypertrie_internal_t;
+		constexpr pos_type depth = 3;
+
+		using key_part_type = typename tr::key_part_type;
+		using value_type = typename tr::value_type;
+		using Key = typename tr::template RawKey<depth>;
+
+
+		NodeContext<depth, tr> context{};
+		// create emtpy primary node
+		UncompressedNodeContainer<depth, tr> nc = context.template newPrimaryNode<depth>();
+		auto tt = TestTensor<depth, tr>::getPrimary();
+
+
+		// generate entries
+		std::vector<std::pair<Key, value_type>> entries{
+				{{7, 3, 7}, {2}},
+				{{7, 4, 7}, {2}},
+				{{7, 4, 7}, {5}},
+				{{5, 7, 6}, {3}}};
 
 		// print entries
 		std::string print_entries{};

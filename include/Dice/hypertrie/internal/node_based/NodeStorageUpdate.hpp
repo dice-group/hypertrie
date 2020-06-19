@@ -351,6 +351,16 @@ namespace hypertrie::internal::node_based {
 			// node before is uncompressed
 			std::vector<AtomicUpdate<depth>> complex_updates{};
 
+			if (this->only_value_changes) {
+				std::set<AtomicUpdate<depth>> temp_updates{};
+				for (const AtomicUpdate<depth> &update : updates) {
+					auto temp_update = update;
+					temp_update.insert_op = InsertOp::CHANGE_VALUE;
+					temp_updates.insert(temp_update);
+				}
+				updates = temp_updates;
+			}
+
 			for (const AtomicUpdate<depth> &update : updates)
 				update.calcHashAfter(this->old_value);
 

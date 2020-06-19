@@ -172,10 +172,11 @@ namespace hypertrie::internal::node_based {
 				it = nodes.find(new_hash);// iterator was invalidates by modifying nodes. get a new one
 			}
 			auto &node = LevelNodeStorage<depth, tri>::template deref<compression>(it);
-			if constexpr (not tri::is_bool_valued)
+			if constexpr (not tri::is_bool_valued){
 				if constexpr (compression == NodeCompression::compressed) node.value() = new_value;
 				else
 					node.change_value(key, old_value, new_value);
+			}
 			node.ref_count() += count_diff;
 			return {new_hash, &node};
 		}

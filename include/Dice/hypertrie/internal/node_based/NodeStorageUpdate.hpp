@@ -88,8 +88,13 @@ namespace hypertrie::internal::node_based {
 				}
 			}
 
-			auto operator<=>(const AtomicUpdate<depth> &other) const {
-				return std::make_tuple(this->insert_op, this->hash_before, this->key, this->value, this->second_key, this->second_value) <=>
+			auto operator<(const AtomicUpdate<depth> &other) const {
+				return std::make_tuple(this->insert_op, this->hash_before, this->key, this->value, this->second_key, this->second_value) <
+					   std::make_tuple(other.insert_op, other.hash_before, other.key, other.value, other.second_key, other.second_value);
+			};
+
+			auto operator==(const AtomicUpdate<depth> &other) const {
+				return std::make_tuple(this->insert_op, this->hash_before, this->key, this->value, this->second_key, this->second_value) ==
 					   std::make_tuple(other.insert_op, other.hash_before, other.key, other.value, other.second_key, other.second_value);
 			};
 		};
@@ -101,8 +106,13 @@ namespace hypertrie::internal::node_based {
 			RawKey<depth> key;
 			value_type value;
 			bool primary_change;
-			auto operator<=>(const SingleEntryChange<depth> &other) const {
-				return std::make_tuple(this->nodec.thash_, this->key, this->value) <=>
+			bool operator<(const SingleEntryChange &other) const {
+				return std::make_tuple(this->nodec.thash_, this->key, this->value) <
+					   std::make_tuple(other.nodec.thash_, other.key, other.value);
+			}
+
+			bool operator==(const SingleEntryChange &other) const {
+				return std::make_tuple(this->nodec.thash_, this->key, this->value) ==
 					   std::make_tuple(other.nodec.thash_, other.key, other.value);
 			}
 		};
@@ -113,7 +123,14 @@ namespace hypertrie::internal::node_based {
 			value_type value;
 			RawKey<depth> second_key;
 			value_type second_value;
-			auto operator<=>(const NewDoubleEntryNode<depth> &other) const = default;
+			bool operator<(const NewDoubleEntryNode<depth> &other) const {
+				return std::make_tuple(this->key, this->value, this->second_key, this->second_value) <
+					   std::make_tuple(other.key, other.value, other.second_key, other.second_value);
+			}
+			bool operator==(const NewDoubleEntryNode<depth> &other) const {
+				return std::make_tuple(this->key, this->value, this->second_key, this->second_value) ==
+					   std::make_tuple(other.key, other.value, other.second_key, other.second_value);
+			}
 		};
 
 
@@ -132,10 +149,10 @@ namespace hypertrie::internal::node_based {
 
 		PlannedUpdates planned_updates{};
 
-		template<size_t depth>
+		template<size_t updates_depth>
 		auto getPlannedUpdates()
-				-> std::set<AtomicUpdate<depth>> & {
-			return std::get<depth - 1>(planned_updates);
+				-> std::set<AtomicUpdate<updates_depth>> & {
+			return std::get<updates_depth - 1>(planned_updates);
 		}
 
 		bool

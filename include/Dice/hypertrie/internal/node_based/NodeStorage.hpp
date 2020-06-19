@@ -177,6 +177,8 @@ namespace hypertrie::internal::node_based {
 				else
 					node.change_value(key, old_value, new_value);
 			}
+			if constexpr (keep_old)
+				node.ref_count() = 0;
 			node.ref_count() += count_diff;
 			return {new_hash, &node};
 		}
@@ -198,6 +200,8 @@ namespace hypertrie::internal::node_based {
 			}
 			auto &node = LevelNodeStorage<depth, tri>::template deref<NodeCompression::uncompressed>(it);
 			node.insertEntry(key, value);
+			if constexpr (keep_old)
+				node.ref_count() = 0;
 			node.ref_count() += count_diff;
 			return {new_hash, &node};
 		}

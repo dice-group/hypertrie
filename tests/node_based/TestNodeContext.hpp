@@ -364,6 +364,50 @@ namespace hypertrie::tests::node_based::node_context {
 		}
 	}
 
+	TEST_CASE("Test Randomized long -> bool", "[NodeContext]") {
+		using tr = default_bool_Hypertrie_internal_t;
+		constexpr pos_type depth = 3;
+
+		using key_part_type = typename tr::key_part_type;
+		using value_type = typename tr::value_type;
+		using Key = typename tr::template RawKey<depth>;
+
+		static utils::RawGenerator<depth, key_part_type, value_type, 0, 10> gen{};
+
+		NodeContext<depth, tr> context{};
+		// create emtpy primary node
+		UncompressedNodeContainer<depth, tr> nc = context.template newPrimaryNode<depth>();
+		auto tt = TestTensor<depth, tr>::getPrimary();
+
+
+		for (size_t count : iter::range(1,10))
+			SECTION("insert {} key "_format(count)) {
+				for (const auto i : iter::range(1000)) {
+					SECTION("{}"_format(i)) {
+						// generate entries
+						std::vector<Key> keys(count);
+						for (auto &key : keys)
+							key = gen.key();
+
+						// print entries
+						std::string print_entries{};
+						for (auto &key : keys)
+							print_entries += "{} → true\n"_format(key);
+						WARN(print_entries);
+
+						// insert entries
+						for (auto &key : keys) {
+
+							context.template set<depth>(nc, key, true);
+							tt.set(key, true);
+
+							tt.checkContext(context);
+						}
+					}
+				}
+			}
+	}
+
 	TEST_CASE("Test Randomized", "[NodeContext]") {
 		using tr = default_long_Hypertrie_internal_t;
 		constexpr pos_type depth = 3;
@@ -623,8 +667,10 @@ namespace hypertrie::tests::node_based::node_context {
 		std::vector<std::pair<Key, value_type>> entries{
 				{{7, 3, 7}, {2}},
 				{{7, 4, 7}, {2}},
-				{{7, 4, 7}, {5}},
-				{{5, 7, 6}, {3}}};
+				{{7, 4, 7}, {5}}};
+
+		// TODO: prblem: 77->2 refcount should be 1 instead of 2
+		// Problem here: A value change can actually mean that I need to create a new node if there is another entry, that uses the same structure but with the old value.
 
 		// print entries
 		std::string print_entries{};

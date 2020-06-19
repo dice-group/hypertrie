@@ -38,7 +38,7 @@ namespace hypertrie::internal::node_based {
 		struct AtomicUpdate;
 
 		template<size_t depth>
-		using LevelUpdates_t = std::vector<AtomicUpdate<depth>>;
+		using LevelUpdates_t = std::set<AtomicUpdate<depth>>;
 
 		using PlannedUpdates = util::CountDownNTuple<LevelUpdates_t, update_depth>;
 
@@ -61,10 +61,11 @@ namespace hypertrie::internal::node_based {
 			value_type value{};
 			RawKey<depth> second_key{};
 			value_type second_value{};
-			TaggedNodeHash hash_after{};
+			mutable TaggedNodeHash hash_after{};
+			mutable size_t ref_count = 1;
 
 		public:
-			void calcHashAfter(const value_type &old_value) {
+			void calcHashAfter(const value_type &old_value) const {
 				hash_after = hash_before;
 				switch (insert_op) {
 					case InsertOp::CHANGE_VALUE:
@@ -87,7 +88,10 @@ namespace hypertrie::internal::node_based {
 				}
 			}
 
-			auto operator<=>(const AtomicUpdate<depth> &other) const = default;
+			auto operator<=>(const AtomicUpdate<depth> &other) const {
+				return std::make_tuple(this->insert_op, this->hash_before, this->key, this->value, this->second_key, this->second_value) <=>
+					   std::make_tuple(other.insert_op, other.hash_before, other.key, other.value, other.second_key, other.second_value);
+			};
 		};
 
 
@@ -97,6 +101,10 @@ namespace hypertrie::internal::node_based {
 			RawKey<depth> key;
 			value_type value;
 			bool primary_change;
+			auto operator<=>(const SingleEntryChange<depth> &other) const {
+				return std::make_tuple(this->nodec.thash_, this->key, this->value) <=>
+					   std::make_tuple(other.nodec.thash_, this->key, this->value);
+			}
 		};
 
 		template<size_t depth>
@@ -105,6 +113,7 @@ namespace hypertrie::internal::node_based {
 			value_type value;
 			RawKey<depth> second_key;
 			value_type second_value;
+			auto operator<=>(const NewDoubleEntryNode<depth> &other) const = default;
 		};
 
 
@@ -125,7 +134,7 @@ namespace hypertrie::internal::node_based {
 
 		template<size_t depth>
 		auto getPlannedUpdates()
-				-> std::vector<AtomicUpdate<depth>> & {
+				-> std::set<AtomicUpdate<depth>> & {
 			return std::get<depth - 1>(planned_updates);
 		}
 
@@ -154,7 +163,7 @@ namespace hypertrie::internal::node_based {
 					else// new entry (key + value)
 						update.insert_op = InsertOp ::EXPAND_UC_NODE;
 					assert(update.value);
-					getPlannedUpdates<update_depth>().push_back(std::move(update));
+					getPlannedUpdates<update_depth>().insert(std::move(update));
 				}
 			} else {
 				throw std::logic_error{"not yet implemented!"};
@@ -173,8 +182,8 @@ namespace hypertrie::internal::node_based {
 		 */
 		template<size_t depth>
 		auto plan_rek(
-				std::vector<SingleEntryChange<depth>> node_cs,
-				std::vector<NewDoubleEntryNode<depth>> expand_uc) {
+				std::set<SingleEntryChange<depth>> node_cs,
+				std::set<NewDoubleEntryNode<depth>> expand_uc) {
 			static_assert(depth >= 1);
 			if constexpr (depth == 1) {
 
@@ -197,19 +206,20 @@ namespace hypertrie::internal::node_based {
 				static constexpr const auto subkey = &tri::template subkey<depth>;
 
 
-				std::vector<AtomicUpdate<depth - 1>> &planned_updates = getPlannedUpdates<depth - 1>();
+				std::set<AtomicUpdate<depth - 1>> &planned_updates = getPlannedUpdates<depth - 1>();
 
-				std::vector<SingleEntryChange<depth - 1>> next_node_cs{};
+				std::set<SingleEntryChange<depth - 1>> next_node_cs{};
 
-				std::vector<NewDoubleEntryNode<depth - 1>> next_expand_uc{};
+				std::set<NewDoubleEntryNode<depth - 1>> next_expand_uc{};
 
-				for (SingleEntryChange<depth> &change : node_cs) {
+				for (const SingleEntryChange<depth> &change : node_cs) {
 					for (size_t pos : iter::range(depth)) {
 						RawKey<depth - 1> key = subkey(change.key, pos);
 						AtomicUpdate<depth - 1> planned_update{};
 						planned_update.key = key;
 						planned_update.value = change.value;
-						TaggedNodeHash child_hash = change.nodec.getChildHashOrValue(pos, change.key[pos]);
+						auto nodec = change.nodec;
+						TaggedNodeHash child_hash = nodec.getChildHashOrValue(pos, change.key[pos]);
 						if (not child_hash.empty()) {
 							planned_update.hash_before = child_hash;
 							if (child_hash.isCompressed()) {
@@ -245,14 +255,14 @@ namespace hypertrie::internal::node_based {
 										planned_update.second_value = true;
 									planned_update.insert_op = InsertOp::EXPAND_C_NODE;
 
-									next_expand_uc.push_back(
+									next_expand_uc.insert(
 											{key, change.value,
 											 planned_update.second_key, planned_update.second_value});
 								}
 							} else {// child_hash.isUncompressed()
 								auto child_nc = node_storage.template getUncompressedNode<depth - 1>(child_hash);
 								assert(not child_nc.empty() and not child_nc.null());// TODO: that fails sometimes.
-								next_node_cs.push_back(
+								next_node_cs.insert(
 										{child_nc,
 										 key, change.value, change.primary_change});
 								planned_update.insert_op = InsertOp::EXPAND_UC_NODE;
@@ -262,7 +272,13 @@ namespace hypertrie::internal::node_based {
 							planned_update.insert_op = InsertOp::INSERT_C_NODE;
 						}
 						assert(planned_update.value);
-						planned_updates.push_back(std::move(planned_update));
+						auto it = planned_updates.find(planned_update);
+						if (it == planned_updates.end())
+							planned_updates.insert(it, std::move(planned_update));
+						else {
+							auto &x = *it;
+							x.ref_count += 1;
+						}
 					}
 				}
 				// creating uncompressed nodes with two keys (expanded compressed nodes)
@@ -270,33 +286,40 @@ namespace hypertrie::internal::node_based {
 					for (size_t pos : iter::range(depth)) {
 						const RawKey<depth - 1> key = subkey(change.key, pos);
 						const RawKey<depth - 1> second_key = subkey(change.second_key, pos);
+						AtomicUpdate<depth - 1> planned_update{};
 						if (change.key[pos] == change.second_key[pos]) {
-							AtomicUpdate<depth - 1> planned_update{};
 							planned_update.key = key;
 							planned_update.value = change.value;
 							planned_update.second_key = second_key;
 							planned_update.second_value = change.second_value;
 							planned_update.insert_op = InsertOp::INSERT_TWO_KEY_UC_NODE;
-							planned_updates.push_back(std::move(planned_update));
 							assert(planned_update.value);
 							assert(planned_update.second_value);
-							next_expand_uc.push_back({key, change.value,
-													  second_key, change.second_value});
+							next_expand_uc.insert({key, change.value,
+												   second_key, change.second_value});
 						} else {
-							AtomicUpdate<depth - 1> planned_update{};
 							planned_update.key = key;
 							planned_update.value = change.value;
 							planned_update.insert_op = InsertOp::INSERT_C_NODE;
 							assert(planned_update.value);
-							planned_updates.push_back(std::move(planned_update));
 
 							AtomicUpdate<depth - 1> second_planned_update{};
 							second_planned_update.key = second_key;
 							second_planned_update.value = change.second_value;
 							second_planned_update.insert_op = InsertOp::INSERT_C_NODE;
 							assert(planned_update.value);
-							planned_updates.push_back(std::move(second_planned_update));
+							auto it = planned_updates.find(second_planned_update);
+							if (it == planned_updates.end())
+								planned_updates.insert(it, std::move(second_planned_update));
+							else
+								it->ref_count++;
 						}
+
+						auto it = planned_updates.find(planned_update);
+						if (it == planned_updates.end())
+							planned_updates.insert(it, std::move(planned_update));
+						else
+							it->ref_count++;
 					}
 				}
 				plan_rek<depth - 1>(next_node_cs, next_expand_uc);
@@ -315,7 +338,7 @@ namespace hypertrie::internal::node_based {
 		template<size_t depth>
 		void apply_rek() {
 
-			std::vector<AtomicUpdate<depth>> &updates = getPlannedUpdates<depth>();
+			std::set<AtomicUpdate<depth>> &updates = getPlannedUpdates<depth>();
 			// ascending
 			std::set<TaggedNodeHash> hashes_before{};
 			boost::container::flat_map<TaggedNodeHash, NodeContainer<depth, tri>> nodes_before{};
@@ -328,16 +351,16 @@ namespace hypertrie::internal::node_based {
 			// node before is uncompressed
 			std::vector<AtomicUpdate<depth>> complex_updates{};
 
-			for (AtomicUpdate<depth> &update : updates)
+			for (const AtomicUpdate<depth> &update : updates)
 				update.calcHashAfter(this->old_value);
 
 			for (const AtomicUpdate<depth> &update : updates) {
 				if (not update.hash_before.empty()) {
-					count_changes[update.hash_before]--;
+					count_changes[update.hash_before] -= update.ref_count;
 					nodes_before[update.hash_before];
 				}
 				assert(not update.hash_after.empty());
-				count_changes[update.hash_after]++;
+				count_changes[update.hash_after] += update.ref_count;
 
 				hashes_before.insert(update.hash_before);
 

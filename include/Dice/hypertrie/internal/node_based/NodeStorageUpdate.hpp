@@ -93,13 +93,13 @@ namespace hypertrie::internal::node_based {
 				}
 			}
 
-			auto operator<(const AtomicUpdate<depth> &other) const {
+			bool operator<(const AtomicUpdate<depth> &other) const {
 				return std::make_tuple(this->insert_op, this->hash_before, this->key, this->value, this->second_key, this->second_value) <
 					   std::make_tuple(other.insert_op, other.hash_before, other.key, other.value, other.second_key, other.second_value);
 			};
 
-			auto operator==(const AtomicUpdate<depth> &other) const {
-				return std::make_tuple(this->insert_op, this->hash_before, this->key, this->value, this->second_key, this->second_value) ==
+			bool operator==(const AtomicUpdate<depth> &other) const {
+				return std::make_tuple(this->insert_op, this->hash_before, this->key, this->value, this->second_key, this->second_value) <
 					   std::make_tuple(other.insert_op, other.hash_before, other.key, other.value, other.second_key, other.second_value);
 			};
 		};
@@ -161,13 +161,14 @@ namespace hypertrie::internal::node_based {
 		}
 
 		template<size_t updates_depth>
-		void planUpdate(AtomicUpdate<updates_depth> &&planned_update, const long count_diff = 1) {
+		void planUpdate(AtomicUpdate<updates_depth> planned_update, const long count_diff = 1) {
 			auto &planned_updates = getPlannedUpdates<updates_depth>();
 			auto it = planned_updates.find(planned_update);
 			if (it == planned_updates.end())
 				planned_updates.insert(it, std::move(planned_update));
 			else {
 				auto &x = *it;
+				assert(planned_update.hash_before == x.hash_before);
 				x.ref_count += count_diff;
 			}
 		}

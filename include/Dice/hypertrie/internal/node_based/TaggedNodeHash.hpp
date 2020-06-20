@@ -216,16 +216,12 @@ namespace hypertrie::internal::node_based {
 			return hash;
 		}
 
-		auto operator<(const TaggedNodeHash &other) const {
+		bool operator<(const TaggedNodeHash &other) const {
 			return this->thash_ < other.thash_;
 		}
 
-		auto operator==(const TaggedNodeHash &other) const {
+		bool operator==(const TaggedNodeHash &other) const {
 			return this->thash_ == other.thash_;
-		}
-
-		auto operator!=(const TaggedNodeHash &other) const {
-			return this->thash_ != other.thash_;
 		}
 
 		/**
@@ -241,7 +237,7 @@ namespace hypertrie::internal::node_based {
 		 * @see empty()
 		 * @return
 		 */
-		operator bool() const noexcept {
+		explicit operator bool() const noexcept {
 			return this->thash_ != NodeHash{};
 		}
 

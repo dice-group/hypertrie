@@ -585,7 +585,6 @@ namespace hypertrie::internal::node_based {
 
 		template<size_t depth>
 		void insertCompressedNode(const AtomicUpdate<depth> &update, const long after_count_diff) {
-			std::cout << update.hash_after << std::endl;
 			auto nc_after = node_storage.template getCompressedNode<depth>(update.hash_after);
 			if (nc_after.empty()) {// node_after doesn't exit already
 				node_storage.template newCompressedNode<depth>(

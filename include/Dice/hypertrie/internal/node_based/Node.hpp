@@ -155,6 +155,7 @@ namespace hypertrie::internal::node_based {
 		const EdgesType &edges() const { return this->edges_; }
 
 		ChildrenType &edges(size_t pos) {
+			assert(pos < depth);
 			if constexpr (depth > 1)
 				return this->edges_[pos];
 			else
@@ -162,6 +163,7 @@ namespace hypertrie::internal::node_based {
 		}
 
 		const ChildrenType &edges(size_t pos) const {
+			assert(pos < depth);
 			if constexpr (depth > 1)
 				return this->edges_[pos];
 			else

@@ -48,7 +48,8 @@ namespace hypertrie::internal::node_based {
 			INSERT_TWO_KEY_UC_NODE,
 			INSERT_C_NODE,
 			EXPAND_UC_NODE,
-			EXPAND_C_NODE
+			EXPAND_C_NODE,
+			CHANGE_REF_COUNT
 		};
 
 		template<size_t depth>
@@ -62,7 +63,7 @@ namespace hypertrie::internal::node_based {
 			RawKey<depth> second_key{};
 			value_type second_value{};
 			mutable TaggedNodeHash hash_after{};
-			mutable size_t ref_count = 1;
+			mutable long ref_count = 1;
 
 		public:
 			void calcHashAfter(const value_type &old_value) const {
@@ -84,6 +85,10 @@ namespace hypertrie::internal::node_based {
 					case InsertOp::EXPAND_C_NODE:
 						assert(hash_before.isCompressed());
 						hash_after.addEntry(key, value);
+						break;
+					case InsertOp::CHANGE_REF_COUNT:
+						assert(not hash_before.empty());
+						hash_after = hash_before;// TODO: or null?
 						break;
 				}
 			}
@@ -153,6 +158,18 @@ namespace hypertrie::internal::node_based {
 		auto getPlannedUpdates()
 				-> std::set<AtomicUpdate<updates_depth>> & {
 			return std::get<updates_depth - 1>(planned_updates);
+		}
+
+		template<size_t updates_depth>
+		void planUpdate(AtomicUpdate<updates_depth> &&planned_update, const long count_diff = 1) {
+			auto &planned_updates = getPlannedUpdates<updates_depth>();
+			auto it = planned_updates.find(planned_update);
+			if (it == planned_updates.end())
+				planned_updates.insert(it, std::move(planned_update));
+			else {
+				auto &x = *it;
+				x.ref_count += count_diff;
+			}
 		}
 
 		bool
@@ -372,7 +389,8 @@ namespace hypertrie::internal::node_based {
 				std::set<AtomicUpdate<depth>> temp_updates{};
 				for (const AtomicUpdate<depth> &update : updates) {
 					auto temp_update = update;
-					temp_update.insert_op = InsertOp::CHANGE_VALUE;
+					if (temp_update.insert_op != InsertOp::CHANGE_REF_COUNT)
+						temp_update.insert_op = InsertOp::CHANGE_VALUE;
 					temp_updates.insert(temp_update);
 				}
 				updates = temp_updates;
@@ -386,10 +404,14 @@ namespace hypertrie::internal::node_based {
 					count_changes[update.hash_before] -= update.ref_count;
 					nodes_before[update.hash_before];
 				}
-				assert(not update.hash_after.empty());
-				count_changes[update.hash_after] += update.ref_count;
-
 				hashes_before.insert(update.hash_before);
+
+				assert(not update.hash_after.empty());
+
+				if (update.insert_op == InsertOp::CHANGE_REF_COUNT)
+					continue;
+
+				count_changes[update.hash_after] += update.ref_count;
 
 
 				if (update.hash_before.empty())
@@ -419,6 +441,7 @@ namespace hypertrie::internal::node_based {
 				auto &nodec_before = entry.second;
 				if (nodec_before.null())
 					nodec_before = node_storage.template getNode<depth>(hash_before);
+				assert(not nodec_before.null());
 				auto [success, count_change] = pop_count_change(hash_before);
 				assert(success);
 				size_t *ref_count = [&]() {
@@ -427,6 +450,7 @@ namespace hypertrie::internal::node_based {
 					else
 						return &nodec_before.uncompressed_node()->ref_count();
 				}();
+				assert(ref_count != nullptr);
 				(*ref_count) += count_change;
 				if ((*ref_count) == 0)
 					finally_unreferenced_hashes_before.insert(hash_before);
@@ -589,10 +613,25 @@ namespace hypertrie::internal::node_based {
 					if constexpr (compression == NodeCompression::compressed)
 						node_storage.template newCompressedNode<depth>(
 								nc_before.node()->key(), update.value, after_count_diff, update.hash_after);
-					else
+					else {
 						// keeps the node_before
 						nc_after = node_storage.template changeNodeValue<depth, compression, true>(
 								nc_before, update.key, this->old_value, update.value, after_count_diff, update.hash_after);
+
+						if constexpr (depth > 1) {
+							UncompressedNode<depth, tri> node_before = nc_before.node();
+							for (size_t pos : iter::range(depth)) {
+								for (const auto &[_, hash] : node_before->edges(pos)) {
+									AtomicUpdate<depth - 1> update_ref_count{};
+									update_ref_count.hash_before = hash;
+									update_ref_count.insert_op = InsertOp::CHANGE_REF_COUNT;
+									update_ref_count.ref_count = -1L;
+
+									planUpdate(std::move(update_ref_count), -1L);
+								}
+							}
+						}
+					}
 				} else {
 					assert(not reuse_node_before);
 					nc_after.node()->ref_count() += after_count_diff;
@@ -630,6 +669,21 @@ namespace hypertrie::internal::node_based {
 				nc_after = node_storage.template getUncompressedNode<depth>(update.hash_after);
 				if (nc_after.empty()) {// node_after doesn't exit already
 					auto nc_before = node_storage.template getUncompressedNode<depth>(update.hash_before);
+
+					if constexpr (depth > 1) {
+						UncompressedNode<depth, tri> *node_before = nc_before.node();
+						for (size_t pos : iter::range(depth)) {
+							for (const auto &[_, hash] : node_before->edges(pos)) {
+								AtomicUpdate<depth - 1> update_ref_count{};
+								update_ref_count.hash_before = hash;
+								update_ref_count.insert_op = InsertOp::CHANGE_REF_COUNT;
+								update_ref_count.ref_count = -1L;
+
+								planUpdate(std::move(update_ref_count), -1L);
+							}
+						}
+					}
+
 					nc_after = node_storage.template insertEntryIntoUncompressedNode<depth, true>(
 							nc_before, update.key, update.value, after_count_diff, update.hash_after);
 				} else {

@@ -94,11 +94,11 @@ namespace hypertrie::internal::node_based {
 		SpecificNodeContainer(const TaggedNodeHash &thash, void *node) : NodeContainer<depth, tri_t>(thash, node) {}
 
 
-		[[nodiscard]] auto node() {
+		[[nodiscard]] constexpr auto node() {
 			return static_cast<CompressedNode<depth, tri_t> *>(this->node_);
 		}
 
-		[[nodiscard]] auto node() const{
+		[[nodiscard]] constexpr auto node() const{
 			return static_cast<CompressedNode<depth, tri_t> *>(this->node_);
 		}
 
@@ -119,11 +119,11 @@ namespace hypertrie::internal::node_based {
 
 		SpecificNodeContainer(const TaggedNodeHash &thash, void *node) : NodeContainer<depth, tri_t>(thash, node) {}
 
-		[[nodiscard]] auto node() {
+		[[nodiscard]] constexpr auto node() {
 			return static_cast<UncompressedNode<depth, tri_t> *>(this->node_);
 		}
 
-		[[nodiscard]] auto node() const {
+		[[nodiscard]] constexpr auto node() const {
 			return static_cast<UncompressedNode<depth, tri_t> *>(this->node_);
 		}
 

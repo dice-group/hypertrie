@@ -31,13 +31,13 @@ namespace hypertrie::internal::node_based {
 		 * Modifiable reference to ref_count.
 		 * @return
 		 */
-		size_t &ref_count() { return this->ref_count_; }
+		constexpr size_t &ref_count() { return this->ref_count_; }
 
 		/**
 		 * Constant reference to ref_count.
 		 * @return
 		 */
-		const size_t &ref_count() const { return this->ref_count_; }
+		constexpr const size_t &ref_count() const { return this->ref_count_; }
 	};
 
 	/**

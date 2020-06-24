@@ -123,6 +123,7 @@ namespace hypertrie::tests::node_based::node_context {
 			for (auto &[hash, test_node] : nodes) {
 				assert(hash == test_node->hash());
 				assert(not hash.empty());
+				INFO(fmt::format("hash: {}", hash));
 				if (hash.isUncompressed()) {
 					uncompressed_count++;
 

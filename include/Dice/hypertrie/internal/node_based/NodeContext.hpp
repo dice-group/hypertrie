@@ -110,12 +110,16 @@ namespace hypertrie::internal::node_based {
 		 */
 		template<size_t depth>
 		auto set(UncompressedNodeContainer<depth, tri> &nodec, const RawKey<depth> &key, value_type value) -> value_type {
-			value_type old_value = get(nodec, key);
-			if (value == old_value) return value;
-
-			NodeStorageUpdate<max_depth, depth, tri> update{this->storage, nodec};
-			update.plan(key, value, old_value);
-			return update.old_value;
+			const value_type old_value = get(nodec, key);
+			if (value == old_value)
+				return value;
+			else if( value != value_type{}){
+				NodeStorageUpdate<max_depth, depth, tri> update{this->storage, nodec};
+				update.apply_update(key, value, old_value);
+			} else {
+				throw std::logic_error{"deleting values from hypertrie is not yet implemented. "};
+			}
+			return old_value;
 		}
 
 		/**

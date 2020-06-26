@@ -52,17 +52,10 @@ namespace hypertrie::internal::node_based {
 			CHANGE_REF_COUNT
 		};
 
-		enum struct Modification : unsigned int {
-			CHANGE = 0,
-			INSERT,
-			DELETE
-		};
-
 		template<size_t depth>
 		struct AtomicUpdate {
 			static_assert(depth >= 1);
 
-			Modification mod{};
 			InsertOp insert_op{};
 			TaggedNodeHash hash_before{};
 			RawKey<depth> key{};
@@ -101,50 +94,15 @@ namespace hypertrie::internal::node_based {
 			}
 
 			bool operator<(const AtomicUpdate<depth> &other) const {
-				return std::make_tuple(this->mod, this->insert_op, this->hash_before, this->key, this->value, this->second_key, this->second_value) <
-					   std::make_tuple(other.mod, other.insert_op, other.hash_before, other.key, other.value, other.second_key, other.second_value);
+				return std::make_tuple(this->insert_op, this->hash_before, this->key, this->value, this->second_key, this->second_value) <
+					   std::make_tuple(other.insert_op, other.hash_before, other.key, other.value, other.second_key, other.second_value);
 			};
 
 			bool operator==(const AtomicUpdate<depth> &other) const {
-				return std::make_tuple(this->mod, this->insert_op, this->hash_before, this->key, this->value, this->second_key, this->second_value) <
-					   std::make_tuple(other.mod, other.insert_op, other.hash_before, other.key, other.value, other.second_key, other.second_value);
+				return std::make_tuple(this->insert_op, this->hash_before, this->key, this->value, this->second_key, this->second_value) <
+					   std::make_tuple(other.insert_op, other.hash_before, other.key, other.value, other.second_key, other.second_value);
 			};
 		};
-
-
-		template<size_t depth>
-		struct SingleEntryChange {
-			UncompressedNodeContainer<depth, tri> nodec;
-			RawKey<depth> key;
-			value_type value;
-			Modification mod{};
-			bool operator<(const SingleEntryChange &other) const {
-				return std::make_tuple(this->mod, this->nodec.thash_, this->key, this->value) <
-					   std::make_tuple(other.mod, other.nodec.thash_, other.key, other.value);
-			}
-
-			bool operator==(const SingleEntryChange &other) const {
-				return std::make_tuple(this->mod, this->nodec.thash_, this->key, this->value) ==
-					   std::make_tuple(other.mod, other.nodec.thash_, other.key, other.value);
-			}
-		};
-
-		template<size_t depth>
-		struct NewDoubleEntryNode {
-			RawKey<depth> key;
-			value_type value;
-			RawKey<depth> second_key;
-			value_type second_value;
-			bool operator<(const NewDoubleEntryNode<depth> &other) const {
-				return std::make_tuple(this->key, this->value, this->second_key, this->second_value) <
-					   std::make_tuple(other.key, other.value, other.second_key, other.second_value);
-			}
-			bool operator==(const NewDoubleEntryNode<depth> &other) const {
-				return std::make_tuple(this->key, this->value, this->second_key, this->second_value) ==
-					   std::make_tuple(other.key, other.value, other.second_key, other.second_value);
-			}
-		};
-
 
 	public:
 		NodeStorage_t<node_storage_depth> &node_storage;
@@ -180,57 +138,29 @@ namespace hypertrie::internal::node_based {
 			}
 		}
 
-		bool
-		hash_changes() {
-			return not this->nothing_changes;
-		}
-
 
 		NodeStorageUpdate(NodeStorage_t<node_storage_depth> &nodeStorage, UncompressedNodeContainer<update_depth, tri> &nodec)
 			: node_storage(nodeStorage), nodec{nodec} {}
 
-
-		void plan(const RawKey<update_depth> &key, value_type value, value_type old_value) {
+		void apply_update(const RawKey<update_depth> &key, value_type value, value_type old_value) {
 			// TODO: handle insert and change value seperately.
-			this->old_value = this->old_value;
+			this->old_value = old_value;
 			this->only_value_changes = this->old_value != value_type{};
+			AtomicUpdate<update_depth> update{};
+			update.hash_before = nodec;
+			update.key = key;
+			update.value = value;
 			if (this->only_value_changes) {
-				AtomicUpdate<update_depth> update{};
-				update.hash_before = nodec;
-				update.mod = Modification::CHANGE;
-				update.key = key;
-				update.value = value;
-				planUpdate(std::move(update));
-
-				plan_change_value_rek<update_depth>();
+				update.insert_op = InsertOp::CHANGE_VALUE;
 			} else {
-				throw std::logic_error{"not yet implemented!"};
+				update.insert_op = InsertOp::EXPAND_UC_NODE;
 			}
-		}
-
-		/**
-		 *
-		 * @tparam depth depth of the nodes currently processed
-		 * @param node_cs vector of (NodeContainer, RawKey<depth>, value_type) to be inserted.
-		 * @param expand_uc vector of two entries (RawKey<depth>, value_type, RawKey<depth> (2), value_type (2)) that should form a node.
-		 * @param only_value_changes this is set to true if the key already exists with another value
-		 * @param old_value the old value
-		 * @param new_value the new value or 0, 0.0, false if it was not yet found or wasn't set before
-		 * @return
-		 */
-		template<size_t depth>
-		auto plan_change_value_rek() {
-			// we only need to look at what to do with subtries for a depth > 1.
-			static constexpr const auto subkey = &tri::template subkey<depth>;
-
-			apply_updates<depth>();
-
-			if constexpr (depth > 1)
-				plan_change_value_rek<depth - 1>();
+			planUpdate(std::move(update));
+			apply_update_rek<update_depth>();
 		}
 
 		template<size_t depth>
-		void apply_updates() {
+		void apply_update_rek() {
 
 			std::set<AtomicUpdate<depth>> &updates = getPlannedUpdates<depth>();
 
@@ -261,6 +191,7 @@ namespace hypertrie::internal::node_based {
 
 			// populate count_changes and nodes_before
 			for (const AtomicUpdate<depth> &update : updates) {
+				update.calcHashAfter(this->old_value);
 				if (not update.hash_before.empty()) {
 					count_changes[update.hash_before] -= update.ref_count;
 					nodes_before[update.hash_before];// NodeContainer is not yet materialized
@@ -304,9 +235,8 @@ namespace hypertrie::internal::node_based {
 				// check if it is a moveable. then save it and skip to the next iteration
 				if (peak_count_change(update.hash_after)) {
 
-					if (auto handle = unreferenced_nodes_before.extract(update.hash_before);
-						// TODO: maybe also skip EXPAND_C_NODE ?
-						not handle.empty()) {
+					if (update.insert_op != InsertOp::EXPAND_C_NODE
+								and not unreferenced_nodes_before.extract(update.hash_before).empty()) {
 						moveable_updates.insert(update);
 					} else {
 						auto [changes, after_count_change] = pop_count_change(update.hash_after);
@@ -334,6 +264,9 @@ namespace hypertrie::internal::node_based {
 			for (auto &[hash_before, _] : unreferenced_nodes_before) {
 				node_storage.template deleteNode<depth>(hash_before);
 			}
+
+			if constexpr (depth > 1)
+				apply_update_rek<depth - 1>();
 		}
 
 		template<size_t depth, NodeCompression compression, bool reuse_node_before = false>

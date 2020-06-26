@@ -434,23 +434,20 @@ namespace hypertrie::internal::node_based {
 				for (const size_t pos : iter::range(depth)) {
 					auto sub_key = subkey(update.key, pos);
 					auto key_part = update.key[pos];
+					AtomicUpdate<depth - 1> child_update{};
+					child_update.key = sub_key;
+					child_update.value = update.value;
 					TaggedNodeHash child_hash = node_before->child(pos, key_part);
+					child_update.hash_before = child_hash;
 					if (child_hash.empty()) {
-						AtomicUpdate<depth - 1> child_update{};
 						child_update.insert_op = InsertOp::INSERT_C_NODE;
-						child_update.key = sub_key;
-						child_update.value = update.value;
-						planUpdate(std::move(child_update));
 					} else {
-						AtomicUpdate<depth - 1> first_child_update{};
 						if (child_hash.isCompressed())
-							first_child_update.insert_op = InsertOp::EXPAND_C_NODE;
+							child_update.insert_op = InsertOp::EXPAND_C_NODE;
 						else
-							first_child_update.insert_op = InsertOp::EXPAND_UC_NODE;
-						first_child_update.key = sub_key;
-						first_child_update.value = update.value;
-						planUpdate(std::move(first_child_update));
+							child_update.insert_op = InsertOp::EXPAND_UC_NODE;
 					}
+					planUpdate(std::move(child_update));
 				}
 			}
 

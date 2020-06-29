@@ -809,6 +809,50 @@ namespace hypertrie::tests::node_based::node_context {
 		}
 	}
 
+	TEST_CASE("Test specific case 9", "[NodeContext]") {
+		using tr = default_long_Hypertrie_internal_t;
+		constexpr pos_type depth = 3;
+
+		using key_part_type = typename tr::key_part_type;
+		using value_type = typename tr::value_type;
+		using Key = typename tr::template RawKey<depth>;
+
+
+		NodeContext<depth, tr> context{};
+		// create emtpy primary node
+		UncompressedNodeContainer<depth, tr> nc = context.template newPrimaryNode<depth>();
+		auto tt = TestTensor<depth, tr>::getPrimary();
+
+
+		// generate entries
+		std::vector<std::pair<Key, value_type>> entries{
+				{{8, 7, 8}, {2}},
+				{{7, 10, 10}, {2}},
+				{{2, 3, 4}, {5}},
+				{{6, 1, 3}, {1}},
+				{{2, 10, 5}, {4}},
+				{{7, 10, 10}, {4}}
+				//{{0, 0, 10}, {3}}
+		};
+
+		// print entries
+		std::string print_entries{};
+		for (auto &[key, value] : entries)
+			print_entries += "{} → {}\n"_format(key, value);
+		WARN(print_entries);
+
+		// insert entries
+		int i = 0;
+		for (auto &[key, value] : entries) {
+
+			context.template set<depth>(nc, key, value);
+			std::cout << "state " << i++ << " " << context.storage << std::endl;
+			tt.set(key, value);
+
+			tt.checkContext(context);
+		}
+	}
+
 
 };// namespace hypertrie::tests::node_based::node_context
 

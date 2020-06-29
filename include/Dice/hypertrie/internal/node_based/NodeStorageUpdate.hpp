@@ -127,15 +127,15 @@ namespace hypertrie::internal::node_based {
 		}
 
 		template<size_t updates_depth>
-		void planUpdate(AtomicUpdate<updates_depth> planned_update, const long count_diff = 1) {
+		void planUpdate(AtomicUpdate<updates_depth> planned_update) {
 			auto &planned_updates = getPlannedUpdates<updates_depth>();
 			auto it = planned_updates.find(planned_update);
 			if (it == planned_updates.end())
 				planned_updates.insert(it, std::move(planned_update));
 			else {
-				auto &x = *it;
-				assert(planned_update.hash_before == x.hash_before);
-				x.ref_count += count_diff;
+				auto &existing_planned_update = *it;
+				assert(planned_update.hash_before == existing_planned_update.hash_before);
+				existing_planned_update.ref_count += planned_update.ref_count;
 			}
 		}
 
@@ -288,7 +288,6 @@ namespace hypertrie::internal::node_based {
 						insertIntoUncompressed<depth, reuse_node_before>(update, after_count_diff, nc_before);
 					break;
 				case InsertOp::EXPAND_C_NODE:
-					// TODO: handle change_ref for compressed
 					insertTwoValueUncompressed<depth>(update, after_count_diff);
 					break;
 				case InsertOp::CHANGE_REF_COUNT:
@@ -363,7 +362,7 @@ namespace hypertrie::internal::node_based {
 										update_ref_count.insert_op = InsertOp::CHANGE_REF_COUNT;
 										update_ref_count.ref_count = -1L;
 
-										planUpdate(std::move(update_ref_count), -1L);
+										planUpdate(std::move(update_ref_count));
 									}
 								}
 							}
@@ -474,6 +473,7 @@ namespace hypertrie::internal::node_based {
 								AtomicUpdate<depth - 1> update_ref_count{};
 								update_ref_count.hash_before = hash;
 								update_ref_count.insert_op = InsertOp::CHANGE_REF_COUNT;
+								update_ref_count.ref_count = -1L;
 
 								planUpdate(std::move(update_ref_count));
 							}

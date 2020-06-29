@@ -85,6 +85,7 @@ namespace hypertrie::internal::node_based {
 					case InsertOp::EXPAND_C_NODE:
 						assert(hash_before.isCompressed());
 						hash_after.addEntry(key, value);
+						assert(hash_after.isUncompressed());
 						break;
 					case InsertOp::CHANGE_REF_COUNT:
 						assert(not hash_before.empty());
@@ -379,7 +380,12 @@ namespace hypertrie::internal::node_based {
 		}
 
 		template<size_t depth>
-		void insertTwoValueUncompressed(const AtomicUpdate<depth> &update, const long after_count_diff) {
+		void insertTwoValueUncompressed(AtomicUpdate<depth> update, const long after_count_diff) {
+			if (update.insert_op == InsertOp::EXPAND_C_NODE){
+				auto nc_before = node_storage.template getCompressedNode<depth>(update.hash_before);
+				update.second_key = nc_before.node()->key();
+				update.second_value = nc_before.node()->value();
+			}
 			auto nc_after = node_storage.template getUncompressedNode<depth>(update.hash_after);
 			if (nc_after.empty()) {// node_after doesn't exit already
 				node_storage.template newUncompressedNode<depth>(
@@ -390,9 +396,9 @@ namespace hypertrie::internal::node_based {
 					static constexpr const auto subkey = &tri::template subkey<depth>;
 					for (const size_t pos : iter::range(depth)) {
 						auto sub_key = subkey(update.key, pos);
-						auto second_sub_key = subkey(update.key, pos);
+						auto second_sub_key = subkey(update.second_key, pos);
 						auto key_part = update.key[pos];
-						auto second_key_part = update.key[pos];
+						auto second_key_part = update.second_key[pos];
 
 
 						if (key_part == second_key_part) {

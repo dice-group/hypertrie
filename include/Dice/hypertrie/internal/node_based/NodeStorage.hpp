@@ -159,6 +159,7 @@ namespace hypertrie::internal::node_based {
 		auto changeNodeValue(SpecificNodeContainer<depth, compression, tri> nc, RawKey<depth> key, value_type old_value, value_type new_value, long count_diff, TaggedNodeHash new_hash)
 				-> SpecificNodeContainer<depth, compression, tri> {
 			auto &nodes = getNodeStorage<depth, compression>();
+			assert(nc.thash_ != new_hash);
 
 			auto [it, success] = [&]() {
 				if constexpr (keep_old) return nodes.insert({new_hash, *nc.node()});
@@ -179,6 +180,7 @@ namespace hypertrie::internal::node_based {
 			}
 			if constexpr (keep_old)
 				node.ref_count() = 0;
+			assert(node.ref_count() == 0);
 			node.ref_count() += count_diff;
 			return {new_hash, &node};
 		}

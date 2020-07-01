@@ -242,7 +242,8 @@ namespace hypertrie::internal::node_based {
 						moveable_updates.insert(update);
 					} else {
 						auto [changes, after_count_change] = pop_count_change(update.hash_after);
-						NodeContainer<depth, tri> node_before = nodes_before[update.hash_before];
+						NodeContainer<depth, tri> node_before = node_storage.template getNode<depth>(update.hash_before);
+						assert(not node_before.null());
 						if (update.hash_before.isCompressed())
 							processUpdate<depth, NodeCompression::compressed, false>(update, after_count_change, node_before.compressed());
 						else
@@ -253,7 +254,8 @@ namespace hypertrie::internal::node_based {
 
 			// do moveables
 			for (const AtomicUpdate<depth> &update : moveable_updates) {
-				NodeContainer<depth, tri> node_before = nodes_before[update.hash_before];
+				NodeContainer<depth, tri> node_before = node_storage.template getNode<depth>(update.hash_before);
+				assert(not node_before.null());
 				auto [changes, after_count_change] = pop_count_change(update.hash_after);
 
 				assert(changes);
@@ -348,9 +350,6 @@ namespace hypertrie::internal::node_based {
 						node_storage.template newCompressedNode<depth>(
 								nc_before.node()->key(), update.value, after_count_diff, update.hash_after);
 					else {
-						nc_after = node_storage.template changeNodeValue<depth, compression, true>(
-								nc_before, update.key, this->old_value, update.value, after_count_diff, update.hash_after);
-
 						if constexpr (depth > 1) {
 							UncompressedNode<depth, tri> *node_before = nc_before.node();
 
@@ -368,6 +367,9 @@ namespace hypertrie::internal::node_based {
 								}
 							}
 						}
+
+						nc_after = node_storage.template changeNodeValue<depth, compression, true>(
+								nc_before, update.key, this->old_value, update.value, after_count_diff, update.hash_after);
 					}
 				} else {
 					assert(not reuse_node_before);

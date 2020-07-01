@@ -237,6 +237,7 @@ namespace hypertrie::internal::node_based {
 				if (peak_count_change(update.hash_after)) {
 
 					if (update.insert_op != InsertOp::EXPAND_C_NODE
+						and node_storage.template getNode<depth>(update.hash_after).null() // TODO: that is a workaround. keep track of the nodes in general
 								and not unreferenced_nodes_before.extract(update.hash_before).empty()) {
 						moveable_updates.insert(update);
 					} else {

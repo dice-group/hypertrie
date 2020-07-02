@@ -70,12 +70,15 @@ namespace hypertrie::internal::node_based {
 				hash_after = hash_before;
 				switch (insert_op) {
 					case InsertOp::CHANGE_VALUE:
+						assert(not hash_before.empty());
 						hash_after.changeValue(key, old_value, value);
 						break;
 					case InsertOp::INSERT_TWO_KEY_UC_NODE:
+						assert(hash_before.empty());
 						hash_after = TaggedNodeHash::getTwoEntriesNodeHash(key, value, second_key, second_value);
 						break;
 					case InsertOp::INSERT_C_NODE:
+						assert(hash_before.empty());
 						hash_after = TaggedNodeHash::getCompressedNodeHash(key, value);
 						break;
 					case InsertOp::EXPAND_UC_NODE:
@@ -266,11 +269,32 @@ namespace hypertrie::internal::node_based {
 			}
 
 			for (auto &[hash_before, _] : unreferenced_nodes_before) {
-				node_storage.template deleteNode<depth>(hash_before);
+				if (hash_before.isCompressed())
+					removeUnreferencedNode<depth, NodeCompression::compressed>(hash_before);
+				else
+					removeUnreferencedNode<depth, NodeCompression::uncompressed>(hash_before);
 			}
 
 			if constexpr (depth > 1)
 				apply_update_rek<depth - 1>();
+		}
+
+		template<size_t depth, NodeCompression compression>
+		void removeUnreferencedNode(TaggedNodeHash hash){
+			if constexpr (compression == NodeCompression::uncompressed and depth > 1){
+				auto node = node_storage.template getUncompressedNode<depth>(hash).node();
+				for (size_t pos : iter::range(depth)) {
+					for (const auto &[_, hash] : node->edges(pos)) {
+						AtomicUpdate<depth - 1> update_ref_count{};
+						update_ref_count.hash_before = hash;
+						update_ref_count.insert_op = InsertOp::CHANGE_REF_COUNT;
+
+						planUpdate(std::move(update_ref_count));
+					}
+				}
+			}
+
+			node_storage.template deleteNode<depth>(hash);
 		}
 
 		template<size_t depth, NodeCompression compression, bool reuse_node_before = false>

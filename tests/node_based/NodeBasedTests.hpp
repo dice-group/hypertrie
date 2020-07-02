@@ -3,6 +3,7 @@
 #include "TestNode.hpp"
 #include "TestNodeContainer.hpp"
 #include "TestNodeContext.hpp"
+#include "TestNodeContextRandomized.hpp"
 #include "TestTaggedNodeHash.hpp"
 
 #ifdef HYPERTRIE_ENABLE_LIBTORCH

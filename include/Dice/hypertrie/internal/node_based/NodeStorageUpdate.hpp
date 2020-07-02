@@ -49,7 +49,8 @@ namespace hypertrie::internal::node_based {
 			INSERT_C_NODE,
 			EXPAND_UC_NODE,
 			EXPAND_C_NODE,
-			CHANGE_REF_COUNT
+			CHANGE_REF_COUNT,
+			REMOVE_FROM_UC
 		};
 
 		template<size_t depth>
@@ -113,13 +114,8 @@ namespace hypertrie::internal::node_based {
 
 		UncompressedNodeContainer<update_depth, tri> &nodec;
 
-		value_type new_value;
-
 		value_type old_value{};
 
-		bool only_value_changes = false;
-
-		bool nothing_changes = false;
 
 		PlannedUpdates planned_updates{};
 
@@ -146,17 +142,26 @@ namespace hypertrie::internal::node_based {
 		NodeStorageUpdate(NodeStorage_t<node_storage_depth> &nodeStorage, UncompressedNodeContainer<update_depth, tri> &nodec)
 			: node_storage(nodeStorage), nodec{nodec} {}
 
-		void apply_update(const RawKey<update_depth> &key, value_type value, value_type old_value) {
-			// TODO: handle insert and change value seperately.
+		void apply_update(const RawKey<update_depth> &key, const value_type value, const value_type old_value) {
+			if (value == old_value)
+				return;
+
 			this->old_value = old_value;
-			this->only_value_changes = this->old_value != value_type{};
+
+			bool value_deleted = value == value_type{};
+
+			bool value_changes = old_value != value_type{};
+
 			AtomicUpdate<update_depth> update{};
 			update.hash_before = nodec;
 			update.key = key;
 			update.value = value;
-			if (this->only_value_changes) {
+			if (value_deleted) {
+				update.insert_op = InsertOp::REMOVE_FROM_UC;
+				throw std::logic_error{"deleting values from hypertrie is not yet implemented. "};
+			} else if (value_changes) {
 				update.insert_op = InsertOp::CHANGE_VALUE;
-			} else {
+			} else { // new entry
 				update.insert_op = InsertOp::EXPAND_UC_NODE;
 			}
 			planUpdate(std::move(update));

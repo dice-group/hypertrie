@@ -113,12 +113,8 @@ namespace hypertrie::internal::node_based {
 			const value_type old_value = get(nodec, key);
 			if (value == old_value)
 				return value;
-			else if( value != value_type{}){
-				NodeStorageUpdate<max_depth, depth, tri> update{this->storage, nodec};
-				update.apply_update(key, value, old_value);
-			} else {
-				throw std::logic_error{"deleting values from hypertrie is not yet implemented. "};
-			}
+			NodeStorageUpdate<max_depth, depth, tri> update{this->storage, nodec};
+			update.apply_update(key, value, old_value);
 			return old_value;
 		}
 

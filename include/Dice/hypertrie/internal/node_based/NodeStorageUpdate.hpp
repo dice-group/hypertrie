@@ -104,9 +104,14 @@ namespace hypertrie::internal::node_based {
 			};
 
 			bool operator==(const AtomicUpdate<depth> &other) const {
-				return std::make_tuple(this->insert_op, this->hash_before, this->key, this->value, this->second_key, this->second_value) <
+				return std::make_tuple(this->insert_op, this->hash_before, this->key, this->value, this->second_key, this->second_value) ==
 					   std::make_tuple(other.insert_op, other.hash_before, other.key, other.value, other.second_key, other.second_value);
 			};
+
+			template <typename H>
+			friend H AbslHashValue(H h, const AtomicUpdate<depth>& other) {
+				return H::combine(std::move(h), long(other.insert_op), other.hash_before, other.key, other.value, other.second_key, other.second_value);
+			}
 		};
 
 	public:
@@ -177,10 +182,10 @@ namespace hypertrie::internal::node_based {
 			std::map<TaggedNodeHash, long> count_changes{};
 
 			// extract a change from count_changes
-			auto pop_count_change = [&](TaggedNodeHash hash, std::map<TaggedNodeHash, long> &count_changes_) -> std::tuple<bool, long> {
-				if (auto changed = count_changes_.find(hash); changed != count_changes_.end()) {
+			auto pop_count_change = [&](TaggedNodeHash hash) -> std::tuple<bool, long> {
+				if (auto changed = count_changes.find(hash); changed != count_changes.end()) {
 					auto diff = changed->second;
-					count_changes_.erase(changed);
+					count_changes.erase(changed);
 					return {diff != 0, diff};
 				} else
 					return {false, 0};
@@ -209,7 +214,6 @@ namespace hypertrie::internal::node_based {
 
 				if (not update.hash_after.empty()) {
 					count_changes[update.hash_after] += update.ref_count;
-					// nodes_after[update.hash_after];
 				}
 			}
 
@@ -218,7 +222,7 @@ namespace hypertrie::internal::node_based {
 
 			// process reference changes to nodes_before
 			for (const auto &hash_before : nodes_before) {
-				const auto &[before_changes, before_count_change] = pop_count_change(hash_before, count_changes);
+				const auto &[before_changes, before_count_change] = pop_count_change(hash_before);
 				if (before_changes) {
 					auto nodec_before = node_storage.template getNode<depth>(hash_before);
 					assert(not nodec_before.null());
@@ -236,52 +240,63 @@ namespace hypertrie::internal::node_based {
 				}
 			}
 
-			struct MovableUpdate {
-				AtomicUpdate<depth> update;
-				long count_change;
-				bool operator<(const MovableUpdate &other) const {
-					return this->update < other.update;
-				};
-
-				bool operator==(const MovableUpdate &other) const {
-					return this->update == other.update;
-				};
-			};
-
-			std::set<MovableUpdate> moveable_updates{};
-			// extract movables and do unmoveables
+			static std::vector<AtomicUpdate<depth>> moveable_updates{};
+			moveable_updates.clear();
+			moveable_updates.reserve(unreferenced_nodes_before.size());
+			// extract movables
 			for (const AtomicUpdate<depth> &update : updates) {
-				// skip CHANGE_REF_COUNT as they were already applied in the nodes_before loop
-				if (update.insert_op == InsertOp::CHANGE_REF_COUNT)
+				// skip if it cannot be a movable
+				if (update.insert_op == InsertOp::CHANGE_REF_COUNT
+					or update.insert_op == InsertOp::EXPAND_C_NODE
+					or update.insert_op == InsertOp::INSERT_TWO_KEY_UC_NODE)
 					continue;
 				// check if it is a moveable. then save it and skip to the next iteration
 				if (peak_count_change(update.hash_after)) {
-					auto [changes, after_count_change] = pop_count_change(update.hash_after, count_changes);
-					if (update.insert_op != InsertOp::EXPAND_C_NODE
-						and node_storage.template getNode<depth>(update.hash_after).null() // TODO: that is a workaround. keep track of the nodes in general
-								and not unreferenced_nodes_before.extract(update.hash_before).empty()) {
-						assert(changes);
-						auto [ref, success] = moveable_updates.insert({update,after_count_change});
-						assert(success);
-						// make sure that the hash_after does not stay in count_changes
-					} else {
-						assert(changes);
-						if (update.hash_before.isCompressed())
-							processUpdate<depth, NodeCompression::compressed, false>(update, after_count_change);
-						else
-							processUpdate<depth, NodeCompression::uncompressed, false>(update, after_count_change);
+					auto unref_before = unreferenced_nodes_before.find(update.hash_before);
+					if (unref_before != unreferenced_nodes_before.end()){
+						if (node_storage.template getNode<depth>(update.hash_after).null()){
+							unreferenced_nodes_before.erase(unref_before);
+							auto [changes, after_count_change] = pop_count_change(update.hash_after);
+							AtomicUpdate<depth> &mov_update = moveable_updates.emplace_back(update);
+							mov_update.ref_count = after_count_change;
+						}
 					}
 				}
 			}
 
-			// do moveables
-			for (const auto &[update,after_count_change] : moveable_updates) {
-				if (update.hash_before.isCompressed())
-					processUpdate<depth, NodeCompression::compressed, true>(update, after_count_change);
-				else
-					processUpdate<depth, NodeCompression::uncompressed, true>(update, after_count_change);
+			static std::vector<AtomicUpdate<depth>> unmoveable_updates{};
+			unmoveable_updates.clear();
+			unmoveable_updates.reserve(unreferenced_nodes_before.size());
+			// extract unmovables
+			for (const AtomicUpdate<depth> &update : updates) {
+				// skip if it cannot be a movable
+				if (update.insert_op == InsertOp::CHANGE_REF_COUNT)
+					continue;
+				// check if it is a moveable. then save it and skip to the next iteration
+				auto [changes, after_count_change] = pop_count_change(update.hash_after);
+				if (changes) {
+					AtomicUpdate<depth> &unmov_update = unmoveable_updates.emplace_back(update);
+					unmov_update.ref_count = after_count_change;
+				}
 			}
 
+			// do unmoveables
+			for (const auto &update : unmoveable_updates) {
+				if (update.hash_before.isCompressed())
+					processUpdate<depth, NodeCompression::compressed, false>(update, update.ref_count);
+				else
+					processUpdate<depth, NodeCompression::uncompressed, false>(update, update.ref_count);
+			}
+
+			// do moveables
+			for (const auto &update : moveable_updates) {
+				if (update.hash_before.isCompressed())
+					processUpdate<depth, NodeCompression::compressed, true>(update, update.ref_count);
+				else
+					processUpdate<depth, NodeCompression::uncompressed, true>(update, update.ref_count);
+			}
+
+			// remove remaining unreferenced_nodes_before
 			for (const auto &hash_before : unreferenced_nodes_before) {
 				if (hash_before.isCompressed())
 					removeUnreferencedNode<depth, NodeCompression::compressed>(hash_before);

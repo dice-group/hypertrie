@@ -9,6 +9,7 @@
 #include <Dice/hypertrie/internal/util/CountDownNTuple.hpp>
 
 #include <tsl/hopscotch_set.h>
+#include <tsl/hopscotch_map.h>
 
 namespace hypertrie::internal::node_based {
 
@@ -44,7 +45,7 @@ namespace hypertrie::internal::node_based {
 
 		using PlannedUpdates = util::CountDownNTuple<LevelUpdates_t, update_depth>;
 
-		using LevelRefChanges = std::unordered_map<TaggedNodeHash, long>;
+		using LevelRefChanges = tsl::hopscotch_map<TaggedNodeHash, long>;
 
 		using RefChanges = std::array<LevelRefChanges, update_depth>;
 
@@ -190,23 +191,8 @@ namespace hypertrie::internal::node_based {
 
 			LevelUpdates_t<depth> &updates = getPlannedUpdates<depth>();
 
-			// all nodes used as nodes before.
-			std::unordered_set<TaggedNodeHash> nodes_before{};
-
-			std::unordered_set<TaggedNodeHash> nodes_after{};
-
-			// populate count_changes and nodes_before
-			for (const AtomicUpdate<depth> &update : updates) {
-				if (not update.hash_before.empty()) {
-					nodes_before.insert(update.hash_before);// NodeContainer is not yet materialized
-				}
-				if (not update.hash_after.empty()) {
-					nodes_after.insert(update.hash_after);
-				}
-			}
-
 			// nodes_before that are have ref_count 0 afterwards -> those could be reused/moved for nodes after
-			std::unordered_set<TaggedNodeHash> unreferenced_nodes_before{};
+			tsl::hopscotch_set<TaggedNodeHash> unreferenced_nodes_before{};
 
 			LevelRefChanges new_after_nodes{};
 
@@ -250,8 +236,6 @@ namespace hypertrie::internal::node_based {
 						unreferenced_nodes_before.insert(hash);
 					}
 				} else {
-					assert(nodes_after.count(hash));
-
 					new_after_nodes.insert({hash, count_diff});
 				}
 			}
@@ -288,7 +272,7 @@ namespace hypertrie::internal::node_based {
 			}
 
 			assert(new_after_nodes.empty());
-			
+
 			std::unordered_map<TaggedNodeHash, long> node_before_children_count_diffs{};
 
 			// do unmoveables

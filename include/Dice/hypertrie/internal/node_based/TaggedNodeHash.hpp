@@ -54,19 +54,19 @@ namespace hypertrie::internal::node_based {
 		 */
 		TaggedNodeHash() {}
 
-		TaggedNodeHash(const TaggedNodeHash &other) : thash_(other.thash_) {}
+		TaggedNodeHash(const TaggedNodeHash &other)  noexcept: thash_(other.thash_) {}
 
-		TaggedNodeHash(TaggedNodeHash &&other) = default;
+		TaggedNodeHash(TaggedNodeHash &&other)  noexcept= default;
 
-		TaggedNodeHash &operator=(const TaggedNodeHash &) = default;
-		TaggedNodeHash &operator=(TaggedNodeHash &&) = default;
+		TaggedNodeHash &operator=(const TaggedNodeHash &)  noexcept= default;
+		TaggedNodeHash &operator=(TaggedNodeHash &&)  noexcept= default;
 
 	public:
 		/**
 		 * Checks if hash is tagged as representing a compressed node.
 		 * @return
 		 */
-		[[nodiscard]] inline bool isCompressed() const {
+		[[nodiscard]] inline bool isCompressed()   const noexcept {
 			return thash_bits_[compression_tag_pos];
 		}
 
@@ -74,7 +74,7 @@ namespace hypertrie::internal::node_based {
 		 * Checks if hash is tagged as representing an uncompressed node.
 		 * @return
 		 */
-		[[nodiscard]] inline bool isUncompressed() const {
+		[[nodiscard]] inline bool isUncompressed()   const noexcept{
 			return not thash_bits_[compression_tag_pos];
 		}
 
@@ -92,7 +92,7 @@ namespace hypertrie::internal::node_based {
 		 */
 		template<size_t depth, typename key_part_type, typename value_type>
 		inline auto
-		changeValue(const RawKey<depth, key_part_type> &key, const value_type &old_value, const value_type &new_value) {
+		changeValue(const RawKey<depth, key_part_type> &key, const value_type &old_value, const value_type &new_value)  noexcept {
 			const bool tag = thash_bits_[compression_tag_pos];
 			thash_ = thash_ xor EntryHash<depth, key_part_type, value_type>()({key, old_value}) xor EntryHash<depth, key_part_type, value_type>()({key, new_value});
 			thash_bits_[compression_tag_pos] = tag;
@@ -110,7 +110,7 @@ namespace hypertrie::internal::node_based {
 		 * @return reference to slef
 		 */
 		template<size_t depth, typename key_part_type, typename value_type>
-		inline auto addFirstEntry(const RawKey<depth, key_part_type> &key, const value_type &value) {
+		inline auto addFirstEntry(const RawKey<depth, key_part_type> &key, const value_type &value)  noexcept{
 			thash_ = thash_ xor EntryHash<depth, key_part_type, value_type>()({key, value});
 			thash_bits_[compression_tag_pos] = compressed_tag;
 			return *this;
@@ -126,7 +126,7 @@ namespace hypertrie::internal::node_based {
 		 * @return reference to slef
 		 */
 		template<size_t depth, typename key_part_type, typename value_type>
-		inline auto addEntry(const RawKey<depth, key_part_type> &key, const value_type &value) {
+		inline auto addEntry(const RawKey<depth, key_part_type> &key, const value_type &value) noexcept {
 			thash_ = thash_ xor EntryHash<depth, key_part_type, value_type>()({key, value});
 			thash_bits_[compression_tag_pos] = uncompressed_tag;
 			return *this;
@@ -144,7 +144,7 @@ namespace hypertrie::internal::node_based {
 		 */
 		template<size_t depth, typename key_part_type, typename value_type>
 		inline auto
-		removeEntry(const RawKey<depth, key_part_type> &key, const value_type &value, bool make_compressed) {
+		removeEntry(const RawKey<depth, key_part_type> &key, const value_type &value, bool make_compressed)  noexcept{
 			assert(isUncompressed());
 			thash_ = thash_ xor EntryHash<depth, key_part_type, value_type>()({key, value});
 			thash_bits_[compression_tag_pos] = make_compressed;
@@ -162,7 +162,7 @@ namespace hypertrie::internal::node_based {
 		 */
 		template<size_t depth, typename key_part_type, typename value_type>
 		static auto
-		getCompressedNodeHash(const RawKey<depth, key_part_type> &key, const value_type &value) -> TaggedNodeHash {
+		getCompressedNodeHash(const RawKey<depth, key_part_type> &key, const value_type &value)  noexcept -> TaggedNodeHash {
 			auto hash = getRawEmptyNodeHash<depth>();
 			hash.addFirstEntry(key, value);
 			return hash;
@@ -175,7 +175,7 @@ namespace hypertrie::internal::node_based {
 		 * @return
 		 */
 		template<size_t depth>
-		static auto getRawEmptyNodeHash() -> TaggedNodeHash {
+		static auto getRawEmptyNodeHash()  noexcept -> TaggedNodeHash {
 			auto hash = TaggedNodeHash();
 			hash.thash_ = absl::Hash<pos_type>()(depth);
 			return hash;
@@ -189,7 +189,7 @@ namespace hypertrie::internal::node_based {
 		 * @return
 		 */
 		template<size_t depth>
-		static auto getUncompressedEmptyNodeHash() -> TaggedNodeHash {
+		static auto getUncompressedEmptyNodeHash()  noexcept -> TaggedNodeHash {
 			auto hash = getRawEmptyNodeHash<depth>();
 			hash.thash_bits_[compression_tag_pos] = uncompressed_tag;
 			return hash;
@@ -209,18 +209,18 @@ namespace hypertrie::internal::node_based {
 		template<size_t depth, typename key_part_type, typename V>
 		static auto getTwoEntriesNodeHash(const RawKey<depth, key_part_type> &key, const V &value,
 										  const RawKey<depth, key_part_type> &second_key,
-										  const V &second_value) -> TaggedNodeHash {
+										  const V &second_value)  noexcept -> TaggedNodeHash {
 			auto hash = getUncompressedEmptyNodeHash<depth>();
 			hash.addEntry(key, value);
 			hash.addEntry(second_key, second_value);
 			return hash;
 		}
 
-		bool operator<(const TaggedNodeHash &other) const {
+		bool operator<(const TaggedNodeHash &other) const noexcept {
 			return this->thash_ < other.thash_;
 		}
 
-		bool operator==(const TaggedNodeHash &other) const {
+		bool operator==(const TaggedNodeHash &other) const noexcept {
 			return this->thash_ == other.thash_;
 		}
 
@@ -257,7 +257,7 @@ namespace hypertrie::internal::node_based {
 			return this->thash_bits_;
 		}
 
-		explicit operator std::string() const {
+		explicit operator std::string() const  noexcept {
 			const char compression = (this->isCompressed()) ? 'c' : 'u';
 			return fmt::format("{}_{:#018x}", compression, size_t(this->thash_ & (~size_t(1))));
 		}

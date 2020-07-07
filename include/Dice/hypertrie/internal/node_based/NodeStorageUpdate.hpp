@@ -681,6 +681,63 @@ namespace hypertrie::internal::node_based {
 				this->nodec = nc_after;
 			return node_before_children_count_diff;
 		}
+
+		template<size_t depth, bool reuse_node_before = false>
+		long insertBulkIntoUC(const MultiUpdate<depth> &update, const long after_count_diff) {
+			static constexpr const auto subkey = &tri::template subkey<depth>;
+			// TODO: handle children_count_iff
+			long node_before_children_count_diff = 0;
+
+			UncompressedNodeContainer<depth, tri> nc_before = node_storage.template getUncompressedNode<depth>(update.hash_before);
+			UncompressedNode<depth, tri> &node_before = *nc_before.node();
+
+			UncompressedNodeContainer<depth, tri> nc_after;
+
+			if constexpr (reuse_node_before) {// node before ref_count is zero -> maybe reused
+				// update the node_before with the after_count and value
+
+				for (const size_t pos : iter::range(depth)) {
+					std::unordered_map<key_part_type, std::vector<RawKey<depth - 1>>> children_inserted_keys{};
+					// group the subkeys by the key part at pos
+					for (const RawKey<depth - 1> &key : update.keys)
+						children_inserted_keys[key[pos]].push_back(subkey(key, pos));
+
+					// process the changes to the node and plan the updates to the sub nodes
+					for (auto &[key_part, child_inserted_keys] : children_inserted_keys) {
+						assert(child_inserted_keys.size() > 0);
+						auto [key_part_exists, iter] = node_before.find(pos, key_part);
+
+						if (key_part_exists) {
+							TaggedNodeHash child_hash = iter->second;
+							TaggedNodeHash hash_after;
+							if (child_inserted_keys.size() == 1) {
+								// plan next update
+								AtomicUpdate<depth - 1> child_update{};
+								child_update.key = child_inserted_keys[0];
+								child_update.value = true;
+								child_update.insert_op = InsertOp::EXPAND_C_NODE;
+								child_update.calcHashAfter();
+
+								// safe hash_after for executing the change
+								hash_after = child_update.hash_after;
+								// submit the planned update
+								planUpdate(std::move(child_update), 1);
+							} else {
+								MultiUpdate<depth - 1> child_update(
+										(child_hash.isCompressed()) ? InsertOp::INSERT_MULT_INTO_C : InsertOp::INSERT_MULT_INTO_UC,
+										child_hash);
+								child_update.keys = std::move(child_inserted_keys);
+								// TODO: do not update the hash_after in planUpdate
+								// TODO: go on here
+								planUpdate(std::move(child_update), 1);
+							}
+							// execute changes
+							tri::template deref<key_part_type, TaggedNodeHash>(iter) = hash_after;
+						}
+					}
+				}
+			}
+		}
 	};
 }// namespace hypertrie::internal::node_based
 

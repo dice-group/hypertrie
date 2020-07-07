@@ -342,7 +342,7 @@ namespace hypertrie::internal::node_based {
 					auto node = node_storage.template getUncompressedNode<depth>(hash).node();
 					for (size_t pos : iter::range(depth)) {
 						for (const auto &[_, child_hash] : node->edges(pos)) {
-							planChangeCount<depth -1 >(child_hash, children_count_diff);
+							planChangeCount<depth -1 >(child_hash, -1*children_count_diff);
 						}
 					}
 				}

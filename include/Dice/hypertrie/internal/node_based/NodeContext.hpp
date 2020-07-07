@@ -119,6 +119,18 @@ namespace hypertrie::internal::node_based {
 		}
 
 		/**
+		 * the keys are required to not be in the hypertrie yet!
+		 * @tparam depth
+		 * @param keys
+		 * @return
+		 */
+		template<size_t depth>
+		void bulk_insert(UncompressedNodeContainer<depth, tri> &nodec, std::vector<RawKey<depth>> keys) {
+			NodeStorageUpdate<max_depth, depth, tri> update{this->storage, nodec};
+			update.apply_update(std::move(keys));
+		}
+
+		/**
 		 * Resolves a keypart by a given position
 		 * @tparam depth the depth of the node container
 		 * @param nodec the node container, must be a uncompressed node

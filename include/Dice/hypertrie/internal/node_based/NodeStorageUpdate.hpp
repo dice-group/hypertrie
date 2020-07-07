@@ -41,9 +41,17 @@ namespace hypertrie::internal::node_based {
 		struct AtomicUpdate;
 
 		template<size_t depth>
-		using LevelUpdates_t = std::unordered_set<AtomicUpdate<depth>, absl::Hash<AtomicUpdate<depth>>>;
+		struct MultiUpdate;
 
-		using PlannedUpdates = util::CountDownNTuple<LevelUpdates_t, update_depth>;
+		template<size_t depth>
+		using LevelAtomicUpdates_t = std::unordered_set<AtomicUpdate<depth>, absl::Hash<AtomicUpdate<depth>>>;
+
+		using PlannedAtomicUpdates = util::CountDownNTuple<LevelAtomicUpdates_t, update_depth>;
+
+		template<size_t depth>
+		using LevelMultiUpdates_t = std::unordered_set<MultiUpdate<depth>, absl::Hash<MultiUpdate<depth>>>;
+
+		using PlannedMultiUpdates = util::CountDownNTuple<LevelMultiUpdates_t, update_depth>;
 
 		using LevelRefChanges = tsl::hopscotch_map<TaggedNodeHash, long>;
 
@@ -56,7 +64,10 @@ namespace hypertrie::internal::node_based {
 			INSERT_C_NODE,
 			EXPAND_UC_NODE,
 			EXPAND_C_NODE,
-			REMOVE_FROM_UC
+			REMOVE_FROM_UC,
+			INSERT_MULT_INTO_C,
+			INSERT_MULT_INTO_UC,
+			NEW_MULT_UC
 		};
 
 		template<size_t depth>
@@ -70,9 +81,10 @@ namespace hypertrie::internal::node_based {
 			value_type value{};
 			RawKey<depth> second_key{};
 			value_type second_value{};
+			value_type old_value{};
 
 		public:
-			void calcHashAfter(const value_type &old_value) {
+			void calcHashAfter() {
 				hash_after = hash_before;
 				switch (insert_op) {
 					case InsertOp::CHANGE_VALUE:
@@ -96,6 +108,8 @@ namespace hypertrie::internal::node_based {
 						hash_after.addEntry(key, value);
 						assert(hash_after.isUncompressed());
 						break;
+					default:
+						assert(false);
 				}
 			}
 
@@ -109,9 +123,67 @@ namespace hypertrie::internal::node_based {
 					   std::make_tuple(other.insert_op, other.hash_before, other.key, other.value, other.second_key, other.second_value);
 			};
 
-			template <typename H>
-			friend H AbslHashValue(H h, const AtomicUpdate<depth>& other) {
-				return H::combine(std::move(h), other.hash_before, other.hash_after);
+			template<typename H>
+			friend H AbslHashValue(H h, const AtomicUpdate<depth> &update) {
+				return H::combine(std::move(h), update.hash_before, update.hash_after);
+			}
+		};
+
+		template<size_t depth>
+		struct MultiUpdate {
+
+			MultiUpdate(InsertOp insert_op, TaggedNodeHash hash_before = {}) : insert_op(insert_op), hash_before(hash_before) {
+				if (insert_op == InsertOp::INSERT_MULT_INTO_UC or insert_op == InsertOp::INSERT_MULT_INTO_C)
+					assert(hash_before != TaggedNodeHash{});
+			}
+			static_assert(depth >= 1);
+
+			InsertOp insert_op{};
+			TaggedNodeHash hash_before{};
+			TaggedNodeHash hash_after{};
+			std::vector<RawKey<depth>> keys{};
+
+			void addKey(const RawKey<depth> key) {
+				keys.push_back(key);
+			}
+
+		public:
+			void calcHashAfter() {
+				hash_after = hash_before;
+				switch (insert_op) {
+					case InsertOp::INSERT_MULT_INTO_C:
+						[[fall_through]];
+					case InsertOp::INSERT_MULT_INTO_UC:
+						for (const auto &key : keys)
+							hash_after.addEntry(key, true);
+						break;
+					case InsertOp::NEW_MULT_UC:
+						assert(hash_before.empty());
+						assert(keys.size() > 0);
+
+						hash_after = TaggedNodeHash::getCompressedNodeHash(keys[0], true);
+						if (keys.size() > 1)
+							for (auto key_it = keys.begin() + 1; key_it != keys.end(); ++key_it)
+								hash_after.addEntry(*key_it, true);
+						break;
+					default:
+						assert(false);
+				}
+			}
+
+			bool operator<(const AtomicUpdate<depth> &other) const {
+				return std::make_tuple(this->insert_op, this->hash_before, this->hash_after) <
+					   std::make_tuple(other.insert_op, other.hash_before, other.hash_after);
+			};
+
+			bool operator==(const AtomicUpdate<depth> &other) const {
+				return std::make_tuple(this->insert_op, this->hash_before, this->hash_after) ==
+					   std::make_tuple(other.insert_op, other.hash_before, other.hash_after);
+			};
+
+			template<typename H>
+			friend H AbslHashValue(H h, const MultiUpdate<depth> &update) {
+				return H::combine(std::move(h), update.hash_before, update.hash_after);
 			}
 		};
 
@@ -122,14 +194,16 @@ namespace hypertrie::internal::node_based {
 
 		value_type old_value{};
 
-		PlannedUpdates planned_updates{};
+		PlannedAtomicUpdates planned_atomic_updates{};
+
+		PlannedMultiUpdates planned_multi_updates{};
 
 		RefChanges ref_changes{};
 
 		template<size_t updates_depth>
 		auto getRefChanges()
 				-> LevelRefChanges & {
-			return ref_changes[updates_depth -1];
+			return ref_changes[updates_depth - 1];
 		}
 
 		// extract a change from count_changes
@@ -141,24 +215,50 @@ namespace hypertrie::internal::node_based {
 
 
 		template<size_t updates_depth>
-		auto getPlannedUpdates()
-				-> LevelUpdates_t<updates_depth> & {
-			return std::get<updates_depth - 1>(planned_updates);
+		auto getPlannedAtomicUpdates()
+				-> LevelAtomicUpdates_t<updates_depth> & {
+			return std::get<updates_depth - 1>(planned_atomic_updates);
+		}
+
+		template<size_t updates_depth>
+		auto getPlannedMultiUpdates()
+				-> LevelMultiUpdates_t<updates_depth> & {
+			return std::get<updates_depth - 1>(planned_multi_updates);
 		}
 
 		template<size_t updates_depth>
 		void planUpdate(AtomicUpdate<updates_depth> planned_update, const long count_diff) {
-			auto &planned_updates = getPlannedUpdates<updates_depth>();
-			planned_update.calcHashAfter(this->old_value);
+			auto &planned_updates = getPlannedAtomicUpdates<updates_depth>();
+			planned_update.calcHashAfter();
 			if (not planned_update.hash_before.empty())
-				planChangeCount<updates_depth>(planned_update.hash_before, -1*count_diff);
+				planChangeCount<updates_depth>(planned_update.hash_before, -1 * count_diff);
 			planChangeCount<updates_depth>(planned_update.hash_after, count_diff);
-			planned_updates.insert(planned_update);
+			planned_updates.insert(std::move(planned_update));
+		}
+
+		template<size_t updates_depth>
+		void planUpdate(MultiUpdate<updates_depth> planned_update, const long count_diff) {
+			auto &planned_updates = getPlannedAtomicUpdates<updates_depth>();
+			planned_update.calcHashAfter();
+			if (not planned_update.hash_before.empty())
+				planChangeCount<updates_depth>(planned_update.hash_before, -1 * count_diff);
+			planChangeCount<updates_depth>(planned_update.hash_after, count_diff);
+			planned_updates.insert(std::move(planned_update));
 		}
 
 
 		NodeStorageUpdate(NodeStorage_t<node_storage_depth> &nodeStorage, UncompressedNodeContainer<update_depth, tri> &nodec)
 			: node_storage(nodeStorage), nodec{nodec} {}
+
+		void apply_update(RawKey<update_depth> keys) {
+			assert(keys.size() > 1);
+			MultiUpdate<update_depth> update(InsertOp::INSERT_MULT_INTO_UC, nodec.thash_);
+			update.keys = std::move(keys);
+
+			planUpdate(std::move(update), 1);
+
+			apply_update_rek<update_depth>();
+		}
 
 		void apply_update(const RawKey<update_depth> &key, const value_type value, const value_type old_value) {
 			if (value == old_value)
@@ -178,6 +278,7 @@ namespace hypertrie::internal::node_based {
 				update.insert_op = InsertOp::REMOVE_FROM_UC;
 				throw std::logic_error{"deleting values from hypertrie is not yet implemented. "};
 			} else if (value_changes) {
+				update.old_value = this->old_value;
 				update.insert_op = InsertOp::CHANGE_VALUE;
 			} else {// new entry
 				update.insert_op = InsertOp::EXPAND_UC_NODE;
@@ -189,7 +290,7 @@ namespace hypertrie::internal::node_based {
 		template<size_t depth>
 		void apply_update_rek() {
 
-			LevelUpdates_t<depth> &updates = getPlannedUpdates<depth>();
+			LevelAtomicUpdates_t<depth> &atomic_updates = getPlannedAtomicUpdates<depth>();
 
 			// nodes_before that are have ref_count 0 afterwards -> those could be reused/moved for nodes after
 			tsl::hopscotch_set<TaggedNodeHash> unreferenced_nodes_before{};
@@ -198,9 +299,9 @@ namespace hypertrie::internal::node_based {
 
 			// extract a change from count_changes
 			auto pop_after_count_change = [&](TaggedNodeHash hash) -> std::tuple<bool, long> {
-			  if (auto changed = new_after_nodes.find(hash); changed != new_after_nodes.end()) {
-				  auto diff = changed->second;
-				  new_after_nodes.erase(changed);
+				if (auto changed = new_after_nodes.find(hash); changed != new_after_nodes.end()) {
+					auto diff = changed->second;
+					new_after_nodes.erase(changed);
 				  return {diff != 0, diff};
 			  } else
 				  return {false, 0};
@@ -242,9 +343,9 @@ namespace hypertrie::internal::node_based {
 
 			static std::vector<std::pair<AtomicUpdate<depth>, long>> moveable_updates{};
 			moveable_updates.clear();
-			moveable_updates.reserve(updates.size());
+			moveable_updates.reserve(atomic_updates.size());
 			// extract movables
-			for (const AtomicUpdate<depth> &update : updates) {
+			for (const AtomicUpdate<depth> &update : atomic_updates) {
 				// skip if it cannot be a movable
 				if (update.insert_op == InsertOp::EXPAND_C_NODE or update.insert_op == InsertOp::INSERT_TWO_KEY_UC_NODE)
 					continue;
@@ -261,9 +362,9 @@ namespace hypertrie::internal::node_based {
 
 			static std::vector<std::pair<AtomicUpdate<depth>, long>> unmoveable_updates{};
 			unmoveable_updates.clear();
-			unmoveable_updates.reserve(updates.size());
+			unmoveable_updates.reserve(atomic_updates.size());
 			// extract unmovables
-			for (const AtomicUpdate<depth> &update : updates) {
+			for (const AtomicUpdate<depth> &update : atomic_updates) {
 				// check if it is a moveable. then save it and skip to the next iteration
 				auto [changes, after_count_change] = pop_after_count_change(update.hash_after);
 				if (changes) {
@@ -405,6 +506,7 @@ namespace hypertrie::internal::node_based {
 						auto key_part = update.key[pos];
 
 						AtomicUpdate<depth - 1> child_update{};
+						child_update.old_value = old_value;
 						child_update.insert_op = InsertOp::CHANGE_VALUE;
 						child_update.value = update.value;
 						child_update.key = sub_key;
@@ -438,6 +540,7 @@ namespace hypertrie::internal::node_based {
 							auto key_part = update.key[pos];
 
 							AtomicUpdate<depth - 1> child_update{};
+							child_update.old_value = old_value;
 							child_update.insert_op = InsertOp::CHANGE_VALUE;
 							child_update.value = update.value;
 							child_update.key = sub_key;

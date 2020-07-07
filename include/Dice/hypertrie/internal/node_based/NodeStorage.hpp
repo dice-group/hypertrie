@@ -32,8 +32,7 @@ namespace hypertrie::internal::node_based {
 
 		template<NodeCompression compression>
 		static Node<depth, compression, tri> &deref(typename map_type<TaggedNodeHash, Node<depth, compression, tri>>::iterator &map_it) {
-//			return *tri::template deref<TaggedNodeHash, Node<depth, compression, tri>>(map_it);
-			 return *map_it.value();
+			return *tri::template deref<TaggedNodeHash, Node<depth, compression, tri>*>(map_it);
 		}
 
 		explicit operator std::string() const {

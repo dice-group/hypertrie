@@ -35,7 +35,7 @@ namespace hypertrie::tests::node_based::node_context::randomized {
 		auto tt = TestTensor<depth, tr>::getPrimary();
 
 
-		for (size_t count : iter::range(5,10))
+		for (size_t count : iter::range(3,10))
 			SECTION("insert {} key "_format(count)) {
 				for (const auto i : iter::range(10)) {
 					SECTION("{}"_format(i)) {
@@ -56,6 +56,7 @@ namespace hypertrie::tests::node_based::node_context::randomized {
 
 						// bulk insert keys
 						context.template bulk_insert<depth>(nc, keys);
+						WARN("\n\n\nresulting hypertrie \n{}\n\n"_format((std::string) context.storage));
 						// check if they were inserted correctly
 						tt.checkContext(context);
 					}

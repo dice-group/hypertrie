@@ -37,6 +37,11 @@ namespace hypertrie::internal::node_based {
 		using NodeStorage_t = NodeStorage<depth, tri>;
 
 	private:
+		static const constexpr long INC_COUNT_DIFF_AFTER = 1;
+		static const constexpr long DEC_COUNT_DIFF_AFTER = -1;
+		static const constexpr long INC_COUNT_DIFF_BEFORE = -1;
+		static const constexpr long DEC_COUNT_DIFF_BEFORE = 1;
+
 		template<size_t depth>
 		struct AtomicUpdate;
 
@@ -253,7 +258,7 @@ namespace hypertrie::internal::node_based {
 			: node_storage(nodeStorage), nodec{nodec} {}
 
 		void apply_update(RawKey<update_depth> keys) {
-			assert(keys.size() > 1);
+			assert(keys.size() > 2);
 			MultiUpdate<update_depth> update(InsertOp::INSERT_MULT_INTO_UC, nodec.thash_);
 			update.keys = std::move(keys);
 
@@ -684,12 +689,101 @@ namespace hypertrie::internal::node_based {
 			return node_before_children_count_diff;
 		}
 
+		template<size_t depth>
+		void newUncompressedBulk(const MultiUpdate<depth> &update, const long after_count_diff) {
+			static constexpr const auto subkey = &tri::template subkey<depth>;
+
+			// move or copy the node from old_hash to new_hash
+			auto &storage = node_storage.template getNodeStorage<depth, NodeCompression::uncompressed>();
+			// make sure everything is set correctly
+			assert(update.hash_before.emtpy());
+			assert(storage.find(update.hash_after) == storage.end());
+
+			// create node and insert it into the storage
+			UncompressedNode<depth, tri> * const node = new UncompressedNode<depth, tri>{after_count_diff};
+			storage.insert({update.hash_after, node});
+
+			// populate the new node
+			for (const size_t pos : iter::range(depth)) {
+				// # group the subkeys by the key part at pos
+
+				// maps key parts to the keys to be inserted for that child
+				std::unordered_map<key_part_type, std::vector<RawKey<depth - 1>>> children_inserted_keys{};
+
+				// populate children_inserted_keys
+				for (const RawKey<depth - 1> &key : update.keys)
+					children_inserted_keys[key[pos]].push_back(subkey(key, pos));
+
+				// process the changes to the node at pos and plan the updates to the sub nodes
+				for (auto &[key_part, child_inserted_keys] : children_inserted_keys) {
+					assert(child_inserted_keys.size() > 0);
+					auto [key_part_exists, iter] = node->find(pos, key_part);
+
+					TaggedNodeHash hash_after;
+					// plan the changes and calculate hash-after
+					const TaggedNodeHash child_hash = (key_part_exists) ? iter->second : TaggedNodeHash{};
+					// EXPAND_C_NODE (insert only one key)
+					if (child_inserted_keys.size() == 1) {
+						// plan next update
+						AtomicUpdate<depth - 1> child_update{};
+						child_update.key = child_inserted_keys[0];
+						child_update.value = true;
+						child_update.insert_op = InsertOp::INSERT_C_NODE;
+						child_update.calcHashAfter();
+
+						// safe hash_after for executing the change
+						hash_after = child_update.hash_after;
+						// submit the planned update
+						planUpdate(std::move(child_update), 1);
+					} else if(child_inserted_keys.size() == 2) {
+							AtomicUpdate<depth - 1> child_update{};
+							child_update.key = child_inserted_keys[0];
+							child_update.value = true;
+							child_update.key = child_inserted_keys[1];
+							child_update.value = true;
+							child_update.insert_op = InsertOp::INSERT_TWO_KEY_UC_NODE;
+							child_update.calcHashAfter();
+
+							// safe hash_after for executing the change
+							hash_after = child_update.hash_after;
+
+							planUpdate(std::move(child_update), 1);
+						}
+					else {
+
+						MultiUpdate<depth - 1> child_update(InsertOp::NEW_MULT_UC, child_hash);
+						child_update.keys = std::move(child_inserted_keys);
+
+						child_update.calcHashAfter();
+
+						// safe hash_after for executing the change
+						hash_after = child_update.hash_after;
+						planUpdate(std::move(child_update), 1);
+					}
+					// execute changes
+					node->edges(pos)[key_part] = hash_after;
+				}
+			}
+		}
+
+		template<size_t depth>
+		void insertBulkIntoC(MultiUpdate<depth> &update, const long after_count_diff) {
+			auto &storage = node_storage.template getNodeStorage<depth, NodeCompression::compressed>();
+			assert(storage.find(update.hash_before) == storage.end());
+
+			CompressedNode<depth, tri> const *const node_before = storage[update.hash_before];
+
+			update.addKey(node_before->key());
+			update.insert_op = InsertOp::NEW_MULT_UC;
+			update.hash_before = {};
+			newUncompressedBulk<depth>(update, after_count_diff);
+		}
+
 		template<size_t depth, bool reuse_node_before = false>
 		long insertBulkIntoUC(const MultiUpdate<depth> &update, const long after_count_diff) {
 			static constexpr const auto subkey = &tri::template subkey<depth>;
-			// TODO: handle children_count_iff
-			const long node_before_children_count_diff  =
-					(not reuse_node_before and depth > 1) ? -1 :  0;
+			const long node_before_children_count_diff =
+					(not reuse_node_before and depth > 1) ? INC_COUNT_DIFF_BEFORE : 0;
 
 			// move or copy the node from old_hash to new_hash
 			auto &storage = node_storage.template getNodeStorage<depth, NodeCompression::uncompressed>();
@@ -723,13 +817,14 @@ namespace hypertrie::internal::node_based {
 					assert(child_inserted_keys.size() > 0);
 					auto [key_part_exists, iter] = node->find(pos, key_part);
 
-					TaggedNodeHash hash_after;
+					TaggedNodeHash child_hash_after;
 					// plan the changes and calculate hash-after
-					const TaggedNodeHash child_hash = (key_part_exists) ? iter->second : TaggedNodeHash{};
+					const TaggedNodeHash child_hash_before = (key_part_exists) ? iter->second : TaggedNodeHash{};
 					// EXPAND_C_NODE (insert only one key)
 					if (child_inserted_keys.size() == 1) {
 						// plan next update
 						AtomicUpdate<depth - 1> child_update{};
+						child_update.hash_before = child_hash_before;
 						child_update.key = child_inserted_keys[0];
 						child_update.value = true;
 						if (key_part_exists)
@@ -738,8 +833,8 @@ namespace hypertrie::internal::node_based {
 							child_update.insert_op = InsertOp::INSERT_C_NODE;
 						child_update.calcHashAfter();
 
-						// safe hash_after for executing the change
-						hash_after = child_update.hash_after;
+						// safe child_hash_after for executing the change
+						child_hash_after = child_update.hash_after;
 						// submit the planned update
 						planUpdate(std::move(child_update), 1);
 					} else {// INSERT_MULT_INTO_UC (insert multiple keys)
@@ -752,8 +847,8 @@ namespace hypertrie::internal::node_based {
 							child_update.insert_op = InsertOp::INSERT_TWO_KEY_UC_NODE;
 							child_update.calcHashAfter();
 
-							// safe hash_after for executing the change
-							hash_after = child_update.hash_after;
+							// safe child_hash_after for executing the change
+							child_hash_after = child_update.hash_after;
 
 							planUpdate(std::move(child_update), 1);
 						} else {
@@ -761,28 +856,30 @@ namespace hypertrie::internal::node_based {
 							MultiUpdate<depth - 1> child_update(
 									[&]() -> InsertOp {
 										if (key_part_exists)
-											if (child_hash.isCompressed())
+											if (child_hash_before.isCompressed())
 												return InsertOp::INSERT_MULT_INTO_C;
 											else
 												return InsertOp::INSERT_MULT_INTO_UC;
 										else
 											return InsertOp::NEW_MULT_UC;
 									}(),
-									child_hash);
+									child_hash_before);
+							if (key_part_exists)
+								child_update.hash_before = child_hash_before;
 							child_update.keys = std::move(child_inserted_keys);
 
 							child_update.calcHashAfter();
 
-							// safe hash_after for executing the change
-							hash_after = child_update.hash_after;
+							// safe child_hash_after for executing the change
+							child_hash_after = child_update.hash_after;
 							planUpdate(std::move(child_update), 1);
 						}
 					}
 					// execute changes
 					if (key_part_exists)
-						tri::template deref<key_part_type, TaggedNodeHash>(iter) = hash_after;
+						tri::template deref<key_part_type, TaggedNodeHash>(iter) = child_hash_after;
 					else
-						node->edges(pos)[key_part] = hash_after;
+						node->edges(pos)[key_part] = child_hash_after;
 				}
 			}
 			return node_before_children_count_diff;

@@ -551,7 +551,7 @@ namespace hypertrie::internal::node_based {
 						node_before_children_count_diff = insertBulkIntoUC<depth, reuse_node_before>(update, after_count_diff);
 					break;
 				case InsertOp::INSERT_MULT_INTO_C:
-					assert(compression == NodeCompression::uncompressed);
+					assert(compression == NodeCompression::compressed);
 					if constexpr (compression == NodeCompression::compressed)
 						insertBulkIntoC<depth>(update, after_count_diff);
 					break;
@@ -863,7 +863,8 @@ namespace hypertrie::internal::node_based {
 		template<size_t depth>
 		void insertBulkIntoC(MultiUpdate<depth> &update, const long after_count_diff) {
 			auto &storage = node_storage.template getNodeStorage<depth, NodeCompression::compressed>();
-			assert(storage.find(update.hash_before) == storage.end());
+			assert(storage.find(update.hash_before) != storage.end());
+			assert(storage.find(update.hash_after) == storage.end());
 
 			CompressedNode<depth, tri> const *const node_before = storage[update.hash_before];
 
@@ -931,10 +932,14 @@ namespace hypertrie::internal::node_based {
 								child_update.hash_before = child_hash_before;
 								child_update.key = child_inserted_keys[0];
 							child_update.value = true;
-							if (key_part_exists)
-								child_update.insert_op = InsertOp::EXPAND_C_NODE;
-							else
+							if (key_part_exists){
+								if (child_hash_before.isCompressed())
+									child_update.insert_op = InsertOp::EXPAND_C_NODE;
+								else
+									child_update.insert_op = InsertOp::EXPAND_UC_NODE;
+							} else{
 								child_update.insert_op = InsertOp::INSERT_C_NODE;
+							}
 							child_update.calcHashAfter();
 
 							// safe child_hash_after for executing the change
@@ -987,8 +992,12 @@ namespace hypertrie::internal::node_based {
 						}
 					}
 				}
+				if constexpr (depth == update_depth)
+					this->nodec.thash_ = update.hash_after;
+
 				return node_before_children_count_diff;
 			}
+
 		}
 
 

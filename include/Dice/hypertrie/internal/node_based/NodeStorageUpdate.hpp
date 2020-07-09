@@ -789,6 +789,9 @@ namespace hypertrie::internal::node_based {
 				UncompressedNode<depth, tri> *const node = new UncompressedNode<depth, tri>{after_count_diff};
 				storage.insert({update.hash_after, node});
 
+				if constexpr (depth > 1)
+					node->size_ = update.keys.size();
+
 				// populate the new node
 				for (const size_t pos : iter::range(depth)) {
 					if constexpr (depth == 1) {
@@ -895,6 +898,8 @@ namespace hypertrie::internal::node_based {
 
 				// update the node count
 				node->ref_count() += after_count_diff;
+				if constexpr (depth > 1)
+					node->size_ += update.keys.size();
 
 				// update the node (new_hash)
 				for (const size_t pos : iter::range(depth)) {

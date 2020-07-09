@@ -256,9 +256,9 @@ namespace hypertrie::internal::node_based {
 	private:
 		static constexpr const auto subkey = &tri::template subkey<depth>;
 		static constexpr const auto deref = &tri::template deref<typename ChildrenType::key_type, typename ChildrenType::mapped_type>;
-		size_t size_ = 0;
-
 	public:
+
+		size_t size_ = 0;
 		Node(size_t ref_count = 0) : ReferenceCounted(ref_count) {}
 
 		Node(const RawKey &key, value_type value, const RawKey &second_key, value_type second_value,

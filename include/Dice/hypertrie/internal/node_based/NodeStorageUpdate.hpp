@@ -418,9 +418,10 @@ namespace hypertrie::internal::node_based {
 
 			// do unmoveables
 			for (auto &[update, count_change] : unmoveable_multi_updates) {
+				assert (count_change > 0);
 				long node_before_children_count_diff;
 				if (update.hash_before.isCompressed())
-					node_before_children_count_diff = processUpdate<depth, NodeCompression::compressed, false>(update, count_change);
+					node_before_children_count_diff = processUpdate<depth, NodeCompression::compressed, false>(update, (size_t)count_change);
 				else
 					node_before_children_count_diff = processUpdate<depth, NodeCompression::uncompressed, false>(update, count_change);
 
@@ -430,11 +431,12 @@ namespace hypertrie::internal::node_based {
 
 			// do unmoveables
 			for (const auto &[update, count_change] : unmoveable_atomic_updates) {
+				assert (count_change > 0);
 				long node_before_children_count_diff;
 				if (update.hash_before.isCompressed())
-					node_before_children_count_diff = processUpdate<depth, NodeCompression::compressed, false>(update, count_change);
+					node_before_children_count_diff = processUpdate<depth, NodeCompression::compressed, false>(update, (size_t)count_change);
 				else
-					node_before_children_count_diff = processUpdate<depth, NodeCompression::uncompressed, false>(update, count_change);
+					node_before_children_count_diff = processUpdate<depth, NodeCompression::uncompressed, false>(update, (size_t)count_change);
 
 				if (node_before_children_count_diff != 0)
 					node_before_children_count_diffs[update.hash_before] += node_before_children_count_diff;
@@ -503,7 +505,7 @@ namespace hypertrie::internal::node_based {
 		}
 
 		template<size_t depth, NodeCompression compression, bool reuse_node_before = false>
-		long processUpdate(const AtomicUpdate<depth> &update, const long after_count_diff) {
+		long processUpdate(const AtomicUpdate<depth> &update, const size_t after_count_diff) {
 			auto nc_after = node_storage.template getNode<depth>(update.hash_after);
 			assert(nc_after.null());
 
@@ -540,7 +542,7 @@ namespace hypertrie::internal::node_based {
 		}
 
 		template<size_t depth, NodeCompression compression, bool reuse_node_before = false>
-		long processUpdate(MultiUpdate<depth> &update, const long after_count_diff) {
+		long processUpdate(MultiUpdate<depth> &update, const size_t after_count_diff) {
 			auto nc_after = node_storage.template getNode<depth>(update.hash_after);
 			assert(nc_after.null());
 
@@ -567,14 +569,14 @@ namespace hypertrie::internal::node_based {
 		}
 
 		template<size_t depth>
-		void insertCompressedNode(const AtomicUpdate<depth> &update, const long after_count_diff) {
+		void insertCompressedNode(const AtomicUpdate<depth> &update, const size_t after_count_diff) {
 
 			node_storage.template newCompressedNode<depth>(
 					update.key, update.value, after_count_diff, update.hash_after);
 		}
 
 		template<size_t depth, NodeCompression compression, bool reuse_node_before = false>
-		long changeValue(const AtomicUpdate<depth> &update, const long after_count_diff) {
+		long changeValue(const AtomicUpdate<depth> &update, const size_t after_count_diff) {
 			long node_before_children_count_diff = 0;
 			SpecificNodeContainer<depth, compression, tri> nc_before = node_storage.template getNode<depth, compression>(update.hash_before);
 			assert(not nc_before.null());
@@ -653,7 +655,7 @@ namespace hypertrie::internal::node_based {
 		}
 
 		template<size_t depth>
-		void insertTwoValueUncompressed(AtomicUpdate<depth> update, const long after_count_diff) {
+		void insertTwoValueUncompressed(AtomicUpdate<depth> update, const size_t after_count_diff) {
 			if (update.insert_op == InsertOp::EXPAND_C_NODE){
 				auto *node_before = node_storage.template getCompressedNode<depth>(update.hash_before).node();
 				update.second_key = node_before->key();
@@ -698,7 +700,7 @@ namespace hypertrie::internal::node_based {
 		}
 
 		template<size_t depth, bool reuse_node_before = false>
-		long insertIntoUncompressed(const AtomicUpdate<depth> &update, const long after_count_diff) {
+		long insertIntoUncompressed(const AtomicUpdate<depth> &update, const size_t after_count_diff) {
 			long node_before_children_count_diff = 0;
 
 			UncompressedNodeContainer<depth, tri> nc_before = node_storage.template getUncompressedNode<depth>(update.hash_before);
@@ -772,7 +774,7 @@ namespace hypertrie::internal::node_based {
 		}
 
 		template<size_t depth>
-		void newUncompressedBulk(const MultiUpdate<depth> &update, const long after_count_diff) {
+		void newUncompressedBulk(const MultiUpdate<depth> &update, const size_t after_count_diff) {
 			// TODO: implement for valued
 			if constexpr (not tri::is_bool_valued)
 				return;
@@ -786,7 +788,7 @@ namespace hypertrie::internal::node_based {
 				assert(storage.find(update.hash_after) == storage.end());
 
 				// create node and insert it into the storage
-				UncompressedNode<depth, tri> *const node = new UncompressedNode<depth, tri>{after_count_diff};
+				UncompressedNode<depth, tri> *const node = new UncompressedNode<depth, tri>{(size_t) after_count_diff};
 				storage.insert({update.hash_after, node});
 
 				if constexpr (depth > 1)
@@ -963,16 +965,17 @@ namespace hypertrie::internal::node_based {
 									planUpdate(std::move(child_update), 1);
 								} else {
 									// TODO: make that more readable
+									InsertOp insert_op;
+
+									if (key_part_exists)
+										if (child_hash_before.isCompressed())
+											insert_op = InsertOp::INSERT_MULT_INTO_C;
+										else
+											insert_op = InsertOp::INSERT_MULT_INTO_UC;
+									else
+										insert_op = InsertOp::NEW_MULT_UC;
 									MultiUpdate<depth - 1> child_update(
-											[&]() -> InsertOp {
-												if (key_part_exists)
-													if (child_hash_before.isCompressed())
-														return InsertOp::INSERT_MULT_INTO_C;
-													else
-														return InsertOp::INSERT_MULT_INTO_UC;
-												else
-													return InsertOp::NEW_MULT_UC;
-											}(),
+											insert_op,
 											child_hash_before);
 									if (key_part_exists)
 										child_update.hash_before = child_hash_before;

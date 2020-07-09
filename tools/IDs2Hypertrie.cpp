@@ -8,7 +8,9 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
 
+#include <absl/hash/hash.h>
 #include <fmt/format.h>
+#include <tsl/hopscotch_set.h>
 
 
 using PhysicalMem = uint32_t;
@@ -76,26 +78,39 @@ int main(int argc, char *argv[]) {
 	unsigned int _1mios = 0;
 	auto start = steady_clock::now();
 	auto start_part = steady_clock::now();
-	while (getline(file, line)) {
-		++count;
-		++total;
-		using boost::lexical_cast;
-		std::vector<std::string> id_triple;
-		// std::cout << line << std::endl;
-		boost::algorithm::split(id_triple, line, boost::algorithm::is_any_of(","));
+	{
+		tsl::hopscotch_set<Key, absl::Hash<Key>> next_entries{};
+		next_entries.reserve(1'000'000);
+		while (getline(file, line)) {
+			++count;
+			++total;
+			using boost::lexical_cast;
+			std::vector<std::string> id_triple;
+			// std::cout << line << std::endl;
+			boost::algorithm::split(id_triple, line, boost::algorithm::is_any_of(","));
+			//		std::cout << count << " #    # " << line << std::endl;
 
-		context.template set<depth>(hypertrie, Key{lexical_cast<key_part_type>(id_triple[0]), lexical_cast<key_part_type>(id_triple[1]), lexical_cast<key_part_type>(id_triple[2])}, true);
+			Key key{lexical_cast<key_part_type>(id_triple[0]), lexical_cast<key_part_type>(id_triple[1]), lexical_cast<key_part_type>(id_triple[2])};
+			if (not context.template get(hypertrie, key))
+				next_entries.insert(std::move(key));
 
-		if (count == 1'000'000) {
-			count = 0;
-			++_1mios;
-			auto short_duration = steady_clock::now() - start_part;
-			start_part = steady_clock::now();
-			std::cerr << "{:d} mio triples processed."_format(_1mios) <<                                                                                           //
-					"\ttook: {:d}.{:04d} s."_format(duration_cast<seconds>(short_duration).count(), (duration_cast<milliseconds>(short_duration) % 1000).count()) <<//
-					"\tdistinct triples: {}"_format(hypertrie.node()->size()) <<                                                                                    //
-					"\ttriple/GB: {}"_format(long(hypertrie.node()->size() / (double(get_memory_usage()) / (1024 * 1024)))) <<                                            //
-					"\tkB/triple: {:.4f}"_format(double(get_memory_usage()) / hypertrie.node()->size()) << std::endl;
+			if (count == 1'000'000) {
+				std::vector<Key> keys(next_entries.size());
+				for (auto [i, key] : iter::enumerate(next_entries))
+					keys[i] = std::move(key);
+				next_entries.clear();
+				context.template bulk_insert(hypertrie, std::move(keys));
+
+				count = 0;
+				++_1mios;
+				auto short_duration = steady_clock::now() - start_part;
+				start_part = steady_clock::now();
+				std::cerr << "{:d} mio triples processed."_format(_1mios) <<                                                                                            //
+						"\ttook: {:d}.{:04d} s."_format(duration_cast<seconds>(short_duration).count(), (duration_cast<milliseconds>(short_duration) % 1000).count()) <<//
+						"\tdistinct triples: {}"_format(hypertrie.node()->size()) <<                                                                                    //
+						"\ttriple/GB: {}"_format(long(hypertrie.node()->size() / (double(get_memory_usage()) / (1024 * 1024)))) <<                                      //
+						"\tkB/triple: {:.4f}"_format(double(get_memory_usage()) / hypertrie.node()->size()) << std::endl;
+			}
 		}
 	}
 	auto end = steady_clock::now();

@@ -829,8 +829,8 @@ namespace hypertrie::internal::node_based {
 								AtomicUpdate<depth - 1> child_update{};
 								child_update.key = child_inserted_keys[0];
 								child_update.value = true;
-								child_update.key = child_inserted_keys[1];
-								child_update.value = true;
+								child_update.second_key = child_inserted_keys[1];
+								child_update.second_value = true;
 								child_update.insert_op = InsertOp::INSERT_TWO_KEY_UC_NODE;
 								child_update.calcHashAfter();
 
@@ -941,8 +941,8 @@ namespace hypertrie::internal::node_based {
 								AtomicUpdate<depth - 1> child_update{};
 								child_update.key = child_inserted_keys[0];
 								child_update.value = true;
-								child_update.key = child_inserted_keys[1];
-								child_update.value = true;
+								child_update.second_key = child_inserted_keys[1];
+								child_update.second_value = true;
 								child_update.insert_op = InsertOp::INSERT_TWO_KEY_UC_NODE;
 								child_update.calcHashAfter();
 

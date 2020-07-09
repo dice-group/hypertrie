@@ -138,6 +138,12 @@ namespace hypertrie::tests::node_based::node_context {
 						{0, 0, 8},
 						{1, 1, 5},
 						{1, 4, 1}
+				},
+				{
+						{0, 3, 3},
+						{4, 1, 9},
+						{5, 3, 9},
+						{8, 7, 9}
 				}
 		};
 
@@ -152,6 +158,7 @@ namespace hypertrie::tests::node_based::node_context {
 				// insert entries into test tensor
 				for (auto &key : entries) {
 					tt.set(key, true);
+//					context.template set(nc, key, true);
 				}
 
 				// bulk insert keys

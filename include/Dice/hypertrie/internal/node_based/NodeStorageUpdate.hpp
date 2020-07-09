@@ -58,7 +58,7 @@ namespace hypertrie::internal::node_based {
 
 		using PlannedMultiUpdates = util::CountDownNTuple<LevelMultiUpdates_t, update_depth>;
 
-		using LevelRefChanges = tsl::hopscotch_map<TaggedNodeHash, long>;
+		using LevelRefChanges = std::unordered_map<TaggedNodeHash, long>;
 
 		using RefChanges = std::array<LevelRefChanges, update_depth>;
 
@@ -932,64 +932,64 @@ namespace hypertrie::internal::node_based {
 								AtomicUpdate<depth - 1> child_update{};
 								child_update.hash_before = child_hash_before;
 								child_update.key = child_inserted_keys[0];
-							child_update.value = true;
-							if (key_part_exists){
-								if (child_hash_before.isCompressed())
-									child_update.insert_op = InsertOp::EXPAND_C_NODE;
-								else
-									child_update.insert_op = InsertOp::EXPAND_UC_NODE;
-							} else{
-								child_update.insert_op = InsertOp::INSERT_C_NODE;
-							}
-							child_update.calcHashAfter();
-
-							// safe child_hash_after for executing the change
-							child_hash_after = child_update.hash_after;
-							// submit the planned update
-							planUpdate(std::move(child_update), 1);
-						} else {// INSERT_MULT_INTO_UC (insert multiple keys)
-							if (not key_part_exists and child_inserted_keys.size() == 2) {
-								AtomicUpdate<depth - 1> child_update{};
-								child_update.key = child_inserted_keys[0];
 								child_update.value = true;
-								child_update.second_key = child_inserted_keys[1];
-								child_update.second_value = true;
-								child_update.insert_op = InsertOp::INSERT_TWO_KEY_UC_NODE;
+								if (key_part_exists) {
+									if (child_hash_before.isCompressed())
+										child_update.insert_op = InsertOp::EXPAND_C_NODE;
+									else
+										child_update.insert_op = InsertOp::EXPAND_UC_NODE;
+								} else {
+									child_update.insert_op = InsertOp::INSERT_C_NODE;
+								}
 								child_update.calcHashAfter();
 
 								// safe child_hash_after for executing the change
 								child_hash_after = child_update.hash_after;
-
+								// submit the planned update
 								planUpdate(std::move(child_update), 1);
-							} else {
+							} else {// INSERT_MULT_INTO_UC (insert multiple keys)
+								if (not key_part_exists and child_inserted_keys.size() == 2) {
+									AtomicUpdate<depth - 1> child_update{};
+									child_update.key = child_inserted_keys[0];
+									child_update.value = true;
+									child_update.second_key = child_inserted_keys[1];
+									child_update.second_value = true;
+									child_update.insert_op = InsertOp::INSERT_TWO_KEY_UC_NODE;
+									child_update.calcHashAfter();
 
-								MultiUpdate<depth - 1> child_update(
-										[&]() -> InsertOp {
-											if (key_part_exists)
-												if (child_hash_before.isCompressed())
-													return InsertOp::INSERT_MULT_INTO_C;
+									// safe child_hash_after for executing the change
+									child_hash_after = child_update.hash_after;
+
+									planUpdate(std::move(child_update), 1);
+								} else {
+									// TODO: make that more readable
+									MultiUpdate<depth - 1> child_update(
+											[&]() -> InsertOp {
+												if (key_part_exists)
+													if (child_hash_before.isCompressed())
+														return InsertOp::INSERT_MULT_INTO_C;
+													else
+														return InsertOp::INSERT_MULT_INTO_UC;
 												else
-													return InsertOp::INSERT_MULT_INTO_UC;
-											else
-												return InsertOp::NEW_MULT_UC;
-										}(),
-										child_hash_before);
-								if (key_part_exists)
-									child_update.hash_before = child_hash_before;
-								child_update.keys = std::move(child_inserted_keys);
+													return InsertOp::NEW_MULT_UC;
+											}(),
+											child_hash_before);
+									if (key_part_exists)
+										child_update.hash_before = child_hash_before;
+									child_update.keys = std::move(child_inserted_keys);
 
-								child_update.calcHashAfter();
+									child_update.calcHashAfter();
 
-								// safe child_hash_after for executing the change
-								child_hash_after = child_update.hash_after;
-								planUpdate(std::move(child_update), 1);
+									// safe child_hash_after for executing the change
+									child_hash_after = child_update.hash_after;
+									planUpdate(std::move(child_update), 1);
+								}
 							}
-						}
-						// execute changes
-						if (key_part_exists)
-							tri::template deref<key_part_type, TaggedNodeHash>(iter) = child_hash_after;
-						else
-							node->edges(pos)[key_part] = child_hash_after;
+							// execute changes
+							if (key_part_exists)
+								tri::template deref<key_part_type, TaggedNodeHash>(iter) = child_hash_after;
+							else
+								node->edges(pos)[key_part] = child_hash_after;
 						}
 					}
 				}

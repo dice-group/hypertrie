@@ -893,6 +893,7 @@ namespace hypertrie::internal::node_based {
 					storage.erase(node_it);
 				} else {
 					node = new UncompressedNode<depth, tri>{*node};
+					node->ref_count() = 0;
 				}
 				assert(storage.find(update.hash_after) == storage.end());
 				storage[update.hash_after] = node;

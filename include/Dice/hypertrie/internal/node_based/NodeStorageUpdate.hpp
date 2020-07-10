@@ -126,6 +126,14 @@ namespace hypertrie::internal::node_based {
 		template<size_t depth>
 		using Entry = std::conditional_t <(tri::is_bool_valued), RawKey<depth>, NonBoolEntry<depth>>;
 
+		template<size_t depth>
+		static auto make_Entry(RawKey<depth> key, const value_type value = value_type(1)) -> Entry<depth> {
+			if constexpr (tri::is_bool_valued)
+				return {key};
+			else
+				return {key, value};
+		}
+
 
 		enum struct InsertOp : unsigned int {
 			NONE = 0,
@@ -171,8 +179,14 @@ namespace hypertrie::internal::node_based {
 
 			const std::vector<Entry<depth>> &entries() const noexcept { return this->entries_;}
 
+
+
 			void addEntry(Entry<depth> entry) noexcept {
 				entries_.push_back(entry);
+			}
+
+			void addEntry(RawKey<depth> key, const value_type  value) noexcept {
+				entries_.push_back(make_Entry(key, value));
 			}
 
 			void addKey(RawKey<depth> key) noexcept {
@@ -203,7 +217,7 @@ namespace hypertrie::internal::node_based {
 
 			value_type &firstValue() noexcept  { return value(entries_[0]); }
 
-			const value_type &firstValue() const noexcept  { return value(entries_[0]); }
+			value_type firstValue() const noexcept  { return value(entries_[0]); }
 
 		private:
 			void calcHashAfter() const noexcept {
@@ -214,10 +228,11 @@ namespace hypertrie::internal::node_based {
 						assert(entries_.size() == 2);
 						this->hash_after_.changeValue(firstKey(), oldValue(), firstValue());
 						break;
-					case InsertOp::INSERT_C_NODE:
+					case InsertOp::INSERT_C_NODE:{
 						assert(hash_before_.empty());
 						hash_after_ = TaggedNodeHash::getCompressedNodeHash(firstKey(), firstValue());
 						break;
+					}
 					case InsertOp::INSERT_MULT_INTO_C:
 						[[fallthrough]];
 					case InsertOp::INSERT_MULT_INTO_UC:
@@ -320,7 +335,7 @@ namespace hypertrie::internal::node_based {
 
 			MultiUpdate<update_depth> update{};
 			update.hashBefore() = nodec;
-			update.addEntry({key, value});
+			update.addEntry(key, value);
 			if (value_deleted) {
 				update.insertOp() = InsertOp::REMOVE_FROM_UC;
 				throw std::logic_error{"deleting values from hypertrie is not yet implemented. "};
@@ -566,8 +581,8 @@ namespace hypertrie::internal::node_based {
 
 							MultiUpdate<depth - 1> child_update{};
 							child_update.insertOp() = InsertOp::CHANGE_VALUE;
+							child_update.addEntry(sub_key, update.firstValue());
 							child_update.oldValue() = update.oldValue();
-							child_update.addEntry({sub_key, update.firstValue()});
 
 							child_update.hashBefore() = node->child(pos, key_part);
 							assert(not child_update.hashBefore().empty());
@@ -600,8 +615,8 @@ namespace hypertrie::internal::node_based {
 
 							MultiUpdate<depth - 1> child_update{};
 							child_update.insertOp() = InsertOp::CHANGE_VALUE;
+							child_update.addEntry(sub_key, update.firstValue());
 							child_update.oldValue() = update.oldValue();
-							child_update.addEntry({sub_key, update.firstValue()});
 
 							child_update.hashBefore() = node->child(pos, key_part);
 							assert(not child_update.hashBefore().empty());
@@ -624,87 +639,57 @@ namespace hypertrie::internal::node_based {
 		template<size_t depth>
 		void newUncompressedBulk(const MultiUpdate<depth> &update, const size_t after_count_diff) {
 			// TODO: implement for valued
-			if constexpr (not tri::is_bool_valued)
-				return;
-			else {
-				static constexpr const auto subkey = &tri::template subkey<depth>;
+			static constexpr const auto subkey = &tri::template subkey<depth>;
 
-				// move or copy the node from old_hash to new_hash
-				auto &storage = node_storage.template getNodeStorage<depth, NodeCompression::uncompressed>();
-				// make sure everything is set correctly
-				assert(update.hashBefore().empty());
-				assert(storage.find(update.hashAfter()) == storage.end());
+			// move or copy the node from old_hash to new_hash
+			auto &storage = node_storage.template getNodeStorage<depth, NodeCompression::uncompressed>();
+			// make sure everything is set correctly
+			assert(update.hashBefore().empty());
+			assert(storage.find(update.hashAfter()) == storage.end());
 
-				// create node and insert it into the storage
-				UncompressedNode<depth, tri> *const node = new UncompressedNode<depth, tri>{(size_t) after_count_diff};
-				storage.insert({update.hashAfter(), node});
+			// create node and insert it into the storage
+			UncompressedNode<depth, tri> *const node = new UncompressedNode<depth, tri>{(size_t) after_count_diff};
+			storage.insert({update.hashAfter(), node});
 
-				if constexpr (depth > 1)
-					node->size_ = update.keys.size();
+			if constexpr (depth > 1)
+				node->size_ = update.entries().size();
 
-				// populate the new node
-				for (const size_t pos : iter::range(depth)) {
-					if constexpr (depth == 1) {
-						for (const RawKey<depth> &key : update.keys)
-							node->edges().insert(key[0]);
-					} else {
-						// # group the subkeys by the key part at pos
+			// populate the new node
+			for (const size_t pos : iter::range(depth)) {
+				if constexpr (depth == 1) {
+					for (const Entry<depth> &entry : update.entries()){
+						if constexpr (tri_t::is_bool_valued)
+							node->edges().insert(key(entry)[0]);
+						else
+							node->edges().emplace(key(entry)[0], value(entry));
+					}
+				} else {
+					// # group the subkeys by the key part at pos
 
-						// maps key parts to the keys to be inserted for that child
-						std::unordered_map<key_part_type, std::vector<RawKey<depth - 1>>> children_inserted_keys{};
+					// maps key parts to the keys to be inserted for that child
+					std::unordered_map<key_part_type, std::vector<Entry<depth - 1>>> children_inserted_keys{};
 
-						// populate children_inserted_keys
-						for (const RawKey<depth> &key : update.keys)
-							children_inserted_keys[key[pos]].push_back(subkey(key, pos));
+					// populate children_inserted_keys
+					for (const Entry<depth> &entry : update.entries())
+						children_inserted_keys[key(entry)[pos]]
+								.push_back(make_Entry(subkey(key(entry), pos), value(entry)));
 
-						// process the changes to the node at pos and plan the updates to the sub nodes
-						for (auto &[key_part, child_inserted_keys] : children_inserted_keys) {
-							assert(child_inserted_keys.size() > 0);
-							auto [key_part_exists, iter] = node->find(pos, key_part);
+					// process the changes to the node at pos and plan the updates to the sub nodes
+					for (auto &[key_part, child_inserted_entries] : children_inserted_keys) {
+						assert(child_inserted_entries.size() > 0);
 
-							TaggedNodeHash hash_after;
-							// plan the changes and calculate hash-after
-							const TaggedNodeHash child_hash = (key_part_exists) ? iter->second : TaggedNodeHash{};
-							// EXPAND_C_NODE (insert only one key)
-							if (child_inserted_keys.size() == 1) {
-								// plan next update
-								MultiUpdate<depth - 1> child_update{};
-								child_update.key = child_inserted_keys[0];
-								child_update.value = true;
-								child_update.insert_op = InsertOp::INSERT_C_NODE;
-								child_update.calcHashAfter();
+						// plan the new subnodes and insert references
+						MultiUpdate<depth - 1> child_update{};
+						if (child_inserted_entries.size() == 1)
+							child_update.insertOp() = InsertOp::INSERT_C_NODE;
+						 else
+							child_update.insertOp() = InsertOp::NEW_MULT_UC;
+						child_update.entries() = std::move(child_inserted_entries);
 
-								// safe hash_after for executing the change
-								hash_after = child_update.hashAfter();
-								// submit the planned update
-								planUpdate(std::move(child_update), 1);
-							} else if (child_inserted_keys.size() == 2) {
-								MultiUpdate<depth - 1> child_update{};
-								child_update.key = child_inserted_keys[0];
-								child_update.value = true;
-								child_update.second_key = child_inserted_keys[1];
-								child_update.second_value = true;
-								child_update.insert_op = InsertOp::INSERT_TWO_KEY_UC_NODE;
-								child_update.calcHashAfter();
-
-								// safe hash_after for executing the change
-								hash_after = child_update.hashAfter();
-
-								planUpdate(std::move(child_update), 1);
-							} else {
-
-								MultiUpdate<depth - 1> child_update(InsertOp::NEW_MULT_UC, child_hash);
-								child_update.keys = std::move(child_inserted_keys);
-
-								child_update.calcHashAfter();
-
-								// safe hash_after for executing the change
-								hash_after = child_update.hashAfter();
-								planUpdate(std::move(child_update), 1);
-							}
-							// execute changes
-							node->edges(pos)[key_part] = hash_after;
-						}
+						// insert reference to subnode
+						node->edges(pos)[key_part] = child_update.hashAfter();
+						// submit subnode plan
+						planUpdate(std::move(child_update), INC_COUNT_DIFF_AFTER);
 					}
 				}
 			}
@@ -719,17 +704,13 @@ namespace hypertrie::internal::node_based {
 			CompressedNode<depth, tri> const *const node_before = storage[update.hashBefore()];
 
 			update.insertOp() = InsertOp::NEW_MULT_UC;
-			update.addKey(node_before->key());
+			update.addEntry(node_before->key(), node_before->value());
 			update.hashBefore() = {};
 			newUncompressedBulk<depth>(update, after_count_diff);
 		}
 
 		template<size_t depth, bool reuse_node_before = false>
 		long insertBulkIntoUC(const MultiUpdate<depth> &update, const long after_count_diff) {
-			// TODO: implement for valued
-			if constexpr (not tri::is_bool_valued)
-				return 0;
-			else {
 				static constexpr const auto subkey = &tri::template subkey<depth>;
 				const long node_before_children_count_diff =
 						(not reuse_node_before and depth > 1) ? INC_COUNT_DIFF_BEFORE : 0;
@@ -755,95 +736,60 @@ namespace hypertrie::internal::node_based {
 
 				// update the node (new_hash)
 				for (const size_t pos : iter::range(depth)) {
-					// # group the subkeys by the key part at pos
 					if constexpr (depth == 1) {
-						for (const RawKey<depth> &key : update.keys)
-							node->edges().insert(key[0]);
+						for (const Entry <depth> &entry : update.entries()){
+							if constexpr (tri_t::is_bool_valued)
+								node->edges().insert(key(entry)[0]);
+							else
+								node->edges().emplace(key(entry)[0], value(entry));
+						}
 					} else {
+						// # group the subkeys by the key part at pos
+
 						// maps key parts to the keys to be inserted for that child
-						std::unordered_map<key_part_type, std::vector<RawKey<depth - 1>>> children_inserted_keys{};
+						std::unordered_map<key_part_type, std::vector<Entry<depth - 1>>> children_inserted_keys{};
 
 						// populate children_inserted_keys
-						for (const RawKey<depth> &key : update.keys)
-							children_inserted_keys[key[pos]].push_back(subkey(key, pos));
+						for (const Entry<depth> &entry : update.entries())
+							children_inserted_keys[key(entry)[pos]]
+									.push_back(make_Entry(subkey(key(entry), pos), value(entry)));
 
 						// process the changes to the node at pos and plan the updates to the sub nodes
-						for (auto &[key_part, child_inserted_keys] : children_inserted_keys) {
-							assert(child_inserted_keys.size() > 0);
-							// TODO: handle what happens when we hit level 1
+						for (auto &[key_part, child_inserted_entries] : children_inserted_keys) {
+							assert(child_inserted_entries.size() > 0);
 							auto [key_part_exists, iter] = node->find(pos, key_part);
 
-							TaggedNodeHash child_hash_after;
-							// plan the changes and calculate hash-after
-							const TaggedNodeHash child_hash_before = (key_part_exists) ? iter->second : TaggedNodeHash{};
-							// EXPAND_C_NODE (insert only one key)
-							if (child_inserted_keys.size() == 1) {
-								// plan next update
-								MultiUpdate<depth - 1> child_update{};
-								child_update.hashBefore() = child_hash_before;
-								child_update.key = child_inserted_keys[0];
-								child_update.value = true;
-								if (key_part_exists) {
-									if (child_hash_before.isCompressed())
-										child_update.insert_op = InsertOp::EXPAND_C_NODE;
-									else
-										child_update.insert_op = InsertOp::EXPAND_UC_NODE;
-								} else {
-									child_update.insert_op = InsertOp::INSERT_C_NODE;
-								}
-								child_update.calcHashAfter();
+							MultiUpdate<depth - 1> child_update{};
+							child_update.hashBefore() = (key_part_exists) ? iter->second : TaggedNodeHash{};
 
-								// safe child_hash_after for executing the change
-								child_hash_after = child_update.hashAfter();
-								// submit the planned update
-								planUpdate(std::move(child_update), 1);
-							} else {// INSERT_MULT_INTO_UC (insert multiple keys)
-								if (not key_part_exists and child_inserted_keys.size() == 2) {
-									MultiUpdate<depth - 1> child_update{};
-									child_update.key = child_inserted_keys[0];
-									child_update.value = true;
-									child_update.second_key = child_inserted_keys[1];
-									child_update.second_value = true;
-									child_update.insert_op = InsertOp::INSERT_TWO_KEY_UC_NODE;
-									child_update.calcHashAfter();
-
-									// safe child_hash_after for executing the change
-									child_hash_after = child_update.hashAfter();
-
-									planUpdate(std::move(child_update), 1);
-								} else {
-									InsertOp insert_op;
-
-									if (key_part_exists)
-										if (child_hash_before.isCompressed())
-											insert_op = InsertOp::INSERT_MULT_INTO_C;
-										else
-											insert_op = InsertOp::INSERT_MULT_INTO_UC;
-									else
-										insert_op = InsertOp::NEW_MULT_UC;
-									MultiUpdate<depth - 1> child_update(insert_op, child_hash_before);
-									child_update.keys = std::move(child_inserted_keys);
-
-									child_update.calcHashAfter();
-
-									// safe child_hash_after for executing the change
-									child_hash_after = child_update.hashAfter();
-									planUpdate(std::move(child_update), 1);
-								}
+							if (key_part_exists) {
+								if (child_update.hashBefore().isCompressed())
+									child_update.insertOp() = InsertOp::INSERT_MULT_INTO_C;
+								else
+									child_update.insertOp() = InsertOp::INSERT_MULT_INTO_UC;
+							} else {
+								if (child_inserted_entries.size() == 1)
+								child_update.insertOp() = InsertOp::INSERT_C_NODE;
+								else
+									child_update.insertOp() = InsertOp::NEW_MULT_UC;
 							}
+
+							child_update.entries() = std::move(child_inserted_entries);
+
 							// execute changes
 							if (key_part_exists)
-								tri::template deref<key_part_type, TaggedNodeHash>(iter) = child_hash_after;
+								tri::template deref<key_part_type, TaggedNodeHash>(iter) = child_update.hashAfter();
 							else
-								node->edges(pos)[key_part] = child_hash_after;
+								node->edges(pos)[key_part] = child_update.hashAfter();
+
+							planUpdate(std::move(child_update), INC_COUNT_DIFF_AFTER);
 						}
 					}
 				}
 				if constexpr (depth == update_depth)
-					this->nodec.thash_ = update.hashAfter();
+					this->nodec = {update.hashAfter(), node};
 
 				return node_before_children_count_diff;
-			}
 
 		}
 

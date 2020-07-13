@@ -148,11 +148,13 @@ namespace hypertrie::tests::node_based::node_context::randomized {
 							print_entries += "{} → true\n"_format(key);
 						WARN(print_entries);
 
+						auto i = 1;
 						// insert entries
 						for (auto &key : keys) {
 
 							context.template set<depth>(nc, key, true);
 							tt.set(key, true);
+							WARN("state {} : {}"_format(i++, (std::string) context.storage));
 
 							tt.checkContext(context);
 						}

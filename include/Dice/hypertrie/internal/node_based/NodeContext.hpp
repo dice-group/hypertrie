@@ -55,25 +55,6 @@ namespace hypertrie::internal::node_based {
 			return nodec;
 		}
 
-		template<size_t depth, NodeCompression compression>
-		void decrementNodeCount(SpecificNodeContainer<depth, compression, tri> &nodec) {
-			//			if (--node->ref_count() == 0){
-			//				if constexpr( compression == NodeCompression::uncompressed) {
-			//					for (size_t pos : iter::range(depth)){
-			//						auto &edges = nodec.node()->edges(pos);
-			//						// TODO: it makes sense to collect the changes
-			//					}
-			//
-			//				}
-			//				getNodeStorage<depth>().compressed_nodes_.erase(nodec.thash_);
-			//			} else {
-			//				// TODO: first implement set
-			//				// TODO: decrement counter
-			//				// TODO: remove from NodeStorage if counter is 0
-			//				// TODO: remove recursively if this counter AND their counter is 0
-			//			}
-		}
-
 		template<size_t depth>
 		bool deletePrimaryNode(TaggedNodeHash thash) {
 			{// remove the hash from primary nodes list
@@ -90,7 +71,7 @@ namespace hypertrie::internal::node_based {
 
 		template<size_t depth>
 		inline void deleteChild(NodeContainer<depth, tri> &nodec, size_t pos, key_part_type key_part) {
-			assert(nodec.thash_.isUncompressed());
+			assert(nodec.hash().isUncompressed());
 			assert(pos < depth);
 			auto &edges = nodec.compressed_node->edges_[pos];
 			edges.erase(key_part);

@@ -160,7 +160,7 @@ namespace hypertrie::internal::node_based {
 		auto changeNodeValue(SpecificNodeContainer<depth, compression, tri> nc, RawKey<depth> key, value_type old_value, value_type new_value, long count_diff, TaggedNodeHash new_hash)
 				-> SpecificNodeContainer<depth, compression, tri> {
 			auto &nodes = getNodeStorage<depth, compression>();
-			assert(nc.thash_ != new_hash);
+			assert(nc.hash() != new_hash);
 
 			auto [it, success] = [&]() {
 				if constexpr (keep_old) return nodes.insert({new_hash, new Node<depth, compression, tri>{*nc.node()}});
@@ -169,7 +169,7 @@ namespace hypertrie::internal::node_based {
 			}();
 			assert(success);
 			if constexpr (not keep_old) {
-				const auto removed = nodes.erase(nc.thash_);
+				const auto removed = nodes.erase(nc.hash());
 				assert(removed);
 				it = nodes.find(new_hash);// iterator was invalidates by modifying nodes. get a new one
 			}
@@ -195,9 +195,9 @@ namespace hypertrie::internal::node_based {
 					return nodes.insert({new_hash, nc.node()});// if the old is not kept it is moved
 			}();
 			assert(success);
-			assert(nc.thash_ != new_hash);
+			assert(nc.hash() != new_hash);
 			if constexpr (not keep_old) {
-				const auto removed = nodes.erase(nc.thash_);
+				const auto removed = nodes.erase(nc.hash());
 				assert(removed);
 				it = nodes.find(new_hash);// iterator was invalidates by modifying nodes. get a new one
 			}

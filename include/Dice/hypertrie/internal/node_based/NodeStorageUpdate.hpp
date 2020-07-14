@@ -55,7 +55,7 @@ namespace hypertrie::internal::node_based {
 		struct CountDiffAndNodePtr{ long count_diff; NodePtr<depth, tri> node_ptr; };
 
 		template <size_t depth>
-		using LevelRefChanges = std::unordered_map<TaggedNodeHash, CountDiffAndNodePtr<depth>>;
+		using LevelRefChanges = tsl::sparse_map<TaggedNodeHash, CountDiffAndNodePtr<depth>>;
 
 		using RefChanges = util::CountDownNTuple<LevelRefChanges, update_depth>;
 
@@ -363,9 +363,9 @@ namespace hypertrie::internal::node_based {
 			LevelMultiUpdates_t<depth> &multi_updates = getPlannedMultiUpdates<depth>();
 
 			// nodes_before that are have ref_count 0 afterwards -> those could be reused/moved for nodes after
-			tsl::hopscotch_map<TaggedNodeHash, NodePtr<depth, tri_t>> unreferenced_nodes_before{}; // TODO: store the pointer alongside to safe one resolve
+			tsl::sparse_map<TaggedNodeHash, NodePtr<depth, tri_t>> unreferenced_nodes_before{}; // TODO: store the pointer alongside to safe one resolve
 
-			std::unordered_map<TaggedNodeHash, size_t> new_after_nodes{};
+			tsl::sparse_map<TaggedNodeHash, size_t> new_after_nodes{};
 
 			// extract a change from count_changes
 			auto pop_after_count_change = [&](TaggedNodeHash hash) -> std::tuple<bool, size_t> {
@@ -443,7 +443,7 @@ namespace hypertrie::internal::node_based {
 
 			assert(new_after_nodes.empty());
 
-			std::unordered_map<TaggedNodeHash, long> node_before_children_count_diffs{};
+			tsl::sparse_map<TaggedNodeHash, long> node_before_children_count_diffs{};
 
 			// do unmoveables
 			for (auto &[update, count] : unmoveable_multi_updates) {
@@ -456,14 +456,15 @@ namespace hypertrie::internal::node_based {
 
 			// remove remaining unreferenced_nodes_before and update the references of their children
 			for (const auto &[hash_before, node_ptr] : unreferenced_nodes_before) {
-				// TODO: use the node ptr
 				if (hash_before.isCompressed()){
 					removeUnreferencedNode<depth, NodeCompression::compressed>(hash_before);
 				} else {
-					auto handle = node_before_children_count_diffs.extract(hash_before);
+					auto children_count_diff_it = node_before_children_count_diffs.find(hash_before);
 					long children_count_diff = DEC_COUNT_DIFF_BEFORE;
-					if (not handle.empty())
-						children_count_diff += handle.mapped();
+					if (children_count_diff_it != node_before_children_count_diffs.end()){
+						children_count_diff += children_count_diff_it->second;
+						node_before_children_count_diffs.erase(children_count_diff_it);
+					}
 
 					removeUnreferencedNode<depth, NodeCompression::uncompressed>(hash_before, node_ptr, children_count_diff);
 				}

@@ -55,7 +55,7 @@ namespace hypertrie::internal::node_based {
 		struct CountDiffAndNodePtr{ long count_diff; NodePtr<depth, tri> node_ptr; };
 
 		template <size_t depth>
-		using LevelRefChanges = std::unordered_map<TaggedNodeHash, CountDiffAndNodePtr<depth>>;
+		using LevelRefChanges = tsl::sparse_map<TaggedNodeHash, CountDiffAndNodePtr<depth>>;
 
 		using RefChanges = util::CountDownNTuple<LevelRefChanges, update_depth>;
 
@@ -365,66 +365,49 @@ namespace hypertrie::internal::node_based {
 			// nodes_before that are have ref_count 0 afterwards -> those could be reused/moved for nodes after
 			tsl::hopscotch_map<TaggedNodeHash, NodePtr<depth, tri_t>> unreferenced_nodes_before{}; // TODO: store the pointer alongside to safe one resolve
 
-			std::unordered_map<TaggedNodeHash, size_t> new_after_nodes{};
+			auto &ref_changes = getRefChanges<depth>();
 
-			// extract a change from count_changes
-			auto pop_after_count_change = [&](TaggedNodeHash hash) -> std::tuple<bool, size_t> {
-				if (auto changed = new_after_nodes.find(hash); changed != new_after_nodes.end()) {
-					auto diff = changed->second;
-					new_after_nodes.erase(changed);
-				  return {diff != 0, diff};
-			  } else
-				  return {false, 0};
-			};
+			tsl::sparse_map<TaggedNodeHash, NodePtr<depth, tri>> ref_count_updated_nodes{};
 
-
-			// check if a hash is in count_changes
-			auto peak_after_count_change = [&](TaggedNodeHash hash) -> bool {
-			  if (auto changed = new_after_nodes.find(hash); changed != new_after_nodes.end()) {
-				  auto diff = changed->second;
-				  return diff != 0;
-			  } else
-				  return false;
-			};
-
-			// process reference changes to nodes_before
-			for (const auto &[hash, diff_u_ptr] : getRefChanges<depth>()) {
-				assert(not hash.empty());
-				if (diff_u_ptr.count_diff == 0)
-					continue;
-				auto nodec = node_storage.template getNode<depth>(hash);
-				if (not nodec.null()){
-					size_t &ref_count = nodec.ref_count();
-					ref_count += diff_u_ptr.count_diff;
-
-					if (ref_count == 0) {
-						unreferenced_nodes_before.insert({hash, nodec.node()});
-					}
-				} else {
-					assert(diff_u_ptr.count_diff > 0);
-					new_after_nodes.insert({hash, (size_t) diff_u_ptr.count_diff});
-				}
-			}
+			tsl::sparse_set<TaggedNodeHash> nodes_done{};
 
 			static std::vector<std::pair<MultiUpdate<depth>, size_t>> moveable_multi_updates{};
 			moveable_multi_updates.clear();
 			moveable_multi_updates.reserve(multi_updates.size());
 			// extract movables
+
 			for (const MultiUpdate<depth> &update : multi_updates) {
 				// skip if it cannot be a movable
 				if (update.insertOp() == InsertOp::NEW_MULT_UC
 					or update.insertOp() == InsertOp::INSERT_C_NODE
 					or update.insertOp() ==  InsertOp::INSERT_MULT_INTO_C)
 					continue;
+				if (nodes_done.count(update.hashBefore()) or nodes_done.count(update.hashAfter()));
+					continue;
 				// check if it is a moveable. then save it and skip to the next iteration
-				auto unref_before = unreferenced_nodes_before.find(update.hashBefore());
-				if (unref_before != unreferenced_nodes_before.end()) {
-					if (peak_after_count_change(update.hashAfter())) {
-						unreferenced_nodes_before.erase(unref_before);
-						auto [changes, count] = pop_after_count_change(update.hashAfter());
-						// TODO: move the keys here
-						moveable_multi_updates.emplace_back(update, count);
+				NodeContainer<depth, tri> nodec_after = node_storage.template getNode<depth>(update.hashAfter());
+				if (nodec_after.null()) {
+					auto before_it = ref_changes.find(update.hashBefore());
+					if (before_it != ref_changes.end()){
+						NodeContainer<depth, tri> nodec_before = node_storage.template getNode<depth>(update.hashBefore());
+						if(ref_count_updated_nodes.count(update.hashBefore()))
+							continue;
+
+						nodec_before.ref_count() += before_it->second.count_diff;
+						ref_count_updated_nodes.insert({update.hashBefore(), nodec_before.node()});
+
+						if (nodec_before.ref_count() != 0)
+							continue;
+
+						nodes_done.insert(update.hashBefore());
+						nodes_done.insert(update.hashAfter());
+						moveable_multi_updates.emplace_back(update, ref_changes[update.hashAfter()].count_diff);
 					}
+				} else {
+					if(ref_count_updated_nodes.count(update.hashAfter()))
+						continue;
+					nodec_after.ref_count() += ref_changes[update.hashAfter()].count_diff;
+					ref_count_updated_nodes.insert({update.hashAfter(), nodec_after.node()});
 				}
 			}
 
@@ -434,16 +417,29 @@ namespace hypertrie::internal::node_based {
 			// extract unmovables
 			for (const MultiUpdate<depth> &update : multi_updates) {
 				// check if it is a moveable. then save it and skip to the next iteration
-				auto [changes, after_count_change] = pop_after_count_change(update.hashAfter());
-				if (changes) {
-					// TODO: move the keys here
-					unmoveable_multi_updates.emplace_back(update, after_count_change);
+				if (nodes_done.count(update.hashAfter()))
+					continue;
+
+				NodeContainer<depth, tri> nodec_after = node_storage.template getNode<depth>(update.hashAfter());
+				if (nodec_after.null()) {
+					if (update.insertOp() == InsertOp::INSERT_MULT_INTO_UC or update.insertOp() == InsertOp::CHANGE_VALUE)
+						if(not ref_count_updated_nodes.count(update.hashBefore())){
+							NodeContainer<depth, tri> nodec_before = node_storage.template getNode<depth>(update.hashBefore());
+							nodec_before.ref_count() += ref_changes[update.hashBefore()].count_diff;
+							ref_count_updated_nodes.insert({update.hashBefore(), nodec_before.node()});
+						}
+
+					nodes_done.insert(update.hashAfter());
+					unmoveable_multi_updates.emplace_back(update, ref_changes[update.hashAfter()].count_diff);
+				} else {
+					if(ref_count_updated_nodes.count(update.hashAfter()))
+						continue;
+					nodec_after.ref_count() += ref_changes[update.hashAfter()].count_diff;
+					ref_count_updated_nodes.insert({update.hashAfter(), nodec_after.node()});
 				}
 			}
 
-			assert(new_after_nodes.empty());
-
-			std::unordered_map<TaggedNodeHash, long> node_before_children_count_diffs{};
+			tsl::sparse_map<TaggedNodeHash, long> node_before_children_count_diffs{};
 
 			// do unmoveables
 			for (auto &[update, count] : unmoveable_multi_updates) {
@@ -454,18 +450,34 @@ namespace hypertrie::internal::node_based {
 					node_before_children_count_diffs[update.hashBefore()] += node_before_children_count_diff;
 			}
 
-			// remove remaining unreferenced_nodes_before and update the references of their children
-			for (const auto &[hash_before, node_ptr] : unreferenced_nodes_before) {
-				// TODO: use the node ptr
-				if (hash_before.isCompressed()){
-					removeUnreferencedNode<depth, NodeCompression::compressed>(hash_before);
-				} else {
-					auto handle = node_before_children_count_diffs.extract(hash_before);
-					long children_count_diff = DEC_COUNT_DIFF_BEFORE;
-					if (not handle.empty())
-						children_count_diff += handle.mapped();
+			// process reference changes to nodes_before
+			for (auto &[hash, diff_u_ptr] : getRefChanges<depth>()) {
+				const auto count_diff = diff_u_ptr.count_diff;
 
-					removeUnreferencedNode<depth, NodeCompression::uncompressed>(hash_before, node_ptr, children_count_diff);
+				if (nodes_done.count(hash) or diff_u_ptr.count_diff == 0)
+					continue;
+
+				auto already_updated_it = ref_count_updated_nodes.find(hash);
+				NodeContainer<depth, tri> nodec;
+				if (already_updated_it != ref_count_updated_nodes.end()){
+					nodec = {hash, already_updated_it->second};
+				} else {
+					nodec = node_storage.template getNode<depth>(hash);
+					nodec.ref_count() += count_diff;
+				}
+
+				if (nodec.ref_count() == 0) {
+					if (hash.isCompressed()){
+						removeUnreferencedNode<depth, NodeCompression::compressed>(hash);
+					} else {
+						auto children_count_diff_it = node_before_children_count_diffs.find(hash);
+						long children_count_diff = DEC_COUNT_DIFF_BEFORE;
+						if (children_count_diff_it != node_before_children_count_diffs.end()){
+							children_count_diff += children_count_diff_it->second;
+							node_before_children_count_diffs.erase(children_count_diff_it);
+						}
+						removeUnreferencedNode<depth, NodeCompression::uncompressed>(hash, nodec.uncompressed_node(), children_count_diff);
+					}
 				}
 			}
 

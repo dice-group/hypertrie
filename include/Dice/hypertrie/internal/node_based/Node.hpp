@@ -256,9 +256,9 @@ namespace hypertrie::internal::node_based {
 	private:
 		static constexpr const auto subkey = &tri::template subkey<depth>;
 		static constexpr const auto deref = &tri::template deref<typename ChildrenType::key_type, typename ChildrenType::mapped_type>;
-		size_t size_ = 0;
-
 	public:
+
+		size_t size_ = 0;
 		Node(size_t ref_count = 0) : ReferenceCounted(ref_count) {}
 
 		Node(const RawKey &key, value_type value, const RawKey &second_key, value_type second_value,
@@ -367,6 +367,35 @@ namespace hypertrie::internal::node_based {
 	template<size_t depth,
 			 HypertrieInternalTrait tri = Hypertrie_internal_t<>>
 	using UncompressedNode = Node<depth, NodeCompression::uncompressed, tri>;
+
+	template<size_t depth,
+			HypertrieInternalTrait tri_t = Hypertrie_internal_t<>>
+	typedef union NodePtr {
+		NodePtr() noexcept : raw(nullptr){}
+		NodePtr(const NodePtr &node_ptr) noexcept : raw(node_ptr.raw){}
+		NodePtr(NodePtr &&node_ptr) noexcept : raw(node_ptr.raw){}
+		NodePtr(void *raw) noexcept : raw(raw){}
+		NodePtr(UncompressedNode<depth, tri_t> *uncompressed) noexcept : uncompressed(uncompressed){}
+		NodePtr(CompressedNode<depth, tri_t> *compressed) noexcept : compressed(compressed){}
+		void *raw;
+		UncompressedNode<depth, tri_t> *uncompressed;
+		CompressedNode<depth, tri_t> *compressed;
+
+		operator CompressedNode<depth, tri_t> *() const noexcept { return this->compressed; }
+		operator UncompressedNode<depth, tri_t> *() const noexcept { return this->uncompressed; }
+
+		NodePtr &operator=(const NodePtr &node_ptr) noexcept {
+			raw = node_ptr.raw;
+			return *this;
+		}
+
+		NodePtr &operator=(NodePtr &&node_ptr) noexcept {
+			raw = node_ptr.raw;
+			return *this;
+		}
+	};
+
+
 
 
 }// namespace hypertrie::internal::node_based

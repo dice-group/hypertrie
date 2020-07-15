@@ -1,6 +1,8 @@
 #ifndef HYPERTRIE_TESTNODECONTEXTRANDOMIZED_H
 #define HYPERTRIE_TESTNODECONTEXTRANDOMIZED_H
 
+#include <iterator>
+
 #include <Dice/hypertrie/internal/node_based/NodeContext.hpp>
 
 #include <fmt/format.h>
@@ -18,6 +20,102 @@ namespace hypertrie::tests::node_based::node_context::randomized {
 
 	template<size_t depth, typename key_part_type>
 	using Key = hypertrie::internal::RawKey<depth, key_part_type>;
+
+	TEST_CASE("Test Randomized bulk long -> bool", "[NodeContext]") {
+		using tr = default_bool_Hypertrie_internal_t;
+		constexpr pos_type depth = 3;
+
+		using key_part_type = typename tr::key_part_type;
+		using value_type = typename tr::value_type;
+		using Key = typename tr::template RawKey<depth>;
+
+		static utils::RawGenerator<depth, key_part_type, value_type, 0, 10> gen{};
+
+		NodeContext<depth, tr> context{};
+		// create emtpy primary node
+		UncompressedNodeContainer<depth, tr> nc = context.template newPrimaryNode<depth>();
+		auto tt = TestTensor<depth, tr>::getPrimary();
+
+
+		for (size_t count : iter::range(3,10))
+			SECTION("insert {} key "_format(count)) {
+				for (const auto i : iter::range(10)) {
+					SECTION("{}"_format(i)) {
+						// generate entries
+						auto temp_keys = gen.keys(count);
+						std::vector<Key> keys{temp_keys.begin(), temp_keys.end()};
+
+						// print entries
+						std::string print_entries{};
+						for (auto &key : keys)
+							print_entries += "{} → true\n"_format(key);
+						WARN(print_entries);
+
+						// insert entries into test tensor
+						for (auto &key : keys) {
+							tt.set(key, true);
+						}
+
+						// bulk insert keys
+						context.template bulk_insert<depth>(nc, keys);
+						WARN("\n\n\nresulting hypertrie \n{}\n\n"_format((std::string) context.storage));
+						// check if they were inserted correctly
+						tt.checkContext(context);
+					}
+				}
+			}
+	}
+
+	TEST_CASE("Test Randomized double bulk long -> bool", "[NodeContext]") {
+		using tr = default_bool_Hypertrie_internal_t;
+		constexpr pos_type depth = 3;
+
+		using key_part_type = typename tr::key_part_type;
+		using value_type = typename tr::value_type;
+		using Key = typename tr::template RawKey<depth>;
+
+		static utils::RawGenerator<depth, key_part_type, value_type, 0, 10> gen{};
+
+		NodeContext<depth, tr> context{};
+		// create emtpy primary node
+		UncompressedNodeContainer<depth, tr> nc = context.template newPrimaryNode<depth>();
+		auto tt = TestTensor<depth, tr>::getPrimary();
+
+
+		for (size_t count : iter::range(3,50))
+			SECTION("insert {} key "_format(count)) {
+				for (const auto i : iter::range(10)) {
+					SECTION("{}"_format(i)) {
+						// generate entries
+						auto temp_keys = gen.keys(2*count);
+						auto middle_it = temp_keys.begin();
+						std::advance(middle_it,count);
+						std::vector<std::vector<Key>> keyss{
+								{temp_keys.begin(), middle_it},
+								{middle_it, temp_keys.end()}};
+
+						for (std::vector<Key> &keys: keyss){
+							// print entries
+							std::string print_entries{};
+							for (auto &key : keys)
+								print_entries += "{} → true\n"_format(key);
+							WARN(print_entries);
+
+							// insert entries into test tensor
+							for (auto &key : keys) {
+								tt.set(key, true);
+							}
+
+							// bulk insert keys
+							context.template bulk_insert<depth>(nc, keys);
+							WARN("\n\n\nresulting hypertrie \n{}\n\n"_format((std::string) context.storage));
+							// check if they were inserted correctly
+							tt.checkContext(context);
+						}
+					}
+				}
+			}
+	}
 
 	TEST_CASE("Test Randomized long -> bool", "[NodeContext]") {
 		using tr = default_bool_Hypertrie_internal_t;
@@ -50,11 +148,13 @@ namespace hypertrie::tests::node_based::node_context::randomized {
 							print_entries += "{} → true\n"_format(key);
 						WARN(print_entries);
 
+						auto i = 1;
 						// insert entries
 						for (auto &key : keys) {
 
 							context.template set<depth>(nc, key, true);
 							tt.set(key, true);
+							WARN("state {} : {}"_format(i++, (std::string) context.storage));
 
 							tt.checkContext(context);
 						}

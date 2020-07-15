@@ -77,6 +77,14 @@ namespace hypertrie::tests::utils {
 			return std::pair{key(), value()};
 		}
 
+		auto keys(size_t size) {
+			std::set<RawKey> key_set;
+			while (key_set.size() < size) {
+				key_set.insert(this->key());
+			}
+			return key_set;
+		}
+
 		auto entries(size_t size) {
 			std::set<std::pair<RawKey, value_type>> entry_set;
 			while (entry_set.size() < size) {

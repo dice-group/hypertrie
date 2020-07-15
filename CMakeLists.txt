@@ -12,16 +12,6 @@ endif ()
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -fomit-frame-pointer -momit-leaf-frame-pointer")
-
-    set(CMAKE_THREAD_LIBS_INIT "-lpthread")
-    set(CMAKE_HAVE_THREADS_LIBRARY 1)
-    set(CMAKE_USE_WIN32_THREADS_INIT 0)
-    set(CMAKE_USE_PTHREADS_INIT 1)
-    set(THREADS_PREFER_PTHREAD_FLAG ON)
-
-    # use libc++
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lc++ -lc++abi -lm -lc -lgcc_s -lgcc")
 else ()
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -fomit-frame-pointer")
 endif ()
@@ -29,6 +19,7 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -Wextra -g -O0")
 
 set(THREADS_PREFER_PTHREAD_FLAG)
 find_package(Threads REQUIRED)
+
 
 # installation directories
 set(hypertrie_INSTALL_INCLUDE_DIR "include" CACHE STRING "The installation include directory")

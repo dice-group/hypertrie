@@ -368,6 +368,35 @@ namespace hypertrie::internal::node_based {
 			 HypertrieInternalTrait tri = Hypertrie_internal_t<>>
 	using UncompressedNode = Node<depth, NodeCompression::uncompressed, tri>;
 
+	template<size_t depth,
+			HypertrieInternalTrait tri_t = Hypertrie_internal_t<>>
+	typedef union NodePtr {
+		NodePtr() noexcept : raw(nullptr){}
+		NodePtr(const NodePtr &node_ptr) noexcept : raw(node_ptr.raw){}
+		NodePtr(NodePtr &&node_ptr) noexcept : raw(node_ptr.raw){}
+		NodePtr(void *raw) noexcept : raw(raw){}
+		NodePtr(UncompressedNode<depth, tri_t> *uncompressed) noexcept : uncompressed(uncompressed){}
+		NodePtr(CompressedNode<depth, tri_t> *compressed) noexcept : compressed(compressed){}
+		void *raw;
+		UncompressedNode<depth, tri_t> *uncompressed;
+		CompressedNode<depth, tri_t> *compressed;
+
+		operator CompressedNode<depth, tri_t> *() const noexcept { return this->compressed; }
+		operator UncompressedNode<depth, tri_t> *() const noexcept { return this->uncompressed; }
+
+		NodePtr &operator=(const NodePtr &node_ptr) noexcept {
+			raw = node_ptr.raw;
+			return *this;
+		}
+
+		NodePtr &operator=(NodePtr &&node_ptr) noexcept {
+			raw = node_ptr.raw;
+			return *this;
+		}
+	};
+
+
+
 
 }// namespace hypertrie::internal::node_based
 

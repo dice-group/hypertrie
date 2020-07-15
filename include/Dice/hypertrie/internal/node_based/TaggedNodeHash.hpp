@@ -27,16 +27,19 @@ namespace hypertrie::internal::node_based {
 		template<size_t depth, typename key_part_type, typename V>
 		using EntryHash = absl::Hash<std::tuple<RawKey<depth, key_part_type>, V>>;
 
-		[[nodiscard]] NodeHashBitSet &thash_bitset() noexcept {
-			return reinterpret_cast<NodeHashBitSet&>(this->thash_);
-		}
-
-		[[nodiscard]] const NodeHashBitSet &thash_bitset() const noexcept {
+	public:
+		/**
+		 * The union bitset of the internally used hash.
+		 * @return
+		 */
+		[[nodiscard]] const auto &bitset() const noexcept {
 			return reinterpret_cast<const NodeHashBitSet&>(this->thash_);
 		}
 
+		[[nodiscard]] auto &bitset() noexcept {
+			return reinterpret_cast<NodeHashBitSet&>(this->thash_);
+		}
 
-	public:
 		/**
 		 * Tag value if the hash represents an uncompressed node.
 		 */
@@ -46,7 +49,7 @@ namespace hypertrie::internal::node_based {
 		 */
 		static constexpr bool compressed_tag = true;
 		/**
-		 * Position of the tag in thash_bitset()
+		 * Position of the tag in bitset()
 		 */
 		static constexpr size_t compression_tag_pos = 0;
 
@@ -68,7 +71,7 @@ namespace hypertrie::internal::node_based {
 		 * @return
 		 */
 		[[nodiscard]] inline bool isCompressed() const noexcept {
-			return thash_bitset()[compression_tag_pos];
+			return bitset()[compression_tag_pos];
 		}
 
 		/**
@@ -76,7 +79,7 @@ namespace hypertrie::internal::node_based {
 		 * @return
 		 */
 		[[nodiscard]] inline bool isUncompressed() const noexcept {
-			return not thash_bitset()[compression_tag_pos];
+			return not bitset()[compression_tag_pos];
 		}
 
 		/**
@@ -94,9 +97,9 @@ namespace hypertrie::internal::node_based {
 		template<size_t depth, typename key_part_type, typename value_type>
 		inline auto
 		changeValue(const RawKey<depth, key_part_type> &key, const value_type &old_value, const value_type &new_value)  noexcept {
-			const bool tag = thash_bitset()[compression_tag_pos];
+			const bool tag = bitset()[compression_tag_pos];
 			thash_ = thash_ xor EntryHash<depth, key_part_type, value_type>()({key, old_value}) xor EntryHash<depth, key_part_type, value_type>()({key, new_value});
-			thash_bitset()[compression_tag_pos] = tag;
+			bitset()[compression_tag_pos] = tag;
 			return *this;
 		}
 
@@ -113,7 +116,7 @@ namespace hypertrie::internal::node_based {
 		template<size_t depth, typename key_part_type, typename value_type>
 		inline auto addFirstEntry(const RawKey<depth, key_part_type> &key, const value_type &value)  noexcept {
 			thash_ = thash_ xor EntryHash<depth, key_part_type, value_type>()({key, value});
-			thash_bitset()[compression_tag_pos] = compressed_tag;
+			bitset()[compression_tag_pos] = compressed_tag;
 			return *this;
 		}
 
@@ -129,7 +132,7 @@ namespace hypertrie::internal::node_based {
 		template<size_t depth, typename key_part_type, typename value_type>
 		inline auto addEntry(const RawKey<depth, key_part_type> &key, const value_type &value) noexcept {
 			thash_ = thash_ xor EntryHash<depth, key_part_type, value_type>()({key, value});
-			thash_bitset()[compression_tag_pos] = uncompressed_tag;
+			bitset()[compression_tag_pos] = uncompressed_tag;
 			return *this;
 		}
 
@@ -148,7 +151,7 @@ namespace hypertrie::internal::node_based {
 		removeEntry(const RawKey<depth, key_part_type> &key, const value_type &value, bool make_compressed)  noexcept {
 			assert(isUncompressed());
 			thash_ = thash_ xor EntryHash<depth, key_part_type, value_type>()({key, value});
-			thash_bitset()[compression_tag_pos] = make_compressed;
+			bitset()[compression_tag_pos] = make_compressed;
 			return *this;
 		}
 
@@ -192,7 +195,7 @@ namespace hypertrie::internal::node_based {
 		template<size_t depth>
 		static auto getUncompressedEmptyNodeHash() noexcept -> TaggedNodeHash {
 			TaggedNodeHash hash = getRawEmptyNodeHash<depth>();
-			hash.thash_bitset()[compression_tag_pos] = uncompressed_tag;
+			hash.bitset()[compression_tag_pos] = uncompressed_tag;
 			return hash;
 		}
 
@@ -250,12 +253,8 @@ namespace hypertrie::internal::node_based {
 			return this->thash_;
 		}
 
-		/**
-		 * The union bitset of the internally used hash.
-		 * @return
-		 */
-		[[nodiscard]] const auto &bitset() const noexcept {
-			return this->thash_bitset();
+		[[nodiscard]] NodeHash &hash() noexcept {
+			return this->thash_;
 		}
 
 		explicit operator std::string() const noexcept {

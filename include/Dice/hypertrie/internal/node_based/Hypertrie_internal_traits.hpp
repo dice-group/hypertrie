@@ -7,6 +7,14 @@
 
 namespace hypertrie::internal::node_based {
 
+	template <typename type>
+	struct LSBUnused_trait {
+		constexpr static const bool value = false;
+	};
+
+	template <>
+	const bool LSBUnused_trait<void *>::value = true;
+
 
 	template<HypertrieTrait tr_t = default_bool_Hypertrie_t>
 	struct Hypertrie_internal_t {
@@ -29,6 +37,7 @@ namespace hypertrie::internal::node_based {
 		using RawSliceKey = hypertrie::internal::RawSliceKey<depth, typename tr::key_part_type>;
 
 		constexpr static bool is_bool_valued = std::is_same_v<value_type, bool>;
+		constexpr static bool is_lsb_unused = LSBUnused_trait<key_part_type>::value;
 		constexpr static bool is_tsl_map = std::is_same_v<map_type<int, int>, container::tsl_sparse_map<int, int>>;
 
 		/**

@@ -4,6 +4,7 @@
 #include "Dice/hypertrie/internal/node_based/Hypertrie_internal_traits.hpp"
 #include "Dice/hypertrie/internal/node_based/NodeCompression.hpp"
 #include "Dice/hypertrie/internal/node_based/TaggedNodeHash.hpp"
+#include "Dice/hypertrie/internal/node_based/KeyPartUCNodeHashVariant.hpp"
 #include "Dice/hypertrie/internal/util/PosType.hpp"
 #include <range.hpp>
 
@@ -129,7 +130,9 @@ namespace hypertrie::internal::node_based {
 		using map_type = typename tri::template map_type<K, V>;
 
 		using ChildType = std::conditional_t<(depth > 1),
-											 TaggedNodeHash,
+											 std::conditional_t<(depth == 2 and tri::is_lsb_unused),
+											         KeyPartUCNodeHashVariant<tri>,
+																TaggedNodeHash>,
 											 value_type>;
 
 		using ChildrenType = std::conditional_t<((depth == 1) and tri::is_bool_valued),
@@ -225,7 +228,7 @@ namespace hypertrie::internal::node_based {
 
 	// compressed nodes with non-boolean value_type
 	template<size_t depth, HypertrieInternalTrait tri_t>
-	struct Node<depth, NodeCompression::compressed, tri_t, std::enable_if_t<((depth >= 1) and not tri_t::is_bool_valued)>> : public ReferenceCounted, public Compressed<depth, tri_t>, Valued<tri_t> {
+	struct Node<depth, NodeCompression::compressed, tri_t, std::enable_if_t<((depth >= 1 + uint(tri_t::is_lsb_unused)) and not tri_t::is_bool_valued)>> : public ReferenceCounted, public Compressed<depth, tri_t>, Valued<tri_t> {
 		using tri = tri_t;
 		using RawKey = typename tri::template RawKey<depth>;
 		using value_type = typename tri::value_type;
@@ -290,6 +293,9 @@ namespace hypertrie::internal::node_based {
 				if (typename ChildrenType::iterator found = children.find(key_part); found != children.end()) {
 					deref(found).addEntry(subkey(key, pos), value);
 				} else {
+					if (depth == 2 and tri::is_lsb_unused) {
+
+					}
 					children[key_part] = TaggedNodeHash::getCompressedNodeHash(subkey(key, pos), value);
 				}
 			}

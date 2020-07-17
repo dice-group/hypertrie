@@ -769,34 +769,37 @@ namespace hypertrie::internal::node_based {
 
 							MultiUpdate<depth - 1> child_update{};
 							if constexpr (not (depth == 2 and tri::is_bool_valued and tri::is_lsb_unused)) {
-								if (key_part_exists)
+								if (key_part_exists) {
 									child_update.hashBefore() = iter->second;
+									if (child_update.hashBefore().isCompressed())
+										child_update.insertOp() = InsertOp::INSERT_MULT_INTO_C;
+									else
+										child_update.insertOp() = InsertOp::INSERT_MULT_INTO_UC;
+								} else {
+									if (child_inserted_entries.size() == 1)
+										child_update.insertOp() = InsertOp::INSERT_C_NODE;
+									else
+										child_update.insertOp() = InsertOp::NEW_MULT_UC;
+								}
 							} else {
 								if (key_part_exists) {
 									if (iter->second.isCompressed()) {
 										child_inserted_entries.push_back({iter->second.getKeyPart()});
+										child_update.insertOp() = InsertOp::NEW_MULT_UC;
 									} else {
 										child_update.hashBefore() = iter->second.getTaggedNodeHash();
+										child_update.insertOp() = InsertOp::INSERT_MULT_INTO_UC;
 									}
 								} else {
 									if (child_inserted_entries.size() == 1) {
 										node->edges(pos)[key_part] = KeyPartUCNodeHashVariant<tri>{child_inserted_entries[0][0]};
 										continue;
+									} else {
+										child_update.insertOp() = InsertOp::NEW_MULT_UC;
 									}
 								}
 							}
 
-							if (key_part_exists) {
-								if (child_update.hashBefore().isCompressed())
-									child_update.insertOp() = InsertOp::INSERT_MULT_INTO_C;
-								else
-									child_update.insertOp() = InsertOp::INSERT_MULT_INTO_UC;
-							} else {
-								if (child_inserted_entries.size() == 1)
-									child_update.insertOp() = InsertOp::INSERT_C_NODE;
-								else
-									child_update.insertOp() = InsertOp::NEW_MULT_UC;
-							}
 
 							child_update.entries() = std::move(child_inserted_entries);
 

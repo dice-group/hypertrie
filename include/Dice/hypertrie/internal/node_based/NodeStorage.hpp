@@ -148,8 +148,8 @@ namespace hypertrie::internal::node_based {
 		template<size_t depth>
 		NodeContainer<depth, tri> getNode(const TaggedNodeHash &node_hash) {
 			if (node_hash.isCompressed()) {
-				assert(not (tri_t::is_lsb_unused and tri_t::is_bool_valued));
-				if constexpr(not (tri_t::is_lsb_unused and tri_t::is_bool_valued))
+				assert(not (depth == 1 and tri_t::is_lsb_unused and tri_t::is_bool_valued));
+				if constexpr(not (depth == 1 and tri_t::is_lsb_unused and tri_t::is_bool_valued))
 					return getCompressedNode<depth>(node_hash);
 			} else {
 				return getUncompressedNode<depth>(node_hash);
@@ -223,8 +223,8 @@ namespace hypertrie::internal::node_based {
 		template<size_t depth>
 		void deleteNode(const TaggedNodeHash &node_hash) {
 			if (node_hash.isCompressed()) {
-				assert(not (tri_t::is_lsb_unused and tri_t::is_bool_valued));
-				if constexpr (not (tri_t::is_lsb_unused and tri_t::is_bool_valued))
+				assert(not (depth == 1 and tri_t::is_lsb_unused and tri_t::is_bool_valued));
+				if constexpr (not (depth == 1 and tri_t::is_lsb_unused and tri_t::is_bool_valued))
 					deleteNode<depth, NodeCompression::compressed>(node_hash);
 			} else {
 				deleteNode<depth, NodeCompression::uncompressed>(node_hash);

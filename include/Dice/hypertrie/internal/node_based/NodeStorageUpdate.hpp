@@ -472,7 +472,7 @@ namespace hypertrie::internal::node_based {
 
 			// update the references of children not covered above (children of nodes that were not removed)
 			for (const auto &[hash_before, children_count_diff] : node_before_children_count_diffs) {
-				updateChildrenCountDiff<depth>(hash_before, children_count_diff);
+				updateChildrenCountDiff<depth>(TaggedNodeHash(hash_before), children_count_diff);
 			}
 
 			// do moveables
@@ -497,7 +497,12 @@ namespace hypertrie::internal::node_based {
 			if constexpr (depth > 1){
 				for (size_t pos : iter::range(depth)) {
 					for (const auto &[_, child_hash] : node->edges(pos)) {
-						planChangeCount<depth -1 >(child_hash, -1*children_count_diff);
+						if constexpr (not (depth == 2 and tri::is_bool_valued and tri::is_lsb_unused))
+							planChangeCount<depth -1 >(child_hash, -1*children_count_diff);
+						else {
+							if (child_hash.isUncompressed())
+								planChangeCount<depth -1 >(TaggedNodeHash(child_hash), -1*children_count_diff);
+						}
 					}
 				}
 			}
@@ -518,19 +523,23 @@ namespace hypertrie::internal::node_based {
 
 			switch (update.insertOp()) {
 				case InsertOp::CHANGE_VALUE:
-					if (update.hashBefore().isCompressed())
-						changeValue<depth, NodeCompression::compressed, reuse_node_before>(update, after_count_diff);
-					else
-						node_before_children_count_diff = changeValue<depth, NodeCompression::uncompressed, reuse_node_before>(update, after_count_diff);
+					if constexpr (not tri::is_bool_valued) {
+						if (update.hashBefore().isCompressed())
+							changeValue<depth, NodeCompression::compressed, reuse_node_before>(update, after_count_diff);
+						else
+							node_before_children_count_diff = changeValue<depth, NodeCompression::uncompressed, reuse_node_before>(update, after_count_diff);
+					}
 					break;
 				case InsertOp::INSERT_C_NODE:
-					insertCompressedNode<depth>(update, after_count_diff);
+					if constexpr(not (depth == 1 and tri_t::is_lsb_unused and tri_t::is_bool_valued))
+						insertCompressedNode<depth>(update, after_count_diff);
 					break;
 				case InsertOp::INSERT_MULT_INTO_UC:
 					node_before_children_count_diff = insertBulkIntoUC<depth, reuse_node_before>(update, after_count_diff);
 					break;
 				case InsertOp::INSERT_MULT_INTO_C:
-					insertBulkIntoC<depth>(update, after_count_diff);
+					if constexpr (not (depth == 1 and tri_t::is_lsb_unused and tri_t::is_bool_valued))
+						insertBulkIntoC<depth>(update, after_count_diff);
 					break;
 				case InsertOp::NEW_MULT_UC:
 					newUncompressedBulk<depth>(update, after_count_diff);
@@ -674,9 +683,14 @@ namespace hypertrie::internal::node_based {
 
 						// plan the new subnodes and insert references
 						MultiUpdate<depth - 1> child_update{};
-						if (child_inserted_entries.size() == 1)
-							child_update.insertOp() = InsertOp::INSERT_C_NODE;
-						 else
+						if (child_inserted_entries.size() == 1){
+							if constexpr (not (depth == 2 and tri::is_bool_valued and tri::is_lsb_unused)) {
+								child_update.insertOp() = InsertOp::INSERT_C_NODE;
+							} else {
+								node->edges(pos)[key_part] = KeyPartUCNodeHashVariant<tri>{child_inserted_entries[0][0]};
+								continue;
+							}
+						} else
 							child_update.insertOp() = InsertOp::NEW_MULT_UC;
 						child_update.entries() = std::move(child_inserted_entries);
 
@@ -754,7 +768,23 @@ namespace hypertrie::internal::node_based {
 							auto [key_part_exists, iter] = node->find(pos, key_part);
 
 							MultiUpdate<depth - 1> child_update{};
-							child_update.hashBefore() = (key_part_exists) ? iter->second : TaggedNodeHash{};
+							if constexpr (not (depth == 2 and tri::is_bool_valued and tri::is_lsb_unused)) {
+								if (key_part_exists)
+									child_update.hashBefore() = iter->second;
+							} else {
+								if (key_part_exists) {
+									if (iter->second.isCompressed()) {
+										child_inserted_entries.push_back({iter->second.getKeyPart()});
+									} else {
+										child_update.hashBefore() = iter->second.getTaggedNodeHash();
+									}
+								} else {
+									if (child_inserted_entries.size() == 1) {
+										node->edges(pos)[key_part] = KeyPartUCNodeHashVariant<tri>{child_inserted_entries[0][0]};
+										continue;
+									}
+								}
+							}
 
 							if (key_part_exists) {
 								if (child_update.hashBefore().isCompressed())
@@ -763,7 +793,7 @@ namespace hypertrie::internal::node_based {
 									child_update.insertOp() = InsertOp::INSERT_MULT_INTO_UC;
 							} else {
 								if (child_inserted_entries.size() == 1)
-								child_update.insertOp() = InsertOp::INSERT_C_NODE;
+									child_update.insertOp() = InsertOp::INSERT_C_NODE;
 								else
 									child_update.insertOp() = InsertOp::NEW_MULT_UC;
 							}
@@ -772,7 +802,10 @@ namespace hypertrie::internal::node_based {
 
 							// execute changes
 							if (key_part_exists)
-								tri::template deref<key_part_type, TaggedNodeHash>(iter) = child_update.hashAfter();
+								if constexpr (not (depth == 2 and tri::is_bool_valued and tri::is_lsb_unused))
+									tri::template deref<key_part_type, TaggedNodeHash>(iter) = child_update.hashAfter();
+								else
+									tri::template deref<key_part_type, KeyPartUCNodeHashVariant<tri>>(iter) = child_update.hashAfter();
 							else
 								node->edges(pos)[key_part] = child_update.hashAfter();
 

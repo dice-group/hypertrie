@@ -17,16 +17,23 @@ namespace hypertrie::internal::node_based {
 
 	template<HypertrieInternalTrait tri>
 	class KeyPartUCNodeHashVariant {
-		TaggedNodeHash hash_;
+		TaggedNodeHash hash_{};
 
 	public:
 
 		using key_part_type = typename  tri::key_part_type;
 
+		KeyPartUCNodeHashVariant() = default;
+
 		KeyPartUCNodeHashVariant(const TaggedNodeHash &node_hash)  noexcept: hash_(node_hash) {}
 
-		KeyPartUCNodeHashVariant(const key_part_type &key_part)  noexcept: hash_(static_cast<TaggedNodeHash>(key_part)) {
+		KeyPartUCNodeHashVariant(const key_part_type &key_part)  noexcept: hash_(reinterpret_cast<NodeHash>(key_part)) {
 			hash_.bitset()[TaggedNodeHash::compression_tag_pos] = TaggedNodeHash::compressed_tag;
+		}
+
+		KeyPartUCNodeHashVariant& operator= (const TaggedNodeHash &node_hash) {
+			hash_ = node_hash;
+			return *this;
 		}
 
 	public:
@@ -34,22 +41,26 @@ namespace hypertrie::internal::node_based {
 		 * Checks if hash is tagged as representing a compressed node.
 		 * @return
 		 */
-		[[nodiscard]] inline bool isKeyPart() const noexcept {
+		[[nodiscard]] inline bool isCompressed() const noexcept {
 			return bitset()[TaggedNodeHash::compression_tag_pos];
 		}
 
 		[[nodiscard]] inline key_part_type getKeyPart() const noexcept {
 			TaggedNodeHash hash_copy = hash_;
 			hash_copy.bitset()[TaggedNodeHash::compression_tag_pos] = TaggedNodeHash::uncompressed_tag;
-			return static_cast<key_part_type>(hash_copy);
+			return reinterpret_cast<key_part_type>(hash_copy.hash());
 		}
 
 		/**
 		 * Checks if hash is tagged as representing an uncompressed node.
 		 * @return
 		 */
-		[[nodiscard]] inline bool isUCNodeHash() const noexcept {
+		[[nodiscard]] inline bool isUncompressed() const noexcept {
 			return not bitset()[TaggedNodeHash::compression_tag_pos];
+		}
+
+		[[nodiscard]] inline const TaggedNodeHash &getTaggedNodeHash() const noexcept {
+			return this->hash_;
 		}
 
 		/**
@@ -108,7 +119,11 @@ namespace hypertrie::internal::node_based {
 		 * @return
 		 */
 		explicit operator bool() const noexcept {
-			return this->hash_ != NodeHash{};
+			return bool(this->hash_);
+		}
+
+		explicit operator TaggedNodeHash() const noexcept {
+			return this->hash_;
 		}
 
 		/**
@@ -128,11 +143,10 @@ namespace hypertrie::internal::node_based {
 		}
 
 		explicit operator std::string() const noexcept {
-			const char compression = (this->isCompressed()) ? 'c' : 'u';
 			if (this->isCompressed())
 				return fmt::format("{}", getKeyPart());
 			else
-				return fmt::format("u_{:#019}", size_t(this->thash_));
+				return fmt::format("u_{:#019}", size_t(this->hash_.hash()));
 		}
 
 		friend std::ostream &operator<<(std::ostream &os, const KeyPartUCNodeHashVariant &hash) {

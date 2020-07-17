@@ -376,7 +376,7 @@ namespace hypertrie::internal::node_based {
 
 	template<size_t depth,
 			HypertrieInternalTrait tri_t = Hypertrie_internal_t<>>
-	typedef union NodePtr {
+	union NodePtr {
 		NodePtr() noexcept : raw(nullptr){}
 		NodePtr(const NodePtr &node_ptr) noexcept : raw(node_ptr.raw){}
 		NodePtr(NodePtr &&node_ptr) noexcept : raw(node_ptr.raw){}

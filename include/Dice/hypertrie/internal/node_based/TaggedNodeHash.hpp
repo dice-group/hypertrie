@@ -60,6 +60,8 @@ namespace hypertrie::internal::node_based {
 
 		TaggedNodeHash(const TaggedNodeHash &other)  noexcept: thash_(other.thash_) {}
 
+		TaggedNodeHash(const size_t &hash)  noexcept: thash_(hash) {}
+
 		TaggedNodeHash(TaggedNodeHash &&other)  noexcept= default;
 
 		TaggedNodeHash &operator=(const TaggedNodeHash &)  noexcept= default;

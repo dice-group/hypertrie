@@ -220,7 +220,7 @@ namespace hypertrie::tests::node_based::node_context {
 				auto sub_entries = getSubEntriesByPos(pos);
 
 				// hash them
-				std::map<key_part_type, NodeRepr> edges{};
+				std::map<key_part_type, NodeRepr_t<depth -1>> edges{};
 				for (const auto &[key_part, child_entries] : sub_entries)
 					edges[key_part] = calcHash<depth - 1>(child_entries);
 
@@ -252,8 +252,8 @@ namespace hypertrie::tests::node_based::node_context {
 		}
 
 		template<size_t key_depth>
-		static NodeRepr_t<depth> calcHash(std::map<RawKey<key_depth>, value_type> entries, bool is_primary_node = false) {
-			if constexpr (tri::is_bool_valued and tri::is_lsb_unused and depth == 1) {
+		static NodeRepr_t<key_depth> calcHash(std::map<RawKey<key_depth>, value_type> entries, bool is_primary_node = false) {
+			if constexpr (tri::is_bool_valued and tri::is_lsb_unused and key_depth == 1) {
 				if (entries.size() == 1) {
 					return {entries.begin()->first[0]};
 				}

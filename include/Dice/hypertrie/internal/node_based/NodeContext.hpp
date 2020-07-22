@@ -166,6 +166,10 @@ namespace hypertrie::internal::node_based {
 					auto pos = 0;//minCardPos();
 					NodeContainer<depth - 1, tri> child = this->template getChild<depth>(nc, pos, key[pos]);
 					if (not child.empty()) {
+						if constexpr (depth == 2 and tri::is_lsb_unused and tri::is_bool_valued) {
+							if (child.null())
+								return child.hash().getKeyPart();
+						}
 						return get<depth - 1>(child, subkey(key, pos));
 					} else {
 						return {};// false, 0, 0.0

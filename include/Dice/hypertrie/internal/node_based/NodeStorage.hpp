@@ -25,6 +25,13 @@ namespace hypertrie::internal::node_based {
 		UncompressedNodeMap uncompressed_nodes_;
 
 	public:
+		~LevelNodeStorage() {
+			for(auto &[hash, node] : compressed_nodes_)
+				delete node;
+			for(auto &[hash, node] : uncompressed_nodes_)
+				delete node;
+		}
+
 		const CompressedNodeMap &compressedNodes() const { return this->compressed_nodes_; }
 		CompressedNodeMap &compressedNodes() { return this->compressed_nodes_; }
 
@@ -54,6 +61,11 @@ namespace hypertrie::internal::node_based {
 		UncompressedNodeMap uncompressed_nodes_;
 
 	public:
+		~LevelNodeStorage() {
+			for(auto &[hash, node] : uncompressed_nodes_)
+				delete node;
+		}
+
 		const UncompressedNodeMap &uncompressedNodes() const { return this->uncompressed_nodes_; }
 		UncompressedNodeMap &uncompressedNodes() { return this->uncompressed_nodes_; }
 

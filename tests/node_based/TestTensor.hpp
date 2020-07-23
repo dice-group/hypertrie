@@ -152,9 +152,8 @@ namespace hypertrie::tests::node_based::node_context {
 						}
 					}
 				} else {
-					compressed_count++;
-
 					if constexpr (not (node_depth == 1 and tri::is_bool_valued and tri::is_lsb_unused)) {
+						compressed_count++;
 						const CompressedNodeContainer<node_depth, tri> &nc = storage.template getCompressedNode<node_depth>(hash);
 
 						INFO("Storage doesn't contain the entry");
@@ -175,8 +174,6 @@ namespace hypertrie::tests::node_based::node_context {
 						REQUIRE(test_node->getEntries().count(node->key()));
 						INFO("Value is not correct");
 						REQUIRE(test_node->getEntries().at(node->key()) == node->value());
-					} else {
-						REQUIRE(test_node->getEntries().count({hash.getKeyPart()}));
 					}
 				}
 			}
@@ -233,6 +230,9 @@ namespace hypertrie::tests::node_based::node_context {
 			auto sub_entries = getSubEntriesByPos(pos);
 
 			for (const auto &[key_part, child_entries] : sub_entries) {
+				if constexpr (depth == 2 and tri::is_bool_valued and tri::is_lsb_unused)
+					if (child_entries.size() == 1)
+						continue;
 				auto child_hash = calcHash<depth -1>(child_entries);
 				if (not existing_children.contains(child_hash))
 					existing_children[child_hash] = std::make_shared<TestTensor<depth - 1, tri>>(false, 0, child_entries); //<TestTensor<depth - 1, tri>>

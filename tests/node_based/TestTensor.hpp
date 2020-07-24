@@ -14,10 +14,20 @@ namespace hypertrie::tests::node_based::node_context {
 
 	using namespace hypertrie::internal::node_based;
 
-	template<size_t depth, HypertrieInternalTrait tri_t>
+	template<size_t depth, HypertrieInternalTrait tri_t, typename = std::enable_if_t<(depth >= 0)>>
 	class TestTensor {
 		using tri = tri_t;
 
+	public:
+		template <size_t node_depth>
+		using NodeRepr_t = std::conditional_t<(not (node_depth == 1 and tri_t::is_bool_valued and tri_t::is_lsb_unused)), TaggedNodeHash, KeyPartUCNodeHashVariant<tri_t>>;
+		using NodeRepr = NodeRepr_t<depth>;
+		template <size_t node_depth>
+		using Hash2Instance_t = std::map<NodeRepr_t<node_depth>, std::shared_ptr<TestTensor<node_depth, tri>>>;
+		using Hash2Instance = Hash2Instance_t<depth>;
+
+
+	private:
 		template<size_t key_depth>
 		using RawKey = typename tri::template RawKey<key_depth>;
 		using value_type = typename tri::value_type;
@@ -29,7 +39,7 @@ namespace hypertrie::tests::node_based::node_context {
 
 		size_t ref_count_;
 
-		TaggedNodeHash hash_;
+		NodeRepr hash_;
 
 
 	public:
@@ -75,59 +85,29 @@ namespace hypertrie::tests::node_based::node_context {
 
 		template<size_t context_depth>
 		void checkContext(NodeContext<context_depth, tri> &context) {
-			TaggedNodeHash hash = this->hash();
-			auto & storage = context.storage;
-			const UncompressedNodeContainer<depth, tri> &nc = storage.template getUncompressedNode<depth>(hash);
-			INFO("Storage doesn't contain the entry");
-			REQUIRE(not nc.null());
-			INFO("Storage doesn't contain the entry");
-			REQUIRE(not nc.empty());
-
-			REQUIRE(storage.template getNodeStorage<depth, NodeCompression::uncompressed>().size() == 1);
-			REQUIRE(storage.template getNodeStorage<depth, NodeCompression::compressed>().size() == 0);
-			const UncompressedNode<depth, tri> *node = nc.node();
-			INFO("ref count is not correct");
-			REQUIRE(node->ref_count() == this->ref_count());
-
-			std::map<TaggedNodeHash, std::shared_ptr<TestTensor<depth - 1, tri>>> existing_children{};
-			auto children_by_pos = getChildrenNodes(existing_children);
-
-			for (size_t pos : iter::range(depth)) {
-				auto &actual_edges = node->edges(pos);
-				auto &expected_edges = children_by_pos[pos];
-				INFO("Wrong amount of children for depth {} and pos {}"_format(depth, pos));
-				REQUIRE(actual_edges.size() == expected_edges.size());
-				for (const auto &[key_part, child] : expected_edges) {
-					INFO("key_part {} missing for depth {} and pos {}"_format(key_part, depth, pos));
-					REQUIRE(actual_edges.count(key_part));
-					INFO("Wrong hash for key_part {} for depth {} and pos {}"_format(key_part, depth, pos));
-					INFO("actual_edges hash {}, expected hash {}"_format(actual_edges.at(key_part), child->hash()));
-					REQUIRE(actual_edges.at(key_part) == child->hash());
-				}
-			}
-
-			if constexpr (depth > 1)
-				checkContext(context, existing_children);
+			typename TestTensor<depth, tri>::Hash2Instance nodes{};
+			nodes[this->hash()] = std::make_shared<TestTensor<depth, tri>>(*this);
+			 checkContext<context_depth, depth>(context, nodes);
 		}
 
 		template<size_t context_depth, size_t node_depth>
-		void static checkContext(NodeContext<context_depth, tri> &context, std::map<TaggedNodeHash, std::shared_ptr<TestTensor<node_depth, tri>>> nodes) {
+		void static checkContext(NodeContext<context_depth, tri> &context, Hash2Instance_t<node_depth> nodes) {
+			static_assert(depth > 0);
 			auto & storage = context.storage;
-			std::map<TaggedNodeHash, std::shared_ptr<TestTensor<node_depth - 1, tri>>> existing_children{};
 
+			// count hwo much uncompressed and compressed children are there
 			size_t uncompressed_count = 0;
 			size_t compressed_count = 0;
 
-
-
+			// check if the nodes passed via argument are fine and in context cext
 			for (auto &[hash, test_node] : nodes) {
-				assert(hash == test_node->hash());
-				assert(not hash.empty());
+				REQUIRE(hash == test_node->hash());
+				REQUIRE(not hash.empty());
 				INFO(fmt::format("hash: {}", hash));
 				if (hash.isUncompressed()) {
 					uncompressed_count++;
 
-					const UncompressedNodeContainer<node_depth, tri> &nc = storage.template getUncompressedNode<node_depth>(hash);
+					const UncompressedNodeContainer<node_depth, tri> &nc = storage.template getUncompressedNode<node_depth>((TaggedNodeHash)hash);
 
 					INFO("Storage doesn't contain the entry");
 					REQUIRE(not nc.null());
@@ -142,78 +122,127 @@ namespace hypertrie::tests::node_based::node_context {
 
 					INFO("size is not correct");
 					REQUIRE(node->size() == test_node->size());
-					auto children_by_pos= test_node->getChildrenNodes(existing_children);
 
-					for (size_t pos : iter::range(node_depth)) {
-						auto &actual_edges = node->edges(pos);
-						auto &expected_edges = children_by_pos[pos];
-						INFO("Wrong amount of children for depth {} and pos {}"_format(node_depth, pos));
-						REQUIRE(actual_edges.size() == expected_edges.size());
-						for (const auto &[key_part, child] : expected_edges) {
-							INFO("key_part {} missing for depth {} and pos {}"_format(key_part, node_depth, pos));
-							REQUIRE(actual_edges.count(key_part));
-							if constexpr (node_depth == 1 and not tri::is_bool_valued) {
-								INFO("Wrong hash for key_part {} for depth {} and pos {}"_format(key_part, node_depth, pos));
-								INFO("actual_edges hash {}, expected hash {}"_format(actual_edges.at(key_part), child->hash()));
-								REQUIRE(actual_edges.at(key_part) == child->getEntries().at({}));
+					if constexpr (node_depth > 1)
+						for (size_t pos : iter::range(node_depth)) {
+							auto &actual_edges = node->edges(pos);
+							const auto &expected_edges = test_node->getEdgesByPos(pos);
+							INFO("Wrong amount of children for depth {} and pos {}"_format(node_depth, pos));
+							REQUIRE(actual_edges.size() == expected_edges.size());
+							for (const auto &[expected_key_part, expected_child_hash] : expected_edges) {
+								INFO("key_part {} missing for depth {} and pos {}"_format(expected_key_part, node_depth, pos));
+								REQUIRE(actual_edges.count(expected_key_part));
+								if constexpr (not (node_depth == 1 and tri::is_bool_valued)) {
+									INFO("child_hash_or_value {}  is wrong for depth {} and pos {}"_format(expected_child_hash, node_depth, pos));
+									REQUIRE(actual_edges.at(expected_key_part) == expected_child_hash);
+								}
 							}
+						}
+					else {
+						auto &actual_edges = node->edges(0);
+						INFO("Wrong amount of children for depth {}"_format(node_depth));
+						REQUIRE(actual_edges.size() == test_node->getEntries().size());
+						for (const auto &[expected_key, expected_value] : test_node->getEntries()) {
+							auto expected_key_part = expected_key[0];
+							INFO("key_part {} missing for depth {}"_format(expected_key_part, node_depth));
+							REQUIRE(actual_edges.count(expected_key_part));
+							INFO("child_value {}  is wrong for depth {}"_format(expected_value, node_depth));
+							if constexpr (not tri::is_bool_valued)
+							REQUIRE(actual_edges.at(expected_key_part) == expected_value);
 						}
 					}
 				} else {
-					compressed_count++;
+					if constexpr (not (node_depth == 1 and tri::is_bool_valued and tri::is_lsb_unused)) {
+						compressed_count++;
+						const CompressedNodeContainer<node_depth, tri> &nc = storage.template getCompressedNode<node_depth>(hash);
 
-					const CompressedNodeContainer<node_depth, tri> &nc = storage.template getCompressedNode<node_depth>(hash);
+						INFO("Storage doesn't contain the entry");
+						REQUIRE(not nc.null());
 
-					INFO("Storage doesn't contain the entry");
-					REQUIRE(not nc.null());
+						INFO("Storage doesn't contain the entry");
+						REQUIRE(not nc.empty());
 
-					INFO("Storage doesn't contain the entry");
-					REQUIRE(not nc.empty());
+						const CompressedNode<node_depth, tri> *node = nc.node();
 
-					const CompressedNode<node_depth, tri> *node = nc.node();
+						INFO("ref count is not correct");
+						REQUIRE(node->ref_count() == test_node->ref_count());
 
-					INFO("ref count is not correct");
-					REQUIRE(node->ref_count() == test_node->ref_count());
+						INFO("size is not correct");
+						REQUIRE(node->size() == test_node->size());
 
-					INFO("size is not correct");
-					REQUIRE(node->size() == test_node->size());
-
-					INFO("Key is not correct");
-					REQUIRE(test_node->getEntries().count(node->key()));
-					INFO("Value is not correct");
-					REQUIRE(test_node->getEntries().at(node->key()) == node->value());
+						INFO("Key is not correct");
+						REQUIRE(test_node->getEntries().count(node->key()));
+						INFO("Value is not correct");
+						REQUIRE(test_node->getEntries().at(node->key()) == node->value());
+					}
 				}
 			}
-
 			REQUIRE(storage.template getNodeStorage<node_depth, NodeCompression::uncompressed>().size() == uncompressed_count);
-			REQUIRE(storage.template getNodeStorage<node_depth, NodeCompression::compressed>().size() == compressed_count);
+			if constexpr (not (node_depth == 1 and tri::is_bool_valued and tri::is_lsb_unused))
+				REQUIRE(storage.template getNodeStorage<node_depth, NodeCompression::compressed>().size() == compressed_count);
 
-			if constexpr (node_depth > 1)
-				checkContext(context, existing_children);
+
+
+			// calculate sub-nodes
+			if constexpr (node_depth > 1) {
+
+				Hash2Instance_t<node_depth -1> existing_children{};
+
+				for (auto &[hash, test_node] : nodes)
+					if (hash.isUncompressed())
+						for (size_t pos : iter::range(node_depth))
+							test_node->populateExistingChildren(pos, existing_children);
+
+				// check the sub-nodes
+				checkContext<context_depth, node_depth -1>(context, existing_children);
+			}
 		}
 
-		auto getChildrenNodes(std::map<TaggedNodeHash, std::shared_ptr<TestTensor<depth - 1, tri>>> &existing_children) {
-			std::array<std::map<key_part_type, std::map<RawKey<depth - 1>, value_type>>, depth> children_entries_by_pos{};
-			for (size_t pos : iter::range(depth))
-				for (const auto &[key, value] : entries)
-					children_entries_by_pos[pos][key[pos]].insert({subkey(key, pos), value});
+		auto getSubEntriesByPos(size_t pos) {
+			if constexpr(depth > 1){
+				std::map<key_part_type,
+						std::map<RawKey<depth - 1>, value_type>
+				> mapped_entries{};
 
+				// find all entries of sub-tensors for that position
+				for (const auto &[key, value] : this->entries)
+					mapped_entries[key[pos]].insert({subkey(key, pos), value});
 
-			std::array<std::map<key_part_type, std::shared_ptr<TestTensor<depth - 1, tri>>>, depth> children_by_pos{};
-
-			for (size_t pos : iter::range(depth))
-				for (const auto &[key_part, child_entries] : children_entries_by_pos[pos]) {
-					TaggedNodeHash child_hash = calcHash(child_entries);
-					if (not existing_children.contains(child_hash))
-						existing_children[child_hash] = std::make_shared<TestTensor<depth - 1, tri>>(false, 0, child_entries);
-					std::shared_ptr<TestTensor<depth - 1, tri>> child = existing_children[child_hash];
-					child->incRefCount();
-					children_by_pos[pos][key_part] = child;
-				}
-			return children_by_pos;
+				return mapped_entries;
+			}
 		}
 
-		TaggedNodeHash
+		auto getEdgesByPos(size_t pos) {
+			if constexpr(depth > 1) {
+				auto sub_entries = getSubEntriesByPos(pos);
+
+				// hash them
+				std::map<key_part_type, NodeRepr_t<depth -1>> edges{};
+				for (const auto &[key_part, child_entries] : sub_entries)
+					edges[key_part] = calcHash<depth - 1>(child_entries);
+
+				return edges;
+			}
+		}
+
+		void populateExistingChildren(size_t pos, Hash2Instance_t<depth -1> &existing_children){
+			if constexpr (depth > 1){
+			auto sub_entries = getSubEntriesByPos(pos);
+
+			for (const auto &[key_part, child_entries] : sub_entries) {
+				if constexpr (depth == 2 and tri::is_bool_valued and tri::is_lsb_unused)
+					if (child_entries.size() == 1)
+						continue;
+				auto child_hash = calcHash<depth -1>(child_entries);
+				if (not existing_children.contains(child_hash))
+					existing_children[child_hash] = std::make_shared<TestTensor<depth - 1, tri>>(false, 0, child_entries); //<TestTensor<depth - 1, tri>>
+				auto child = existing_children[child_hash];
+				child->incRefCount();
+			}
+			}
+		}
+
+		NodeRepr
 		hash() const {
 			return  this->hash_;
 		}
@@ -223,7 +252,13 @@ namespace hypertrie::tests::node_based::node_context {
 		}
 
 		template<size_t key_depth>
-		static TaggedNodeHash calcHash(std::map<RawKey<key_depth>, value_type> entries, bool is_primary_node = false) {
+		static NodeRepr_t<key_depth> calcHash(std::map<RawKey<key_depth>, value_type> entries, bool is_primary_node = false) {
+			if constexpr (tri::is_bool_valued and tri::is_lsb_unused and key_depth == 1) {
+				if (entries.size() == 1) {
+					return {entries.begin()->first[0]};
+				}
+			}
+
 			TaggedNodeHash hash = TaggedNodeHash::getUncompressedEmptyNodeHash<depth>();
 			bool first = true;
 			for (const auto &[key, value] : entries) {
@@ -233,7 +268,7 @@ namespace hypertrie::tests::node_based::node_context {
 				} else
 					hash.addEntry(key, value);
 			}
-			return hash;
+			return {hash};
 		}
 	};
 

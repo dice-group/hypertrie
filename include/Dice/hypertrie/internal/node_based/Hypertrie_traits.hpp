@@ -9,10 +9,11 @@
 
 namespace hypertrie::internal::node_based {
 
-	template<typename key_part_type_t,
-			 typename value_type_t,
-			 template<typename, typename> class map_type_t,
-			 template<typename> class set_type_t>
+	template<typename key_part_type_t = unsigned long,
+			 typename value_type_t = bool,
+			 template<typename, typename> class map_type_t = hypertrie::internal::container::tsl_sparse_map,
+			 template<typename> class set_type_t = hypertrie::internal::container::tsl_sparse_set,
+			 bool lsb_unused_v = false>
 	struct Hypertrie_t {
 		using key_part_type = key_part_type_t;
 		using value_type = value_type_t;
@@ -23,13 +24,16 @@ namespace hypertrie::internal::node_based {
 
 		using SliceKey = ::hypertrie::SliceKey<key_part_type>;
 		using Key = ::hypertrie::Key<key_part_type>;
+
+		static constexpr const bool lsb_unused = lsb_unused_v;
 	};
 
 	namespace internal::hypertrie_trait {
 		template<typename T, template<typename,
 									  typename,
 									  template<typename, typename> class,
-									  template<typename> class>
+									  template<typename> class,
+									  bool>
 							 typename U>
 		struct is_instance_impl : public std::false_type {
 		};
@@ -37,19 +41,22 @@ namespace hypertrie::internal::node_based {
 		template<template<typename,
 						  typename,
 						  template<typename, typename> class,
-						  template<typename> class>
+						  template<typename> class,
+						  bool>
 				 typename U,
 				 typename key_part_type_t,
 				 typename value_type_t,
 				 template<typename, typename> class map_type_t,
-				 template<typename> class set_type_t>
-		struct is_instance_impl<U<key_part_type_t, value_type_t, map_type_t, set_type_t>, U> : public std::true_type {
+				 template<typename> class set_type_t,
+				bool lsb_unused_v>
+		struct is_instance_impl<U<key_part_type_t, value_type_t, map_type_t, set_type_t, lsb_unused_v>, U> : public std::true_type {
 		};
 
 		template<typename T, template<typename,
 									  typename,
 									  template<typename, typename> class,
-									  template<typename> class>
+									  template<typename> class,
+									  bool>
 							 typename U>
 		using is_instance = is_instance_impl<std::decay_t<T>, U>;
 	}// namespace internal::hypertrie_trait

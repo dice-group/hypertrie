@@ -125,7 +125,13 @@ namespace hypertrie::internal::node_based {
 		-> std::conditional_t<(depth > 1), NodeContainer<depth - 1, tri>, value_type> {
 			assert(pos < depth);
 			auto child = nodec.getChildHashOrValue(pos, key_part);
-			if constexpr (depth > 1) {
+			if constexpr (depth == 2 and tri::is_lsb_unused and tri::is_bool_valued) {
+				if (child.isCompressed()) {
+					return CompressedNodeContainer<depth - 1, tri>{child, {}};
+				} else {
+					return storage.template getUncompressedNode<depth - 1>(child.getTaggedNodeHash());
+				}
+			} else if constexpr (depth > 1) {
 				if (not child.empty())
 					return storage.template getNode<depth - 1>(child);
 				else
@@ -160,6 +166,10 @@ namespace hypertrie::internal::node_based {
 					auto pos = 0;//minCardPos();
 					NodeContainer<depth - 1, tri> child = this->template getChild<depth>(nc, pos, key[pos]);
 					if (not child.empty()) {
+						if constexpr (depth == 2 and tri::is_lsb_unused and tri::is_bool_valued) {
+							if (child.isCompressed()) // here, we have an KeyPart stored instead of a hash
+								return key[1] == child.hash().getKeyPart();
+						}
 						return get<depth - 1>(child, subkey(key, pos));
 					} else {
 						return {};// false, 0, 0.0

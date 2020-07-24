@@ -170,6 +170,69 @@ namespace hypertrie::tests::node_based::node_context {
 		}
 	}
 
+	TEST_CASE("Test specific case long -> bool, unused_lsb", "[NodeContext]") {
+		using tr = Hypertrie_internal_t<Hypertrie_t<unsigned long,
+				bool,
+				hypertrie::internal::container::std_map,
+				hypertrie::internal::container::std_set,
+				true>>;
+		constexpr pos_type depth = 3;
+
+		using key_part_type = typename tr::key_part_type;
+		using value_type = typename tr::value_type;
+		using Key = typename tr::template RawKey<depth>;
+
+
+		NodeContext<depth, tr> context{};
+		// create emtpy primary node
+		UncompressedNodeContainer<depth, tr> nc = context.template newPrimaryNode<depth>();
+		auto tt = TestTensor<depth, tr>::getPrimary();
+
+
+		static std::vector<
+				std::vector<Key>> test_entries{
+				{
+						{14, 6, 14},
+						{14, 14, 18},
+  						{14, 14, 4} //,
+//						{8, 12, 10},
+//						{10, 14, 12}
+				}
+		};
+		static bool initialized = false;
+		if (not initialized){
+			initialized = true;
+			for (auto &keys : test_entries)
+				for (auto &key : keys){
+					key[0] <<= 1;
+					key[1] <<= 1;
+					key[2] <<= 1;
+				}
+		}
+
+		for(const auto &[case_, entries] : iter::enumerate(test_entries)) {
+			SECTION("case {}"_format(case_)) {
+				// print entries
+				std::string print_entries{};
+				for (auto &key : entries)
+					print_entries += "{} → true\n"_format(key);
+				WARN(print_entries);
+
+				// insert entries
+				int i = 0;
+				WARN("state {} : {}"_format(i++, (std::string) context.storage));
+				for (auto &key : entries) {
+
+					context.template set<depth>(nc, key, true);
+					tt.set(key, true);
+					WARN("state {} : {}"_format(i++, (std::string) context.storage));
+
+					tt.checkContext(context);
+				}
+			}
+		}
+	}
+
 
 	TEST_CASE("Test specific case double bulk long -> bool", "[NodeContext]") {
 		using tr = default_bool_Hypertrie_internal_t;

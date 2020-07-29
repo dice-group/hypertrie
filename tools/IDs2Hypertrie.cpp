@@ -110,7 +110,7 @@ int main(int argc, char *argv[]) {
 				auto short_duration = steady_clock::now() - start_part;
 				start_part = steady_clock::now();
 				std::cerr << "{:d} mio triples processed."_format(_1mios) <<                                                                                            //
-						"\ttook: {:d}.{:04d} s."_format(duration_cast<seconds>(short_duration).count(), (duration_cast<milliseconds>(short_duration) % 1000).count()) <<//
+						"\ttook: {:d}.{:03d} s."_format(duration_cast<seconds>(short_duration).count(), (duration_cast<milliseconds>(short_duration) % 1000).count()) <<//
 						"\tdistinct triples: {}"_format(hypertrie.uncompressed().node()->size()) <<                                                                                    //
 						"\ttriple/GB: {}"_format(long(hypertrie.uncompressed().node()->size() / (double(get_memory_usage()) / (1024 * 1024)))) <<                                      //
 						"\tkB/triple: {:.4f}"_format(double(get_memory_usage()) / hypertrie.uncompressed().node()->size()) << std::endl;
@@ -124,7 +124,7 @@ int main(int argc, char *argv[]) {
 	std::cerr << "hypertrie size estimation: {:d} kB."_format(get_memory_usage()) << std::endl;
 	auto duration = end - start;
 
-	std::cerr << "duration: {:d}.{:04d} s."_format(duration_cast<seconds>(duration).count(),
+	std::cerr << "duration: {:d}.{:03d} s."_format(duration_cast<seconds>(duration).count(),
 												   (duration_cast<milliseconds>(duration) % 1000).count())
 			  << std::endl;
 }

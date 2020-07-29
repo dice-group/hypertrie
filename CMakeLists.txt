@@ -4,6 +4,10 @@ set(CMAKE_CXX_STANDARD 20)
 
 include(${CMAKE_BINARY_DIR}/conan_paths.cmake)
 
+# robin_hood hashing builds only with this approach :/
+include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+conan_basic_setup(TARGETS)
+
 if (NOT EXISTS ${CMAKE_BINARY_DIR}/CMakeCache.txt)
     if (NOT CMAKE_BUILD_TYPE)
         set(CMAKE_BUILD_TYPE "Release" CACHE STRING "" FORCE)
@@ -37,7 +41,6 @@ target_include_directories(cppitertools INTERFACE
 find_package(absl REQUIRED)
 find_package(tsl-hopscotch-map REQUIRED)
 find_package(tsl-sparse-map REQUIRED)
-find_package(robin-hood-hashing REQUIRED)
 find_package(fmt REQUIRED)
 
 SET(Boost_USE_STATIC_LIBS ON)
@@ -61,7 +64,7 @@ target_link_libraries(hypertrie INTERFACE
         Boost::Boost
         Threads::Threads
         tsl-sparse-map::tsl-sparse-map
-        robin-hood-hashing::robin-hood-hashing
+        CONAN_PKG::robin-hood-hashing
         )
 
 

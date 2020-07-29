@@ -46,7 +46,7 @@ namespace hypertrie::internal::node_based {
 		class MultiUpdate;
 
 		template<size_t depth>
-		using LevelMultiUpdates_t = std::unordered_set<MultiUpdate<depth>, absl::Hash<MultiUpdate<depth>>>;
+		using LevelMultiUpdates_t = robin_hood::unordered_node_set<MultiUpdate<depth>, absl::Hash<MultiUpdate<depth>>>;
 
 		using PlannedMultiUpdates = util::CountDownNTuple<LevelMultiUpdates_t, update_depth>;
 
@@ -774,7 +774,7 @@ namespace hypertrie::internal::node_based {
 						// # group the subkeys by the key part at pos
 
 						// maps key parts to the keys to be inserted for that child
-						std::unordered_map<key_part_type, std::vector<Entry<depth - 1>>> children_inserted_keys{};
+						robin_hood::unordered_map<key_part_type, std::vector<Entry<depth - 1>>> children_inserted_keys{};
 
 						// populate children_inserted_keys
 						for (const Entry<depth> &entry : update.entries())

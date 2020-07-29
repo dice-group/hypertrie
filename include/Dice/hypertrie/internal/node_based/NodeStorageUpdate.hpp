@@ -282,7 +282,7 @@ namespace hypertrie::internal::node_based {
 	public:
 		NodeStorage_t<node_storage_depth> &node_storage;
 
-		UncompressedNodeContainer<update_depth, tri> &nodec;
+		NodeContainer<update_depth, tri> &nodec;
 
 		PlannedMultiUpdates planned_multi_updates{};
 
@@ -318,7 +318,7 @@ namespace hypertrie::internal::node_based {
 		}
 
 
-		NodeStorageUpdate(NodeStorage_t<node_storage_depth> &nodeStorage, UncompressedNodeContainer<update_depth, tri> &nodec)
+		NodeStorageUpdate(NodeStorage_t<node_storage_depth> &nodeStorage, NodeContainer<update_depth, tri> &nodec)
 			: node_storage(nodeStorage), nodec{nodec} {}
 
 		auto apply_update(std::vector<RawKey<update_depth>> keys) {
@@ -351,7 +351,12 @@ namespace hypertrie::internal::node_based {
 				update.insertOp() = InsertOp::CHANGE_VALUE;
 				update.oldValue() = old_value;
 			} else {// new entry
-				update.insertOp() = InsertOp::INSERT_MULT_INTO_UC;
+				if (nodec.empty())
+					update.insertOp() = InsertOp::INSERT_C_NODE;
+				else if (nodec.isCompressed())
+					update.insertOp() = InsertOp::INSERT_MULT_INTO_C;
+				else
+					update.insertOp() = InsertOp::INSERT_MULT_INTO_UC;
 			}
 			planUpdate(std::move(update), INC_COUNT_DIFF_AFTER);
 			apply_update_rek<update_depth>();
@@ -556,8 +561,10 @@ namespace hypertrie::internal::node_based {
 		template<size_t depth>
 		void insertCompressedNode(const MultiUpdate<depth> &update, const size_t after_count_diff) {
 
-			node_storage.template newCompressedNode<depth>(
+			auto nodec_after = node_storage.template newCompressedNode<depth>(
 					update.firstKey(), update.firstValue(), after_count_diff, update.hashAfter());
+			if constexpr (depth == update_depth)
+				this->nodec = nodec_after;
 		}
 
 		template<size_t depth, NodeCompression compression, bool reuse_node_before = false>
@@ -633,7 +640,7 @@ namespace hypertrie::internal::node_based {
 				}
 			}
 
-			if constexpr (depth == update_depth and compression == NodeCompression::uncompressed)
+			if constexpr (depth == update_depth)
 				this->nodec = nc_after;
 
 			return node_before_children_count_diff;
@@ -701,6 +708,8 @@ namespace hypertrie::internal::node_based {
 					}
 				}
 			}
+			if constexpr (depth == update_depth)
+				this->nodec = {update.hashAfter(), node};
 		}
 
 		template<size_t depth>

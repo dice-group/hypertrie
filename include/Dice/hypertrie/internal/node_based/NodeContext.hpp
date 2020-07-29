@@ -50,7 +50,7 @@ namespace hypertrie::internal::node_based {
 		 * @return old value
 		 */
 		template<size_t depth>
-		auto set(UncompressedNodeContainer<depth, tri> &nodec, const RawKey<depth> &key, value_type value) -> value_type {
+		auto set(NodeContainer<depth, tri> &nodec, const RawKey<depth> &key, value_type value) -> value_type {
 			const value_type old_value = get(nodec, key);
 			if (value == old_value)
 				return value;

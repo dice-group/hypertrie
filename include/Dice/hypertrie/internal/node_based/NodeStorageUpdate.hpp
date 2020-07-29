@@ -8,7 +8,7 @@
 #include "Dice/hypertrie/internal/util/CONSTANTS.hpp"
 #include <Dice/hypertrie/internal/util/CountDownNTuple.hpp>
 
-#include <tsl/hopscotch_set.h>
+#include <robin_hood.h>
 #include <tsl/hopscotch_map.h>
 
 namespace hypertrie::internal::node_based {
@@ -670,7 +670,7 @@ namespace hypertrie::internal::node_based {
 					// # group the subkeys by the key part at pos
 
 					// maps key parts to the keys to be inserted for that child
-					std::unordered_map<key_part_type, std::vector<Entry<depth - 1>>> children_inserted_keys{};
+					robin_hood::unordered_map<key_part_type, std::vector<Entry<depth - 1>>> children_inserted_keys{};
 
 					// populate children_inserted_keys
 					for (const Entry<depth> &entry : update.entries())

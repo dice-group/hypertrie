@@ -66,7 +66,7 @@ namespace hypertrie::internal::node_based {
 		 * @return
 		 */
 		template<size_t depth>
-		void bulk_insert(UncompressedNodeContainer<depth, tri> &nodec, std::vector<RawKey<depth>> keys) {
+		void bulk_insert(NodeContainer<depth, tri> &nodec, std::vector<RawKey<depth>> keys) {
 			NodeStorageUpdate<max_depth, depth, tri> update{this->storage, nodec};
 			update.apply_update(std::move(keys));
 		}

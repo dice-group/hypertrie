@@ -58,7 +58,11 @@ int main(int argc, char *argv[]) {
 		exit(EXIT_FAILURE);
 	}
 
-	using tr = default_bool_Hypertrie_internal_t;
+	using tr = Hypertrie_internal_t<Hypertrie_t<unsigned long,
+			bool,
+			hypertrie::internal::container::tsl_sparse_map,
+			hypertrie::internal::container::tsl_sparse_set,
+			true>>;
 	constexpr hypertrie::pos_type depth = 3;
 
 	using key_part_type = typename tr::key_part_type;
@@ -67,7 +71,7 @@ int main(int argc, char *argv[]) {
 
 	NodeContext<depth, tr> context{};
 	// create emtpy primary node
-	UncompressedNodeContainer<depth, tr> hypertrie = context.template newPrimaryNode<depth>();
+	NodeContainer<depth, tr> hypertrie{};
 
 	std::ifstream file(rdf_file);
 
@@ -107,16 +111,16 @@ int main(int argc, char *argv[]) {
 				start_part = steady_clock::now();
 				std::cerr << "{:d} mio triples processed."_format(_1mios) <<                                                                                            //
 						"\ttook: {:d}.{:04d} s."_format(duration_cast<seconds>(short_duration).count(), (duration_cast<milliseconds>(short_duration) % 1000).count()) <<//
-						"\tdistinct triples: {}"_format(hypertrie.node()->size()) <<                                                                                    //
-						"\ttriple/GB: {}"_format(long(hypertrie.node()->size() / (double(get_memory_usage()) / (1024 * 1024)))) <<                                      //
-						"\tkB/triple: {:.4f}"_format(double(get_memory_usage()) / hypertrie.node()->size()) << std::endl;
+						"\tdistinct triples: {}"_format(hypertrie.uncompressed().node()->size()) <<                                                                                    //
+						"\ttriple/GB: {}"_format(long(hypertrie.uncompressed().node()->size() / (double(get_memory_usage()) / (1024 * 1024)))) <<                                      //
+						"\tkB/triple: {:.4f}"_format(double(get_memory_usage()) / hypertrie.uncompressed().node()->size()) << std::endl;
 			}
 		}
 	}
 	auto end = steady_clock::now();
 	file.close();
 	std::cerr << "{:} mio triples processed."_format(double(total)) << std::endl;
-	std::cerr << "hypertrie entries: {:d}."_format(hypertrie.node()->size()) << std::endl;
+	std::cerr << "hypertrie entries: {:d}."_format(hypertrie.uncompressed().node()->size()) << std::endl;
 	std::cerr << "hypertrie size estimation: {:d} kB."_format(get_memory_usage()) << std::endl;
 	auto duration = end - start;
 

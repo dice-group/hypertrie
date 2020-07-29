@@ -35,24 +35,19 @@ namespace hypertrie::tests::node_based::node_context {
 
 		std::map<RawKey<depth>, value_type> entries{};
 
-		bool is_primary_node;
-
 		size_t ref_count_;
 
 		NodeRepr hash_;
 
 
 	public:
-		bool isPrimaryNode() const {
-			return is_primary_node;
-		}
 		size_t ref_count() const {
 			return ref_count_;
 		}
 
 	public:
-		explicit TestTensor(bool primary = false, size_t ref_count = 0, std::map<RawKey<depth>, value_type> entries = {}) : entries(entries), is_primary_node(primary), ref_count_(ref_count) {
-			hash_ = calcHash(this->entries, this->is_primary_node);
+		explicit TestTensor(bool primary = false, size_t ref_count = 0, std::map<RawKey<depth>, value_type> entries = {}) : entries(entries), ref_count_(ref_count) {
+			hash_ = calcHash(this->entries);
 		}
 
 		static auto getPrimary() {
@@ -76,7 +71,7 @@ namespace hypertrie::tests::node_based::node_context {
 				entries[key] = value;
 			else
 				entries.erase(key);
-			hash_ = calcHash(this->entries, this->is_primary_node);
+			hash_ = calcHash(this->entries);
 		}
 
 		void incRefCount() {
@@ -252,7 +247,7 @@ namespace hypertrie::tests::node_based::node_context {
 		}
 
 		template<size_t key_depth>
-		static NodeRepr_t<key_depth> calcHash(std::map<RawKey<key_depth>, value_type> entries, bool is_primary_node = false) {
+		static NodeRepr_t<key_depth> calcHash(std::map<RawKey<key_depth>, value_type> entries) {
 			if constexpr (tri::is_bool_valued and tri::is_lsb_unused and key_depth == 1) {
 				if (entries.size() == 1) {
 					return {entries.begin()->first[0]};
@@ -262,7 +257,7 @@ namespace hypertrie::tests::node_based::node_context {
 			TensorHash hash{};
 			bool first = true;
 			for (const auto &[key, value] : entries) {
-				if (not is_primary_node and first) {
+				if (first) {
 					first = false;
 					hash = TensorHash::getCompressedNodeHash(key, value);
 				} else

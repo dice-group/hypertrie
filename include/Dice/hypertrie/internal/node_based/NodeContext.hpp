@@ -84,20 +84,24 @@ namespace hypertrie::internal::node_based {
 		inline auto getChild(UncompressedNodeContainer<depth, tri> &nodec, size_t pos, key_part_type key_part)
 		-> std::conditional_t<(depth > 1), NodeContainer<depth - 1, tri>, value_type> {
 			assert(pos < depth);
-			auto child = nodec.getChildHashOrValue(pos, key_part);
-			if constexpr (depth == 2 and tri::is_lsb_unused and tri::is_bool_valued) {
-				if (child.isCompressed()) {
-					return CompressedNodeContainer<depth - 1, tri>{child, {}};
+			if (nodec.empty())
+				return {};
+			else {
+				auto child = nodec.getChildHashOrValue(pos, key_part);
+				if constexpr (depth == 2 and tri::is_lsb_unused and tri::is_bool_valued) {
+					if (child.isCompressed()) {
+						return CompressedNodeContainer<depth - 1, tri>{child, {}};
+					} else {
+						return storage.template getUncompressedNode<depth - 1>(child.getTaggedNodeHash());
+					}
+				} else if constexpr (depth > 1) {
+					if (not child.empty())
+						return storage.template getNode<depth - 1>(child);
+					else
+						return {};
 				} else {
-					return storage.template getUncompressedNode<depth - 1>(child.getTaggedNodeHash());
+					return child;
 				}
-			} else if constexpr (depth > 1) {
-				if (not child.empty())
-					return storage.template getNode<depth - 1>(child);
-				else
-					return {};
-			} else {
-				return child;
 			}
 		}
 
@@ -111,7 +115,9 @@ namespace hypertrie::internal::node_based {
 		template<size_t depth>
 		auto get(NodeContainer<depth, tri> &nodec, RawKey<depth> key) -> value_type {
 			static constexpr const auto subkey = &tri::template subkey<depth>;
-			if (nodec.isCompressed()) {
+			if (nodec.empty())
+				return {};
+			else if (nodec.isCompressed()) {
 				auto *node = nodec.compressed_node();
 				if (node->key() == key) {
 					if constexpr (tri::is_bool_valued) return true;

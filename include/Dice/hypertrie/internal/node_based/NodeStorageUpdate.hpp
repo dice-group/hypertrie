@@ -322,9 +322,19 @@ namespace hypertrie::internal::node_based {
 			: node_storage(nodeStorage), nodec{nodec} {}
 
 		auto apply_update(std::vector<RawKey<update_depth>> keys) {
-			assert(keys.size() > 2);
 			MultiUpdate<update_depth> update{};
-			update.insertOp() = InsertOp::INSERT_MULT_INTO_UC;
+			if (keys.empty())
+				return;
+			else if (nodec.empty())
+				if (keys.size() == 1)
+					update.insertOp() = InsertOp::INSERT_C_NODE;
+				else
+					update.insertOp() = InsertOp::NEW_MULT_UC;
+			else if (nodec.isCompressed())
+				update.insertOp() = InsertOp::INSERT_MULT_INTO_C;
+			else
+				update.insertOp() = InsertOp::INSERT_MULT_INTO_UC;
+
 			update.hashBefore() = nodec.hash();
 			update.entries() = std::move(keys);
 

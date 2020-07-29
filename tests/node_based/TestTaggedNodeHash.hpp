@@ -18,15 +18,6 @@ namespace hypertrie::tests::node_based::tagged_node_hash {
 		REQUIRE(TNS().hash() == size_t(0));
 	}
 
-	TEST_CASE("construct hash for empty nodes", "[TensorHash]") {
-		// make sure the hashes are pairwise different
-		REQUIRE(TNS::getUncompressedEmptyNodeHash<1>() != TNS::getUncompressedEmptyNodeHash<2>());
-		REQUIRE(TNS::getUncompressedEmptyNodeHash<1>() != TNS::getUncompressedEmptyNodeHash<3>());
-		REQUIRE(TNS::getUncompressedEmptyNodeHash<1>() != TNS::getUncompressedEmptyNodeHash<4>());
-		REQUIRE(TNS::getUncompressedEmptyNodeHash<2>() != TNS::getUncompressedEmptyNodeHash<3>());
-		REQUIRE(TNS::getUncompressedEmptyNodeHash<2>() != TNS::getUncompressedEmptyNodeHash<4>());
-		REQUIRE(TNS::getUncompressedEmptyNodeHash<3>() != TNS::getUncompressedEmptyNodeHash<4>());
-	}
 
 	template<pos_type depth>
 	void singleEntryCompressed() {
@@ -92,7 +83,7 @@ namespace hypertrie::tests::node_based::tagged_node_hash {
 												  {-3, 0}};
 		const auto values = std::vector<value_type>{4.2, 7.0, -100, 15.75};
 
-		const TensorHash hash = TNS::getUncompressedEmptyNodeHash<depth>().addEntry(keys[0], values[0]);
+		const TensorHash hash = TensorHash{}.addEntry(keys[0], values[0]);
 		REQUIRE(hash.isUncompressed());
 
 		TensorHash hash1 = hash;

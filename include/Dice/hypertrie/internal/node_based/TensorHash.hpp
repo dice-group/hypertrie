@@ -210,35 +210,10 @@ namespace hypertrie::internal::node_based {
 		template<size_t depth, typename key_part_type, typename value_type>
 		static auto
 		getCompressedNodeHash(const RawKey<depth, key_part_type> &key, const value_type &value) noexcept -> TensorHash {
-			auto hash = getRawEmptyNodeHash<depth>();
-			hash.addFirstEntry(key, value);
-			return hash;
-		}
-
-	private:
-		/**
-		 * Creates an empty node hash. Does not initialize compression tag.
-		 * @tparam depth  key depth/length
-		 */
-		template<size_t depth>
-		static auto getRawEmptyNodeHash() noexcept -> TensorHash {
-			auto hash = TensorHash();
-			hash.hash_ = absl::Hash<pos_type>()(depth);
-			return hash;
+			return TensorHash().addFirstEntry(key, value);
 		}
 
 	public:
-
-		/**
-		 * Creates an empty, uncompressed node hash.
-		 * @tparam depth  key depth/length
-		 */
-		template<size_t depth>
-		static auto getUncompressedEmptyNodeHash() noexcept -> TensorHash {
-			TensorHash hash = getRawEmptyNodeHash<depth>();
-			hash.bitset()[compression_tag_pos] = uncompressed_tag;
-			return hash;
-		}
 
 		bool operator<(const TensorHash &other) const noexcept {
 			return this->hash_ < other.hash_;

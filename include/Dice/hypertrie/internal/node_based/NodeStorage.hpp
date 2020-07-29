@@ -181,14 +181,6 @@ namespace hypertrie::internal::node_based {
 		}
 
 
-		template<size_t depth, typename = std::enable_if_t<(not (depth == 1 and tri_t::is_lsb_unused and tri_t::is_bool_valued))>>
-		UncompressedNodeContainer<depth, tri> newUncompressedNode(size_t ref_count) {
-			static const TensorHash hash = TensorHash::getUncompressedEmptyNodeHash<depth>();
-			auto [it, success] = getNodeStorage<depth, NodeCompression::uncompressed>().insert({hash, new UncompressedNode<depth, tri>{ref_count}});
-			assert(success);
-			return UncompressedNodeContainer<depth, tri>{hash, &LevelNodeStorage<depth, tri>::template deref<NodeCompression::uncompressed>(it)};
-		}
-
 		/**
 		 * creates a new node with the value changed. The old node is NOT deleted if keep_old is true and must eventually be deleted afterwards.
 		 */

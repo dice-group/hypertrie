@@ -42,46 +42,6 @@ namespace hypertrie::internal::node_based {
 	public:
 		NodeStorage_t storage{};
 
-		template<size_t depth>
-		UncompressedNodeContainer<depth, tri> newPrimaryNode() {
-			static const TensorHash base_hash = TensorHash::getUncompressedEmptyNodeHash<depth>();
-			primary_nodes_.push_front(base_hash);
-			storage.template getUncompressedNode<depth>(base_hash);
-			UncompressedNodeContainer<depth, tri> nodec = storage.template getUncompressedNode<depth>(base_hash);
-			if (nodec.null())
-				nodec = storage.template newUncompressedNode<depth>(1);
-			else
-				nodec.node()->ref_count()++;
-			return nodec;
-		}
-
-		template<size_t depth>
-		bool deletePrimaryNode(TensorHash thash) {
-			{// remove the hash from primary nodes list
-				auto found = std::find(primary_nodes_.begin(), primary_nodes_.end(), thash);
-				if (found == primary_nodes_.end())
-					return false;
-				primary_nodes_.erase(found);
-			}
-			decrementNodeCount<depth, NodeCompression::uncompressed>(thash);
-
-			return true;
-		}
-
-
-		template<size_t depth>
-		inline void deleteChild(NodeContainer<depth, tri> &nodec, size_t pos, key_part_type key_part) {
-			assert(nodec.hash().isUncompressed());
-			assert(pos < depth);
-			auto &edges = nodec.compressed_node->edges_[pos];
-			edges.erase(key_part);
-		}
-
-		template<class K, class V>
-		using Map = container::boost_flat_map<K, V>;
-		template<class K>
-		using Set = container::boost_flat_set<K>;
-
 		/**
 		 *
 		 * @tparam depth

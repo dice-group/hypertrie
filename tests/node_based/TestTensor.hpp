@@ -259,7 +259,7 @@ namespace hypertrie::tests::node_based::node_context {
 				}
 			}
 
-			TensorHash hash = TensorHash::getUncompressedEmptyNodeHash<depth>();
+			TensorHash hash{};
 			bool first = true;
 			for (const auto &[key, value] : entries) {
 				if (not is_primary_node and first) {

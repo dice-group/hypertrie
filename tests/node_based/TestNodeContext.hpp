@@ -32,7 +32,7 @@ namespace hypertrie::tests::node_based::node_context {
 				// create context
 				NodeContext<depth, tr> context{};
 				// create emtpy primary node
-				UncompressedNodeContainer<depth, tr> nc = context.template newPrimaryNode<depth>();
+				UncompressedNodeContainer<depth, tr> nc{};
 
 				const auto entries = gen.entries(2);
 				const auto [key, value] = *entries.begin();
@@ -90,7 +90,7 @@ namespace hypertrie::tests::node_based::node_context {
 
 		NodeContext<depth, tr> context{};
 		// create emtpy primary node
-		UncompressedNodeContainer<depth, tr> nc = context.template newPrimaryNode<depth>();
+		UncompressedNodeContainer<depth, tr> nc{};
 		auto tt = TestTensor<depth, tr>::getPrimary();
 
 		SECTION("write a single entry") {
@@ -128,7 +128,7 @@ namespace hypertrie::tests::node_based::node_context {
 
 		NodeContext<depth, tr> context{};
 		// create emtpy primary node
-		UncompressedNodeContainer<depth, tr> nc = context.template newPrimaryNode<depth>();
+		UncompressedNodeContainer<depth, tr> nc{};
 		auto tt = TestTensor<depth, tr>::getPrimary();
 
 
@@ -185,7 +185,7 @@ namespace hypertrie::tests::node_based::node_context {
 
 		NodeContext<depth, tr> context{};
 		// create emtpy primary node
-		UncompressedNodeContainer<depth, tr> nc = context.template newPrimaryNode<depth>();
+		UncompressedNodeContainer<depth, tr> nc{};
 		auto tt = TestTensor<depth, tr>::getPrimary();
 
 
@@ -245,7 +245,7 @@ namespace hypertrie::tests::node_based::node_context {
 
 		NodeContext<depth, tr> context{};
 		// create emtpy primary node
-		UncompressedNodeContainer<depth, tr> nc = context.template newPrimaryNode<depth>();
+		UncompressedNodeContainer<depth, tr> nc{};
 		auto tt = TestTensor<depth, tr>::getPrimary();
 
 
@@ -354,7 +354,7 @@ namespace hypertrie::tests::node_based::node_context {
 
 		NodeContext<depth, tr> context{};
 		// create emtpy primary node
-		UncompressedNodeContainer<depth, tr> nc = context.template newPrimaryNode<depth>();
+		UncompressedNodeContainer<depth, tr> nc{};
 		auto tt = TestTensor<depth, tr>::getPrimary();
 
 
@@ -441,7 +441,7 @@ namespace hypertrie::tests::node_based::node_context {
 
 		NodeContext<depth, tr> context{};
 		// create emtpy primary node
-		UncompressedNodeContainer<depth, tr> nc = context.template newPrimaryNode<depth>();
+		UncompressedNodeContainer<depth, tr> nc{};
 		auto tt = TestTensor<depth, tr>::getPrimary();
 
 

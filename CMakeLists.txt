@@ -37,6 +37,7 @@ target_include_directories(cppitertools INTERFACE
 find_package(absl REQUIRED)
 find_package(tsl-hopscotch-map REQUIRED)
 find_package(tsl-sparse-map REQUIRED)
+find_package(robin-hood-hashing REQUIRED)
 find_package(fmt REQUIRED)
 
 SET(Boost_USE_STATIC_LIBS ON)
@@ -60,6 +61,7 @@ target_link_libraries(hypertrie INTERFACE
         Boost::Boost
         Threads::Threads
         tsl-sparse-map::tsl-sparse-map
+        robin-hood-hashing::robin-hood-hashing
         )
 
 

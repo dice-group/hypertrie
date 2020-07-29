@@ -4,7 +4,7 @@
 #include "Dice/hypertrie/internal/node_based/Hypertrie_traits.hpp"
 #include "Dice/hypertrie/internal/node_based/NodeContainer.hpp"
 #include "Dice/hypertrie/internal/node_based/NodeStorage.hpp"
-#include "Dice/hypertrie/internal/node_based/TaggedNodeHash.hpp"
+#include "Dice/hypertrie/internal/node_based/TensorHash.hpp"
 #include "Dice/hypertrie/internal/util/CONSTANTS.hpp"
 #include <Dice/hypertrie/internal/util/CountDownNTuple.hpp>
 
@@ -55,7 +55,7 @@ namespace hypertrie::internal::node_based {
 		struct CountDiffAndNodePtr{ long count_diff; NodePtr<depth, tri> node_ptr; };
 
 		template <size_t depth>
-		using LevelRefChanges = tsl::sparse_map<TaggedNodeHash, CountDiffAndNodePtr<depth>>;
+		using LevelRefChanges = tsl::sparse_map<TensorHash, CountDiffAndNodePtr<depth>>;
 
 		using RefChanges = util::CountDownNTuple<LevelRefChanges, update_depth>;
 
@@ -159,8 +159,8 @@ namespace hypertrie::internal::node_based {
 
 
 			InsertOp insert_op_{};
-			TaggedNodeHash hash_before_{};
-			mutable TaggedNodeHash hash_after_{};
+			TensorHash hash_before_{};
+			mutable TensorHash hash_after_{};
 			mutable std::vector<Entry<depth>> entries_{};
 
 		public:
@@ -169,19 +169,19 @@ namespace hypertrie::internal::node_based {
 
 			const InsertOp &insertOp() const noexcept { return this->insert_op_;}
 
-			TaggedNodeHash &hashBefore()  noexcept { return this->hash_before_;}
+			TensorHash &hashBefore()  noexcept { return this->hash_before_;}
 
-			const TaggedNodeHash &hashBefore() const noexcept {
+			const TensorHash &hashBefore() const noexcept {
 				if (hash_after_.empty()) calcHashAfter();
 				return this->hash_before_;
 			}
 
-			TaggedNodeHash &hashAfter() noexcept {
+			TensorHash &hashAfter() noexcept {
 				if (hash_after_.empty()) calcHashAfter();
 				return this->hash_after_;
 			}
 
-			const TaggedNodeHash &hashAfter() const noexcept { return this->hash_after_;}
+			const TensorHash &hashAfter() const noexcept { return this->hash_after_;}
 
 			std::vector<Entry<depth>> &entries() noexcept { return this->entries_;}
 
@@ -238,7 +238,7 @@ namespace hypertrie::internal::node_based {
 						break;
 					case InsertOp::INSERT_C_NODE:{
 						assert(hash_before_.empty());
-						hash_after_ = TaggedNodeHash::getCompressedNodeHash(firstKey(), firstValue());
+						hash_after_ = TensorHash::getCompressedNodeHash(firstKey(), firstValue());
 						break;
 					}
 					case InsertOp::INSERT_MULT_INTO_C:
@@ -252,7 +252,7 @@ namespace hypertrie::internal::node_based {
 						assert(hash_before_.empty());
 						assert(entries_.size() > 1);
 
-						hash_after_ = TaggedNodeHash::getCompressedNodeHash(firstKey(), firstValue());
+						hash_after_ = TensorHash::getCompressedNodeHash(firstKey(), firstValue());
 						for (auto entry_it = std::next(entries_.begin()); entry_it != entries_.end(); ++entry_it)
 							hash_after_.addEntry(key(*entry_it), value(*entry_it));
 						break;
@@ -296,7 +296,7 @@ namespace hypertrie::internal::node_based {
 
 		// extract a change from count_changes
 		template<size_t updates_depth>
-		void planChangeCount(const TaggedNodeHash hash, const long count_change) {
+		void planChangeCount(const TensorHash hash, const long count_change) {
 			LevelRefChanges<updates_depth> &count_changes = getRefChanges<updates_depth>();
 			count_changes[hash].count_diff += count_change;
 		};
@@ -363,12 +363,12 @@ namespace hypertrie::internal::node_based {
 			LevelMultiUpdates_t<depth> &multi_updates = getPlannedMultiUpdates<depth>();
 
 			// nodes_before that are have ref_count 0 afterwards -> those could be reused/moved for nodes after
-			tsl::sparse_map<TaggedNodeHash, NodePtr<depth, tri_t>> unreferenced_nodes_before{}; // TODO: store the pointer alongside to safe one resolve
+			tsl::sparse_map<TensorHash, NodePtr<depth, tri_t>> unreferenced_nodes_before{}; // TODO: store the pointer alongside to safe one resolve
 
-			tsl::sparse_map<TaggedNodeHash, size_t> new_after_nodes{};
+			tsl::sparse_map<TensorHash, size_t> new_after_nodes{};
 
 			// extract a change from count_changes
-			auto pop_after_count_change = [&](TaggedNodeHash hash) -> std::tuple<bool, size_t> {
+			auto pop_after_count_change = [&](TensorHash hash) -> std::tuple<bool, size_t> {
 				if (auto changed = new_after_nodes.find(hash); changed != new_after_nodes.end()) {
 					auto diff = changed->second;
 					new_after_nodes.erase(changed);
@@ -379,7 +379,7 @@ namespace hypertrie::internal::node_based {
 
 
 			// check if a hash is in count_changes
-			auto peak_after_count_change = [&](TaggedNodeHash hash) -> bool {
+			auto peak_after_count_change = [&](TensorHash hash) -> bool {
 			  if (auto changed = new_after_nodes.find(hash); changed != new_after_nodes.end()) {
 				  auto diff = changed->second;
 				  return diff != 0;
@@ -443,7 +443,7 @@ namespace hypertrie::internal::node_based {
 
 			assert(new_after_nodes.empty());
 
-			tsl::sparse_map<TaggedNodeHash, long> node_before_children_count_diffs{};
+			tsl::sparse_map<TensorHash, long> node_before_children_count_diffs{};
 
 			// do unmoveables
 			for (auto &[update, count] : unmoveable_multi_updates) {
@@ -472,7 +472,7 @@ namespace hypertrie::internal::node_based {
 
 			// update the references of children not covered above (children of nodes that were not removed)
 			for (const auto &[hash_before, children_count_diff] : node_before_children_count_diffs) {
-				updateChildrenCountDiff<depth>(TaggedNodeHash(hash_before), children_count_diff);
+				updateChildrenCountDiff<depth>(TensorHash(hash_before), children_count_diff);
 			}
 
 			// do moveables
@@ -485,7 +485,7 @@ namespace hypertrie::internal::node_based {
 		}
 
 		template<size_t depth>
-		void updateChildrenCountDiff(const TaggedNodeHash &hash, const long &children_count_diff){
+		void updateChildrenCountDiff(const TensorHash &hash, const long &children_count_diff){
 			if (children_count_diff != 0) {
 				auto node = node_storage.template getUncompressedNode<depth>(hash).node();
 				this->template updateChildrenCountDiff<depth>(node, children_count_diff);
@@ -501,7 +501,7 @@ namespace hypertrie::internal::node_based {
 							planChangeCount<depth -1 >(child_hash, -1*children_count_diff);
 						else {
 							if (child_hash.isUncompressed())
-								planChangeCount<depth -1 >(TaggedNodeHash(child_hash), -1*children_count_diff);
+								planChangeCount<depth -1 >(TensorHash(child_hash), -1*children_count_diff);
 						}
 					}
 				}
@@ -509,7 +509,7 @@ namespace hypertrie::internal::node_based {
 		}
 
 		template<size_t depth, NodeCompression compression>
-		void removeUnreferencedNode(const TaggedNodeHash hash, Node<depth, compression, tri> *node = nullptr, long children_count_diff = 0){
+		void removeUnreferencedNode(const TensorHash hash, Node<depth, compression, tri> *node = nullptr, long children_count_diff = 0){
 			if constexpr(compression == NodeCompression::uncompressed)
 				if (children_count_diff != 0)
 					this->template updateChildrenCountDiff<depth>(node, children_count_diff);
@@ -806,7 +806,7 @@ namespace hypertrie::internal::node_based {
 							// execute changes
 							if (key_part_exists)
 								if constexpr (not (depth == 2 and tri::is_bool_valued and tri::is_lsb_unused))
-									tri::template deref<key_part_type, TaggedNodeHash>(iter) = child_update.hashAfter();
+									tri::template deref<key_part_type, TensorHash>(iter) = child_update.hashAfter();
 								else
 									tri::template deref<key_part_type, KeyPartUCNodeHashVariant<tri>>(iter) = child_update.hashAfter();
 							else

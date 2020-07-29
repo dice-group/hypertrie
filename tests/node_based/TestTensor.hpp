@@ -20,7 +20,7 @@ namespace hypertrie::tests::node_based::node_context {
 
 	public:
 		template <size_t node_depth>
-		using NodeRepr_t = std::conditional_t<(not (node_depth == 1 and tri_t::is_bool_valued and tri_t::is_lsb_unused)), TaggedNodeHash, KeyPartUCNodeHashVariant<tri_t>>;
+		using NodeRepr_t = std::conditional_t<(not (node_depth == 1 and tri_t::is_bool_valued and tri_t::is_lsb_unused)), TensorHash, KeyPartUCNodeHashVariant<tri_t>>;
 		using NodeRepr = NodeRepr_t<depth>;
 		template <size_t node_depth>
 		using Hash2Instance_t = std::map<NodeRepr_t<node_depth>, std::shared_ptr<TestTensor<node_depth, tri>>>;
@@ -107,7 +107,7 @@ namespace hypertrie::tests::node_based::node_context {
 				if (hash.isUncompressed()) {
 					uncompressed_count++;
 
-					const UncompressedNodeContainer<node_depth, tri> &nc = storage.template getUncompressedNode<node_depth>((TaggedNodeHash)hash);
+					const UncompressedNodeContainer<node_depth, tri> &nc = storage.template getUncompressedNode<node_depth>((TensorHash)hash);
 
 					INFO("Storage doesn't contain the entry");
 					REQUIRE(not nc.null());
@@ -259,12 +259,12 @@ namespace hypertrie::tests::node_based::node_context {
 				}
 			}
 
-			TaggedNodeHash hash = TaggedNodeHash::getUncompressedEmptyNodeHash<depth>();
+			TensorHash hash = TensorHash::getUncompressedEmptyNodeHash<depth>();
 			bool first = true;
 			for (const auto &[key, value] : entries) {
 				if (not is_primary_node and first) {
 					first = false;
-					hash = TaggedNodeHash::getCompressedNodeHash(key, value);
+					hash = TensorHash::getCompressedNodeHash(key, value);
 				} else
 					hash.addEntry(key, value);
 			}

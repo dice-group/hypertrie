@@ -7,7 +7,7 @@
 #include "Dice/hypertrie/internal/node_based/NodeContainer.hpp"
 #include "Dice/hypertrie/internal/node_based/NodeStorage.hpp"
 #include "Dice/hypertrie/internal/node_based/NodeStorageUpdate.hpp"
-#include "Dice/hypertrie/internal/node_based/TaggedNodeHash.hpp"
+#include "Dice/hypertrie/internal/node_based/TensorHash.hpp"
 #include "Dice/hypertrie/internal/util/CONSTANTS.hpp"
 
 #include <Dice/hypertrie/internal/util/CountDownNTuple.hpp>
@@ -37,14 +37,14 @@ namespace hypertrie::internal::node_based {
 		using NodeStorage_t = NodeStorage<max_depth, tri>;
 
 	private:
-		std::list<TaggedNodeHash> primary_nodes_{};
+		std::list<TensorHash> primary_nodes_{};
 
 	public:
 		NodeStorage_t storage{};
 
 		template<size_t depth>
 		UncompressedNodeContainer<depth, tri> newPrimaryNode() {
-			static const TaggedNodeHash base_hash = TaggedNodeHash::getUncompressedEmptyNodeHash<depth>();
+			static const TensorHash base_hash = TensorHash::getUncompressedEmptyNodeHash<depth>();
 			primary_nodes_.push_front(base_hash);
 			storage.template getUncompressedNode<depth>(base_hash);
 			UncompressedNodeContainer<depth, tri> nodec = storage.template getUncompressedNode<depth>(base_hash);
@@ -56,7 +56,7 @@ namespace hypertrie::internal::node_based {
 		}
 
 		template<size_t depth>
-		bool deletePrimaryNode(TaggedNodeHash thash) {
+		bool deletePrimaryNode(TensorHash thash) {
 			{// remove the hash from primary nodes list
 				auto found = std::find(primary_nodes_.begin(), primary_nodes_.end(), thash);
 				if (found == primary_nodes_.end())

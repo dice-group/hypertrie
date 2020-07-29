@@ -2,7 +2,7 @@
 #define HYPERTRIE_NODECONTAINER_HPP
 
 #include "Dice/hypertrie/internal/node_based/Node.hpp"
-#include "Dice/hypertrie/internal/node_based/TaggedNodeHash.hpp"
+#include "Dice/hypertrie/internal/node_based/TensorHash.hpp"
 
 namespace hypertrie::internal::node_based {
 
@@ -19,7 +19,7 @@ namespace hypertrie::internal::node_based {
 
 	template<size_t depth, HypertrieInternalTrait tri_t = Hypertrie_internal_t<>>
 	struct NodeContainer {
-		using NodeRepr = std::conditional_t<(not (depth == 1 and tri_t::is_bool_valued and tri_t::is_lsb_unused)), TaggedNodeHash, KeyPartUCNodeHashVariant<tri_t>>;
+		using NodeRepr = std::conditional_t<(not (depth == 1 and tri_t::is_bool_valued and tri_t::is_lsb_unused)), TensorHash, KeyPartUCNodeHashVariant<tri_t>>;
 	protected:
 		NodeRepr repr_{};
 		NodePtr<depth, tri_t> node_ptr_{};
@@ -92,7 +92,7 @@ namespace hypertrie::internal::node_based {
 
 	template<size_t depth, HypertrieInternalTrait tri_t>
 	struct SpecificNodeContainer<depth, NodeCompression::compressed, tri_t> : public NodeContainer<depth, tri_t> {
-		using NodeRepr = std::conditional_t<(not (depth == 1 and tri_t::is_bool_valued and tri_t::is_lsb_unused)), TaggedNodeHash, KeyPartUCNodeHashVariant<tri_t>>;
+		using NodeRepr = std::conditional_t<(not (depth == 1 and tri_t::is_bool_valued and tri_t::is_lsb_unused)), TensorHash, KeyPartUCNodeHashVariant<tri_t>>;
 
 		SpecificNodeContainer() noexcept : NodeContainer<depth, tri_t>{} {}
 
@@ -123,7 +123,7 @@ namespace hypertrie::internal::node_based {
 	template<size_t depth,
 			 HypertrieInternalTrait tri_t>
 	struct SpecificNodeContainer<depth, NodeCompression::uncompressed, tri_t> : public NodeContainer<depth, tri_t> {
-		using NodeRepr = std::conditional_t<(not (depth == 1 and tri_t::is_bool_valued and tri_t::is_lsb_unused)), TaggedNodeHash, KeyPartUCNodeHashVariant<tri_t>>;
+		using NodeRepr = std::conditional_t<(not (depth == 1 and tri_t::is_bool_valued and tri_t::is_lsb_unused)), TensorHash, KeyPartUCNodeHashVariant<tri_t>>;
 
 		SpecificNodeContainer() noexcept : NodeContainer<depth, tri_t>{} {}
 

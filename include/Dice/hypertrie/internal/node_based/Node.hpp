@@ -2,9 +2,9 @@
 #define HYPERTRIE_NODE_HPP
 
 #include "Dice/hypertrie/internal/node_based/Hypertrie_internal_traits.hpp"
-#include "Dice/hypertrie/internal/node_based/NodeCompression.hpp"
-#include "Dice/hypertrie/internal/node_based/TaggedNodeHash.hpp"
 #include "Dice/hypertrie/internal/node_based/KeyPartUCNodeHashVariant.hpp"
+#include "Dice/hypertrie/internal/node_based/NodeCompression.hpp"
+#include "Dice/hypertrie/internal/node_based/TensorHash.hpp"
 #include "Dice/hypertrie/internal/util/PosType.hpp"
 #include <range.hpp>
 
@@ -132,7 +132,7 @@ namespace hypertrie::internal::node_based {
 		using ChildType = std::conditional_t<(depth > 1),
 											 std::conditional_t<(depth == 2 and tri::is_lsb_unused),
 											         KeyPartUCNodeHashVariant<tri>,
-																TaggedNodeHash>,
+																TensorHash>,
 											 value_type>;
 
 		using ChildrenType = std::conditional_t<((depth == 1) and tri::is_bool_valued),
@@ -264,23 +264,12 @@ namespace hypertrie::internal::node_based {
 		size_t size_ = 0;
 		Node(size_t ref_count = 0) : ReferenceCounted(ref_count) {}
 
-		Node(const RawKey &key, value_type value, const RawKey &second_key, value_type second_value,
-			 size_t ref_count = 0)
-			: ReferenceCounted(ref_count), size_{2} {
-			for (const size_t pos : iter::range(depth))
-				this->edges(pos) = (key[pos] != second_key[pos])
-										   ? ChildrenType{{{key[pos], TaggedNodeHash::getCompressedNodeHash(subkey(key, pos), value)},
-														   {second_key[pos], TaggedNodeHash::getCompressedNodeHash(subkey(second_key, pos), second_value)}}}
-										   : ChildrenType{{{key[pos], TaggedNodeHash::getTwoEntriesNodeHash(
-																			  subkey(key, pos), value,
-																			  subkey(second_key, pos), second_value)}}};
-		}
 
 		void change_value(const RawKey &key, value_type old_value, value_type new_value) {
 			if constexpr (not tri::is_bool_valued)
 				for (const size_t pos : iter::range(depth)) {
 					auto sub_key = subkey(key, pos);
-					TaggedNodeHash &hash = this->edges(pos)[key[pos]];
+					TensorHash &hash = this->edges(pos)[key[pos]];
 					hash.changeValue(sub_key, old_value, new_value);
 				}
 		}
@@ -296,7 +285,7 @@ namespace hypertrie::internal::node_based {
 					if (depth == 2 and tri::is_lsb_unused) {
 
 					}
-					children[key_part] = TaggedNodeHash::getCompressedNodeHash(subkey(key, pos), value);
+					children[key_part] = TensorHash::getCompressedNodeHash(subkey(key, pos), value);
 				}
 			}
 		}

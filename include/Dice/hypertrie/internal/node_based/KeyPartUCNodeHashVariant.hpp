@@ -7,17 +7,17 @@
 #include <absl/hash/hash.h>
 #include <fmt/ostream.h>
 
+#include "Dice/hypertrie/internal/node_based/Hypertrie_internal_traits.hpp"
+#include "Dice/hypertrie/internal/node_based/TensorHash.hpp"
 #include "Dice/hypertrie/internal/util/PosType.hpp"
 #include "Dice/hypertrie/internal/util/RawKey.hpp"
-#include "Dice/hypertrie/internal/node_based/TaggedNodeHash.hpp"
-#include "Dice/hypertrie/internal/node_based/Hypertrie_internal_traits.hpp"
 
 namespace hypertrie::internal::node_based {
 
 
 	template<HypertrieInternalTrait tri>
 	class KeyPartUCNodeHashVariant {
-		TaggedNodeHash hash_{};
+		TensorHash hash_{};
 
 	public:
 
@@ -25,13 +25,13 @@ namespace hypertrie::internal::node_based {
 
 		KeyPartUCNodeHashVariant() = default;
 
-		KeyPartUCNodeHashVariant(const TaggedNodeHash &node_hash)  noexcept: hash_(node_hash) {}
+		KeyPartUCNodeHashVariant(const TensorHash &node_hash)  noexcept: hash_(node_hash) {}
 
-		KeyPartUCNodeHashVariant(const key_part_type &key_part)  noexcept: hash_(reinterpret_cast<NodeHash>(key_part)) {
-			hash_.bitset()[TaggedNodeHash::compression_tag_pos] = TaggedNodeHash::compressed_tag;
+		KeyPartUCNodeHashVariant(const key_part_type &key_part)  noexcept: hash_(reinterpret_cast<RawTensorHash>(key_part)) {
+			hash_.bitset()[TensorHash::compression_tag_pos] = TensorHash::compressed_tag;
 		}
 
-		KeyPartUCNodeHashVariant& operator= (const TaggedNodeHash &node_hash) {
+		KeyPartUCNodeHashVariant& operator= (const TensorHash &node_hash) {
 			hash_ = node_hash;
 			return *this;
 		}
@@ -42,12 +42,12 @@ namespace hypertrie::internal::node_based {
 		 * @return
 		 */
 		[[nodiscard]] inline bool isCompressed() const noexcept {
-			return bitset()[TaggedNodeHash::compression_tag_pos];
+			return bitset()[TensorHash::compression_tag_pos];
 		}
 
 		[[nodiscard]] inline key_part_type getKeyPart() const noexcept {
-			TaggedNodeHash hash_copy = hash_;
-			hash_copy.bitset()[TaggedNodeHash::compression_tag_pos] = TaggedNodeHash::uncompressed_tag;
+			TensorHash hash_copy = hash_;
+			hash_copy.bitset()[TensorHash::compression_tag_pos] = TensorHash::uncompressed_tag;
 			return reinterpret_cast<key_part_type>(hash_copy.hash());
 		}
 
@@ -56,10 +56,10 @@ namespace hypertrie::internal::node_based {
 		 * @return
 		 */
 		[[nodiscard]] inline bool isUncompressed() const noexcept {
-			return not bitset()[TaggedNodeHash::compression_tag_pos];
+			return not bitset()[TensorHash::compression_tag_pos];
 		}
 
-		[[nodiscard]] inline const TaggedNodeHash &getTaggedNodeHash() const noexcept {
+		[[nodiscard]] inline const TensorHash &getTaggedNodeHash() const noexcept {
 			return this->hash_;
 		}
 
@@ -75,7 +75,7 @@ namespace hypertrie::internal::node_based {
 		 */
 		inline auto addFirstEntry(const RawKey<1, key_part_type> &key, [[maybe_unused]] const bool &value)  noexcept {
 			hash_.hash() = static_cast<key_part_type> (key[0]);
-			hash_.bitset()[TaggedNodeHash::compression_tag_pos] = TaggedNodeHash::compressed_tag;
+			hash_.bitset()[TensorHash::compression_tag_pos] = TensorHash::compressed_tag;
 			return *this;
 		}
 
@@ -91,7 +91,7 @@ namespace hypertrie::internal::node_based {
 		inline auto addEntry(const RawKey<1, key_part_type> &key, [[maybe_unused]] const bool &value) noexcept {
 			assert(value);
 			if (hash_.isCompressed()) {
-				hash_ = TaggedNodeHash::getCompressedNodeHash(getKeyPart(), true);
+				hash_ = TensorHash::getCompressedNodeHash(getKeyPart(), true);
 			}
 			hash_.addEntry(key, value);
 			return *this;
@@ -122,7 +122,7 @@ namespace hypertrie::internal::node_based {
 			return bool(this->hash_);
 		}
 
-		explicit operator TaggedNodeHash() const noexcept {
+		explicit operator TensorHash() const noexcept {
 			return this->hash_;
 		}
 
@@ -130,7 +130,7 @@ namespace hypertrie::internal::node_based {
 		 * The internally used hash.
 		 * @return
 		 */
-		[[nodiscard]] const NodeHash &hash() const noexcept {
+		[[nodiscard]] const RawTensorHash &hash() const noexcept {
 			return this->hash_.hash();
 		}
 

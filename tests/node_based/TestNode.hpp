@@ -110,7 +110,7 @@ namespace hypertrie::tests::node_based::node {
 					REQUIRE(node.child(0, key[0]) == value);
 				} else {
 					for (auto pos : iter::range(depth)) {
-						auto expected_hash = TaggedNodeHash::getCompressedNodeHash(tr::subkey(key, pos), value);
+						auto expected_hash = TensorHash::getCompressedNodeHash(tr::subkey(key, pos), value);
 						REQUIRE(node.edges(pos)[key[pos]] == expected_hash);
 					}
 				}
@@ -133,16 +133,16 @@ namespace hypertrie::tests::node_based::node {
 					REQUIRE(node2.size() == 2);
 					for (auto pos : iter::range(depth)) {
 						if (pos == unchanged_pos) {// there is a sub node with two entries for unchanged_pos
-							auto expected_hash = TaggedNodeHash::getCompressedNodeHash(tr::subkey(key, pos), value)
+							auto expected_hash = TensorHash::getCompressedNodeHash(tr::subkey(key, pos), value)
 														 .addEntry(tr::subkey(second_key, pos), second_value);
 							REQUIRE(node2.edges(pos)[key[pos]] == expected_hash);
 						} else {// there are single entries for all other positions
 							{   // entry for key/value
-								auto expected_hash = TaggedNodeHash::getCompressedNodeHash(tr::subkey(key, pos), value);
+								auto expected_hash = TensorHash::getCompressedNodeHash(tr::subkey(key, pos), value);
 								REQUIRE(node2.edges(pos)[key[pos]] == expected_hash);
 							}
 							{// entry for second_key/value
-								auto expected_hash = TaggedNodeHash::getCompressedNodeHash(tr::subkey(second_key, pos),
+								auto expected_hash = TensorHash::getCompressedNodeHash(tr::subkey(second_key, pos),
 																						   second_value);
 								REQUIRE(node2.edges(pos)[second_key[pos]] == expected_hash);
 							}

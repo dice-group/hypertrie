@@ -704,7 +704,7 @@ namespace hypertrie::internal::node_based {
 							if constexpr (not (depth == 2 and tri::is_bool_valued and tri::is_lsb_unused)) {
 								child_update.insertOp() = InsertOp::INSERT_C_NODE;
 							} else {
-								node->edges(pos)[key_part] = KeyPartUCNodeHashVariant<tri>{child_inserted_entries[0][0]};
+								node->edges(pos)[key_part] = TaggedTensorHash<tri>{child_inserted_entries[0][0]};
 								continue;
 							}
 						} else
@@ -811,7 +811,7 @@ namespace hypertrie::internal::node_based {
 									}
 								} else {
 									if (child_inserted_entries.size() == 1) {
-										node->edges(pos)[key_part] = KeyPartUCNodeHashVariant<tri>{child_inserted_entries[0][0]};
+										node->edges(pos)[key_part] = TaggedTensorHash<tri>{child_inserted_entries[0][0]};
 										continue;
 									} else {
 										child_update.insertOp() = InsertOp::NEW_MULT_UC;
@@ -827,7 +827,7 @@ namespace hypertrie::internal::node_based {
 								if constexpr (not (depth == 2 and tri::is_bool_valued and tri::is_lsb_unused))
 									tri::template deref<key_part_type, TensorHash>(iter) = child_update.hashAfter();
 								else
-									tri::template deref<key_part_type, KeyPartUCNodeHashVariant<tri>>(iter) = child_update.hashAfter();
+									tri::template deref<key_part_type, TaggedTensorHash<tri>>(iter) = child_update.hashAfter();
 							else
 								node->edges(pos)[key_part] = child_update.hashAfter();
 

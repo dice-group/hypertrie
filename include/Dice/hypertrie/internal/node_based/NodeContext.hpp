@@ -36,9 +36,6 @@ namespace hypertrie::internal::node_based {
 
 		using NodeStorage_t = NodeStorage<max_depth, tri>;
 
-	private:
-		std::list<TensorHash> primary_nodes_{};
-
 	public:
 		NodeStorage_t storage{};
 

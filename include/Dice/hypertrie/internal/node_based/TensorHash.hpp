@@ -213,8 +213,6 @@ namespace hypertrie::internal::node_based {
 			return TensorHash().addFirstEntry(key, value);
 		}
 
-	public:
-
 		bool operator<(const TensorHash &other) const noexcept {
 			return this->hash_ < other.hash_;
 		}

@@ -2,8 +2,8 @@
 #define HYPERTRIE_NODE_HPP
 
 #include "Dice/hypertrie/internal/node_based/Hypertrie_internal_traits.hpp"
-#include "Dice/hypertrie/internal/node_based/KeyPartUCNodeHashVariant.hpp"
 #include "Dice/hypertrie/internal/node_based/NodeCompression.hpp"
+#include "Dice/hypertrie/internal/node_based/TaggedTensorHash.hpp"
 #include "Dice/hypertrie/internal/node_based/TensorHash.hpp"
 #include "Dice/hypertrie/internal/util/PosType.hpp"
 #include <range.hpp>
@@ -131,7 +131,7 @@ namespace hypertrie::internal::node_based {
 
 		using ChildType = std::conditional_t<(depth > 1),
 											 std::conditional_t<(depth == 2 and tri::is_lsb_unused),
-											         KeyPartUCNodeHashVariant<tri>,
+																TaggedTensorHash<tri>,
 																TensorHash>,
 											 value_type>;
 
@@ -150,8 +150,6 @@ namespace hypertrie::internal::node_based {
 		WithEdges() : edges_{} {}
 
 		WithEdges(EdgesType edges) : edges_{edges} {}
-
-		void insertEntry(const RawKey &key, value_type value);
 
 		EdgesType &edges() { return this->edges_; }
 
@@ -216,7 +214,7 @@ namespace hypertrie::internal::node_based {
 
 		constexpr bool value() const { return true; }
 
-		auto print() const {
+		explicit operator std::string() const noexcept {
 			return fmt::format("<Node depth = {}, compressed> {{\n"
 							   "\t{},\n"
 							   "\tref_count = {} }}",
@@ -237,7 +235,7 @@ namespace hypertrie::internal::node_based {
 		Node(const RawKey &key, value_type value, size_t ref_count = 0)
 			: ReferenceCounted(ref_count), Compressed<depth, tri_t>(key), Valued<tri_t>(value) {}
 
-		auto print() const {
+		explicit operator std::string() const noexcept {
 			return fmt::format("<Node depth = {}, compressed> {{\n"
 							   "\t{} -> {},\n"
 							   "\tref_count = {} }}",
@@ -265,7 +263,7 @@ namespace hypertrie::internal::node_based {
 		Node(size_t ref_count = 0) : ReferenceCounted(ref_count) {}
 
 
-		void change_value(const RawKey &key, value_type old_value, value_type new_value) {
+		void change_value(const RawKey &key, value_type old_value, value_type new_value) noexcept {
 			if constexpr (not tri::is_bool_valued)
 				for (const size_t pos : iter::range(depth)) {
 					auto sub_key = subkey(key, pos);
@@ -274,25 +272,9 @@ namespace hypertrie::internal::node_based {
 				}
 		}
 
-		void insertEntry(const RawKey &key, value_type value) {
-			this->size_++;
-			for (const size_t pos : iter::range(depth)) {
-				auto &children = this->edges(pos);
-				auto key_part = key[pos];
-				if (typename ChildrenType::iterator found = children.find(key_part); found != children.end()) {
-					deref(found).addEntry(subkey(key, pos), value);
-				} else {
-					if (depth == 2 and tri::is_lsb_unused) {
-
-					}
-					children[key_part] = TensorHash::getCompressedNodeHash(subkey(key, pos), value);
-				}
-			}
-		}
-
 		[[nodiscard]] inline size_t size() const noexcept { return size_; }
 
-		auto print() const {
+		explicit operator std::string() const noexcept {
 			fmt::memory_buffer out;
 			fmt::format_to(out, "<Node depth = {}, uncompressed> {{", depth);
 			for (size_t pos : iter::range(depth)) {
@@ -331,21 +313,13 @@ namespace hypertrie::internal::node_based {
 										{second_key[0], second_value}}};
 			  }()) {}
 
-		void insertEntry(const RawKey &key, [[maybe_unused]] value_type value) {
-			if constexpr (tri::is_bool_valued)
-				this->edges().insert(key[0]);
-			else
-				this->edges()[key[0]] = value;
-		}
-
 		void change_value(const RawKey &key, [[maybe_unused]] value_type old_value, value_type new_value) {
 			if constexpr (not tri::is_bool_valued)
 				this->edges(0)[key[0]] = new_value;
 		}
-
 		[[nodiscard]] inline size_t size() const noexcept { return this->edges().size(); }
 
-		auto print() const {
+		explicit operator std::string() const noexcept {
 			return fmt::format("<Node depth = {}, uncompressed> {{\n"
 							   "\tedges[0] = {},\n"
 							   "\tref_count = {} }}",
@@ -363,41 +337,11 @@ namespace hypertrie::internal::node_based {
 			 HypertrieInternalTrait tri = Hypertrie_internal_t<>>
 	using UncompressedNode = Node<depth, NodeCompression::uncompressed, tri>;
 
-	template<size_t depth,
-			HypertrieInternalTrait tri_t = Hypertrie_internal_t<>>
-	union NodePtr {
-		NodePtr() noexcept : raw(nullptr){}
-		NodePtr(const NodePtr &node_ptr) noexcept : raw(node_ptr.raw){}
-		NodePtr(NodePtr &&node_ptr) noexcept : raw(node_ptr.raw){}
-		NodePtr(void *raw) noexcept : raw(raw){}
-		NodePtr(UncompressedNode<depth, tri_t> *uncompressed) noexcept : uncompressed(uncompressed){}
-		NodePtr(CompressedNode<depth, tri_t> *compressed) noexcept : compressed(compressed){}
-		void *raw;
-		UncompressedNode<depth, tri_t> *uncompressed;
-		CompressedNode<depth, tri_t> *compressed;
-
-		operator CompressedNode<depth, tri_t> *() const noexcept { return this->compressed; }
-		operator UncompressedNode<depth, tri_t> *() const noexcept { return this->uncompressed; }
-
-		NodePtr &operator=(const NodePtr &node_ptr) noexcept {
-			raw = node_ptr.raw;
-			return *this;
-		}
-
-		NodePtr &operator=(NodePtr &&node_ptr) noexcept {
-			raw = node_ptr.raw;
-			return *this;
-		}
-	};
-
-
-
-
 }// namespace hypertrie::internal::node_based
 
 template<size_t depth, NodeCompression compressed, hypertrie::internal::node_based::HypertrieInternalTrait tri_t, typename enabled>
 std::ostream &operator<<(std::ostream &os, const hypertrie::internal::node_based::Node<depth, compressed, tri_t, enabled> &node) {
-	return os << fmt::format("{}", node.print());
+	return os << (std::string) node;
 }
 
 template<size_t depth, NodeCompression compressed, hypertrie::internal::node_based::HypertrieInternalTrait tri_t, typename enabled>
@@ -409,7 +353,7 @@ public:
 	auto parse(format_parse_context &ctx) { return ctx.begin(); }
 
 	template<typename FormatContext>
-	auto format(const node_type &node, FormatContext &ctx) { return fmt::format_to(ctx.out(), "{}", node.print()); }
+	auto format(const node_type &node, FormatContext &ctx) { return fmt::format_to(ctx.out(), "{}", (std::string) node); }
 };
 
 #endif//HYPERTRIE_NODE_HPP

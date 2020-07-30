@@ -20,7 +20,7 @@ namespace hypertrie::tests::node_based::node_context {
 
 	public:
 		template <size_t node_depth>
-		using NodeRepr_t = std::conditional_t<(not (node_depth == 1 and tri_t::is_bool_valued and tri_t::is_lsb_unused)), TensorHash, KeyPartUCNodeHashVariant<tri_t>>;
+		using NodeRepr_t = std::conditional_t<(not (node_depth == 1 and tri_t::is_bool_valued and tri_t::is_lsb_unused)), TensorHash, TaggedTensorHash<tri_t>>;
 		using NodeRepr = NodeRepr_t<depth>;
 		template <size_t node_depth>
 		using Hash2Instance_t = std::map<NodeRepr_t<node_depth>, std::shared_ptr<TestTensor<node_depth, tri>>>;

@@ -15,23 +15,30 @@
 namespace hypertrie::internal::node_based {
 
 
+
+	/**
+	 * Tagged Tensor Hash is a wrapper around TensorHash.
+	 * If tri::is_bool_valued and tri::is_lsb_unused it stores instead of a compressed nodes hash directly the key-part of a depth 1 node.
+	 * @tparam tri
+	 */
 	template<HypertrieInternalTrait tri>
-	class KeyPartUCNodeHashVariant {
+	class TaggedTensorHash {
 		TensorHash hash_{};
 
 	public:
+		using tr = tri;
 
-		using key_part_type = typename  tri::key_part_type;
+		using key_part_type = typename  tr::key_part_type;
 
-		KeyPartUCNodeHashVariant() = default;
+		TaggedTensorHash() = default;
 
-		KeyPartUCNodeHashVariant(const TensorHash &node_hash)  noexcept: hash_(node_hash) {}
+		TaggedTensorHash(const TensorHash &node_hash)  noexcept: hash_(node_hash) {}
 
-		KeyPartUCNodeHashVariant(const key_part_type &key_part)  noexcept: hash_(reinterpret_cast<RawTensorHash>(key_part)) {
+		TaggedTensorHash(const key_part_type &key_part)  noexcept: hash_(reinterpret_cast<RawTensorHash>(key_part)) {
 			hash_.bitset()[TensorHash::compression_tag_pos] = TensorHash::compressed_tag;
 		}
 
-		KeyPartUCNodeHashVariant& operator= (const TensorHash &node_hash) {
+		TaggedTensorHash & operator= (const TensorHash &node_hash) {
 			hash_ = node_hash;
 			return *this;
 		}
@@ -97,11 +104,11 @@ namespace hypertrie::internal::node_based {
 			return *this;
 		}
 
-		bool operator<(const KeyPartUCNodeHashVariant &other) const noexcept {
+		bool operator<(const TaggedTensorHash &other) const noexcept {
 			return this->hash_ < other.hash_;
 		}
 
-		bool operator==(const KeyPartUCNodeHashVariant &other) const noexcept {
+		bool operator==(const TaggedTensorHash &other) const noexcept {
 			return this->hash_ == other.hash_;
 		}
 
@@ -146,10 +153,10 @@ namespace hypertrie::internal::node_based {
 			if (this->isCompressed())
 				return fmt::format("{}", getKeyPart());
 			else
-				return fmt::format("u_{:#019}", size_t(this->hash_.hash()));
+				return fmt::format("{}", this->hash_);
 		}
 
-		friend std::ostream &operator<<(std::ostream &os, const KeyPartUCNodeHashVariant &hash) {
+		friend std::ostream &operator<<(std::ostream &os, const TaggedTensorHash &hash) {
 			os << (std::string) hash;
 			return os;
 		}
@@ -160,21 +167,21 @@ namespace hypertrie::internal::node_based {
 
 
 template<hypertrie::internal::node_based::HypertrieInternalTrait tri>
-struct fmt::formatter<hypertrie::internal::node_based::KeyPartUCNodeHashVariant<tri>> {
+struct fmt::formatter<hypertrie::internal::node_based::TaggedTensorHash<tri>> {
 	auto parse(format_parse_context &ctx) {
 		return ctx.begin();
 	}
 
 	template<typename FormatContext>
-	auto format(const hypertrie::internal::node_based::KeyPartUCNodeHashVariant<tri> &hash, FormatContext &ctx) {
+	auto format(const hypertrie::internal::node_based::TaggedTensorHash<tri> &hash, FormatContext &ctx) {
 		return fmt::format_to(ctx.out(), "{}", (std::string) hash);
 	}
 };
 
 namespace std {
 	template<hypertrie::internal::node_based::HypertrieInternalTrait tri>
-	struct hash<::hypertrie::internal::node_based::KeyPartUCNodeHashVariant<tri>> {
-		size_t operator()(const ::hypertrie::internal::node_based::KeyPartUCNodeHashVariant<tri> &hash) const noexcept {
+	struct hash<::hypertrie::internal::node_based::TaggedTensorHash<tri>> {
+		size_t operator()(const ::hypertrie::internal::node_based::TaggedTensorHash<tri> &hash) const noexcept {
 			return hash.hash();
 		}
 	};

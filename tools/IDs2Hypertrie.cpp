@@ -79,7 +79,6 @@ int main(int argc, char *argv[]) {
 	// Iterate through each line and split the content using delimeter
 	unsigned int total = 0;
 	unsigned int count = 0;
-	unsigned int _1mios = 0;
 	auto start = steady_clock::now();
 	auto start_part = steady_clock::now();
 	{
@@ -105,7 +104,6 @@ int main(int argc, char *argv[]) {
 				next_entries.clear();
 				context.template bulk_insert(hypertrie, std::move(keys));
 
-				++_1mios;
 				auto short_duration = steady_clock::now() - start_part;
 				start_part = steady_clock::now();
 				std::cerr << "{:>9.3f} mio triples processed."_format(double(count)/1'000'000.0) <<                                                                                            //

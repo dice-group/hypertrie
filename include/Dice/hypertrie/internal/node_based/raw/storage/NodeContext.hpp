@@ -6,9 +6,9 @@
 #include "Dice/hypertrie/internal/node_based/interface/Hypertrie_traits.hpp"
 #include "Dice/hypertrie/internal/node_based/raw/node/NodeContainer.hpp"
 #include "Dice/hypertrie/internal/node_based/raw/node/TensorHash.hpp"
-#include "Dice/hypertrie/internal/util/CONSTANTS.hpp"
 #include "Dice/hypertrie/internal/node_based/raw/storage/NodeStorage.hpp"
-#include "Dice/hypertrie/internal/node_based/raw/storage/NodeStorageUpdate.hpp"
+#include "Dice/hypertrie/internal/node_based/raw/storage/RekNodeModification.hpp"
+#include "Dice/hypertrie/internal/util/CONSTANTS.hpp"
 
 #include <Dice/hypertrie/internal/util/CountDownNTuple.hpp>
 #include <itertools.hpp>
@@ -51,7 +51,7 @@ namespace hypertrie::internal::node_based {
 			const value_type old_value = get(nodec, key);
 			if (value == old_value)
 				return value;
-			NodeStorageUpdate<max_depth, depth, tri> update{this->storage, nodec};
+			RekNodeModification<max_depth, depth, tri> update{this->storage, nodec};
 			update.apply_update(key, value, old_value);
 			return old_value;
 		}
@@ -64,7 +64,7 @@ namespace hypertrie::internal::node_based {
 		 */
 		template<size_t depth>
 		void bulk_insert(NodeContainer<depth, tri> &nodec, std::vector<RawKey<depth>> keys) {
-			NodeStorageUpdate<max_depth, depth, tri> update{this->storage, nodec};
+			RekNodeModification<max_depth, depth, tri> update{this->storage, nodec};
 			update.apply_update(std::move(keys));
 		}
 

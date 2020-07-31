@@ -34,7 +34,7 @@ namespace hypertrie::internal::node_based {
 			const key_part_type &operator[](size_t pos) const {
 				return key_[pos];
 			}
-			friend class RawEntry_t;
+			friend struct RawEntry_t;
 
 		};
 

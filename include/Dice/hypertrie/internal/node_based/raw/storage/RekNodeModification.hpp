@@ -1,13 +1,13 @@
-#ifndef HYPERTRIE_NODESTORAGEUPDATE_HPP
-#define HYPERTRIE_NODESTORAGEUPDATE_HPP
+#ifndef HYPERTRIE_REKNODEMODIFICATION_HPP
+#define HYPERTRIE_REKNODEMODIFICATION_HPP
 
 #include "Dice/hypertrie/internal/node_based/interface/Hypertrie_traits.hpp"
 #include "Dice/hypertrie/internal/node_based/raw/node/NodeContainer.hpp"
 #include "Dice/hypertrie/internal/node_based/raw/node/TensorHash.hpp"
-#include "Dice/hypertrie/internal/util/CONSTANTS.hpp"
-#include "Dice/hypertrie/internal/node_based/raw/storage/NodeStorage.hpp"
 #include "Dice/hypertrie/internal/node_based/raw/storage/Entry.hpp"
-#include "Dice/hypertrie/internal/node_based/raw/storage/Modification.hpp"
+#include "Dice/hypertrie/internal/node_based/raw/storage/NodeModificationPlan.hpp"
+#include "Dice/hypertrie/internal/node_based/raw/storage/NodeStorage.hpp"
+#include "Dice/hypertrie/internal/util/CONSTANTS.hpp"
 #include "Dice/hypertrie/internal/util/CountDownNTuple.hpp"
 
 #include <robin_hood.h>
@@ -19,24 +19,14 @@ namespace hypertrie::internal::node_based {
 			 size_t update_depth,
 			 HypertrieInternalTrait tri_t = Hypertrie_internal_t<>,
 			 typename = typename std::enable_if_t<(node_storage_depth >= 1)>>
-	class NodeStorageUpdate {
+	class RekNodeModification {
 	public:
 		using tri = tri_t;
 		/// public definitions
 		using key_part_type = typename tri::key_part_type;
 		using value_type = typename tri::value_type;
-		template<typename key, typename value>
-		using map_type = typename tri::template map_type<key, value>;
-		template<typename key>
-		using set_type = typename tri::template set_type<key>;
 		template<size_t depth>
 		using RawKey = typename tri::template RawKey<depth>;
-
-		template<size_t depth>
-		using RawSliceKey = typename tri::template RawSliceKey<depth>;
-
-		template<size_t depth>
-		using NodeStorage_t = NodeStorage<depth, tri>;
 
 	private:
 		static const constexpr long INC_COUNT_DIFF_AFTER = 1;
@@ -45,12 +35,15 @@ namespace hypertrie::internal::node_based {
 		static const constexpr long DEC_COUNT_DIFF_BEFORE = 1;
 
 		template<size_t depth>
-		using Modification_t = Modification<depth, tri>;
+		using NodeStorage_t = NodeStorage<depth, tri>;
 
 		template<size_t depth>
-		using LevelMultiUpdates_t = robin_hood::unordered_node_set<Modification_t<depth>, absl::Hash<Modification_t<depth>>>;
+		using Modification_t = NodeModificationPlan<depth, tri>;
 
-		using PlannedMultiUpdates = util::CountDownNTuple<LevelMultiUpdates_t, update_depth>;
+		template<size_t depth>
+		using LevelModifications_t = robin_hood::unordered_node_set<Modification_t<depth>, absl::Hash<Modification_t<depth>>>;
+
+		using PlannedModifications = util::CountDownNTuple<LevelModifications_t, update_depth>;
 
 
 		template <size_t depth>
@@ -73,7 +66,7 @@ namespace hypertrie::internal::node_based {
 
 		NodeContainer<update_depth, tri> &nodec;
 
-		PlannedMultiUpdates planned_multi_updates{};
+		PlannedModifications planned_multi_updates{};
 
 		RefChanges ref_changes{};
 
@@ -92,14 +85,14 @@ namespace hypertrie::internal::node_based {
 
 
 		template<size_t updates_depth>
-		auto getPlannedMultiUpdates()
-				-> LevelMultiUpdates_t<updates_depth> & {
+		auto getPlannedModifications()
+				-> LevelModifications_t<updates_depth> & {
 			return std::get<updates_depth - 1>(planned_multi_updates);
 		}
 
 		template<size_t updates_depth>
 		void planUpdate(Modification_t<updates_depth> planned_update, const long count_diff) {
-			auto &planned_updates = getPlannedMultiUpdates<updates_depth>();
+			auto &planned_updates = getPlannedModifications<updates_depth>();
 			if (not planned_update.hashBefore().empty())
 				planChangeCount<updates_depth>(planned_update.hashBefore(), -1 * count_diff);
 			planChangeCount<updates_depth>(planned_update.hashAfter(), count_diff);
@@ -107,7 +100,7 @@ namespace hypertrie::internal::node_based {
 		}
 
 
-		NodeStorageUpdate(NodeStorage_t<node_storage_depth> &nodeStorage, NodeContainer<update_depth, tri> &nodec)
+		RekNodeModification(NodeStorage_t<node_storage_depth> &nodeStorage, NodeContainer<update_depth, tri> &nodec)
 			: node_storage(nodeStorage), nodec{nodec} {}
 
 		auto apply_update(std::vector<RawKey<update_depth>> keys) {
@@ -164,7 +157,7 @@ namespace hypertrie::internal::node_based {
 		template<size_t depth>
 		void apply_update_rek() {
 
-			LevelMultiUpdates_t<depth> &multi_updates = getPlannedMultiUpdates<depth>();
+			LevelModifications_t<depth> &multi_updates = getPlannedModifications<depth>();
 
 			// nodes_before that are have ref_count 0 afterwards -> those could be reused/moved for nodes after
 			tsl::sparse_map<TensorHash, NodePtr<depth, tri_t>> unreferenced_nodes_before{}; // TODO: store the pointer alongside to safe one resolve
@@ -634,4 +627,4 @@ namespace hypertrie::internal::node_based {
 	};
 }// namespace hypertrie::internal::node_based
 
-#endif//HYPERTRIE_NODESTORAGEUPDATE_HPP
+#endif//HYPERTRIE_REKNODEMODIFICATION_HPP

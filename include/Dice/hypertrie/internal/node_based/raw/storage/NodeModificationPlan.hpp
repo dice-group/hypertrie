@@ -1,5 +1,5 @@
-#ifndef HYPERTRIE_MODIFICATION_HPP
-#define HYPERTRIE_MODIFICATION_HPP
+#ifndef HYPERTRIE_NODEMODIFICATIONPLAN_HPP
+#define HYPERTRIE_NODEMODIFICATIONPLAN_HPP
 
 #include "Dice/hypertrie/internal/node_based/raw/node/TensorHash.hpp"
 #include "Dice/hypertrie/internal/node_based/raw/storage/Entry.hpp"
@@ -20,7 +20,7 @@ namespace hypertrie::internal::node_based {
 	};
 
 	template<size_t depth, HypertrieInternalTrait tri_t>
-	class Modification {
+	class NodeModificationPlan {
 		static_assert(depth >= 1);
 	public:
 		using tri = tri_t;
@@ -139,20 +139,20 @@ namespace hypertrie::internal::node_based {
 
 	public:
 
-		bool operator<(const Modification &other) const noexcept {
+		bool operator<(const NodeModificationPlan &other) const noexcept {
 			return std::make_tuple(this->mod_op_, this->hash_before_, this->hashAfter()) <
 				   std::make_tuple(other.mod_op_, other.hash_before_, other.hashAfter());
 		};
 
-		bool operator==(const Modification &other) const noexcept {
+		bool operator==(const NodeModificationPlan &other) const noexcept {
 			return std::make_tuple(this->mod_op_, this->hash_before_, this->hashAfter()) ==
 				   std::make_tuple(other.mod_op_, other.hash_before_, other.hashAfter());
 		};
 
 		template<typename H>
-		friend H AbslHashValue(H h, const Modification &update) {
+		friend H AbslHashValue(H h, const NodeModificationPlan &update) {
 			return H::combine(std::move(h), update.hash_before_, update.hashAfter());
 		}
 	};
 }
-#endif//HYPERTRIE_MODIFICATION_HPP
+#endif//HYPERTRIE_NODEMODIFICATIONPLAN_HPP

@@ -1,7 +1,7 @@
 #ifndef HYPERTRIE_NODEPTR_HPP
 #define HYPERTRIE_NODEPTR_HPP
 
-#include "Dice/hypertrie/internal/node_based/Node.hpp"
+#include "Dice/hypertrie/internal/node_based/raw/node/Node.hpp"
 
 namespace hypertrie::internal::node_based {
 	/**

@@ -3,12 +3,12 @@
 
 #include <compare>
 
-#include "Dice/hypertrie/internal/node_based/Hypertrie_traits.hpp"
-#include "Dice/hypertrie/internal/node_based/NodeContainer.hpp"
-#include "Dice/hypertrie/internal/node_based/NodeStorage.hpp"
-#include "Dice/hypertrie/internal/node_based/NodeStorageUpdate.hpp"
-#include "Dice/hypertrie/internal/node_based/TensorHash.hpp"
+#include "Dice/hypertrie/internal/node_based/interface/Hypertrie_traits.hpp"
+#include "Dice/hypertrie/internal/node_based/raw/node/NodeContainer.hpp"
+#include "Dice/hypertrie/internal/node_based/raw/node/TensorHash.hpp"
 #include "Dice/hypertrie/internal/util/CONSTANTS.hpp"
+#include "Dice/hypertrie/internal/node_based/raw/storage/NodeStorage.hpp"
+#include "Dice/hypertrie/internal/node_based/raw/storage/NodeStorageUpdate.hpp"
 
 #include <Dice/hypertrie/internal/util/CountDownNTuple.hpp>
 #include <itertools.hpp>

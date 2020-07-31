@@ -1,7 +1,7 @@
 #ifndef HYPERTRIE_TESTNODECONTAINER_H
 #define HYPERTRIE_TESTNODECONTAINER_H
 
-#include <Dice/hypertrie/internal/node_based/NodeContainer.hpp>
+#include <Dice/hypertrie/internal/node_based/raw/node/NodeContainer.hpp>
 
 #include "../utils/AssetGenerator.hpp"
 

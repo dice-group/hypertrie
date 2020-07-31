@@ -1,7 +1,7 @@
 #ifndef HYPERTRIE_HYPERTRIE_INTERNAL_TRAITS_HPP
 #define HYPERTRIE_HYPERTRIE_INTERNAL_TRAITS_HPP
 
-#include "Dice/hypertrie/internal/node_based/Hypertrie_traits.hpp"
+#include "Dice/hypertrie/internal/node_based/interface/Hypertrie_traits.hpp"
 
 #include "Dice/hypertrie/internal/util/RawKey.hpp"
 

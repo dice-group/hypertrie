@@ -1,9 +1,9 @@
 #ifndef HYPERTRIE_LEVELNODESTORAGE_HPP
 #define HYPERTRIE_LEVELNODESTORAGE_HPP
 
-#include "Dice/hypertrie/internal/node_based/Hypertrie_internal_traits.hpp"
-#include "Dice/hypertrie/internal/node_based/Node.hpp"
-#include "Dice/hypertrie/internal/node_based/TensorHash.hpp"
+#include "Dice/hypertrie/internal/node_based/raw/Hypertrie_internal_traits.hpp"
+#include "Dice/hypertrie/internal/node_based/raw/node/Node.hpp"
+#include "Dice/hypertrie/internal/node_based/raw/node/TensorHash.hpp"
 #include "Dice/hypertrie/internal/util/CONSTANTS.hpp"
 #include "Dice/hypertrie/internal/util/CountDownNTuple.hpp"
 

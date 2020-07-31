@@ -4,7 +4,7 @@
 #include <fstream>
 #include <iostream>
 
-#include <Dice/hypertrie/internal/node_based/NodeContext.hpp>
+#include <Dice/hypertrie/internal/node_based/raw/storage/NodeContext.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
 

@@ -2,7 +2,7 @@
 #define HYPERTRIE_HYPERTRIECONTEXT_HPP
 
 
-#include "Dice/hypertrie/internal/node_based/NodeContext.hpp"
+#include "Dice/hypertrie/internal/node_based/raw/storage/NodeContext.hpp"
 
 
 namespace hypertrie::internal::node_based {

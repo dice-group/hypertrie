@@ -1,11 +1,12 @@
 #ifndef HYPERTRIE_NODESTORAGEUPDATE_HPP
 #define HYPERTRIE_NODESTORAGEUPDATE_HPP
 
-#include "Dice/hypertrie/internal/node_based/Hypertrie_traits.hpp"
-#include "Dice/hypertrie/internal/node_based/NodeContainer.hpp"
-#include "Dice/hypertrie/internal/node_based/NodeStorage.hpp"
-#include "Dice/hypertrie/internal/node_based/TensorHash.hpp"
+#include "Dice/hypertrie/internal/node_based/interface/Hypertrie_traits.hpp"
+#include "Dice/hypertrie/internal/node_based/raw/node/NodeContainer.hpp"
+#include "Dice/hypertrie/internal/node_based/raw/node/TensorHash.hpp"
 #include "Dice/hypertrie/internal/util/CONSTANTS.hpp"
+#include "Dice/hypertrie/internal/node_based/raw/storage/NodeStorage.hpp"
+#include "Dice/hypertrie/internal/node_based/raw/storage/Entry.hpp"
 #include <Dice/hypertrie/internal/util/CountDownNTuple.hpp>
 
 #include <robin_hood.h>
@@ -59,98 +60,22 @@ namespace hypertrie::internal::node_based {
 
 		using RefChanges = util::CountDownNTuple<LevelRefChanges, update_depth>;
 
+		template <size_t depth>
+		using re = RawEntry_t<depth, tri>;
 
-
-		template<size_t depth>
-		class BoolEntry {
-
-			RawKey<depth> key_;
-
-		public:
-			BoolEntry() : key_{}{}
-			BoolEntry(RawKey<depth> key, [[maybe_unused]] value_type value = value_type(1)) : key_(key) {}
-
-
-			constexpr value_type value() const noexcept { return value_type(1); };
-		};
-
-		template<size_t depth>
-		class NonBoolEntry : public BoolEntry<depth> {
-			RawKey<depth> key_;
-
-			value_type value_;
-
-		public:
-			NonBoolEntry() : key_{},  value_{}{}
-			NonBoolEntry(const RawKey<depth> &key, [[maybe_unused]] value_type value = value_type(1)) : key_{key}, value_(value) {}
-
-			key_part_type & operator[](size_t pos) {
-				return key_[pos];
-			}
-
-			const key_part_type & operator[](size_t pos) const {
-				return key_[pos];
-			}
-
-			friend class NodeStorageUpdate;
-		};
-
-		template<size_t depth>
-		using Entry = std::conditional_t <(tri::is_bool_valued), RawKey<depth>, NonBoolEntry<depth>>;
-
-		template<size_t depth>
-		static auto make_Entry(RawKey<depth> key, const value_type value = value_type(1)) -> Entry<depth> {
-			if constexpr (tri::is_bool_valued)
-				return {key};
-			else
-				return {key, value};
-		}
-
-		template<size_t depth>
-		static RawKey<depth> &key(NonBoolEntry<depth> &entry){
-			return entry.key_;
-		}
-
-		template<size_t depth>
-		static const RawKey<depth> &key(const NonBoolEntry<depth> &entry){
-			return entry.key_;
-		}
-
-		template<size_t depth>
-		static value_type &value(NonBoolEntry<depth> &entry){
-			return entry.value_;
-		}
-
-		template<size_t depth>
-		static const value_type &value(const NonBoolEntry<depth> &entry){
-			return entry.value_;
-		}
-
-		template<size_t depth>
-		static value_type value([[maybe_unused]] const RawKey<depth> &entry){
-			return true;
-		}
-
-		template<size_t depth>
-		static RawKey<depth> &key([[maybe_unused]] RawKey<depth> &entry){
-			return entry;
-		}
-
-		template<size_t depth>
-		static const RawKey<depth> &key([[maybe_unused]] const RawKey<depth> &entry){
-			return entry;
-		}
+		template <size_t depth>
+		using Entry = typename re<depth>::RawEntry;
 
 
 
-		enum struct InsertOp : unsigned int {
+		enum struct ModificationOperations : unsigned int {
 			NONE = 0,
 			CHANGE_VALUE,
-			INSERT_C_NODE,
+			NEW_COMPRESSED_NODE,
+			NEW_UNCOMPRESSED_NODE,
+			INSERT_INTO_COMPRESSED_NODE,
+			INSERT_INTO_UNCOMPRESSED_NODE,
 			REMOVE_FROM_UC,
-			INSERT_MULT_INTO_C,
-			INSERT_MULT_INTO_UC,
-			NEW_MULT_UC
 		};
 
 		template<size_t depth>
@@ -158,16 +83,15 @@ namespace hypertrie::internal::node_based {
 			static_assert(depth >= 1);
 
 
-			InsertOp insert_op_{};
+			ModificationOperations mod_op_{};
 			TensorHash hash_before_{};
 			mutable TensorHash hash_after_{};
 			mutable std::vector<Entry<depth>> entries_{};
 
 		public:
+			ModificationOperations &modOp()  noexcept { return this->mod_op_;}
 
-			InsertOp &insertOp()  noexcept { return this->insert_op_;}
-
-			const InsertOp &insertOp() const noexcept { return this->insert_op_;}
+			const ModificationOperations &modOp() const noexcept { return this->mod_op_;}
 
 			TensorHash &hashBefore()  noexcept { return this->hash_before_;}
 
@@ -194,7 +118,7 @@ namespace hypertrie::internal::node_based {
 			}
 
 			void addEntry(RawKey<depth> key, const value_type  value) noexcept {
-				entries_.push_back(make_Entry(key, value));
+				entries_.push_back(re<depth>::make_Entry(key, value));
 			}
 
 			void addKey(RawKey<depth> key) noexcept {
@@ -203,58 +127,58 @@ namespace hypertrie::internal::node_based {
 
 			value_type &oldValue() noexcept {
 				if constexpr (not tri::is_bool_valued){
-					assert(insert_op_ == InsertOp::CHANGE_VALUE);
+					assert(mod_op_ == ModificationOperations::CHANGE_VALUE);
 					entries_.resize(2);
-					return value(entries_[1]);
+					return re<depth>::value(entries_[1]);
 				} else
 					assert(false);
 			}
 
 			const value_type &oldValue() const noexcept {
 				if constexpr (not tri::is_bool_valued){
-					assert(insert_op_ == InsertOp::CHANGE_VALUE);
+					assert(mod_op_ == ModificationOperations::CHANGE_VALUE);
 					entries_.resize(2);
-					return value(entries_[1]);
+					return re<depth>::value(entries_[1]);
 				} else
 					assert(false);
 			}
 
-			RawKey<depth> &firstKey() noexcept { return key(entries_[0]); }
+			RawKey<depth> &firstKey() noexcept { return re<depth>::key(entries_[0]); }
 
-			const RawKey<depth> &firstKey() const noexcept { return key(entries_[0]); }
+			const RawKey<depth> &firstKey() const noexcept { return re<depth>::key(entries_[0]); }
 
-			value_type &firstValue() noexcept  { return value(entries_[0]); }
+			value_type &firstValue() noexcept  { return re<depth>::value(entries_[0]); }
 
-			value_type firstValue() const noexcept  { return value(entries_[0]); }
+			value_type firstValue() const noexcept  { return re<depth>::value(entries_[0]); }
 
 		private:
 			void calcHashAfter() const noexcept {
 				hash_after_ = hash_before_;
-				switch (insert_op_) {
-					case InsertOp::CHANGE_VALUE:
+				switch (mod_op_) {
+					case ModificationOperations::CHANGE_VALUE:
 						assert(not hash_before_.empty());
 						assert(entries_.size() == 2);
 						this->hash_after_.changeValue(firstKey(), oldValue(), firstValue());
 						break;
-					case InsertOp::INSERT_C_NODE:{
+					case ModificationOperations::NEW_COMPRESSED_NODE:{
 						assert(hash_before_.empty());
 						hash_after_ = TensorHash::getCompressedNodeHash(firstKey(), firstValue());
 						break;
 					}
-					case InsertOp::INSERT_MULT_INTO_C:
+					case ModificationOperations::INSERT_INTO_COMPRESSED_NODE:
 						[[fallthrough]];
-					case InsertOp::INSERT_MULT_INTO_UC:
+					case ModificationOperations::INSERT_INTO_UNCOMPRESSED_NODE:
 						assert(not hash_before_.empty());
 						for (const auto &entry : entries_)
-							hash_after_.addEntry(key(entry), value(entry));
+							hash_after_.addEntry(re<depth>::key(entry), re<depth>::value(entry));
 						break;
-					case InsertOp::NEW_MULT_UC:
+					case ModificationOperations::NEW_UNCOMPRESSED_NODE:
 						assert(hash_before_.empty());
 						assert(entries_.size() > 1);
 
 						hash_after_ = TensorHash::getCompressedNodeHash(firstKey(), firstValue());
 						for (auto entry_it = std::next(entries_.begin()); entry_it != entries_.end(); ++entry_it)
-							hash_after_.addEntry(key(*entry_it), value(*entry_it));
+							hash_after_.addEntry(re<depth>::key(*entry_it), re<depth>::value(*entry_it));
 						break;
 					default:
 						assert(false);
@@ -264,13 +188,13 @@ namespace hypertrie::internal::node_based {
 		public:
 
 			bool operator<(const MultiUpdate<depth> &other) const noexcept {
-				return std::make_tuple(this->insert_op_, this->hash_before_, this->hashAfter()) <
-					   std::make_tuple(other.insert_op_, other.hash_before_, other.hashAfter());
+				return std::make_tuple(this->mod_op_, this->hash_before_, this->hashAfter()) <
+					   std::make_tuple(other.mod_op_, other.hash_before_, other.hashAfter());
 			};
 
 			bool operator==(const MultiUpdate<depth> &other) const noexcept {
-				return std::make_tuple(this->insert_op_, this->hash_before_, this->hashAfter()) ==
-					   std::make_tuple(other.insert_op_, other.hash_before_, other.hashAfter());
+				return std::make_tuple(this->mod_op_, this->hash_before_, this->hashAfter()) ==
+					   std::make_tuple(other.mod_op_, other.hash_before_, other.hashAfter());
 			};
 
 			template<typename H>
@@ -327,13 +251,13 @@ namespace hypertrie::internal::node_based {
 				return;
 			else if (nodec.empty())
 				if (keys.size() == 1)
-					update.insertOp() = InsertOp::INSERT_C_NODE;
+					update.modOp() = ModificationOperations::NEW_COMPRESSED_NODE;
 				else
-					update.insertOp() = InsertOp::NEW_MULT_UC;
+					update.modOp() = ModificationOperations::NEW_UNCOMPRESSED_NODE;
 			else if (nodec.isCompressed())
-				update.insertOp() = InsertOp::INSERT_MULT_INTO_C;
+				update.modOp() = ModificationOperations::INSERT_INTO_COMPRESSED_NODE;
 			else
-				update.insertOp() = InsertOp::INSERT_MULT_INTO_UC;
+				update.modOp() = ModificationOperations::INSERT_INTO_UNCOMPRESSED_NODE;
 
 			update.hashBefore() = nodec.hash();
 			update.entries() = std::move(keys);
@@ -355,18 +279,18 @@ namespace hypertrie::internal::node_based {
 			update.hashBefore() = nodec;
 			update.addEntry(key, value);
 			if (value_deleted) {
-				update.insertOp() = InsertOp::REMOVE_FROM_UC;
+				update.modOp() = ModificationOperations::REMOVE_FROM_UC;
 				throw std::logic_error{"deleting values from hypertrie is not yet implemented. "};
 			} else if (value_changes) {
-				update.insertOp() = InsertOp::CHANGE_VALUE;
+				update.modOp() = ModificationOperations::CHANGE_VALUE;
 				update.oldValue() = old_value;
 			} else {// new entry
 				if (nodec.empty())
-					update.insertOp() = InsertOp::INSERT_C_NODE;
+					update.modOp() = ModificationOperations::NEW_COMPRESSED_NODE;
 				else if (nodec.isCompressed())
-					update.insertOp() = InsertOp::INSERT_MULT_INTO_C;
+					update.modOp() = ModificationOperations::INSERT_INTO_COMPRESSED_NODE;
 				else
-					update.insertOp() = InsertOp::INSERT_MULT_INTO_UC;
+					update.modOp() = ModificationOperations::INSERT_INTO_UNCOMPRESSED_NODE;
 			}
 			planUpdate(std::move(update), INC_COUNT_DIFF_AFTER);
 			apply_update_rek<update_depth>();
@@ -427,9 +351,7 @@ namespace hypertrie::internal::node_based {
 			// extract movables
 			for (const MultiUpdate<depth> &update : multi_updates) {
 				// skip if it cannot be a movable
-				if (update.insertOp() == InsertOp::NEW_MULT_UC
-					or update.insertOp() == InsertOp::INSERT_C_NODE
-					or update.insertOp() ==  InsertOp::INSERT_MULT_INTO_C)
+				if (update.modOp() == ModificationOperations::NEW_UNCOMPRESSED_NODE or update.modOp() == ModificationOperations::NEW_COMPRESSED_NODE or update.modOp() == ModificationOperations::INSERT_INTO_COMPRESSED_NODE)
 					continue;
 				// check if it is a moveable. then save it and skip to the next iteration
 				auto unref_before = unreferenced_nodes_before.find(update.hashBefore());
@@ -536,8 +458,8 @@ namespace hypertrie::internal::node_based {
 		long processUpdate(MultiUpdate<depth> &update, const size_t after_count_diff) {
 			long node_before_children_count_diff = 0;
 
-			switch (update.insertOp()) {
-				case InsertOp::CHANGE_VALUE:
+			switch (update.modOp()) {
+				case ModificationOperations::CHANGE_VALUE:
 					if constexpr (not tri::is_bool_valued) {
 						if (update.hashBefore().isCompressed())
 							changeValue<depth, NodeCompression::compressed, reuse_node_before>(update, after_count_diff);
@@ -545,21 +467,21 @@ namespace hypertrie::internal::node_based {
 							node_before_children_count_diff = changeValue<depth, NodeCompression::uncompressed, reuse_node_before>(update, after_count_diff);
 					}
 					break;
-				case InsertOp::INSERT_C_NODE:
+				case ModificationOperations::NEW_COMPRESSED_NODE:
 					if constexpr(not (depth == 1 and tri_t::is_lsb_unused and tri_t::is_bool_valued))
 						insertCompressedNode<depth>(update, after_count_diff);
 					break;
-				case InsertOp::INSERT_MULT_INTO_UC:
+				case ModificationOperations::INSERT_INTO_UNCOMPRESSED_NODE:
 					node_before_children_count_diff = insertBulkIntoUC<depth, reuse_node_before>(update, after_count_diff);
 					break;
-				case InsertOp::INSERT_MULT_INTO_C:
+				case ModificationOperations::INSERT_INTO_COMPRESSED_NODE:
 					if constexpr (not (depth == 1 and tri_t::is_lsb_unused and tri_t::is_bool_valued))
 						insertBulkIntoC<depth>(update, after_count_diff);
 					break;
-				case InsertOp::NEW_MULT_UC:
+				case ModificationOperations::NEW_UNCOMPRESSED_NODE:
 					newUncompressedBulk<depth>(update, after_count_diff);
 					break;
-				case InsertOp::REMOVE_FROM_UC:
+				case ModificationOperations::REMOVE_FROM_UC:
 					assert(false);// not yet implemented
 					break;
 				default:
@@ -601,7 +523,7 @@ namespace hypertrie::internal::node_based {
 							auto key_part = update.firstKey()[pos];
 
 							MultiUpdate<depth - 1> child_update{};
-							child_update.insertOp() = InsertOp::CHANGE_VALUE;
+							child_update.modOp() = ModificationOperations::CHANGE_VALUE;
 							child_update.addEntry(sub_key, update.firstValue());
 							child_update.oldValue() = update.oldValue();
 
@@ -634,7 +556,7 @@ namespace hypertrie::internal::node_based {
 							auto key_part = update.firstKey()[pos];
 
 							MultiUpdate<depth - 1> child_update{};
-							child_update.insertOp() = InsertOp::CHANGE_VALUE;
+							child_update.modOp() = ModificationOperations::CHANGE_VALUE;
 							child_update.addEntry(sub_key, update.firstValue());
 							child_update.oldValue() = update.oldValue();
 
@@ -660,7 +582,7 @@ namespace hypertrie::internal::node_based {
 		void newUncompressedBulk(const MultiUpdate<depth> &update, const size_t after_count_diff) {
 			// TODO: implement for valued
 			static constexpr const auto subkey = &tri::template subkey<depth>;
-
+			using red = re<depth>;
 			// move or copy the node from old_hash to new_hash
 			auto &storage = node_storage.template getNodeStorage<depth, NodeCompression::uncompressed>();
 			// make sure everything is set correctly
@@ -679,9 +601,9 @@ namespace hypertrie::internal::node_based {
 				if constexpr (depth == 1) {
 					for (const Entry<depth> &entry : update.entries()){
 						if constexpr (tri_t::is_bool_valued)
-							node->edges().insert(key(entry)[0]);
+							node->edges().insert(red::key(entry)[0]);
 						else
-							node->edges().emplace(key(entry)[0], value(entry));
+							node->edges().emplace(red::key(entry)[0], red::value(entry));
 					}
 				} else {
 					// # group the subkeys by the key part at pos
@@ -691,8 +613,8 @@ namespace hypertrie::internal::node_based {
 
 					// populate children_inserted_keys
 					for (const Entry<depth> &entry : update.entries())
-						children_inserted_keys[key(entry)[pos]]
-								.push_back(make_Entry(subkey(key(entry), pos), value(entry)));
+						children_inserted_keys[red::key(entry)[pos]]
+								.push_back(re<depth-1>::make_Entry(subkey(red::key(entry), pos), red::value(entry)));
 
 					// process the changes to the node at pos and plan the updates to the sub nodes
 					for (auto &[key_part, child_inserted_entries] : children_inserted_keys) {
@@ -702,13 +624,13 @@ namespace hypertrie::internal::node_based {
 						MultiUpdate<depth - 1> child_update{};
 						if (child_inserted_entries.size() == 1){
 							if constexpr (not (depth == 2 and tri::is_bool_valued and tri::is_lsb_unused)) {
-								child_update.insertOp() = InsertOp::INSERT_C_NODE;
+								child_update.modOp() = ModificationOperations::NEW_COMPRESSED_NODE;
 							} else {
 								node->edges(pos)[key_part] = TaggedTensorHash<tri>{child_inserted_entries[0][0]};
 								continue;
 							}
 						} else
-							child_update.insertOp() = InsertOp::NEW_MULT_UC;
+							child_update.modOp() = ModificationOperations::NEW_UNCOMPRESSED_NODE;
 						child_update.entries() = std::move(child_inserted_entries);
 
 						// insert reference to subnode
@@ -730,7 +652,7 @@ namespace hypertrie::internal::node_based {
 
 			CompressedNode<depth, tri> const *const node_before = storage[update.hashBefore()];
 
-			update.insertOp() = InsertOp::NEW_MULT_UC;
+			update.modOp() = ModificationOperations::NEW_UNCOMPRESSED_NODE;
 			update.addEntry(node_before->key(), node_before->value());
 			update.hashBefore() = {};
 			newUncompressedBulk<depth>(update, after_count_diff);
@@ -739,6 +661,7 @@ namespace hypertrie::internal::node_based {
 		template<size_t depth, bool reuse_node_before = false>
 		long insertBulkIntoUC(const MultiUpdate<depth> &update, const long after_count_diff) {
 				static constexpr const auto subkey = &tri::template subkey<depth>;
+				using red = re<depth>;
 				const long node_before_children_count_diff =
 						(not reuse_node_before and depth > 1) ? INC_COUNT_DIFF_BEFORE : 0;
 
@@ -766,9 +689,9 @@ namespace hypertrie::internal::node_based {
 					if constexpr (depth == 1) {
 						for (const Entry <depth> &entry : update.entries()){
 							if constexpr (tri_t::is_bool_valued)
-								node->edges().insert(key(entry)[0]);
+								node->edges().insert(red::key(entry)[0]);
 							else
-								node->edges().emplace(key(entry)[0], value(entry));
+								node->edges().emplace(red::key(entry)[0], red::value(entry));
 						}
 					} else {
 						// # group the subkeys by the key part at pos
@@ -778,8 +701,8 @@ namespace hypertrie::internal::node_based {
 
 						// populate children_inserted_keys
 						for (const Entry<depth> &entry : update.entries())
-							children_inserted_keys[key(entry)[pos]]
-									.push_back(make_Entry(subkey(key(entry), pos), value(entry)));
+							children_inserted_keys[red::key(entry)[pos]]
+									.push_back(re<depth-1>::make_Entry(subkey(red::key(entry), pos), red::value(entry)));
 
 						// process the changes to the node at pos and plan the updates to the sub nodes
 						for (auto &[key_part, child_inserted_entries] : children_inserted_keys) {
@@ -791,30 +714,30 @@ namespace hypertrie::internal::node_based {
 								if (key_part_exists) {
 									child_update.hashBefore() = iter->second;
 									if (child_update.hashBefore().isCompressed())
-										child_update.insertOp() = InsertOp::INSERT_MULT_INTO_C;
+										child_update.modOp() = ModificationOperations::INSERT_INTO_COMPRESSED_NODE;
 									else
-										child_update.insertOp() = InsertOp::INSERT_MULT_INTO_UC;
+										child_update.modOp() = ModificationOperations::INSERT_INTO_UNCOMPRESSED_NODE;
 								} else {
 									if (child_inserted_entries.size() == 1)
-										child_update.insertOp() = InsertOp::INSERT_C_NODE;
+										child_update.modOp() = ModificationOperations::NEW_COMPRESSED_NODE;
 									else
-										child_update.insertOp() = InsertOp::NEW_MULT_UC;
+										child_update.modOp() = ModificationOperations::NEW_UNCOMPRESSED_NODE;
 								}
 							} else {
 								if (key_part_exists) {
 									if (iter->second.isCompressed()) {
 										child_inserted_entries.push_back({iter->second.getKeyPart()});
-										child_update.insertOp() = InsertOp::NEW_MULT_UC;
+										child_update.modOp() = ModificationOperations::NEW_UNCOMPRESSED_NODE;
 									} else {
 										child_update.hashBefore() = iter->second.getTaggedNodeHash();
-										child_update.insertOp() = InsertOp::INSERT_MULT_INTO_UC;
+										child_update.modOp() = ModificationOperations::INSERT_INTO_UNCOMPRESSED_NODE;
 									}
 								} else {
 									if (child_inserted_entries.size() == 1) {
 										node->edges(pos)[key_part] = TaggedTensorHash<tri>{child_inserted_entries[0][0]};
 										continue;
 									} else {
-										child_update.insertOp() = InsertOp::NEW_MULT_UC;
+										child_update.modOp() = ModificationOperations::NEW_UNCOMPRESSED_NODE;
 									}
 								}
 							}

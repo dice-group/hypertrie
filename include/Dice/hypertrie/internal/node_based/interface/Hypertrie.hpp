@@ -3,11 +3,11 @@
 
 #include "Dice/hypertrie/internal/container/AllContainer.hpp"
 
-#include "Dice/hypertrie/internal/node_based/Hypertrie_traits.hpp"
+#include "Dice/hypertrie/internal/node_based/interface/Hypertrie_traits.hpp"
 #include "Dice/hypertrie/internal/util/CONSTANTS.hpp"
-#include <vector>
 #include <optional>
 #include <variant>
+#include <vector>
 
 namespace hypertrie::internal::node_based {
 

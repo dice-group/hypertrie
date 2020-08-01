@@ -5,7 +5,7 @@
 #include "Dice/hypertrie/internal/node_based/raw/node/NodePtr.hpp"
 #include "Dice/hypertrie/internal/node_based/raw/node/TensorHash.hpp"
 
-namespace hypertrie::internal::node_based {
+namespace hypertrie::internal::node_based::raw {
 
 	template<size_t depth, NodeCompression compressed, HypertrieInternalTrait tri_t = Hypertrie_internal_t<>>
 	struct SpecificNodeContainer;

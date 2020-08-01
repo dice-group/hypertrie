@@ -2,6 +2,7 @@
 #define HYPERTRIE_TESTNODECONTEXT_H
 
 #include <Dice/hypertrie/internal/node_based/raw/storage/NodeContext.hpp>
+#include <Dice/hypertrie/internal/node_based/interface/Hypertrie_traits.hpp>
 
 #include <fmt/format.h>
 
@@ -10,9 +11,11 @@
 #include "TestTensor.hpp"
 
 
-namespace hypertrie::tests::node_based::node_context {
+namespace hypertrie::tests::node_based::raw::node_context {
 
 	using namespace hypertrie::tests::utils;
+
+	using namespace hypertrie::internal::node_based::raw;
 
 	using namespace hypertrie::internal::node_based;
 

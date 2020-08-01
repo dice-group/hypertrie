@@ -13,7 +13,7 @@
 #include <Dice/hypertrie/internal/util/CountDownNTuple.hpp>
 #include <itertools.hpp>
 
-namespace hypertrie::internal::node_based {
+namespace hypertrie::internal::node_based::raw {
 
 	template<size_t max_depth,
 			 HypertrieInternalTrait tri_t = Hypertrie_internal_t<>,

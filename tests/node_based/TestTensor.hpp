@@ -5,14 +5,14 @@
 #include <fmt/format.h>
 #include <itertools.hpp>
 
-namespace hypertrie::tests::node_based::node_context {
+namespace hypertrie::tests::node_based::raw::node_context {
 
 
 	using namespace fmt::literals;
 
 	using namespace hypertrie::tests::utils;
 
-	using namespace hypertrie::internal::node_based;
+	using namespace hypertrie::internal::node_based::raw;
 
 	template<size_t depth, HypertrieInternalTrait tri_t, typename = std::enable_if_t<(depth >= 0)>>
 	class TestTensor {

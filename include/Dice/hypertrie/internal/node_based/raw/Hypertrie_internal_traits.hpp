@@ -5,7 +5,7 @@
 
 #include "Dice/hypertrie/internal/util/RawKey.hpp"
 
-namespace hypertrie::internal::node_based {
+namespace hypertrie::internal::node_based::raw {
 
 	template<HypertrieTrait tr_t = default_bool_Hypertrie_t>
 	struct Hypertrie_internal_t {

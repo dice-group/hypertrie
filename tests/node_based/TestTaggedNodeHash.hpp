@@ -5,8 +5,8 @@
 
 #include <Dice/hypertrie/internal/util/RawKey.hpp>
 
-namespace hypertrie::tests::node_based::tagged_node_hash {
-	using namespace hypertrie::internal::node_based;
+namespace hypertrie::tests::node_based::raw::tagged_node_hash {
+	using namespace hypertrie::internal::node_based::raw;
 
 	using key_part_type = float;
 	template<pos_type depth>

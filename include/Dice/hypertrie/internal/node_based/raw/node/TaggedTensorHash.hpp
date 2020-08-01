@@ -12,7 +12,7 @@
 #include "Dice/hypertrie/internal/util/RawKey.hpp"
 #include "Dice/hypertrie/internal/node_based/raw/node/TensorHash.hpp"
 
-namespace hypertrie::internal::node_based {
+namespace hypertrie::internal::node_based::raw {
 
 
 
@@ -166,22 +166,22 @@ namespace hypertrie::internal::node_based {
 
 
 
-template<hypertrie::internal::node_based::HypertrieInternalTrait tri>
-struct fmt::formatter<hypertrie::internal::node_based::TaggedTensorHash<tri>> {
+template<hypertrie::internal::node_based::raw::HypertrieInternalTrait tri>
+struct fmt::formatter<hypertrie::internal::node_based::raw::TaggedTensorHash<tri>> {
 	auto parse(format_parse_context &ctx) {
 		return ctx.begin();
 	}
 
 	template<typename FormatContext>
-	auto format(const hypertrie::internal::node_based::TaggedTensorHash<tri> &hash, FormatContext &ctx) {
+	auto format(const hypertrie::internal::node_based::raw::TaggedTensorHash<tri> &hash, FormatContext &ctx) {
 		return fmt::format_to(ctx.out(), "{}", (std::string) hash);
 	}
 };
 
 namespace std {
-	template<hypertrie::internal::node_based::HypertrieInternalTrait tri>
-	struct hash<::hypertrie::internal::node_based::TaggedTensorHash<tri>> {
-		size_t operator()(const ::hypertrie::internal::node_based::TaggedTensorHash<tri> &hash) const noexcept {
+	template<hypertrie::internal::node_based::raw::HypertrieInternalTrait tri>
+	struct hash<::hypertrie::internal::node_based::raw::TaggedTensorHash<tri>> {
+		size_t operator()(const ::hypertrie::internal::node_based::raw::TaggedTensorHash<tri> &hash) const noexcept {
 			return hash.hash();
 		}
 	};

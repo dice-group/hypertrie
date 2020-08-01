@@ -6,7 +6,7 @@
 #include "../utils/AssetGenerator.hpp"
 
 
-namespace hypertrie::tests::node_based::node_container {
+namespace hypertrie::tests::node_based::raw::node_container {
 
 	TEST_CASE("TODO", "[NodeContainer]") {
 	}

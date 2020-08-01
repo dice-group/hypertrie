@@ -7,7 +7,7 @@
 #include "Dice/hypertrie/internal/util/CONSTANTS.hpp"
 #include "Dice/hypertrie/internal/util/CountDownNTuple.hpp"
 
-namespace hypertrie::internal::node_based {
+namespace hypertrie::internal::node_based::raw {
 
 	template<size_t depth,
 			 HypertrieInternalTrait tri_t = Hypertrie_internal_t<>,

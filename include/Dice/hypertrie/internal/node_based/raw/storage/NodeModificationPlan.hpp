@@ -6,7 +6,7 @@
 #include "Dice/hypertrie/internal/node_based/raw/Hypertrie_internal_traits.hpp"
 
 
-namespace hypertrie::internal::node_based {
+namespace hypertrie::internal::node_based::raw {
 
 
 	enum struct ModificationOperations : unsigned int {

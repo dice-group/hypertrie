@@ -46,12 +46,12 @@ namespace hypertrie::tests::node_based::raw::node_context {
 		}
 
 	public:
-		explicit TestTensor(bool primary = false, size_t ref_count = 0, std::map<RawKey<depth>, value_type> entries = {}) : entries(entries), ref_count_(ref_count) {
+		explicit TestTensor(size_t ref_count = 0, std::map<RawKey<depth>, value_type> entries = {}) : entries(entries), ref_count_(ref_count) {
 			hash_ = calcHash(this->entries);
 		}
 
 		static auto getPrimary() {
-			return TestTensor(true, 1);
+			return TestTensor(1);
 		}
 
 		template<size_t key_depth>
@@ -230,7 +230,7 @@ namespace hypertrie::tests::node_based::raw::node_context {
 						continue;
 				auto child_hash = calcHash<depth -1>(child_entries);
 				if (not existing_children.contains(child_hash))
-					existing_children[child_hash] = std::make_shared<TestTensor<depth - 1, tri>>(false, 0, child_entries); //<TestTensor<depth - 1, tri>>
+					existing_children[child_hash] = std::make_shared<TestTensor<depth - 1, tri>>(0, child_entries); //<TestTensor<depth - 1, tri>>
 				auto child = existing_children[child_hash];
 				child->incRefCount();
 			}

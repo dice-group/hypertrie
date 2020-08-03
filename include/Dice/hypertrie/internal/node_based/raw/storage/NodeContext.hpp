@@ -153,7 +153,13 @@ namespace hypertrie::internal::node_based::raw {
 		}
 
 		template<size_t depth>
-		bool size(NodeContainer<depth, tri> &nodec) {
+		std::size_t size(NodeContainer<depth, tri> &nodec) {
+			if (nodec.empty())
+				return 0;
+			else if (nodec.isCompressed())
+				return 1;
+			else
+				nodec.uncompressed_node()->size();
 		}
 	};
 }// namespace hypertrie::internal::node_based

@@ -26,12 +26,11 @@ namespace hypertrie::tests::node_based::raw::node_context {
 	void basicUsage() {
 		using key_part_type = typename tr::key_part_type;
 		using value_type = typename tr::value_type;
-		using Key = typename tr::template RawKey<depth>;
 
 		SECTION(fmt::format("depth = {}, key_part_type = {}, value_type = {}",
 							depth, nameOfType<key_part_type>(), nameOfType<value_type>())) {
 			utils::RawGenerator<depth, key_part_type, value_type> gen{};
-			for (auto i : iter::range(5000)) {
+			for ([[maybe_unused]]auto i : iter::range(5000)) {
 				// create context
 				NodeContext<depth, tr> context{};
 				// create emtpy primary node
@@ -69,27 +68,23 @@ namespace hypertrie::tests::node_based::raw::node_context {
 	}
 
 	TEST_CASE("Test setting independent keys", "[NodeContext]") {
-//		basicUsage<default_bool_Hypertrie_internal_t, 1>();
-//		basicUsage<default_long_Hypertrie_internal_t, 1>();
-//		basicUsage<default_double_Hypertrie_internal_t, 1>();
-//		basicUsage<default_bool_Hypertrie_internal_t, 2>();
-//		basicUsage<default_long_Hypertrie_internal_t, 2>();
-//		basicUsage<default_double_Hypertrie_internal_t, 2>();
-//		basicUsage<default_bool_Hypertrie_internal_t, 3>();
-//		basicUsage<default_long_Hypertrie_internal_t, 3>();
-//		basicUsage<default_double_Hypertrie_internal_t, 3>();
-//		basicUsage<default_bool_Hypertrie_internal_t, 5>();
-//		basicUsage<default_long_Hypertrie_internal_t, 5>();
-//		basicUsage<default_double_Hypertrie_internal_t, 5>();
+		basicUsage<default_bool_Hypertrie_internal_t, 1>();
+		basicUsage<default_long_Hypertrie_internal_t, 1>();
+		basicUsage<default_double_Hypertrie_internal_t, 1>();
+		basicUsage<default_bool_Hypertrie_internal_t, 2>();
+		basicUsage<default_long_Hypertrie_internal_t, 2>();
+		basicUsage<default_double_Hypertrie_internal_t, 2>();
+		basicUsage<default_bool_Hypertrie_internal_t, 3>();
+		basicUsage<default_long_Hypertrie_internal_t, 3>();
+		basicUsage<default_double_Hypertrie_internal_t, 3>();
+		basicUsage<default_bool_Hypertrie_internal_t, 5>();
+		basicUsage<default_long_Hypertrie_internal_t, 5>();
+		basicUsage<default_double_Hypertrie_internal_t, 5>();
 	}
 
 	TEST_CASE("Test Long valued", "[NodeContext]") {
 		using tr = default_long_Hypertrie_internal_t;
 		constexpr pos_type depth = 3;
-
-		using key_part_type = typename tr::key_part_type;
-		using value_type = typename tr::value_type;
-		using Key = typename tr::template RawKey<depth>;
 
 		NodeContext<depth, tr> context{};
 		// create emtpy primary node
@@ -124,8 +119,6 @@ namespace hypertrie::tests::node_based::raw::node_context {
 		using tr = default_bool_Hypertrie_internal_t;
 		constexpr pos_type depth = 3;
 
-		using key_part_type = typename tr::key_part_type;
-		using value_type = typename tr::value_type;
 		using Key = typename tr::template RawKey<depth>;
 
 
@@ -181,8 +174,6 @@ namespace hypertrie::tests::node_based::raw::node_context {
 				true>>;
 		constexpr pos_type depth = 3;
 
-		using key_part_type = typename tr::key_part_type;
-		using value_type = typename tr::value_type;
 		using Key = typename tr::template RawKey<depth>;
 
 
@@ -241,8 +232,6 @@ namespace hypertrie::tests::node_based::raw::node_context {
 		using tr = default_bool_Hypertrie_internal_t;
 		constexpr pos_type depth = 3;
 
-		using key_part_type = typename tr::key_part_type;
-		using value_type = typename tr::value_type;
 		using Key = typename tr::template RawKey<depth>;
 
 
@@ -350,8 +339,6 @@ namespace hypertrie::tests::node_based::raw::node_context {
 		using tr = default_bool_Hypertrie_internal_t;
 		constexpr pos_type depth = 3;
 
-		using key_part_type = typename tr::key_part_type;
-		using value_type = typename tr::value_type;
 		using Key = typename tr::template RawKey<depth>;
 
 
@@ -437,7 +424,6 @@ namespace hypertrie::tests::node_based::raw::node_context {
 		using tr = default_long_Hypertrie_internal_t;
 		constexpr pos_type depth = 3;
 
-		using key_part_type = typename tr::key_part_type;
 		using value_type = typename tr::value_type;
 		using Key = typename tr::template RawKey<depth>;
 

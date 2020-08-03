@@ -66,7 +66,7 @@ namespace hypertrie::internal::node_based {
 								node_container,
 								raw_key);
 					},
-					[]() -> bool { assert(("Hypertrie depth {} invalid. allowed range: [1,{}). Should never be reached.", false)); });
+					[]() -> bool { assert(false); return {}; });
 		}
 
 
@@ -118,7 +118,7 @@ namespace hypertrie::internal::node_based {
 						auto &node_container = *static_cast<raw::NodeContainer<depth_arg, tri> *>(this->node_container_);
 						return this->context_->rawContext().template set<depth_arg>(node_container, raw_key, value);
 					},
-					[]() -> value_type { assert(("Hypertrie depth {} invalid. allowed range: [1,{}). Should never be reached.", false)); });
+					[]() -> value_type { assert(false); return {}; });
 		}
 
 		Hypertrie(size_t depth, HypertrieContext<tr> &context = DefaultHypertrieContext<tr>::instance())

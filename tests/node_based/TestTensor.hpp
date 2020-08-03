@@ -1,18 +1,18 @@
 #ifndef HYPERTRIE_TESTTENSOR_HPP
 #define HYPERTRIE_TESTTENSOR_HPP
-#include <Dice/hypertrie/internal/node_based/NodeContext.hpp>
+#include <Dice/hypertrie/internal/node_based/raw/storage/NodeContext.hpp>
 #include <catch2/catch.hpp>
 #include <fmt/format.h>
 #include <itertools.hpp>
 
-namespace hypertrie::tests::node_based::node_context {
+namespace hypertrie::tests::node_based::raw::node_context {
 
 
 	using namespace fmt::literals;
 
 	using namespace hypertrie::tests::utils;
 
-	using namespace hypertrie::internal::node_based;
+	using namespace hypertrie::internal::node_based::raw;
 
 	template<size_t depth, HypertrieInternalTrait tri_t, typename = std::enable_if_t<(depth >= 0)>>
 	class TestTensor {
@@ -20,7 +20,7 @@ namespace hypertrie::tests::node_based::node_context {
 
 	public:
 		template <size_t node_depth>
-		using NodeRepr_t = std::conditional_t<(not (node_depth == 1 and tri_t::is_bool_valued and tri_t::is_lsb_unused)), TaggedNodeHash, KeyPartUCNodeHashVariant<tri_t>>;
+		using NodeRepr_t = std::conditional_t<(not (node_depth == 1 and tri_t::is_bool_valued and tri_t::is_lsb_unused)), TensorHash, TaggedTensorHash<tri_t>>;
 		using NodeRepr = NodeRepr_t<depth>;
 		template <size_t node_depth>
 		using Hash2Instance_t = std::map<NodeRepr_t<node_depth>, std::shared_ptr<TestTensor<node_depth, tri>>>;
@@ -35,28 +35,23 @@ namespace hypertrie::tests::node_based::node_context {
 
 		std::map<RawKey<depth>, value_type> entries{};
 
-		bool is_primary_node;
-
 		size_t ref_count_;
 
 		NodeRepr hash_;
 
 
 	public:
-		bool isPrimaryNode() const {
-			return is_primary_node;
-		}
 		size_t ref_count() const {
 			return ref_count_;
 		}
 
 	public:
-		explicit TestTensor(bool primary = false, size_t ref_count = 0, std::map<RawKey<depth>, value_type> entries = {}) : entries(entries), is_primary_node(primary), ref_count_(ref_count) {
-			hash_ = calcHash(this->entries, this->is_primary_node);
+		explicit TestTensor(size_t ref_count = 0, std::map<RawKey<depth>, value_type> entries = {}) : entries(entries), ref_count_(ref_count) {
+			hash_ = calcHash(this->entries);
 		}
 
 		static auto getPrimary() {
-			return TestTensor(true, 1);
+			return TestTensor(1);
 		}
 
 		template<size_t key_depth>
@@ -76,7 +71,7 @@ namespace hypertrie::tests::node_based::node_context {
 				entries[key] = value;
 			else
 				entries.erase(key);
-			hash_ = calcHash(this->entries, this->is_primary_node);
+			hash_ = calcHash(this->entries);
 		}
 
 		void incRefCount() {
@@ -107,7 +102,7 @@ namespace hypertrie::tests::node_based::node_context {
 				if (hash.isUncompressed()) {
 					uncompressed_count++;
 
-					const UncompressedNodeContainer<node_depth, tri> &nc = storage.template getUncompressedNode<node_depth>((TaggedNodeHash)hash);
+					const UncompressedNodeContainer<node_depth, tri> &nc = storage.template getUncompressedNode<node_depth>((TensorHash)hash);
 
 					INFO("Storage doesn't contain the entry");
 					REQUIRE(not nc.null());
@@ -235,7 +230,7 @@ namespace hypertrie::tests::node_based::node_context {
 						continue;
 				auto child_hash = calcHash<depth -1>(child_entries);
 				if (not existing_children.contains(child_hash))
-					existing_children[child_hash] = std::make_shared<TestTensor<depth - 1, tri>>(false, 0, child_entries); //<TestTensor<depth - 1, tri>>
+					existing_children[child_hash] = std::make_shared<TestTensor<depth - 1, tri>>(0, child_entries); //<TestTensor<depth - 1, tri>>
 				auto child = existing_children[child_hash];
 				child->incRefCount();
 			}
@@ -252,19 +247,19 @@ namespace hypertrie::tests::node_based::node_context {
 		}
 
 		template<size_t key_depth>
-		static NodeRepr_t<key_depth> calcHash(std::map<RawKey<key_depth>, value_type> entries, bool is_primary_node = false) {
+		static NodeRepr_t<key_depth> calcHash(std::map<RawKey<key_depth>, value_type> entries) {
 			if constexpr (tri::is_bool_valued and tri::is_lsb_unused and key_depth == 1) {
 				if (entries.size() == 1) {
 					return {entries.begin()->first[0]};
 				}
 			}
 
-			TaggedNodeHash hash = TaggedNodeHash::getUncompressedEmptyNodeHash<depth>();
+			TensorHash hash{};
 			bool first = true;
 			for (const auto &[key, value] : entries) {
-				if (not is_primary_node and first) {
+				if (first) {
 					first = false;
-					hash = TaggedNodeHash::getCompressedNodeHash(key, value);
+					hash = TensorHash::getCompressedNodeHash(key, value);
 				} else
 					hash.addEntry(key, value);
 			}

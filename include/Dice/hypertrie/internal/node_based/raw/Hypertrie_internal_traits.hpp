@@ -1,11 +1,11 @@
 #ifndef HYPERTRIE_HYPERTRIE_INTERNAL_TRAITS_HPP
 #define HYPERTRIE_HYPERTRIE_INTERNAL_TRAITS_HPP
 
-#include "Dice/hypertrie/internal/node_based/Hypertrie_traits.hpp"
+#include "Dice/hypertrie/internal/node_based/interface/Hypertrie_traits.hpp"
 
 #include "Dice/hypertrie/internal/util/RawKey.hpp"
 
-namespace hypertrie::internal::node_based {
+namespace hypertrie::internal::node_based::raw {
 
 	template<HypertrieTrait tr_t = default_bool_Hypertrie_t>
 	struct Hypertrie_internal_t {

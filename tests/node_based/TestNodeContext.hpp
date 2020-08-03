@@ -1,7 +1,8 @@
 #ifndef HYPERTRIE_TESTNODECONTEXT_H
 #define HYPERTRIE_TESTNODECONTEXT_H
 
-#include <Dice/hypertrie/internal/node_based/NodeContext.hpp>
+#include <Dice/hypertrie/internal/node_based/raw/storage/NodeContext.hpp>
+#include <Dice/hypertrie/internal/node_based/interface/Hypertrie_traits.hpp>
 
 #include <fmt/format.h>
 
@@ -10,9 +11,11 @@
 #include "TestTensor.hpp"
 
 
-namespace hypertrie::tests::node_based::node_context {
+namespace hypertrie::tests::node_based::raw::node_context {
 
 	using namespace hypertrie::tests::utils;
+
+	using namespace hypertrie::internal::node_based::raw;
 
 	using namespace hypertrie::internal::node_based;
 
@@ -23,16 +26,15 @@ namespace hypertrie::tests::node_based::node_context {
 	void basicUsage() {
 		using key_part_type = typename tr::key_part_type;
 		using value_type = typename tr::value_type;
-		using Key = typename tr::template RawKey<depth>;
 
 		SECTION(fmt::format("depth = {}, key_part_type = {}, value_type = {}",
 							depth, nameOfType<key_part_type>(), nameOfType<value_type>())) {
 			utils::RawGenerator<depth, key_part_type, value_type> gen{};
-			for (auto i : iter::range(5000)) {
+			for ([[maybe_unused]]auto i : iter::range(5000)) {
 				// create context
 				NodeContext<depth, tr> context{};
 				// create emtpy primary node
-				UncompressedNodeContainer<depth, tr> nc = context.template newPrimaryNode<depth>();
+				UncompressedNodeContainer<depth, tr> nc{};
 
 				const auto entries = gen.entries(2);
 				const auto [key, value] = *entries.begin();
@@ -84,13 +86,9 @@ namespace hypertrie::tests::node_based::node_context {
 		using tr = default_long_Hypertrie_internal_t;
 		constexpr pos_type depth = 3;
 
-		using key_part_type = typename tr::key_part_type;
-		using value_type = typename tr::value_type;
-		using Key = typename tr::template RawKey<depth>;
-
 		NodeContext<depth, tr> context{};
 		// create emtpy primary node
-		UncompressedNodeContainer<depth, tr> nc = context.template newPrimaryNode<depth>();
+		UncompressedNodeContainer<depth, tr> nc{};
 		auto tt = TestTensor<depth, tr>::getPrimary();
 
 		SECTION("write a single entry") {
@@ -121,14 +119,12 @@ namespace hypertrie::tests::node_based::node_context {
 		using tr = default_bool_Hypertrie_internal_t;
 		constexpr pos_type depth = 3;
 
-		using key_part_type = typename tr::key_part_type;
-		using value_type = typename tr::value_type;
 		using Key = typename tr::template RawKey<depth>;
 
 
 		NodeContext<depth, tr> context{};
 		// create emtpy primary node
-		UncompressedNodeContainer<depth, tr> nc = context.template newPrimaryNode<depth>();
+		UncompressedNodeContainer<depth, tr> nc{};
 		auto tt = TestTensor<depth, tr>::getPrimary();
 
 
@@ -178,14 +174,12 @@ namespace hypertrie::tests::node_based::node_context {
 				true>>;
 		constexpr pos_type depth = 3;
 
-		using key_part_type = typename tr::key_part_type;
-		using value_type = typename tr::value_type;
 		using Key = typename tr::template RawKey<depth>;
 
 
 		NodeContext<depth, tr> context{};
 		// create emtpy primary node
-		UncompressedNodeContainer<depth, tr> nc = context.template newPrimaryNode<depth>();
+		UncompressedNodeContainer<depth, tr> nc{};
 		auto tt = TestTensor<depth, tr>::getPrimary();
 
 
@@ -238,14 +232,12 @@ namespace hypertrie::tests::node_based::node_context {
 		using tr = default_bool_Hypertrie_internal_t;
 		constexpr pos_type depth = 3;
 
-		using key_part_type = typename tr::key_part_type;
-		using value_type = typename tr::value_type;
 		using Key = typename tr::template RawKey<depth>;
 
 
 		NodeContext<depth, tr> context{};
 		// create emtpy primary node
-		UncompressedNodeContainer<depth, tr> nc = context.template newPrimaryNode<depth>();
+		UncompressedNodeContainer<depth, tr> nc{};
 		auto tt = TestTensor<depth, tr>::getPrimary();
 
 
@@ -347,14 +339,12 @@ namespace hypertrie::tests::node_based::node_context {
 		using tr = default_bool_Hypertrie_internal_t;
 		constexpr pos_type depth = 3;
 
-		using key_part_type = typename tr::key_part_type;
-		using value_type = typename tr::value_type;
 		using Key = typename tr::template RawKey<depth>;
 
 
 		NodeContext<depth, tr> context{};
 		// create emtpy primary node
-		UncompressedNodeContainer<depth, tr> nc = context.template newPrimaryNode<depth>();
+		UncompressedNodeContainer<depth, tr> nc{};
 		auto tt = TestTensor<depth, tr>::getPrimary();
 
 
@@ -434,14 +424,13 @@ namespace hypertrie::tests::node_based::node_context {
 		using tr = default_long_Hypertrie_internal_t;
 		constexpr pos_type depth = 3;
 
-		using key_part_type = typename tr::key_part_type;
 		using value_type = typename tr::value_type;
 		using Key = typename tr::template RawKey<depth>;
 
 
 		NodeContext<depth, tr> context{};
 		// create emtpy primary node
-		UncompressedNodeContainer<depth, tr> nc = context.template newPrimaryNode<depth>();
+		UncompressedNodeContainer<depth, tr> nc{};
 		auto tt = TestTensor<depth, tr>::getPrimary();
 
 

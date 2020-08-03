@@ -1,5 +1,6 @@
 #ifndef NODEBASED_HYPERTRIE_TESTS_H
 #define NODEBASED_HYPERTRIE_TESTS_H
+#include "TestHypertrie.hpp"
 #include "TestNode.hpp"
 #include "TestNodeContainer.hpp"
 #include "TestNodeContext.hpp"

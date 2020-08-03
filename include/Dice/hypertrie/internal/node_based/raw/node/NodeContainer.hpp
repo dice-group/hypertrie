@@ -1,10 +1,11 @@
 #ifndef HYPERTRIE_NODECONTAINER_HPP
 #define HYPERTRIE_NODECONTAINER_HPP
 
-#include "Dice/hypertrie/internal/node_based/Node.hpp"
-#include "Dice/hypertrie/internal/node_based/TaggedNodeHash.hpp"
+#include "Dice/hypertrie/internal/node_based/raw/node/Node.hpp"
+#include "Dice/hypertrie/internal/node_based/raw/node/NodePtr.hpp"
+#include "Dice/hypertrie/internal/node_based/raw/node/TensorHash.hpp"
 
-namespace hypertrie::internal::node_based {
+namespace hypertrie::internal::node_based::raw {
 
 	template<size_t depth, NodeCompression compressed, HypertrieInternalTrait tri_t = Hypertrie_internal_t<>>
 	struct SpecificNodeContainer;
@@ -17,11 +18,27 @@ namespace hypertrie::internal::node_based {
 			 HypertrieInternalTrait tri_t = Hypertrie_internal_t<>>
 	using UncompressedNodeContainer = SpecificNodeContainer<depth, NodeCompression::uncompressed, tri_t>;
 
+	/**
+	 * A Node container holds a pointer to a Node and it's TensorHash. The container does not own the node i.e. destructing the NodeContainer does not destruct the Node.
+	 * @tparam depth
+	 * @tparam tri_t
+	 */
 	template<size_t depth, HypertrieInternalTrait tri_t = Hypertrie_internal_t<>>
 	struct NodeContainer {
-		using NodeRepr = std::conditional_t<(not (depth == 1 and tri_t::is_bool_valued and tri_t::is_lsb_unused)), TaggedNodeHash, KeyPartUCNodeHashVariant<tri_t>>;
+		using tri = tri_t;
+		/**
+		 * Normally the node representation is just a TensorHash.
+		 * However, if depth == 1 and tri::is_bool_valued and tri::is_lsb_unused, then the key_part is directly stored in a TaggedTensorHash.
+		 */
+		using NodeRepr = std::conditional_t<(not (depth == 1 and tri::is_bool_valued and tri::is_lsb_unused)), TensorHash, TaggedTensorHash<tri_t>>;
 	protected:
+		/**
+		 * NodeHash (or TaggedNodeHash) that identifies (or represents) the Node.
+		 */
 		NodeRepr repr_{};
+		/**
+		 * Pointer to the Node.
+		 */
 		NodePtr<depth, tri_t> node_ptr_{};
 
 	public:
@@ -54,15 +71,24 @@ namespace hypertrie::internal::node_based {
 
 		[[nodiscard]] bool isUncompressed() const noexcept { return repr_.isUncompressed(); }
 
+		/**
+		 * Check if the NodeRepr (NodeHash/TaggedNodeHash) is empty.
+		 */
 		[[nodiscard]] bool empty() const noexcept { return repr_.empty(); }
 
+		/**
+		 * Check if the the NodePtr is empty.
+		 */
 		[[nodiscard]] bool null() const noexcept { return node_ptr_.raw == nullptr; }
 
 		[[nodiscard]] NodeRepr hash() const noexcept { return this->repr_; }
 
 		[[nodiscard]] NodeRepr &hash() noexcept { return this->repr_; }
 
-		size_t &ref_count() {
+		/**
+		 * Get the reference Count of the contained Node.
+		 */
+		[[nodiscard]] size_t &ref_count() {
 			if (isCompressed())
 				return compressed_node()->ref_count();
 			else
@@ -75,24 +101,9 @@ namespace hypertrie::internal::node_based {
 		friend struct SpecificNodeContainer<depth, NodeCompression::uncompressed, tri_t>;
 	};
 
-	template<NodeCompression compression, HypertrieInternalTrait tri>
-	auto getValue(SpecificNodeContainer<1, compression, tri> &nodec, typename tri::key_part_type key_part) noexcept
-			-> typename tri::value_type {
-		if constexpr (compression == NodeCompression::compressed) {
-			if (key_part == nodec.node()->key()[0]) {
-				if constexpr (tri::is_bool_valued)
-					return true;
-				else
-					return nodec.node()->value();
-			}
-		} else {
-			return nodec.node()->child(0, key_part);
-		}
-	}
-
 	template<size_t depth, HypertrieInternalTrait tri_t>
 	struct SpecificNodeContainer<depth, NodeCompression::compressed, tri_t> : public NodeContainer<depth, tri_t> {
-		using NodeRepr = std::conditional_t<(not (depth == 1 and tri_t::is_bool_valued and tri_t::is_lsb_unused)), TaggedNodeHash, KeyPartUCNodeHashVariant<tri_t>>;
+		using NodeRepr = std::conditional_t<(not (depth == 1 and tri_t::is_bool_valued and tri_t::is_lsb_unused)), TensorHash, TaggedTensorHash<tri_t>>;
 
 		SpecificNodeContainer() noexcept : NodeContainer<depth, tri_t>{} {}
 
@@ -123,7 +134,7 @@ namespace hypertrie::internal::node_based {
 	template<size_t depth,
 			 HypertrieInternalTrait tri_t>
 	struct SpecificNodeContainer<depth, NodeCompression::uncompressed, tri_t> : public NodeContainer<depth, tri_t> {
-		using NodeRepr = std::conditional_t<(not (depth == 1 and tri_t::is_bool_valued and tri_t::is_lsb_unused)), TaggedNodeHash, KeyPartUCNodeHashVariant<tri_t>>;
+		using NodeRepr = std::conditional_t<(not (depth == 1 and tri_t::is_bool_valued and tri_t::is_lsb_unused)), TensorHash, TaggedTensorHash<tri_t>>;
 
 		SpecificNodeContainer() noexcept : NodeContainer<depth, tri_t>{} {}
 

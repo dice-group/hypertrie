@@ -4,7 +4,7 @@
 #include <fstream>
 #include <iostream>
 
-#include <Dice/hypertrie/internal/node_based/NodeContext.hpp>
+#include <Dice/hypertrie/internal/node_based/raw/storage/NodeContext.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
 
@@ -58,7 +58,11 @@ int main(int argc, char *argv[]) {
 		exit(EXIT_FAILURE);
 	}
 
-	using tr = default_bool_Hypertrie_internal_t;
+	using tr = Hypertrie_internal_t<Hypertrie_t<unsigned long,
+			bool,
+			hypertrie::internal::container::tsl_sparse_map,
+			hypertrie::internal::container::tsl_sparse_set,
+			true>>;
 	constexpr hypertrie::pos_type depth = 3;
 
 	using key_part_type = typename tr::key_part_type;
@@ -67,7 +71,7 @@ int main(int argc, char *argv[]) {
 
 	NodeContext<depth, tr> context{};
 	// create emtpy primary node
-	UncompressedNodeContainer<depth, tr> hypertrie = context.template newPrimaryNode<depth>();
+	NodeContainer<depth, tr> hypertrie{};
 
 	std::ifstream file(rdf_file);
 
@@ -75,7 +79,6 @@ int main(int argc, char *argv[]) {
 	// Iterate through each line and split the content using delimeter
 	unsigned int total = 0;
 	unsigned int count = 0;
-	unsigned int _1mios = 0;
 	auto start = steady_clock::now();
 	auto start_part = steady_clock::now();
 	{
@@ -94,33 +97,31 @@ int main(int argc, char *argv[]) {
 			if (not context.template get(hypertrie, key))
 				next_entries.insert(std::move(key));
 
-			if (count == 1'000'000) {
+			if (next_entries.size() == 1'000'000) {
 				std::vector<Key> keys(next_entries.size());
 				for (auto [i, key] : iter::enumerate(next_entries))
 					keys[i] = std::move(key);
 				next_entries.clear();
 				context.template bulk_insert(hypertrie, std::move(keys));
 
-				count = 0;
-				++_1mios;
 				auto short_duration = steady_clock::now() - start_part;
 				start_part = steady_clock::now();
-				std::cerr << "{:d} mio triples processed."_format(_1mios) <<                                                                                            //
-						"\ttook: {:d}.{:04d} s."_format(duration_cast<seconds>(short_duration).count(), (duration_cast<milliseconds>(short_duration) % 1000).count()) <<//
-						"\tdistinct triples: {}"_format(hypertrie.node()->size()) <<                                                                                    //
-						"\ttriple/GB: {}"_format(long(hypertrie.node()->size() / (double(get_memory_usage()) / (1024 * 1024)))) <<                                      //
-						"\tkB/triple: {:.4f}"_format(double(get_memory_usage()) / hypertrie.node()->size()) << std::endl;
+				std::cerr << "{:>9.3f} mio triples processed."_format(double(count)/1'000'000.0) <<                                                                                            //
+						"\ttook: {:>4d}.{:03d} s."_format(duration_cast<seconds>(short_duration).count(), (duration_cast<milliseconds>(short_duration) % 1000).count()) <<//
+						"\tdistinct triples: {:>9.03f} mio"_format(hypertrie.uncompressed().node()->size()/1'000'000.0) <<                                                                                    //
+						"\ttriple/GB: {}"_format(long(hypertrie.uncompressed().node()->size() / (double(get_memory_usage()) / (1000 * 1000)))) <<                                      //
+						"\tB/triple: {:.1f}"_format(double(get_memory_usage()) * 1000.0 / hypertrie.uncompressed().node()->size()) << std::endl;
 			}
 		}
 	}
 	auto end = steady_clock::now();
 	file.close();
 	std::cerr << "{:} mio triples processed."_format(double(total)) << std::endl;
-	std::cerr << "hypertrie entries: {:d}."_format(hypertrie.node()->size()) << std::endl;
+	std::cerr << "hypertrie entries: {:d}."_format(hypertrie.uncompressed().node()->size()) << std::endl;
 	std::cerr << "hypertrie size estimation: {:d} kB."_format(get_memory_usage()) << std::endl;
 	auto duration = end - start;
 
-	std::cerr << "duration: {:d}.{:04d} s."_format(duration_cast<seconds>(duration).count(),
+	std::cerr << "duration: {:d}.{:03d} s."_format(duration_cast<seconds>(duration).count(),
 												   (duration_cast<milliseconds>(duration) % 1000).count())
 			  << std::endl;
 }

@@ -3,17 +3,17 @@
 
 #include <compare>
 
-#include "Dice/hypertrie/internal/node_based/Hypertrie_traits.hpp"
-#include "Dice/hypertrie/internal/node_based/NodeContainer.hpp"
-#include "Dice/hypertrie/internal/node_based/NodeStorage.hpp"
-#include "Dice/hypertrie/internal/node_based/NodeStorageUpdate.hpp"
-#include "Dice/hypertrie/internal/node_based/TaggedNodeHash.hpp"
+#include "Dice/hypertrie/internal/node_based/interface/Hypertrie_traits.hpp"
+#include "Dice/hypertrie/internal/node_based/raw/node/NodeContainer.hpp"
+#include "Dice/hypertrie/internal/node_based/raw/node/TensorHash.hpp"
+#include "Dice/hypertrie/internal/node_based/raw/storage/NodeStorage.hpp"
+#include "Dice/hypertrie/internal/node_based/raw/storage/RekNodeModification.hpp"
 #include "Dice/hypertrie/internal/util/CONSTANTS.hpp"
 
 #include <Dice/hypertrie/internal/util/CountDownNTuple.hpp>
 #include <itertools.hpp>
 
-namespace hypertrie::internal::node_based {
+namespace hypertrie::internal::node_based::raw {
 
 	template<size_t max_depth,
 			 HypertrieInternalTrait tri_t = Hypertrie_internal_t<>,
@@ -36,51 +36,8 @@ namespace hypertrie::internal::node_based {
 
 		using NodeStorage_t = NodeStorage<max_depth, tri>;
 
-	private:
-		std::list<TaggedNodeHash> primary_nodes_{};
-
 	public:
 		NodeStorage_t storage{};
-
-		template<size_t depth>
-		UncompressedNodeContainer<depth, tri> newPrimaryNode() {
-			static const TaggedNodeHash base_hash = TaggedNodeHash::getUncompressedEmptyNodeHash<depth>();
-			primary_nodes_.push_front(base_hash);
-			storage.template getUncompressedNode<depth>(base_hash);
-			UncompressedNodeContainer<depth, tri> nodec = storage.template getUncompressedNode<depth>(base_hash);
-			if (nodec.null())
-				nodec = storage.template newUncompressedNode<depth>(1);
-			else
-				nodec.node()->ref_count()++;
-			return nodec;
-		}
-
-		template<size_t depth>
-		bool deletePrimaryNode(TaggedNodeHash thash) {
-			{// remove the hash from primary nodes list
-				auto found = std::find(primary_nodes_.begin(), primary_nodes_.end(), thash);
-				if (found == primary_nodes_.end())
-					return false;
-				primary_nodes_.erase(found);
-			}
-			decrementNodeCount<depth, NodeCompression::uncompressed>(thash);
-
-			return true;
-		}
-
-
-		template<size_t depth>
-		inline void deleteChild(NodeContainer<depth, tri> &nodec, size_t pos, key_part_type key_part) {
-			assert(nodec.hash().isUncompressed());
-			assert(pos < depth);
-			auto &edges = nodec.compressed_node->edges_[pos];
-			edges.erase(key_part);
-		}
-
-		template<class K, class V>
-		using Map = container::boost_flat_map<K, V>;
-		template<class K>
-		using Set = container::boost_flat_set<K>;
 
 		/**
 		 *
@@ -90,11 +47,11 @@ namespace hypertrie::internal::node_based {
 		 * @return old value
 		 */
 		template<size_t depth>
-		auto set(UncompressedNodeContainer<depth, tri> &nodec, const RawKey<depth> &key, value_type value) -> value_type {
+		auto set(NodeContainer<depth, tri> &nodec, const RawKey<depth> &key, value_type value) -> value_type {
 			const value_type old_value = get(nodec, key);
 			if (value == old_value)
 				return value;
-			NodeStorageUpdate<max_depth, depth, tri> update{this->storage, nodec};
+			RekNodeModification<max_depth, depth, tri> update{this->storage, nodec};
 			update.apply_update(key, value, old_value);
 			return old_value;
 		}
@@ -106,8 +63,8 @@ namespace hypertrie::internal::node_based {
 		 * @return
 		 */
 		template<size_t depth>
-		void bulk_insert(UncompressedNodeContainer<depth, tri> &nodec, std::vector<RawKey<depth>> keys) {
-			NodeStorageUpdate<max_depth, depth, tri> update{this->storage, nodec};
+		void bulk_insert(NodeContainer<depth, tri> &nodec, std::vector<RawKey<depth>> keys) {
+			RekNodeModification<max_depth, depth, tri> update{this->storage, nodec};
 			update.apply_update(std::move(keys));
 		}
 
@@ -124,20 +81,24 @@ namespace hypertrie::internal::node_based {
 		inline auto getChild(UncompressedNodeContainer<depth, tri> &nodec, size_t pos, key_part_type key_part)
 		-> std::conditional_t<(depth > 1), NodeContainer<depth - 1, tri>, value_type> {
 			assert(pos < depth);
-			auto child = nodec.getChildHashOrValue(pos, key_part);
-			if constexpr (depth == 2 and tri::is_lsb_unused and tri::is_bool_valued) {
-				if (child.isCompressed()) {
-					return CompressedNodeContainer<depth - 1, tri>{child, {}};
+			if (nodec.empty())
+				return {};
+			else {
+				auto child = nodec.getChildHashOrValue(pos, key_part);
+				if constexpr (depth == 2 and tri::is_lsb_unused and tri::is_bool_valued) {
+					if (child.isCompressed()) {
+						return CompressedNodeContainer<depth - 1, tri>{child, {}};
+					} else {
+						return storage.template getUncompressedNode<depth - 1>(child.getTaggedNodeHash());
+					}
+				} else if constexpr (depth > 1) {
+					if (not child.empty())
+						return storage.template getNode<depth - 1>(child);
+					else
+						return {};
 				} else {
-					return storage.template getUncompressedNode<depth - 1>(child.getTaggedNodeHash());
+					return child;
 				}
-			} else if constexpr (depth > 1) {
-				if (not child.empty())
-					return storage.template getNode<depth - 1>(child);
-				else
-					return {};
-			} else {
-				return child;
 			}
 		}
 
@@ -149,9 +110,11 @@ namespace hypertrie::internal::node_based {
 		 * @return the value associated to the key.
 		 */
 		template<size_t depth>
-		auto get(NodeContainer<depth, tri> &nodec, RawKey<depth> key) -> value_type {
+		auto get(const NodeContainer<depth, tri> &nodec, RawKey<depth> key) -> value_type {
 			static constexpr const auto subkey = &tri::template subkey<depth>;
-			if (nodec.isCompressed()) {
+			if (nodec.empty())
+				return {};
+			else if (nodec.isCompressed()) {
 				auto *node = nodec.compressed_node();
 				if (node->key() == key) {
 					if constexpr (tri::is_bool_valued) return true;
@@ -190,7 +153,13 @@ namespace hypertrie::internal::node_based {
 		}
 
 		template<size_t depth>
-		bool size(NodeContainer<depth, tri> &nodec) {
+		std::size_t size(NodeContainer<depth, tri> &nodec) {
+			if (nodec.empty())
+				return 0;
+			else if (nodec.isCompressed())
+				return 1;
+			else
+				nodec.uncompressed_node()->size();
 		}
 	};
 }// namespace hypertrie::internal::node_based

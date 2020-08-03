@@ -3,7 +3,7 @@
 
 #include <iterator>
 
-#include <Dice/hypertrie/internal/node_based/NodeContext.hpp>
+#include <Dice/hypertrie/internal/node_based/raw/storage/NodeContext.hpp>
 
 #include <fmt/format.h>
 
@@ -12,11 +12,11 @@
 #include "TestTensor.hpp"
 
 
-namespace hypertrie::tests::node_based::node_context::randomized {
+namespace hypertrie::tests::node_based::raw::node_context::randomized {
 
 	using namespace hypertrie::tests::utils;
 
-	using namespace hypertrie::internal::node_based;
+	using namespace hypertrie::internal::node_based::raw;
 
 	template<size_t depth, typename key_part_type>
 	using Key = hypertrie::internal::RawKey<depth, key_part_type>;
@@ -33,7 +33,7 @@ namespace hypertrie::tests::node_based::node_context::randomized {
 
 		NodeContext<depth, tr> context{};
 		// create emtpy primary node
-		UncompressedNodeContainer<depth, tr> nc = context.template newPrimaryNode<depth>();
+		UncompressedNodeContainer<depth, tr> nc{};
 		auto tt = TestTensor<depth, tr>::getPrimary();
 
 
@@ -78,7 +78,7 @@ namespace hypertrie::tests::node_based::node_context::randomized {
 
 		NodeContext<depth, tr> context{};
 		// create emtpy primary node
-		UncompressedNodeContainer<depth, tr> nc = context.template newPrimaryNode<depth>();
+		UncompressedNodeContainer<depth, tr> nc{};
 		auto tt = TestTensor<depth, tr>::getPrimary();
 
 
@@ -133,7 +133,7 @@ namespace hypertrie::tests::node_based::node_context::randomized {
 
 		NodeContext<depth, tr> context{};
 		// create emtpy primary node
-		UncompressedNodeContainer<depth, tr> nc = context.template newPrimaryNode<depth>();
+		UncompressedNodeContainer<depth, tr> nc{};
 		auto tt = TestTensor<depth, tr>::getPrimary();
 
 
@@ -191,7 +191,7 @@ namespace hypertrie::tests::node_based::node_context::randomized {
 
 		NodeContext<depth, tr> context{};
 		// create emtpy primary node
-		UncompressedNodeContainer<depth, tr> nc = context.template newPrimaryNode<depth>();
+		UncompressedNodeContainer<depth, tr> nc{};
 		auto tt = TestTensor<depth, tr>::getPrimary();
 
 
@@ -241,7 +241,7 @@ namespace hypertrie::tests::node_based::node_context::randomized {
 
 		NodeContext<depth, tr> context{};
 		// create emtpy primary node
-		UncompressedNodeContainer<depth, tr> nc = context.template newPrimaryNode<depth>();
+		UncompressedNodeContainer<depth, tr> nc{};
 		auto tt = TestTensor<depth, tr>::getPrimary();
 
 
@@ -291,7 +291,7 @@ namespace hypertrie::tests::node_based::node_context::randomized {
 
 		NodeContext<depth, tr> context{};
 		// create emtpy primary node
-		UncompressedNodeContainer<depth, tr> nc = context.template newPrimaryNode<depth>();
+		UncompressedNodeContainer<depth, tr> nc{};
 		auto tt = TestTensor<depth, tr>::getPrimary();
 
 
@@ -335,7 +335,7 @@ namespace hypertrie::tests::node_based::node_context::randomized {
 
 		NodeContext<depth, tr> context{};
 		// create emtpy primary node
-		UncompressedNodeContainer<depth, tr> nc = context.template newPrimaryNode<depth>();
+		UncompressedNodeContainer<depth, tr> nc{};
 		auto tt = TestTensor<depth, tr>::getPrimary();
 
 		auto count = 500;

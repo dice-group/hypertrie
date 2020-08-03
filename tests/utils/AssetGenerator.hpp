@@ -45,6 +45,7 @@ namespace hypertrie::tests::utils {
 			key_part_type min = std::numeric_limits<key_part_type>::min(),
 			key_part_type max = std::numeric_limits<key_part_type>::max()>
 	class RawGenerator : public AssetGenerator {
+	protected:
 
 		using RawKey = hypertrie::internal::RawKey<depth, key_part_type>;
 		value_type value_min;
@@ -91,6 +92,29 @@ namespace hypertrie::tests::utils {
 				entry_set.insert(this->entry());
 			}
 			return entry_set;
+		}
+	};
+
+	template<size_t depth, typename key_part_type, typename value_type,
+			key_part_type min = std::numeric_limits<key_part_type>::min(),
+			key_part_type max = std::numeric_limits<key_part_type>::max()>
+	class EntryGenerator : public RawGenerator<depth, key_part_type, value_type, min, max> {
+		using super = RawGenerator<depth, key_part_type, value_type, min, max>;
+
+		using RawKey = hypertrie::internal::RawKey<depth, key_part_type>;
+		using Key = hypertrie::Key<key_part_type>;
+
+	public:
+		EntryGenerator(value_type valueMin = std::numeric_limits<value_type>::min(), value_type valueMax = std::numeric_limits<value_type>::max())
+			: RawGenerator<depth, key_part_type, value_type, min, max>( valueMin , valueMax ) {}
+
+		auto keys(size_t size) {
+			auto raw_key_set = super::keys(size);
+			std::set<Key> key_set;
+			for (auto raw_key : raw_key_set){
+				key_set.insert({raw_key.begin(), raw_key.end()});
+			}
+			return key_set;
 		}
 	};
 }

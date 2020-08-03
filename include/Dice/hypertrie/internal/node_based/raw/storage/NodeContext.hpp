@@ -110,7 +110,7 @@ namespace hypertrie::internal::node_based::raw {
 		 * @return the value associated to the key.
 		 */
 		template<size_t depth>
-		auto get(NodeContainer<depth, tri> &nodec, RawKey<depth> key) -> value_type {
+		auto get(const NodeContainer<depth, tri> &nodec, RawKey<depth> key) -> value_type {
 			static constexpr const auto subkey = &tri::template subkey<depth>;
 			if (nodec.empty())
 				return {};

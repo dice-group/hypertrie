@@ -38,7 +38,7 @@ namespace hypertrie::internal::node_based {
 	class DefaultHypertrieContext {
 	public:
 		static HypertrieContext<tr>& instance(){
-			static const std::unique_ptr<HypertrieContext<tr>> instance{new HypertrieContext<tr>(hypertrie_depth_limit - 1)};
+			static const std::unique_ptr<HypertrieContext<tr>> instance{new HypertrieContext<tr>()};
 			return *instance;
 		}
 

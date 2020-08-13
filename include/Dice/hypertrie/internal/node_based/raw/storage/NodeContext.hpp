@@ -47,6 +47,24 @@ namespace hypertrie::internal::node_based::raw {
 		 * @return old value
 		 */
 		template<size_t depth>
+		void incRefCount(NodeContainer<depth, tri> &nodec) {
+			if constexpr (depth == 1 and tri::is_bool_valued and tri::is_lsb_unused)
+				return; // there is no real node to be counted
+			else
+				if (nodec.compressed())
+					nodec.compressed_node()->ref_count()++;
+				else
+					nodec.compressed_node()->ref_count()++;
+		}
+
+		/**
+		 *
+		 * @tparam depth
+		 * @param nodec
+		 * @param key
+		 * @return old value
+		 */
+		template<size_t depth>
 		auto set(NodeContainer<depth, tri> &nodec, const RawKey<depth> &key, value_type value) -> value_type {
 			const value_type old_value = get(nodec, key);
 			if (value == old_value)

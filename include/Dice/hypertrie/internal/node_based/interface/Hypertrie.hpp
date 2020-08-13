@@ -23,16 +23,18 @@ namespace hypertrie::internal::node_based {
 
 		template<size_t depth>
 		using RawSliceKey = typename tri::template RawSliceKey<depth>;
+
 	protected:
-		void *node_container_;
+		void *node_container_ = nullptr;
 
-		HypertrieContext<tr> *context_;
+		HypertrieContext<tr> *context_ = nullptr;
 
-		size_t depth_;
+		size_t depth_ = 0;
 
 		const_Hypertrie(size_t depth, HypertrieContext<tr> *context, void *raw_hypertrie) : node_container_(raw_hypertrie), context_(context), depth_(depth) {}
 
 	public:
+		explicit const_Hypertrie(size_t depth) : depth_(depth) {}
 		void *rawNodeContainer() const {
 			return node_container_;
 		}
@@ -52,8 +54,11 @@ namespace hypertrie::internal::node_based {
 
 		[[nodiscard]] std::vector<size_t> getCards(const std::vector<pos_type> &positions) const;
 
-		[[nodiscard]]
-		size_t size() const;
+		[[nodiscard]] size_t size() const;
+
+		[[nodiscard]] constexpr bool empty() const noexcept {
+			return this->node_container_ == nullptr;
+		}
 
 		[[nodiscard]] value_type operator[](const Key &key) const {
 			return compiled_switch<hypertrie_depth_limit, 1>::switch_(
@@ -121,9 +126,18 @@ namespace hypertrie::internal::node_based {
 					[]() -> value_type { assert(false); return {}; });
 		}
 
+		Hypertrie(const const_Hypertrie<tr> &hypertrie) : const_Hypertrie<tr>(hypertrie) {
+			// TODO: increase reference counter
+			compiled_switch<hypertrie_depth_limit, 1>::switch_void(
+					this->depth_,
+					[&](auto depth_arg){ this->context_->template incRefCount<depth_arg>(reinterpret_cast<raw::NodeContainer<depth_arg, tri> *>(this->node_container_));},
+					[&](auto depth_arg){ throw std::logic_error{fmt::format("Hypertrie depth {} invalid. allowed range: [1,{})", depth_arg, hypertrie_depth_limit)}; }
+					);
+		}
+
 		Hypertrie(size_t depth, HypertrieContext<tr> &context = DefaultHypertrieContext<tr>::instance())
 			: const_Hypertrie<tr>(depth, &context,
-							  compiled_switch<hypertrie_depth_limit, 1>::switch_(
+								  compiled_switch<hypertrie_depth_limit, 1>::switch_(
 										  depth,
 										  [&](auto depth_arg) -> void * { return (void *) new raw::NodeContainer<depth_arg, tri>; },
 										  [&]() -> void * { throw std::logic_error{fmt::format("Hypertrie depth {} invalid. allowed range: [1,{})", depth, hypertrie_depth_limit)}; })) {}

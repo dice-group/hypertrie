@@ -1,0 +1,9 @@
+#ifndef HYPERTRIE_DIAGONAL_HPP
+#define HYPERTRIE_DIAGONAL_HPP
+
+
+class Diagonal {
+};
+
+
+#endif//HYPERTRIE_DIAGONAL_HPP

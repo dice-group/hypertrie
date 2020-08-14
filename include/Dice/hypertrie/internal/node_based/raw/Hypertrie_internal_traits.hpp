@@ -27,7 +27,7 @@ namespace hypertrie::internal::node_based::raw {
 		template<size_t depth>
 		using RawSliceKey = hypertrie::internal::RawSliceKey<depth, typename tr::key_part_type>;
 
-		constexpr static bool is_bool_valued = std::is_same_v<value_type, bool>;
+		constexpr static bool is_bool_valued = tr::is_bool_valued;
 		constexpr static const bool is_lsb_unused = tr::lsb_unused;
 		constexpr static bool is_tsl_map = std::is_same_v<map_type<int, int>, container::tsl_sparse_map<int, int>>;
 

@@ -5,10 +5,12 @@
 
 #include "Dice/hypertrie/internal/node_based/interface/Hypertrie_traits.hpp"
 #include "Dice/hypertrie/internal/node_based/interface/HypertrieContext.hpp"
+#include "Dice/hypertrie/internal/node_based/raw/iterator/Iterator.hpp"
 #include "Dice/hypertrie/internal/util/CONSTANTS.hpp"
 #include <optional>
 #include <variant>
 #include <vector>
+#include <itertools.hpp>
 
 namespace hypertrie::internal::node_based {
 
@@ -79,7 +81,111 @@ namespace hypertrie::internal::node_based {
 		[[nodiscard]]
 		std::variant<std::optional<const_Hypertrie>, value_type> operator[](const SliceKey &slice_key) const;
 
-		class iterator;
+		class iterator {
+		protected:
+			struct RawMethods {
+
+				static void (*destruct)(const void *);
+
+				static void *(*begin)(const const_Hypertrie &boolHypertrie);
+
+				static const Key &(*value)(void const *);
+
+				static void (*inc)(void *);
+
+				static bool (*ended)(void const *);
+
+			};
+
+			template<pos_type depth>
+			inline static RawMethods generateRawMethods() {
+				using RawIterator = typename raw::iterator<depth, raw::NodeCompression::uncompressed, tri>;
+				return RawMethods{
+						[](const void *raw_hypertrie_iterator) {
+						  if (raw_hypertrie_iterator != nullptr){
+							  delete static_cast<const RawIterator *>(raw_hypertrie_iterator);
+						  }
+						},
+						[](const const_Hypertrie &hypertrie) -> void * {
+						  return new RawIterator(
+								  static_cast<raw::UncompressedNodeContainer<depth, tri> *>(hypertrie.rawNodeContainer()),
+								  static_cast<raw::UncompressedNodeContainer<depth, tri> *>(hypertrie.context()->rawContext())
+									);
+						},
+						&RawIterator::value,
+						&RawIterator::inc,
+						&RawIterator::ended};
+			}
+
+			inline static const std::vector<RawMethods> raw_method_cache_uncompressed = [](){
+				std::vector<RawMethods> raw_methods;
+				for(size_t depth : iter::range(1UL,hypertrie_depth_limit))
+					raw_methods.push_back(compiled_switch<hypertrie_depth_limit, 1>::switch_(
+							depth,
+							[&](auto depth_arg) -> RawMethods {
+							  return generateRawMethods<depth_arg>();
+							},
+							[]() -> RawMethods { assert(false); return {}; }));
+			}();
+
+			static RawMethods const &getRawMethodsUncompressed(pos_type depth) {
+				return raw_method_cache_uncompressed[depth - 1];
+			};
+
+
+		protected:
+			RawMethods const *raw_methods = nullptr;
+			void *raw_iterator = nullptr;
+
+		public:
+			using self_type =  iterator;
+			using value_type = Key;
+
+			iterator() = default;
+
+			iterator(iterator &) = delete;
+
+			iterator(const iterator &) = delete;
+
+			iterator(iterator &&) = delete;
+
+			iterator &operator=(iterator &&other) noexcept {
+				if (this->raw_methods != nullptr)
+					this->raw_methods->destruct(this->raw_iterator);
+				this->raw_methods = other.raw_methods;
+				this->raw_iterator = other.raw_iterator;
+				other.raw_iterator = nullptr;
+				other.raw_methods = nullptr;
+				return *this;
+			}
+
+			iterator &operator=(iterator &) = delete;
+
+			iterator &operator=(const iterator &) = delete;
+
+			iterator(const_Hypertrie const *const hypertrie) :
+					raw_methods(&getRawMethodsUncompressed(hypertrie->depth())),
+					raw_iterator(raw_methods->begin(*hypertrie)) {}
+
+			iterator(const_Hypertrie &hypertrie) : iterator(&hypertrie) {}
+
+			~iterator() {
+				if (raw_methods != nullptr)
+					raw_methods->destruct(raw_iterator);
+				raw_methods = nullptr;
+				raw_iterator = nullptr;
+			}
+
+			self_type &operator++() {
+				raw_methods->inc(raw_iterator);
+				return *this;
+			}
+
+			value_type operator*() const { return raw_methods->value(raw_iterator); }
+
+			operator bool() const { return not raw_methods->ended(raw_iterator); }
+
+		};
 
 		using const_iterator = iterator;
 

@@ -25,7 +25,21 @@ namespace hypertrie::internal::node_based {
 		using SliceKey = ::hypertrie::SliceKey<key_part_type>;
 		using Key = ::hypertrie::Key<key_part_type>;
 
+		static constexpr const bool is_bool_valued = std::is_same_v<value_type, bool>;
 		static constexpr const bool lsb_unused = lsb_unused_v;
+
+		using IteratorEntry = std::conditional_t<(is_bool_valued), Key, std::pair<Key, value_type>>;
+
+		struct iterator_entry{
+			static Key &key(IteratorEntry &entry) noexcept {
+				if constexpr (is_bool_valued) return entry;
+				else
+					return entry.first;
+			}
+
+			template<typename = std::enable_if_t<(is_bool_valued)>>
+			static value_type &value(IteratorEntry &entry) noexcept { return entry.second; }
+		};
 	};
 
 	namespace internal::hypertrie_trait {

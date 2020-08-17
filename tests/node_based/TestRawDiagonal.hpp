@@ -22,8 +22,9 @@ namespace hypertrie::tests::node_based::raw::node_context::iterator_test {
 	using namespace hypertrie::internal::node_based;
 
 
-	template<HypertrieInternalTrait tri, pos_type depth>
-	void basicUsage() {
+	TEST_CASE("bool depth 1", "[iterator]") {
+		using tri = default_bool_Hypertrie_internal_t;
+		constexpr const size_t depth = 1;
 		using key_part_type = typename tri::key_part_type;
 		using value_type = typename tri::value_type;
 
@@ -45,11 +46,27 @@ namespace hypertrie::tests::node_based::raw::node_context::iterator_test {
 		}
 	}
 
-	TEST_CASE("Test setting independent keys", "[NodeContext]") {
-		basicUsage<default_bool_Hypertrie_internal_t, 1>();
-//		basicUsage<default_long_Hypertrie_internal_t, 3>();
-//		basicUsage<default_double_Hypertrie_internal_t, 3>();
+	TEST_CASE("bool depth 2", "[iterator]") {
+		using tri = default_bool_Hypertrie_internal_t;
+		constexpr const size_t depth = 2;
+		using key_part_type = typename tri::key_part_type;
+		using value_type = typename tri::value_type;
+
+		utils::RawGenerator<depth, key_part_type, value_type> gen{};
+
+		NodeContext<depth, tri> context{};
+		UncompressedNodeContainer<depth, tri> nc{};
+
+		context.template set<depth>(nc, {1,3}, true);
+		context.template set<depth>(nc, {2,4}, true);
+
+
+		for(auto iter = iterator<depth, NodeCompression::uncompressed, tri>(nc, context); iter != false; ++iter){
+			auto key = *iter;
+			fmt::print("[{} {} ] -> {}\n", key[0], key[1],true);
+		}
 	}
+
 
 }
 

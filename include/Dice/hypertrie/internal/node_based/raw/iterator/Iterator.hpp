@@ -106,7 +106,7 @@ namespace hypertrie::internal::node_based::raw {
 			auto &iter = std::get<node_depth>(iters);
 			auto hash = iter->second;
 			// child is compressed
-			if (tri::is_bool_valued and tri::is_lsb_unused and node_depth == 1) {
+			if constexpr (tri::is_bool_valued and tri::is_lsb_unused and node_depth == 1) {
 				// set key_part stored in TaggedTensorHash
 				key()[depth - 1] = hash.getKeyPart();
 			} else {
@@ -115,8 +115,8 @@ namespace hypertrie::internal::node_based::raw {
 				auto *child_node = compressed_child_node.node();
 				const auto &compr_key = child_node->key();
 				// copy the key of the compressed child node to the iterator key
-				std::copy(compr_key.cbegin(), compr_key.cend(), std::next(key().begin(), depth - (node_depth + 1)));
-				if constexpr (not tri::is_bool_value)
+				std::copy(compr_key.cbegin(), compr_key.cend(), std::next(key().begin(), depth - (node_depth)));
+				if constexpr (not tri::is_bool_valued)
 					value() = child_node->value();
 			}
 		}
@@ -161,7 +161,7 @@ namespace hypertrie::internal::node_based::raw {
 					auto &parent_iter = getIter<current_depth>();
 					const auto hash = parent_iter->second;
 
-					return node_context_->storage.template getUncompressedNode<current_depth - 1>(hash);
+					return node_context_->storage.template getUncompressedNode<current_depth>(hash);
 				}
 			}();
 

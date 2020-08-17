@@ -13,13 +13,43 @@
 #include "TestTensor.hpp"
 
 
-namespace hypertrie::tests::node_based::raw::node_context {
+namespace hypertrie::tests::node_based::raw::node_context::iterator_test {
 
 	using namespace hypertrie::tests::utils;
 
 	using namespace hypertrie::internal::node_based::raw;
 
 	using namespace hypertrie::internal::node_based;
+
+
+	template<HypertrieInternalTrait tri, pos_type depth>
+	void basicUsage() {
+		using key_part_type = typename tri::key_part_type;
+		using value_type = typename tri::value_type;
+
+		utils::RawGenerator<depth, key_part_type, value_type> gen{};
+
+		NodeContext<depth, tri> context{};
+		UncompressedNodeContainer<depth, tri> nc{};
+
+		const auto entries = gen.entries(2);
+
+		context.template set<depth>(nc, {1}, true);
+		context.template set<depth>(nc, {2}, true);
+
+
+		for(auto iter = iterator<depth, NodeCompression::uncompressed, tri>(nc, context); iter != false; ++iter){
+			auto key = *iter;
+			fmt::print("[{}] -> {}\n", key[0], true);
+//			fmt::print("[{} {} {}] -> {}", key[0], key[1], key[2], true);
+		}
+	}
+
+	TEST_CASE("Test setting independent keys", "[NodeContext]") {
+		basicUsage<default_bool_Hypertrie_internal_t, 1>();
+//		basicUsage<default_long_Hypertrie_internal_t, 3>();
+//		basicUsage<default_double_Hypertrie_internal_t, 3>();
+	}
 
 }
 

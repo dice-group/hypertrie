@@ -86,10 +86,20 @@ namespace hypertrie::tests::utils {
 			return key_set;
 		}
 
+		/**
+		 * Generates a set of Entries (key-value-pairs) of given size. It does contain only entries with pair-wise different keys.
+		 * @param size
+		 * @return
+		 */
 		auto entries(size_t size) {
+			std::set<RawKey> unique_keys;
 			std::set<std::pair<RawKey, value_type>> entry_set;
 			while (entry_set.size() < size) {
-				entry_set.insert(this->entry());
+				auto next_entry = this->entry();
+				if (unique_keys.count(next_entry.first))
+					continue;
+				unique_keys.insert(next_entry.first);
+				entry_set.insert(next_entry);
 			}
 			return entry_set;
 		}

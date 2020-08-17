@@ -159,6 +159,70 @@ namespace hypertrie::tests::node_based::raw::node_context::iterator_test {
 	}
 
 
+	template<HypertrieInternalTrait tri, size_t depth>
+	void randomized_raw_iterator_test() {
+		using key_part_type = typename tri::key_part_type;
+		using value_type = typename tri::value_type;
+		using Key = typename tri::Key;
+
+		static utils::RawGenerator<depth, key_part_type, value_type> gen{};
+
+		SECTION(fmt::format("depth = {}, key_part_type = {}, value_type = {}",
+							depth, nameOfType<key_part_type>(), nameOfType<value_type>())) {
+
+			for ([[maybe_unused]]auto number_of_entries : iter::range(0,500)) {
+				SECTION(fmt::format("number of entries = {}", number_of_entries)) {
+
+					for ([[maybe_unused]]auto run : iter::range(0,30)) {
+						// create context
+						NodeContext<depth, tri> context{};
+						// create emtpy primary node
+						UncompressedNodeContainer<depth, tri> nc{};
+
+						const auto entries = gen.entries(number_of_entries);
+
+
+						for (const auto &entry : entries)
+							context.template set<depth>(nc, entry.first, entry.second);
+
+						using IteratorEntry = std::conditional_t<(tri::is_bool_valued), Key, std::pair<Key, value_type>>;
+
+						std::vector<IteratorEntry> iterator_entries;
+
+						for (auto iter = iterator<depth, tri>(nc, context); iter != false; ++iter) {
+							iterator_entries.push_back(*iter);
+						}
+
+						REQUIRE(entries.size() == iterator_entries.size());
+
+						for (auto entry : entries) {
+							IteratorEntry actual_entry = [&]() -> IteratorEntry {
+								if constexpr (tri::is_bool_valued) return {entry.first.begin(), entry.first.end()};
+								else
+									return {Key{entry.first.begin(), entry.first.end()}, entry.second};
+							}();
+							REQUIRE(std::find(iterator_entries.begin(), iterator_entries.end(), actual_entry) != iterator_entries.end());
+						}
+					}
+				}
+			}
+		}
+	}
+
+	template <size_t depth>
+	void randomized_raw_iterator_tests() {
+		randomized_raw_iterator_test<default_bool_Hypertrie_internal_t, depth>();
+		randomized_raw_iterator_test<default_long_Hypertrie_internal_t, depth>();
+		randomized_raw_iterator_test<default_double_Hypertrie_internal_t, depth>();
+	}
+
+
+	TEST_CASE("randomized tests", "[iterator]") {
+		randomized_raw_iterator_tests<1>();
+		randomized_raw_iterator_tests<2>();
+		randomized_raw_iterator_tests<3>();
+		randomized_raw_iterator_tests<4>();
+	}
 }
 
 #endif//HYPERTRIE_TESTRAWDIAGONAL_HPP

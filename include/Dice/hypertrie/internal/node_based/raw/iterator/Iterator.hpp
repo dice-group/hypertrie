@@ -1,51 +1,42 @@
-#ifndef HYPERTRIE_ITERATOR_HPP
-#define HYPERTRIE_ITERATOR_HPP
+#ifndef HYPERTRIE_RAWITERATOR_HPP
+#define HYPERTRIE_RAWITERATOR_HPP
 
 #include "Dice/hypertrie/internal/node_based/raw/storage/NodeContext.hpp"
 #include "Dice/hypertrie/internal/node_based/ConfigHypertrieDepthLimit.hpp"
-#include "Dice/hypertrie/internal/util/CountDownNTuple.hpp"
+#include "Dice/hypertrie/internal/util/IntegralTemplatedTuple.hpp"
 namespace hypertrie::internal::node_based::raw {
 
-	template<size_t depth_t,
-			 HypertrieInternalTrait tri_t,
-			typename = typename std::enable_if_t<(depth_t >= 1)>>
-	class iterator {
-	public:
-
+	template<HypertrieInternalTrait tri_t>
+	class base_iterator {
 		using tri = tri_t;
 		using tr = typename tri::tr;
-		static constexpr const size_t depth = depth_t;
-		/// public definitions
-		using key_part_type = typename tri::key_part_type;
-		using value_t = typename tri::value_type;
-
-		using RawKey = typename tri::template RawKey<depth>;
-		using Key = typename tr::Key;
-
-	private:
-		NodeContext<hypertrie_depth_limit, tri> *node_context_;
-		NodeContainer<depth, tri> *nodec_;
+	protected:
 		template<size_t depth_>
 		using UncomressedChildren = typename UncompressedNode<depth_, tri>::ChildrenType;
 		template<size_t depth_>
 		using UncomressedChildrenIterator = typename UncomressedChildren<depth_>::const_iterator;
-		template<size_t depth_>
-		using ComressedChildren = CompressedNode<depth_ - 1, tri>;
-
-		util::CountDownNTuple<UncomressedChildrenIterator, depth> iters;
-
-		util::CountDownNTuple<UncomressedChildrenIterator, depth> ends;
-
-		template<size_t child_depth>
-		auto &getIter() { return std::get<child_depth>(iters); }
-
-		template<size_t child_depth>
-		auto &getEnd() { return std::get<child_depth>(ends); }
-
 		using Entry = typename tr::IteratorEntry;
+		using Key = typename tr::Key;
+		using value_t = typename tri::value_type;
+
+		mutable void *node_context_;
+
+		mutable void *nodec_;
+
+		util::IntegralTemplatedTuple<UncomressedChildrenIterator, 1, hypertrie_depth_limit - 1> iters;
+
+		util::IntegralTemplatedTuple<UncomressedChildrenIterator, 1, hypertrie_depth_limit - 1> ends;
+
 		Entry entry;
+
 		NodeCompression compression_;
+
 		bool ended_;
+
+		template<size_t child_depth>
+		auto &getIter() { return iters.template get<child_depth + 1>(); }
+		template<size_t child_depth>
+		auto &getEnd() { return ends.template get<child_depth + 1>(); }
 
 		Key &key() noexcept {
 			if constexpr (tri::is_bool_valued) return entry;
@@ -53,19 +44,46 @@ namespace hypertrie::internal::node_based::raw {
 				return entry.first;
 		}
 
-		value_t &value() noexcept { if (not tri::is_bool_valued) return entry.second; }
+		value_t &val() noexcept { if (not tri::is_bool_valued) return entry.second; }
 
 	public:
+		base_iterator(void *nodeContext, void *nodec, NodeCompression compression, bool ended) : node_context_(nodeContext), nodec_(nodec), compression_(compression), ended_(ended) {}
+	};
+
+	template<size_t depth_t,
+			 HypertrieInternalTrait tri_t,
+			typename = typename std::enable_if_t<(depth_t >= 1)>>
+	class iterator : public base_iterator<tri_t> {
+	public:
+
+		/// public definitions
+		static constexpr const size_t depth = depth_t;
+		using tri = tri_t;
+		using tr = typename tri::tr;
+	private:
+		using key_part_type = typename tri::key_part_type;
+
+		using RawKey = typename tri::template RawKey<depth>;
+		using Key = typename tr::Key;
+
+		using Entry = typename tr::IteratorEntry;
+
+		auto *nodec() const {
+			return reinterpret_cast<NodeContainer<depth, tri>*>(this->nodec_);
+		}
+
+		auto *node_context() const {
+			return reinterpret_cast<NodeContext<depth, tri>*>(this->node_context_);
+		}
+
+	public:
+		/// iterator definitions
 		using self_type = iterator;
 		using value_type = Entry;
 
-	public:
 		iterator(NodeContainer<depth, tri> &nodec, NodeContext<hypertrie_depth_limit, tri> &node_context)
-			: node_context_(&node_context),
-			  nodec_(&nodec),
-			  compression_((NodeCompression )nodec_->isCompressed()),
-			  ended_(nodec_->empty()) {
-			if (not ended_){
+			: base_iterator<tri>(&node_context, &nodec, (NodeCompression)nodec.isCompressed(), nodec.empty()) {
+			if (not this->ended_){
 				this->key().resize(depth);
 				this->init_rek();
 			}
@@ -73,12 +91,9 @@ namespace hypertrie::internal::node_based::raw {
 
 		template<size_t any_depth>
 		iterator(NodeContainer<depth, tri> &nodec, NodeContext<any_depth, tri> &node_context)
-				: node_context_(reinterpret_cast<NodeContext<hypertrie_depth_limit, tri> *>(&node_context)),
-				  nodec_(&nodec),
-				  compression_((NodeCompression )nodec_->isCompressed()),
-				  ended_(nodec_->empty()) {
+				: base_iterator<tri>(&node_context, &nodec, (NodeCompression)nodec.isCompressed(), nodec.empty()) {
 			static_assert(any_depth < hypertrie_depth_limit);
-			if (not ended_){
+			if (not this->ended_){
 				this->key().resize(depth);
 				this->init_rek();
 			}
@@ -89,11 +104,11 @@ namespace hypertrie::internal::node_based::raw {
 			return *this;
 		}
 
-		inline const value_type &operator*() const { return entry; }
+		inline const value_type &operator*() const { return this->entry; }
 
-		inline const value_type* operator-> () const{ return &entry; }
+		inline const value_type* operator-> () const{ return &this->entry; }
 
-		inline operator bool() const { return not ended_; }
+		inline operator bool() const { return not this->ended_; }
 
 		/*
 		 * Static Interface for usage with function pointers
@@ -124,27 +139,27 @@ namespace hypertrie::internal::node_based::raw {
 
 			// child is compressed
 			if constexpr (tri::is_bool_valued and tri::is_lsb_unused and node_depth == 1) {
-				auto &iter = getIter<node_depth>();
+				auto &iter = this->template getIter<node_depth>();
 				auto hash = iter->second;
 				// set key_part stored in TaggedTensorHash
-				key()[depth - 1] = hash.getKeyPart();
+				this->key()[depth - 1] = hash.getKeyPart();
 			} else {
 				// set rest of the key (and value) with the data in the compressed node
 				auto *node = [&]() {
 					if constexpr (node_depth == depth) {
 						assert(this->compression_ == NodeCompression::compressed);
-						return this->nodec_->compressed_node();
+						return this->nodec()->compressed_node();
 					} else {
-						auto &iter = getIter<node_depth>();
+						auto &iter = this->template getIter<node_depth>();
 						auto hash = iter->second;
-						return node_context_->storage.template getCompressedNode<node_depth>(hash).compressed_node();
+						return this->node_context()->storage.template getCompressedNode<node_depth>(hash).compressed_node();
 					}
 				}();
 				const auto &compr_key = node->key();
 				// copy the key of the compressed child node to the iterator key
-				std::copy(compr_key.cbegin(), compr_key.cend(), std::next(key().begin(), depth - (node_depth)));
+				std::copy(compr_key.cbegin(), compr_key.cend(), std::next(this->key().begin(), depth - (node_depth)));
 				if constexpr (not tri::is_bool_valued)
-					value() = node->value();
+					this->val() = node->value();
 			}
 		}
 
@@ -154,7 +169,7 @@ namespace hypertrie::internal::node_based::raw {
 		 */
 		template <size_t child_depth>
 		inline void writeUncompressed() noexcept {
-			auto &iter = getIter<child_depth>();
+			auto &iter = this->template getIter<child_depth>();
 			// set the key at the corresponding position
 			auto x = [&]() {
 			  if constexpr (child_depth == 0 and tri::is_bool_valued)
@@ -164,11 +179,11 @@ namespace hypertrie::internal::node_based::raw {
 			}();
 
 
-			key()[depth - (child_depth + 1)] = x;
+			this->key()[depth - (child_depth + 1)] = x;
 
 			// write value
 			if constexpr (child_depth == 0 and not tri::is_bool_valued)
-				value() = iter->second;
+				this->val() = iter->second;
 		}
 
 		/**
@@ -189,20 +204,20 @@ namespace hypertrie::internal::node_based::raw {
 			// get the UncompressedNodeContainer
 			auto current_nodec = [&]() {
 				if constexpr (current_depth == depth) {
-					return *nodec_;
+					return *this->nodec();
 				} else {
-					auto &parent_iter = getIter<current_depth>();
+					auto &parent_iter = this->template getIter<current_depth>();
 					const auto hash = parent_iter->second;
 
-					return node_context_->storage.template getUncompressedNode<current_depth>(hash);
+					return this->node_context()->storage.template getUncompressedNode<current_depth>(hash);
 				}
 			}();
 
 			// set the iterator for child elements
-			auto &iter = this->getIter<child_depth>();
+			auto &iter = this->template getIter<child_depth>();
 			iter = current_nodec.uncompressed_node()->edges(0).cbegin();
 
-			auto &end = this->getEnd<child_depth>();
+			auto &end = this->template getEnd<child_depth>();
 			end = current_nodec.uncompressed_node()->edges(0).cend();
 
 			writeUncompressed<child_depth>();
@@ -229,7 +244,7 @@ namespace hypertrie::internal::node_based::raw {
 				}
 
 			constexpr const size_t child_depth = current_depth - 1;
-			auto &iter = getIter<child_depth>();
+			auto &iter = this->template getIter<child_depth>();
 			bool child_it_done = [&]() {
 				if constexpr (current_depth == 1)
 					return true;
@@ -243,7 +258,7 @@ namespace hypertrie::internal::node_based::raw {
 
 			// if the child is at its end
 			if (child_it_done) {
-				auto &end = getEnd<child_depth>();
+				auto &end = this->template getEnd<child_depth>();
 				// forward this it
 				iter = ++iter;
 				if (iter != end) { // this it has values left
@@ -259,7 +274,7 @@ namespace hypertrie::internal::node_based::raw {
 					}
 					return false;
 				} else {
-					if constexpr(current_depth == depth) ended_ = true;
+					if constexpr(current_depth == depth) this->ended_ = true;
 					return true;
 				}
 			} else {
@@ -269,4 +284,4 @@ namespace hypertrie::internal::node_based::raw {
 	};
 };// namespace hypertrie::internal::node_based::raw
 
-#endif//HYPERTRIE_ITERATOR_HPP
+#endif//HYPERTRIE_RAWITERATOR_HPP

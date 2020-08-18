@@ -2,15 +2,14 @@
 #define HYPERTRIE_HYPERTRIECONTEXT_HPP
 
 
+#include <memory>
+#include <fmt/format.h>
 #include "Dice/hypertrie/internal/node_based/raw/storage/NodeContext.hpp"
 #include "Dice/hypertrie/internal/util/SwitchTemplateFunctions.hpp"
-#include <fmt/format.h>
-#include <memory>
+#include "Dice/hypertrie/internal/node_based/ConfigHypertrieDepthLimit.hpp"
 
 
 namespace hypertrie::internal::node_based {
-
-	static constexpr const std::size_t hypertrie_depth_limit = 6;
 
 	template<HypertrieTrait tr = default_bool_Hypertrie_t>
 	class HypertrieContext {

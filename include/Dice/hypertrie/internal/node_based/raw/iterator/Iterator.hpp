@@ -2,18 +2,16 @@
 #define HYPERTRIE_ITERATOR_HPP
 
 #include "Dice/hypertrie/internal/node_based/raw/storage/NodeContext.hpp"
-
+#include "Dice/hypertrie/internal/node_based/ConfigHypertrieDepthLimit.hpp"
+#include "Dice/hypertrie/internal/util/CountDownNTuple.hpp"
 namespace hypertrie::internal::node_based::raw {
 
-	template<size_t depth,
-			 HypertrieInternalTrait tri_t = Hypertrie_internal_t<>,
-			 typename = typename std::enable_if_t<(depth >= 1)>>
-	class iterator;
-
 	template<size_t depth_t,
-			 HypertrieInternalTrait tri_t>
-	class iterator<depth_t, tri_t, std::enable_if_t<(depth_t >= 1)>> {
+			 HypertrieInternalTrait tri_t,
+			typename = typename std::enable_if_t<(depth_t >= 1)>>
+	class iterator {
 	public:
+
 		using tri = tri_t;
 		using tr = typename tri::tr;
 		static constexpr const size_t depth = depth_t;
@@ -25,7 +23,7 @@ namespace hypertrie::internal::node_based::raw {
 		using Key = typename tr::Key;
 
 	private:
-		NodeContext<depth, tri> *node_context_;
+		NodeContext<hypertrie_depth_limit, tri> *node_context_;
 		NodeContainer<depth, tri> *nodec_;
 		template<size_t depth_>
 		using UncomressedChildren = typename UncompressedNode<depth_, tri>::ChildrenType;
@@ -62,11 +60,24 @@ namespace hypertrie::internal::node_based::raw {
 		using value_type = Entry;
 
 	public:
-		iterator(NodeContainer<depth, tri> &nodec, NodeContext<depth, tri> &node_context)
+		iterator(NodeContainer<depth, tri> &nodec, NodeContext<hypertrie_depth_limit, tri> &node_context)
 			: node_context_(&node_context),
 			  nodec_(&nodec),
 			  compression_((NodeCompression )nodec_->isCompressed()),
 			  ended_(nodec_->empty()) {
+			if (not ended_){
+				this->key().resize(depth);
+				this->init_rek();
+			}
+		}
+
+		template<size_t any_depth>
+		iterator(NodeContainer<depth, tri> &nodec, NodeContext<any_depth, tri> &node_context)
+				: node_context_(reinterpret_cast<NodeContext<hypertrie_depth_limit, tri> *>(&node_context)),
+				  nodec_(&nodec),
+				  compression_((NodeCompression )nodec_->isCompressed()),
+				  ended_(nodec_->empty()) {
+			static_assert(any_depth < hypertrie_depth_limit);
 			if (not ended_){
 				this->key().resize(depth);
 				this->init_rek();
@@ -78,26 +89,30 @@ namespace hypertrie::internal::node_based::raw {
 			return *this;
 		}
 
+		inline const value_type &operator*() const { return entry; }
+
+		inline const value_type* operator-> () const{ return &entry; }
+
+		inline operator bool() const { return not ended_; }
+
+		/*
+		 * Static Interface for usage with function pointers
+		 */
 		static void inc(void *it_ptr) {
 			auto &it = *static_cast<iterator *>(it_ptr);
 			++it;
 		}
-
-		inline const value_type &operator*() const { return entry; }
-
-		inline const value_type* operator-> () const{ return &entry; }
 
 		static const value_type &value(void const *it_ptr) {
 			auto &it = *static_cast<iterator const *>(it_ptr);
 			return *it;
 		}
 
-		inline operator bool() const { return not ended_; }
-
 		static bool ended(void const *it_ptr) {
 			auto &it = *static_cast<iterator const *>(it_ptr);
 			return it.ended_;
 		}
+
 
 	private:
 		/**

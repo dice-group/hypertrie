@@ -8,7 +8,7 @@
 #include "Dice/hypertrie/internal/node_based/raw/storage/NodeModificationPlan.hpp"
 #include "Dice/hypertrie/internal/node_based/raw/storage/NodeStorage.hpp"
 #include "Dice/hypertrie/internal/util/CONSTANTS.hpp"
-#include "Dice/hypertrie/internal/util/CountDownNTuple.hpp"
+#include "Dice/hypertrie/internal/util/IntegralTemplatedTuple.hpp"
 
 #include <robin_hood.h>
 #include <tsl/hopscotch_map.h>
@@ -43,7 +43,7 @@ namespace hypertrie::internal::node_based::raw {
 		template<size_t depth>
 		using LevelModifications_t = robin_hood::unordered_node_set<Modification_t<depth>, absl::Hash<Modification_t<depth>>>;
 
-		using PlannedModifications = util::CountDownNTuple<LevelModifications_t, update_depth>;
+		using PlannedModifications = util::IntegralTemplatedTuple<LevelModifications_t, 1, update_depth>;
 
 
 		template <size_t depth>
@@ -52,7 +52,7 @@ namespace hypertrie::internal::node_based::raw {
 		template <size_t depth>
 		using LevelRefChanges = tsl::sparse_map<TensorHash, CountDiffAndNodePtr<depth>>;
 
-		using RefChanges = util::CountDownNTuple<LevelRefChanges, update_depth>;
+		using RefChanges = util::IntegralTemplatedTuple<LevelRefChanges, 1, update_depth>;
 
 		template <size_t depth>
 		using re = RawEntry_t<depth, tri>;
@@ -73,7 +73,7 @@ namespace hypertrie::internal::node_based::raw {
 		template<size_t updates_depth>
 		auto getRefChanges()
 				-> LevelRefChanges<updates_depth> & {
-			return std::get<updates_depth - 1>(ref_changes);
+			return ref_changes.template get<updates_depth>();
 		}
 
 		// extract a change from count_changes
@@ -87,7 +87,7 @@ namespace hypertrie::internal::node_based::raw {
 		template<size_t updates_depth>
 		auto getPlannedModifications()
 				-> LevelModifications_t<updates_depth> & {
-			return std::get<updates_depth - 1>(planned_multi_updates);
+			return planned_multi_updates.template get<updates_depth>();
 		}
 
 		template<size_t updates_depth>

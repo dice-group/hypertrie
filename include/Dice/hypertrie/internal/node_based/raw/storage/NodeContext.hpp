@@ -10,7 +10,6 @@
 #include "Dice/hypertrie/internal/node_based/raw/storage/RekNodeModification.hpp"
 #include "Dice/hypertrie/internal/util/CONSTANTS.hpp"
 
-#include <Dice/hypertrie/internal/util/CountDownNTuple.hpp>
 #include <itertools.hpp>
 
 namespace hypertrie::internal::node_based::raw {

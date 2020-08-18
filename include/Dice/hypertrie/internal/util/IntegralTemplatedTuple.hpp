@@ -1,5 +1,5 @@
-#ifndef HYPERTRIE_COUNTDOWNNTUPLE_HPP
-#define HYPERTRIE_COUNTDOWNNTUPLE_HPP
+#ifndef HYPERTRIE_INTEGRALTEMPLATEDTUPLE_HPP
+#define HYPERTRIE_INTEGRALTEMPLATEDTUPLE_HPP
 
 #include "Dice/hypertrie/internal/util/NTuple.hpp"
 #include <cmath>
@@ -42,19 +42,21 @@ namespace hypertrie::internal::util {
 	class IntegralTemplatedTuple {
 		count_tuple_internal::CUT<T, FIRST, LAST> count_up_tuple_;
 
-		template<std::integral I>
-		constexpr static I abs(I a, I b) {
-			if (a < b)
-				return b - a;
-			else
-				return a - b;
+		constexpr static auto abs(auto a, auto b) {
+			if (a < b) return b - a; else return a - b;
 		}
 
 	public:
 		template<auto I>
-		auto &get() {
+		constexpr auto &get() noexcept {
+			constexpr const auto pos = (FIRST <= LAST) ? LAST - I : I - LAST;
+			static_assert(pos >= 0 and pos <= abs(LAST, FIRST));
+			return std::get<pos>(count_up_tuple_);
+		}
 
-			static constexpr const auto pos = (FIRST <= LAST) ? LAST - I : I - LAST;
+		template<auto I>
+		constexpr const auto &get() const noexcept {
+			constexpr const auto pos = (FIRST <= LAST) ? LAST - I : I - LAST;
 			static_assert(pos >= 0 and pos <= abs(LAST, FIRST));
 			return std::get<pos>(count_up_tuple_);
 		}
@@ -62,4 +64,4 @@ namespace hypertrie::internal::util {
 }// namespace hypertrie::internal::util
 
 
-#endif//HYPERTRIE_COUNTDOWNNTUPLE_HPP
+#endif//HYPERTRIE_INTEGRALTEMPLATEDTUPLE_HPP

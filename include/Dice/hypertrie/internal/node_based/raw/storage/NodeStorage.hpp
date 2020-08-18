@@ -5,7 +5,7 @@
 #include "Dice/hypertrie/internal/node_based/raw/node/Node.hpp"
 #include "Dice/hypertrie/internal/node_based/raw/node/TensorHash.hpp"
 #include "Dice/hypertrie/internal/util/CONSTANTS.hpp"
-#include "Dice/hypertrie/internal/util/CountDownNTuple.hpp"
+#include "Dice/hypertrie/internal/util/IntegralTemplatedTuple.hpp"
 
 namespace hypertrie::internal::node_based::raw {
 
@@ -108,7 +108,7 @@ namespace hypertrie::internal::node_based::raw {
 		using UncompressedNodeMap = typename NodeStorage_t<depth>::UncompressedNodeMap;
 
 	private:
-		using storage_t = util::CountDownNTuple<NodeStorage_t, max_depth>;
+		using storage_t = util::IntegralTemplatedTuple<NodeStorage_t, 1, max_depth>;
 
 		storage_t storage_;
 
@@ -116,12 +116,12 @@ namespace hypertrie::internal::node_based::raw {
 		// TODO: remove
 		template<size_t depth>
 		NodeStorage_t<depth> &getStorage() {
-			return std::get<depth - 1>(this->storage_);
+			return this->storage_.template get<depth>();
 		}
 
 		template<size_t depth>
 		const NodeStorage_t<depth> &getStorage() const {
-			return std::get<depth - 1>(this->storage_);
+			return this->storage_.template get<depth>();
 		}
 
 	public:

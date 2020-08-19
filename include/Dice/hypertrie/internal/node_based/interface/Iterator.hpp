@@ -27,7 +27,6 @@ namespace hypertrie::internal::node_based {
 
 			RawMethods() {}
 
-
 			RawMethods(RawBaseIterator (*begin)(const const_Hypertrie<tr> &), const Key &(*value)(const void *), void (*inc)(void *), bool (*ended)(const void *)) : begin(begin), value(value), inc(inc), ended(ended) {}
 		};
 

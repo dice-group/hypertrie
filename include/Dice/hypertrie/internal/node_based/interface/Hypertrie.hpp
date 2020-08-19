@@ -136,6 +136,10 @@ namespace hypertrie::internal::node_based {
 					);
 		}
 
+		~Hypertrie() {
+			// TODO: decrease reference counter
+		}
+
 		Hypertrie(size_t depth, HypertrieContext<tr> &context = DefaultHypertrieContext<tr>::instance())
 			: const_Hypertrie<tr>(depth, &context,
 								  compiled_switch<hypertrie_depth_limit, 1>::switch_(

@@ -53,7 +53,11 @@ namespace hypertrie::internal::node_based::raw {
 				if (nodec.compressed())
 					nodec.compressed_node()->ref_count()++;
 				else
-					nodec.compressed_node()->ref_count()++;
+					nodec.uncompressed_node()->ref_count()++;
+		}
+		template<size_t depth>
+		void decrRefCount(NodeContainer<depth, tri> &nodec) {
+			// TODO: implement
 		}
 
 		/**

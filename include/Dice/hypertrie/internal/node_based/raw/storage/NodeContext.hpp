@@ -166,30 +166,82 @@ namespace hypertrie::internal::node_based::raw {
 		}
 
 
-		template<size_t depth>
-		using RawSliceKey_ = std::array<depth, std::pair<size_t, std::optional<key_part_type>>;
-
+		/**
+		 * Returns a pair of a node container and a boolean which states if the pointed node is managed (true) or if it is unmanaged (false) and MUST be deleted by the user manually.
+		 * Only compressed nodes can be managed.
+		 * if fixed_depth == depth, just a scalar is returned
+		 * @tparam depth depth of the node container
+		 * @tparam fixed_keyparts number of fixed key_parts in the slice key
+		 * @param nodec a container with a node.
+		 * @param raw_slice_key the slice key
+		 * @return see above
+		 */
 		template<size_t depth, size_t fixed_keyparts>
-		auto slice(NodeContainer<depth, tri> &nodec, RawSliceKey_<fixed_keyparts> slice_def)
-		-> std::conditional_t<(depth > fixed_keyparts), NodeContainer<depth - fixed_keyparts, tri>, value_type> {
-			return slice_rek(nodec, slice_def);
+		auto slice(NodeContainer<depth, tri> &nodec, RawSliceKey<fixed_keyparts> raw_slice_key)
+		-> std::conditional_t<(depth > fixed_keyparts), std::pair<NodeContainer<depth - fixed_keyparts, tri>,bool>, value_type> {
+			return slice_rek(nodec, raw_slice_key);
 		}
 
 	private:
-		template<size_t depth, size_t fixed_keyparts, size_t pos = 0>
-		auto slice_rek(NodeContainer<depth, tri> &nodec, RawSliceKey_<fixed_keyparts> slice_def)
-				-> std::conditional_t<(depth > fixed_keyparts - pos), NodeContainer<depth - fixed_keyparts, tri>, value_type> {
-			if constexpr (pos == fixed_keyparts)
-				return nodec;
-			else {
+		template<size_t depth, size_t fixed_keyparts, size_t slice_offset = 0>
+		auto slice_rek(NodeContainer<depth, tri> &nodec, const RawSliceKey<fixed_keyparts> &raw_slice_key)
+				-> std::conditional_t<(depth > fixed_keyparts - slice_offset), std::pair<NodeContainer<depth - fixed_keyparts, tri>,bool>, value_type> {
+
+			constexpr static const size_t result_depth = depth - fixed_keyparts;
+			constexpr static const size_t current_depth = depth - slice_offset;
+			if constexpr (slice_offset == fixed_keyparts) // break condition
+				return {nodec, true};
+			else { // recursion
 				if (nodec.isUncompressed()){
-					auto child = getChild(nodec, slice_def[pos].first - pos, slice_def[pos].second);
-					if constexpr (fixed_keyparts == pos + 1)
-						return child;
+					auto child = getChild(nodec, raw_slice_key[slice_offset].pos - slice_offset, raw_slice_key[slice_offset].key_part);
+					if (child.empty())
+						return {};
 					else
-						return slice<depth - 1, fixed_keyparts, pos +1> (child, nodec);
-				} else {
-					// TODO: hui!
+						return slice<depth - 1, fixed_keyparts, slice_offset +1> (child, nodec);
+
+				} else { // nodec.isCompressed()
+					// check if key-parts match the slice key
+					for (auto i : iter::range(slice_offset, fixed_keyparts))
+						if (nodec.compressed_node()->key()[raw_slice_key[slice_offset + i].pos - slice_offset] != raw_slice_key[slice_offset + i].key_part)
+							return {};
+					// when this point is reached, the compressed node is a match
+					if constexpr (result_depth > 0){ // return key/value
+						CompressedNodeContainer<result_depth, tri> nc;
+						if constexpr (tri::is_bool_valued and tri::is_lsb_unused and (result_depth == 1)){
+							size_t slice_pos = 0;
+							size_t result_pos = 0;
+							for (auto nodec_pos : iter::range(current_depth)){
+								if (nodec_pos == raw_slice_key[slice_pos + slice_offset].pos - slice_offset){
+									++slice_pos;
+									continue;
+								} else {
+									nc.hash() = TaggedTensorHash(raw_slice_key[slice_pos + slice_offset].key_part);
+									return {nc,false};
+								}
+							}
+							assert(false);
+							return {};
+
+						} else {
+							auto node = new CompressedNode<result_depth, tri>();
+							size_t slice_pos = 0;
+							size_t result_pos = 0;
+							for (auto nodec_pos : iter::range(current_depth)){
+								if (nodec_pos == raw_slice_key[slice_pos + slice_offset].pos - slice_offset){
+									++slice_pos;
+									continue;
+								} else {
+									node->key()[result_pos++] = raw_slice_key[slice_pos + slice_offset].key_part;
+								}
+							}
+							return {nc,false};
+						}
+					} else { // return just the mapped value
+						if constexpr (tri::is_bool_valued)
+							return true;
+						else
+							return nodec.compressed_node()->value();
+					}
 				}
 			}
 		}

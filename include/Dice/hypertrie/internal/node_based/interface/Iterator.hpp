@@ -35,7 +35,7 @@ namespace hypertrie::internal::node_based {
 			return RawMethods(
 					[](const const_Hypertrie<tr> &hypertrie) -> RawBaseIterator {
 					  return (RawBaseIterator) RawIterator<depth>{
-							  *reinterpret_cast<raw::NodeContainer<depth, tri> *>(hypertrie.rawNodeContainer()),
+								*const_cast<raw::NodeContainer<depth, tri> *>(reinterpret_cast<const raw::NodeContainer<depth, tri> *>(hypertrie.rawNodeContainer())),
 							  hypertrie.context()->rawContext()};
 					},
 					&RawIterator<depth>::value,

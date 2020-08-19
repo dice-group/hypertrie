@@ -7,6 +7,14 @@
 
 namespace hypertrie::internal::node_based::raw {
 
+	/**
+	 * The sole purpose of this class is to have the same memory layout as a template instantiation of SpecificNodeContainer and NodeContainer.
+	 */
+	struct RawNodeContainer {
+		size_t hash_sized = 0;
+		void * pointer_sized = nullptr;
+	};
+
 	template<size_t depth, NodeCompression compressed, HypertrieInternalTrait tri_t = Hypertrie_internal_t<>>
 	struct SpecificNodeContainer;
 

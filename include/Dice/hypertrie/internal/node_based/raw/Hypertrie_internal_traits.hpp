@@ -24,8 +24,44 @@ namespace hypertrie::internal::node_based::raw {
 		template<size_t depth>
 		using RawKey = hypertrie::internal::RawKey<depth, typename tr::key_part_type>;
 
-		template<size_t depth>
-		using RawSliceKey = hypertrie::internal::RawSliceKey<depth, typename tr::key_part_type>;
+		static size_t sliceKeyDepth(const SliceKey &slice_key) {
+			size_t fixed_depth = 0;
+			for (auto opt_key_part : slice_key) {
+				if (opt_key_part.has_value())
+					++fixed_depth;
+			}
+			return fixed_depth;
+		}
+
+		template<size_t fixed_depth>
+		class RawSliceKey {
+		public:
+			struct FixedValue {
+				size_t pos;
+				key_part_type key_part;
+			};
+
+		private:
+			std::array<FixedValue, fixed_depth> fixed_values;
+
+		public:
+			explicit RawSliceKey(const SliceKey &slice_key) : fixed_values(slice_key) {
+				assert(sliceKeyDepth(slice_key) == fixed_depth);
+				size_t pos = 0;
+				size_t key_pos = 0;
+				for (const auto &opt_key_part : slice_key) {
+					if (opt_key_part.has_value())
+						fixed_values[pos++] = {key_pos, opt_key_part.value()};
+					++key_pos;
+				}
+			}
+
+			key_part_type operator[](size_t pos) const { return fixed_values[pos]; }
+
+			auto begin() const { return fixed_values.cbegin(); }
+
+			auto end() const { return fixed_values.cend(); }
+		};
 
 		constexpr static bool is_bool_valued = tr::is_bool_valued;
 		constexpr static const bool is_lsb_unused = tr::lsb_unused;

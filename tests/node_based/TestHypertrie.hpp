@@ -31,7 +31,9 @@ namespace hypertrie::tests::node_based::node_context {
 			utils::EntryGenerator<depth, key_part_type, value_type> gen{};
 			auto keys = gen.keys(500);
 			for (const auto &key : keys) {
-				Hypertrie<tr> t{depth};
+				HypertrieContext<tr> context;
+				Hypertrie<tr> t{depth, context};
+				WARN(fmt::format("[ {} ]",fmt::join(key, ", ")));
 				t.set(key, true);
 				REQUIRE(t[key]);
 			}
@@ -53,19 +55,29 @@ namespace hypertrie::tests::node_based::node_context {
 		using key_part_type = typename tr::key_part_type;
 		using value_type = typename tr::value_type;
 
-		utils::EntryGenerator<depth, key_part_type, value_type> gen{};
-		auto keys = gen.keys(5);
+		utils::EntryGenerator<depth, key_part_type, value_type,1,15> gen{};
+		auto keys = gen.keys(150);
 
 //		std::cout << keys << std::endl;
 
-		Hypertrie<tr> t{depth};
+		HypertrieContext<tr> context;
+		Hypertrie<tr> t{depth, context};
 		for (const auto &key : keys) {
+//			WARN(fmt::format("[ {} ]",fmt::join(key, ", ")));
 			t.set(key, true);
 			REQUIRE(t[key]);
 		}
 
+		std::vector<typename tr::Key> actual_keys;
 		for (const auto &key : t) {
-			std::cout << key[0]  << ", " << key[1]  << ", " << key[2] << ", " << key[3] << std::endl;
+//			WARN(fmt::format("[ {} ]",fmt::join(key, ", ")));
+			actual_keys.push_back(key);
+		}
+
+		REQUIRE(keys.size() == actual_keys.size());
+
+		for (const auto &actual_key : actual_keys) {
+			REQUIRE(keys.count(actual_key));
 		}
 
 	}

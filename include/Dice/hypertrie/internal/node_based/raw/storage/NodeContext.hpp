@@ -166,6 +166,36 @@ namespace hypertrie::internal::node_based::raw {
 		}
 
 
+		template<size_t depth>
+		using RawSliceKey_ = std::array<depth, std::pair<size_t, std::optional<key_part_type>>;
+
+		template<size_t depth, size_t fixed_keyparts>
+		auto slice(NodeContainer<depth, tri> &nodec, RawSliceKey_<fixed_keyparts> slice_def)
+		-> std::conditional_t<(depth > fixed_keyparts), NodeContainer<depth - fixed_keyparts, tri>, value_type> {
+			return slice_rek(nodec, slice_def);
+		}
+
+	private:
+		template<size_t depth, size_t fixed_keyparts, size_t pos = 0>
+		auto slice_rek(NodeContainer<depth, tri> &nodec, RawSliceKey_<fixed_keyparts> slice_def)
+				-> std::conditional_t<(depth > fixed_keyparts - pos), NodeContainer<depth - fixed_keyparts, tri>, value_type> {
+			if constexpr (pos == fixed_keyparts)
+				return nodec;
+			else {
+				if (nodec.isUncompressed()){
+					auto child = getChild(nodec, slice_def[pos].first - pos, slice_def[pos].second);
+					if constexpr (fixed_keyparts == pos + 1)
+						return child;
+					else
+						return slice<depth - 1, fixed_keyparts, pos +1> (child, nodec);
+				} else {
+					// TODO: hui!
+				}
+			}
+		}
+
+	public:
+
 
 
 		template<size_t depth>

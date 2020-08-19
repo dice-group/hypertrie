@@ -82,6 +82,32 @@ namespace hypertrie::tests::node_based::node_context {
 
 	}
 
+	TEST_CASE("test_slice", "[BoolHypertrie]") {
+		using tr = default_bool_Hypertrie_t;
+		constexpr const size_t depth = 4;
+		using key_part_type = typename tr::key_part_type;
+		using value_type = typename tr::value_type;
+
+//		std::cout << keys << std::endl;
+
+		HypertrieContext<tr> context;
+		Hypertrie<tr> t{depth, context};
+//			WARN(fmt::format("[ {} ]",fmt::join(key, ", ")));
+		t.set({1,2,3,4}, true);
+		t.set({1,2,4,4}, true);
+		t.set({1,2,4,5}, true);
+		WARN((std::string) t);
+		
+		typename tr::SliceKey slice_key = {1,2,{},{}};
+
+		const std::variant<std::optional<const_Hypertrie<tr>>, bool> &result = t[slice_key];
+
+		const_Hypertrie sliced_hypertrie = std::get<0>(result).value();
+
+		WARN((std::string) sliced_hypertrie);
+
+	}
+
 };// namespace hypertrie::tests::node_based::node_context
 
 #endif//HYPERTRIE_TESTHYPERTRIE_H

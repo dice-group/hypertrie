@@ -45,7 +45,7 @@ namespace hypertrie::internal::node_based::raw {
 			std::array<FixedValue, fixed_depth> fixed_values;
 
 		public:
-			explicit RawSliceKey(const SliceKey &slice_key) : fixed_values(slice_key) {
+			explicit RawSliceKey(const SliceKey &slice_key) {
 				assert(sliceKeyDepth(slice_key) == fixed_depth);
 				size_t pos = 0;
 				size_t key_pos = 0;
@@ -56,7 +56,7 @@ namespace hypertrie::internal::node_based::raw {
 				}
 			}
 
-			key_part_type operator[](size_t pos) const { return fixed_values[pos]; }
+			const FixedValue &operator[](size_t pos) const { return fixed_values[pos]; }
 
 			auto begin() const { return fixed_values.cbegin(); }
 

@@ -177,14 +177,14 @@ namespace hypertrie::internal::node_based::raw {
 		 * @return see above
 		 */
 		template<size_t depth, size_t fixed_keyparts>
-		auto slice(NodeContainer<depth, tri> &nodec, RawSliceKey<fixed_keyparts> raw_slice_key)
+		auto slice(const NodeContainer<depth, tri> &nodec, RawSliceKey<fixed_keyparts> raw_slice_key)
 		-> std::conditional_t<(depth > fixed_keyparts), std::pair<NodeContainer<depth - fixed_keyparts, tri>,bool>, value_type> {
 			return slice_rek(nodec, raw_slice_key);
 		}
 
 	private:
 		template<size_t depth, size_t fixed_keyparts, size_t slice_offset = 0>
-		auto slice_rek(NodeContainer<depth, tri> &nodec, const RawSliceKey<fixed_keyparts> &raw_slice_key)
+		auto slice_rek(const NodeContainer<depth, tri> &nodec, const RawSliceKey<fixed_keyparts> &raw_slice_key)
 				-> std::conditional_t<(depth > fixed_keyparts - slice_offset), std::pair<NodeContainer<depth - fixed_keyparts, tri>,bool>, value_type> {
 
 			constexpr static const size_t result_depth = depth - fixed_keyparts;
@@ -193,11 +193,12 @@ namespace hypertrie::internal::node_based::raw {
 				return {nodec, true};
 			else { // recursion
 				if (nodec.isUncompressed()){
-					auto child = getChild(nodec, raw_slice_key[slice_offset].pos - slice_offset, raw_slice_key[slice_offset].key_part);
+					auto uncompressed_nodec = nodec.uncompressed();
+					auto child = this->template getChild(uncompressed_nodec, raw_slice_key[slice_offset].pos - slice_offset, raw_slice_key[slice_offset].key_part);
 					if (child.empty())
 						return {};
 					else
-						return slice<depth - 1, fixed_keyparts, slice_offset +1> (child, nodec);
+						return slice_rek<depth - 1, fixed_keyparts, slice_offset +1> (child, raw_slice_key);
 
 				} else { // nodec.isCompressed()
 					// check if key-parts match the slice key
@@ -249,11 +250,6 @@ namespace hypertrie::internal::node_based::raw {
 	public:
 
 
-
-		template<size_t depth>
-		bool slice(NodeContainer<depth, tri> &nodec, RawSliceKey<depth>) {
-			return false;
-		}
 
 		template<size_t depth>
 		std::size_t size(NodeContainer<depth, tri> &nodec) {

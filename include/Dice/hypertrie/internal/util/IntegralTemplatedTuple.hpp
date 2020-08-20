@@ -4,6 +4,7 @@
 #include "Dice/hypertrie/internal/util/NTuple.hpp"
 #include <cmath>
 #include <concepts>
+#include <cstdint>
 #include <functional>
 #include <tuple>
 
@@ -11,24 +12,30 @@ namespace hypertrie::internal::util {
 
 	namespace count_tuple_internal {
 
-		template<template<auto X> typename T, int N, int MAX, int MIN, bool count_up,
+		template<template<auto X> typename T, std::uintptr_t N, std::intptr_t MAX, std::intptr_t MIN, bool count_up, bool use_signed,
 				 template<typename...> class TT>
 		struct repeat {
-			static constexpr const bool use_signed = (MAX < 0 or MIN < 0);
-			static constexpr const int I = (count_up) ? MIN + N : MAX - N;
+			static constexpr const std::intptr_t I = (count_up) ? MAX - N + 1 : MIN + N - 1;
 			using type = typename append_to_type_seq<
 					std::conditional_t<(use_signed), T<I>, T<(I < 0) ? 0u : unsigned(I)>>,
-					typename repeat<T, N + 1, MAX, MIN, count_up, TT>::type>::type;
+					typename repeat<T, N - 1, MAX, MIN, count_up, use_signed, TT>::type>::type;
 		};
 
-		template<template<auto I> typename T, int MAX, int MIN, bool count_up,
+		template<template<auto X> typename T, std::intptr_t MAX, std::intptr_t MIN, bool count_up, bool use_signed,
 				 template<typename...> class TT>
-		struct repeat<T, MAX - MIN + 1, MAX, MIN, count_up, TT> {
+		struct repeat<T, 0, MAX, MIN, count_up, use_signed, TT> {
 			using type = TT<>;
 		};
 
 		template<template<auto I> typename T, auto FIRST, auto LAST>
-		using CUT = typename repeat<T, 0, (FIRST < LAST) ? LAST : FIRST, (FIRST < LAST) ? FIRST : LAST, (FIRST < LAST), std::tuple>::type;
+		struct x {
+			static constexpr const bool count_up = (std::intptr_t(FIRST) < std::intptr_t(LAST));
+			static constexpr const auto MIN = (count_up) ? std::intptr_t(FIRST) : std::intptr_t(LAST);
+			static constexpr const auto MAX = (count_up) ? std::intptr_t(LAST) : std::intptr_t(FIRST);
+			static constexpr const auto N = MAX - MIN + 1L;
+			static constexpr const bool use_signed = (MAX < 0 or MIN < 0);
+			using type = typename repeat<T, N, MAX, MIN, count_up, use_signed, std::tuple>::type;
+		};
 	}// namespace count_tuple_internal
 
 
@@ -40,10 +47,12 @@ namespace hypertrie::internal::util {
 	 */
 	template<template<std::integral auto> typename T, auto FIRST = 0, auto LAST = 0>
 	class IntegralTemplatedTuple {
-		count_tuple_internal::CUT<T, FIRST, LAST> count_up_tuple_;
+		typename count_tuple_internal::x<T, FIRST, LAST>::type count_up_tuple_;
 
 		constexpr static auto abs(std::intptr_t a, std::intptr_t b) {
-			if (a < b) return b - a; else return a - b;
+			if (a < b) return b - a;
+			else
+				return a - b;
 		}
 
 	public:

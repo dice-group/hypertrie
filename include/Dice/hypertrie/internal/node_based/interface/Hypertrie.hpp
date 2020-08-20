@@ -52,7 +52,7 @@ namespace hypertrie::internal::node_based {
 						[&](auto depth_arg) {
 							using CND = typename raw::template CompressedNodeContainer<depth_arg, tri>;
 							if constexpr (not(depth_arg == 1 and tri::is_bool_valued and tri::is_lsb_unused))
-								delete reinterpret_cast<CND *>(&this->node_container_)->node();
+								delete reinterpret_cast<CND *>(&this->node_container_)->compressed_node();
 						},
 						[]() { assert(false); });
 			}

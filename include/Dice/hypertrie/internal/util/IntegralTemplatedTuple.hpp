@@ -42,7 +42,7 @@ namespace hypertrie::internal::util {
 	class IntegralTemplatedTuple {
 		count_tuple_internal::CUT<T, FIRST, LAST> count_up_tuple_;
 
-		constexpr static auto abs(auto a, auto b) {
+		constexpr static auto abs(std::intptr_t a, std::intptr_t b) {
 			if (a < b) return b - a; else return a - b;
 		}
 

@@ -85,8 +85,7 @@ namespace hypertrie::tests::node_based::node_context {
 	TEST_CASE("test_slice", "[BoolHypertrie]") {
 		using tr = default_bool_Hypertrie_t;
 		constexpr const size_t depth = 4;
-		using key_part_type = typename tr::key_part_type;
-		using value_type = typename tr::value_type;
+//		using key_part_type = typename tr::key_part_type;
 
 //		std::cout << keys << std::endl;
 

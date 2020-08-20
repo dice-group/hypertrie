@@ -56,7 +56,7 @@ namespace hypertrie::internal::node_based::raw {
 					nodec.uncompressed_node()->ref_count()++;
 		}
 		template<size_t depth>
-		void decrRefCount(NodeContainer<depth, tri> &nodec) {
+		void decrRefCount([[maybe_unused]]NodeContainer<depth, tri> &nodec) {
 			// TODO: implement
 		}
 
@@ -211,7 +211,6 @@ namespace hypertrie::internal::node_based::raw {
 						CompressedNodeContainer<result_depth, tri> nc;
 						if constexpr (tri::is_bool_valued and tri::is_lsb_unused and (result_depth == 1)){
 							size_t slice_pos = 0;
-							size_t result_pos = 0;
 							for (auto nodec_pos : iter::range(current_depth)){
 								if (slice_pos + slice_offset < fixed_keyparts and nodec_pos == raw_slice_key[slice_pos + slice_offset].pos - slice_offset){
 									++slice_pos;

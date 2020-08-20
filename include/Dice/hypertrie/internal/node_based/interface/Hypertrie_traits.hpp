@@ -40,6 +40,8 @@ namespace hypertrie::internal::node_based {
 			template<typename = std::enable_if_t<(is_bool_valued)>>
 			static value_type &value(IteratorEntry &entry) noexcept { return entry.second; }
 		};
+
+		using KeyPositions = std::vector<uint8_t>;
 	};
 
 	namespace internal::hypertrie_trait {

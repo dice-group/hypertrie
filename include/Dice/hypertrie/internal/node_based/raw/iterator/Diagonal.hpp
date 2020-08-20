@@ -7,7 +7,7 @@
 namespace hypertrie::internal::node_based::raw {
 
 	template<size_t diag_depth, size_t depth, NodeCompression compression, HypertrieInternalTrait tri_t>
-	class HashDiagonal
+	class HashDiagonal;
 
 	template<size_t diag_depth, size_t depth, HypertrieInternalTrait tri_t>
 	class HashDiagonal<diag_depth, depth, NodeCompression::uncompressed, tri_t> {

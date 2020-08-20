@@ -6,6 +6,7 @@
 #include "Dice/hypertrie/internal/node_based/interface/Hypertrie_traits.hpp"
 #include "Dice/hypertrie/internal/node_based/interface/HypertrieContext.hpp"
 #include "Dice/hypertrie/internal/node_based/interface/Iterator.hpp"
+#include "Dice/hypertrie/internal/node_based/interface/HashDiagonal.hpp"
 
 #include "Dice/hypertrie/internal/util/CONSTANTS.hpp"
 #include <optional>

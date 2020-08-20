@@ -68,7 +68,7 @@ namespace hypertrie::internal::node_based {
 							if constexpr (not(depth_arg == 1 and tri::is_bool_valued and tri::is_lsb_unused)) {
 								// create a copy of the contextless compressed node
 								auto nodec = reinterpret_cast<CND *>(&this->node_container_);
-								nodec->compressed_node() = new raw::CompressedNode<depth_arg, tri>(*nodec->node());
+								nodec->compressed_node() = new raw::CompressedNode<depth_arg, tri>(*nodec->compressed_node());
 							}
 						},
 						[]() { assert(false); });
@@ -153,9 +153,9 @@ namespace hypertrie::internal::node_based {
 
 									auto [node_cont, is_managed] = this->context()->rawContext().template slice<depth_arg, slice_key_depth_arg>(node_container, raw_slice_key);
 									if (is_managed)
-										result = const_Hypertrie<tr>(depth_arg, this->context(), {node_cont.hash().hash(), node_cont.node()});
+										result = const_Hypertrie<tr>(depth_arg - slice_key_depth_arg, this->context(), {node_cont.hash().hash(), node_cont.node()});
 									else
-										result = const_Hypertrie<tr>(depth_arg, nullptr, {node_cont.hash().hash(), node_cont.node()});
+										result = const_Hypertrie<tr>(depth_arg - slice_key_depth_arg, nullptr, {node_cont.hash().hash(), node_cont.node()});
 								  });
 
 						});
@@ -179,14 +179,14 @@ namespace hypertrie::internal::node_based {
 		bool cend() const { return false; }
 
 		operator std::string() {
-			std::string s;
+			std::vector<std::string> mappings;
 			for (const auto &entry : *this){
 				if constexpr (tr::is_bool_valued)
-					s += fmt::format("{} -> true", fmt::join(entry,", "));
+					mappings.push_back(fmt::format("⟨{}⟩ → true", fmt::join(entry,", ")));
 				else
-					s += fmt::format("{} -> {}", fmt::join(entry.first,", "), entry.second);
+					mappings.push_back(fmt::format("⟨{}⟩ → {}", fmt::join(entry.first,", "), entry.second));
 			}
-			return s;
+			return fmt::format("[ {} ]", fmt::join(mappings, ", "));
 		}
 
 	};

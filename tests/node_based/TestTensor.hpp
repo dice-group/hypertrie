@@ -110,7 +110,7 @@ namespace hypertrie::tests::node_based::raw::node_context {
 					INFO("Storage doesn't contain the entry");
 					REQUIRE(not nc.empty());
 
-					const UncompressedNode<node_depth, tri> *node = nc.node();
+					const UncompressedNode<node_depth, tri> *node = nc.uncompressed_node();
 
 					INFO("ref count is not correct");
 					REQUIRE(node->ref_count() == test_node->ref_count());
@@ -157,7 +157,7 @@ namespace hypertrie::tests::node_based::raw::node_context {
 						INFO("Storage doesn't contain the entry");
 						REQUIRE(not nc.empty());
 
-						const CompressedNode<node_depth, tri> *node = nc.node();
+						const CompressedNode<node_depth, tri> *node = nc.compressed_node();
 
 						INFO("ref count is not correct");
 						REQUIRE(node->ref_count() == test_node->ref_count());

@@ -191,9 +191,9 @@ namespace hypertrie::internal::node_based::raw {
 			assert(nc.hash() != new_hash);
 
 			auto [it, success] = [&]() {
-				if constexpr (keep_old) return nodes.insert({new_hash, new Node<depth, compression, tri>{*nc.node()}});
+				if constexpr (keep_old) return nodes.insert({new_hash, new Node<depth, compression, tri>{*nc.template specific_node<compression>()}});
 				else
-					return nodes.insert({new_hash, nc.node()});// if the old is not kept it is moved
+					return nodes.insert({new_hash, nc.template specific_node<compression>()});// if the old is not kept it is moved
 			}();
 			assert(success);
 			if constexpr (not keep_old) {

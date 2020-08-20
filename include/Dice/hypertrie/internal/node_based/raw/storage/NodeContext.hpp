@@ -183,13 +183,14 @@ namespace hypertrie::internal::node_based::raw {
 		}
 
 	private:
-		template<size_t depth, size_t fixed_keyparts, size_t slice_offset = 0>
-		auto slice_rek(const NodeContainer<depth, tri> &nodec, const RawSliceKey<fixed_keyparts> &raw_slice_key)
-				-> std::conditional_t<(depth > fixed_keyparts - slice_offset), std::pair<NodeContainer<depth - fixed_keyparts, tri>,bool>, value_type> {
+		template<size_t current_depth, size_t fixed_keyparts, size_t slice_offset = 0>
+		auto slice_rek(const NodeContainer<current_depth, tri> &nodec, const RawSliceKey<fixed_keyparts> &raw_slice_key)
+				-> std::conditional_t<(current_depth - fixed_keyparts + slice_offset > 0),
+				        std::pair<NodeContainer<current_depth - fixed_keyparts + slice_offset, tri>, bool>,
+				                value_type> {
 
-			constexpr static const size_t result_depth = depth - fixed_keyparts;
-			constexpr static const size_t current_depth = depth - slice_offset;
-			if constexpr (slice_offset == fixed_keyparts) // break condition
+			constexpr static const size_t result_depth = current_depth - fixed_keyparts + slice_offset;
+			if constexpr (slice_offset >= fixed_keyparts) // break condition
 				return {nodec, true};
 			else { // recursion
 				if (nodec.isUncompressed()){
@@ -198,12 +199,12 @@ namespace hypertrie::internal::node_based::raw {
 					if (child.empty())
 						return {};
 					else
-						return slice_rek<depth - 1, fixed_keyparts, slice_offset +1> (child, raw_slice_key);
+						return slice_rek<current_depth - 1, fixed_keyparts, slice_offset +1> (child, raw_slice_key);
 
 				} else { // nodec.isCompressed()
 					// check if key-parts match the slice key
-					for (auto i : iter::range(slice_offset, fixed_keyparts))
-						if (nodec.compressed_node()->key()[raw_slice_key[slice_offset + i].pos - slice_offset] != raw_slice_key[slice_offset + i].key_part)
+					for (auto slice_key_i : iter::range(slice_offset, fixed_keyparts))
+						if (nodec.compressed_node()->key()[raw_slice_key[slice_key_i].pos - slice_offset] != raw_slice_key[slice_key_i].key_part)
 							return {};
 					// when this point is reached, the compressed node is a match
 					if constexpr (result_depth > 0){ // return key/value
@@ -212,11 +213,11 @@ namespace hypertrie::internal::node_based::raw {
 							size_t slice_pos = 0;
 							size_t result_pos = 0;
 							for (auto nodec_pos : iter::range(current_depth)){
-								if (nodec_pos == raw_slice_key[slice_pos + slice_offset].pos - slice_offset){
+								if (slice_pos + slice_offset < fixed_keyparts and nodec_pos == raw_slice_key[slice_pos + slice_offset].pos - slice_offset){
 									++slice_pos;
 									continue;
 								} else {
-									nc.hash() = TaggedTensorHash(raw_slice_key[slice_pos + slice_offset].key_part);
+									nc.hash() = TaggedTensorHash(nodec.compressed_node()->value());
 									return {nc,false};
 								}
 							}
@@ -224,17 +225,18 @@ namespace hypertrie::internal::node_based::raw {
 							return {};
 
 						} else {
-							auto node = new CompressedNode<result_depth, tri>();
+							nc.node() = new CompressedNode<result_depth, tri>();
 							size_t slice_pos = 0;
 							size_t result_pos = 0;
 							for (auto nodec_pos : iter::range(current_depth)){
-								if (nodec_pos == raw_slice_key[slice_pos + slice_offset].pos - slice_offset){
+								if (slice_pos + slice_offset < fixed_keyparts and nodec_pos == raw_slice_key[slice_pos + slice_offset].pos - slice_offset){
 									++slice_pos;
 									continue;
 								} else {
-									node->key()[result_pos++] = raw_slice_key[slice_pos + slice_offset].key_part;
+									nc.compressed_node()->key()[result_pos++] = nodec.compressed_node()->key()[nodec_pos];
 								}
 							}
+							nc.hash() = TensorHash().addFirstEntry(nc.compressed_node()->key(), nc.compressed_node()->value());
 							return {nc,false};
 						}
 					} else { // return just the mapped value

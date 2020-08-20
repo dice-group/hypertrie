@@ -69,6 +69,11 @@ namespace hypertrie::internal::node_based::raw {
 		[[nodiscard]] auto * node() const noexcept  { return node_ptr_.raw; }
 
 		template<NodeCompression compression>
+		[[nodiscard]] auto * &specific_node() noexcept { if constexpr (compression == NodeCompression::uncompressed) return uncompressed_node(); else return compressed_node(); }
+		template<NodeCompression compression>
+		[[nodiscard]] auto * specific_node() const noexcept  { if constexpr (compression == NodeCompression::uncompressed) return uncompressed_node(); else return compressed_node(); }
+
+		template<NodeCompression compression>
 		[[nodiscard]] auto specific() const noexcept { return SpecificNodeContainer<depth, compression, tri_t>{repr_, node_ptr_}; }
 
 		[[nodiscard]] auto compressed() const noexcept { return specific<NodeCompression::compressed>(); }
@@ -126,9 +131,9 @@ namespace hypertrie::internal::node_based::raw {
 		SpecificNodeContainer& operator=(SpecificNodeContainer &&nodec) =default;
 
 
-		[[nodiscard]] constexpr auto node() noexcept { return this->node_ptr_.compressed; }
-
-		[[nodiscard]] constexpr auto node() const noexcept  { return this->node_ptr_.compressed; }
+//		[[nodiscard]] constexpr auto node() noexcept { return this->node_ptr_.compressed; }
+//
+//		[[nodiscard]] constexpr auto node() const noexcept  { return this->node_ptr_.compressed; }
 
 		[[nodiscard]] bool isCompressed() const noexcept  { return true; }
 
@@ -156,9 +161,9 @@ namespace hypertrie::internal::node_based::raw {
 
 		SpecificNodeContainer& operator=(SpecificNodeContainer &&nodec) =default;
 
-		[[nodiscard]] constexpr auto node() noexcept { return this->node_ptr_.uncompressed; }
-
-		[[nodiscard]] constexpr auto node() const noexcept { return this->node_ptr_.uncompressed; }
+//		[[nodiscard]] constexpr auto node() noexcept { return this->node_ptr_.uncompressed; }
+//
+//		[[nodiscard]] constexpr auto node() const noexcept { return this->node_ptr_.uncompressed; }
 
 		[[nodiscard]] bool isCompressed() const noexcept { return false; }
 
@@ -167,7 +172,7 @@ namespace hypertrie::internal::node_based::raw {
 		inline auto getChildHashOrValue(size_t pos, typename tri_t::key_part_type key_part)
 				-> std::conditional_t<(depth > 1), typename Node<depth, NodeCompression::uncompressed, tri_t>::ChildType, typename tri_t::value_type> {
 			assert(pos < depth);
-			return this->node()->child(pos, key_part);
+			return this->uncompressed_node()->child(pos, key_part);
 		}
 
 		operator NodeContainer<depth, tri_t>() const noexcept { return {this->repr_, this->node_ptr_}; }

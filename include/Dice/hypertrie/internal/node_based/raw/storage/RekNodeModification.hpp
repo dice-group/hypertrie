@@ -282,7 +282,7 @@ namespace hypertrie::internal::node_based::raw {
 		template<size_t depth>
 		void updateChildrenCountDiff(const TensorHash &hash, const long &children_count_diff){
 			if (children_count_diff != 0) {
-				auto node = node_storage.template getUncompressedNode<depth>(hash).node();
+				auto node = node_storage.template getUncompressedNode<depth>(hash).uncompressed_node();
 				this->template updateChildrenCountDiff<depth>(node, children_count_diff);
 			}
 		}
@@ -362,7 +362,7 @@ namespace hypertrie::internal::node_based::raw {
 			long node_before_children_count_diff = 0;
 			SpecificNodeContainer<depth, compression, tri> nc_before = node_storage.template getNode<depth, compression>(update.hashBefore());
 			assert(not nc_before.null());
-			Node<depth, compression, tri> *node_before = nc_before.node();
+			Node<depth, compression, tri> *node_before = nc_before.template specific_node<compression>();
 
 			SpecificNodeContainer<depth, compression, tri> nc_after;
 

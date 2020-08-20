@@ -33,6 +33,9 @@ namespace hypertrie::internal::node_based::raw {
 		template<size_t depth>
 		using RawSliceKey = typename tri::template RawSliceKey<depth>;
 
+		template<size_t depth>
+		using DiagonalPositions = typename tri::template DiagonalPositions<depth>;
+
 		using NodeStorage_t = NodeStorage<max_depth, tri>;
 
 	public:
@@ -216,7 +219,7 @@ namespace hypertrie::internal::node_based::raw {
 									++slice_pos;
 									continue;
 								} else {
-									nc.hash() = TaggedTensorHash(nodec.compressed_node()->value());
+									nc.hash() = TaggedTensorHash(nodec.compressed_node()->key()[nodec_pos]);
 									return {nc,false};
 								}
 							}
@@ -235,6 +238,8 @@ namespace hypertrie::internal::node_based::raw {
 									nc.compressed_node()->key()[result_pos++] = nodec.compressed_node()->key()[nodec_pos];
 								}
 							}
+							if constexpr (not tri::is_bool_valued)
+								nc.compressed_node()->value() = nodec.compressed_node()->value();
 							nc.hash() = TensorHash().addFirstEntry(nc.compressed_node()->key(), nc.compressed_node()->value());
 							return {nc,false};
 						}
@@ -249,7 +254,88 @@ namespace hypertrie::internal::node_based::raw {
 		}
 
 	public:
+		template<size_t depth, size_t fixed_keyparts>
+		auto diagonal_slice(const NodeContainer<depth, tri> &nodec, const DiagonalPositions<depth> &diagonal_positions, const key_part_type &key_part, CompressedNode<depth - fixed_keyparts, tri> *contextless_compressed_result = nullptr)
+		-> std::conditional_t<(depth > fixed_keyparts), std::pair<NodeContainer<depth - fixed_keyparts, tri>,bool>, value_type> {
+			return diagonal_slice_rek(nodec, diagonal_positions, raw_slice_key, contextless_compressed_result);
+		}
 
+
+	private:
+		template<size_t current_depth, size_t fixed_keyparts, size_t offset = 0>
+		auto diagonal_slice_rek(const NodeContainer<current_depth, tri> &nodec, const DiagonalPositions<depth> &diagonal_positions, const key_part_type &key_part, CompressedNode<depth - fixed_keyparts, tri> *contextless_compressed_result = nullptr,
+								size_t key_pos = 0)
+		-> std::conditional_t<(current_depth - fixed_keyparts + offset > 0),
+				std::pair<NodeContainer<current_depth - fixed_keyparts + offset, tri>, bool>,
+				value_type> {
+
+			constexpr static const size_t result_depth = current_depth - fixed_keyparts + offset;
+			if constexpr (offset >= fixed_keyparts) // break condition
+				return {nodec, true};
+			else { // recursion
+				if (nodec.isUncompressed()){
+					auto uncompressed_nodec = nodec.uncompressed();
+					while(not diagonal_positions[key_pos])
+						++key_pos;
+					auto child = this->template getChild(uncompressed_nodec, key_pos - offset, key_part);
+					if (child.empty())
+						return {};
+					else
+						return diagonal_slice_rek<current_depth - 1, fixed_keyparts, offset +1> (child, diagonal_positions, key_part, key_pos);
+
+				} else { // nodec.isCompressed()
+					// check if key-parts match the slice key
+					auto key_pos_copy = key_pos;
+					while (key_pos_copy < fixed_keyparts) {
+						if (diagonal_positions[key_pos_copy])
+							if (nodec.compressed_node()->key()[key_pos_copy - offset] != key_part)
+								return {};
+
+						++key_pos_copy;
+					}
+					// when this point is reached, the compressed node is a match
+					if constexpr (result_depth > 0){ // return key/value
+						CompressedNodeContainer<result_depth, tri> nc;
+						if constexpr (tri::is_bool_valued and tri::is_lsb_unused and (result_depth == 1)){
+							size_t result_pos = 0;
+							while (key_pos < fixed_keyparts) {
+								if (not diagonal_positions[key_pos]){
+									CompressedNodeContainer<result_depth, tri> nc;
+									nc.hash() = TaggedTensorHash(nodec.compressed_node()->key()[key_pos - offset]);
+									return {nc,false};
+								}
+								++key_pos;
+							}
+							assert(false);
+							return {};
+
+						} else {
+							if (contextless_compressed_result == nullptr)
+								nc.node() = new CompressedNode<result_depth, tri>();
+							else
+								nc.node() = contextless_compressed_result;
+							size_t result_pos = 0;
+							while (key_pos < fixed_keyparts) {
+								if (not diagonal_positions[key_pos])
+									nc.compressed_node()->key()[result_pos++] = nodec.compressed_node()->key()[key_pos - offset];
+								++key_pos;
+							}
+							if constexpr (not tri::is_bool_valued)
+								nc.compressed_node()->value() = nodec.compressed_node()->value();
+							nc.hash() = TensorHash().addFirstEntry(nc.compressed_node()->key(), nc.compressed_node()->value());
+							return {nc,false};
+						}
+					} else { // return just the mapped value
+						if constexpr (tri::is_bool_valued)
+							return true;
+						else
+							return nodec.compressed_node()->value();
+					}
+				}
+			}
+		}
+
+	public:
 
 
 		template<size_t depth>

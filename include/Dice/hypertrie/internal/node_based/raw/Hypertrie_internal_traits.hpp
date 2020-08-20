@@ -63,6 +63,10 @@ namespace hypertrie::internal::node_based::raw {
 			auto end() const { return fixed_values.cend(); }
 		};
 
+		// TODO: rename to key_positions
+		template<size_t depth>
+		using DiagonalPositions = std::bitset<depth>;
+
 		constexpr static bool is_bool_valued = tr::is_bool_valued;
 		constexpr static const bool is_lsb_unused = tr::lsb_unused;
 		constexpr static bool is_tsl_map = std::is_same_v<map_type<int, int>, container::tsl_sparse_map<int, int>>;

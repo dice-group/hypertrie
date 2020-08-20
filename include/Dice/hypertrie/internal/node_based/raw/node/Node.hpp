@@ -191,6 +191,38 @@ namespace hypertrie::internal::node_based::raw {
 				return ChildType{};// 0, 0.0, false
 			}
 		}
+
+		[[nodiscard]]
+		size_t minCardPos(const std::vector<size_t> &positions) const {
+			assert(positions.size() > 0);
+			auto min_pos = positions[0];
+			auto min_card = std::numeric_limits<size_t>::max();
+			for(const size_t pos : positions){
+				const size_t current_card = edges(pos).size();
+				if (current_card < min_card) {
+					min_card = current_card;
+					min_pos = pos_it;
+				}
+			}
+			return min_pos;
+		}
+
+		[[nodiscard]]
+		size_t minCardPos(const typename tri::template DiagonalPositions<depth> &positions_mask) const {
+			assert(positions_mask.any());
+			auto min_pos = 0;
+			auto min_card = std::numeric_limits<size_t>::max();
+			for(const size_t pos : iter::range(depth)){
+				if (positions_mask[pos]){
+					const size_t current_card = edges(pos).size();
+					if (current_card < min_card) {
+						min_card = current_card;
+						min_pos = pos_it;
+					}
+				}
+			}
+			return min_pos;
+		}
 	};
 
 

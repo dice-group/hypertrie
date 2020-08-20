@@ -23,7 +23,7 @@ namespace hypertrie::internal {
 		}
 
 		template<class T, T... Is, class F>
-		static auto execute_switch_void(T i, std::integer_sequence<T, Is...>, F f) {
+		static auto execute_switch_void([[maybe_unused]] T i, std::integer_sequence<T, Is...>, [[maybe_unused]] F f) {
 				std::initializer_list<int>({(i == Is + min ? (f(std::integral_constant<T, Is + min>{})), 0 : 0)...});
 		}
 

@@ -43,6 +43,8 @@ namespace hypertrie::internal::node_based {
 			return context_ == nullptr;
 		}
 
+		friend class HashDiagonal<tr>;
+
 
 	public:
 		~const_Hypertrie() {

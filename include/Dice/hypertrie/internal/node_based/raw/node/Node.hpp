@@ -201,7 +201,7 @@ namespace hypertrie::internal::node_based::raw {
 				const size_t current_card = edges(pos).size();
 				if (current_card < min_card) {
 					min_card = current_card;
-					min_pos = pos_it;
+					min_pos = pos;
 				}
 			}
 			return min_pos;
@@ -217,7 +217,7 @@ namespace hypertrie::internal::node_based::raw {
 					const size_t current_card = edges(pos).size();
 					if (current_card < min_card) {
 						min_card = current_card;
-						min_pos = pos_it;
+						min_pos = pos;
 					}
 				}
 			}

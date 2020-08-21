@@ -257,13 +257,13 @@ namespace hypertrie::internal::node_based::raw {
 		template<size_t depth, size_t fixed_keyparts>
 		auto diagonal_slice(const NodeContainer<depth, tri> &nodec, const DiagonalPositions<depth> &diagonal_positions, const key_part_type &key_part, CompressedNode<depth - fixed_keyparts, tri> *contextless_compressed_result = nullptr)
 		-> std::conditional_t<(depth > fixed_keyparts), std::pair<NodeContainer<depth - fixed_keyparts, tri>,bool>, value_type> {
-			return diagonal_slice_rek(nodec, diagonal_positions, raw_slice_key, contextless_compressed_result);
+			return diagonal_slice_rek(nodec, diagonal_positions, key_part, contextless_compressed_result);
 		}
 
 
 	private:
 		template<size_t current_depth, size_t fixed_keyparts, size_t offset = 0>
-		auto diagonal_slice_rek(const NodeContainer<current_depth, tri> &nodec, const DiagonalPositions<depth> &diagonal_positions, const key_part_type &key_part, CompressedNode<depth - fixed_keyparts, tri> *contextless_compressed_result = nullptr,
+		auto diagonal_slice_rek(const NodeContainer<current_depth, tri> &nodec, const DiagonalPositions<current_depth + offset> &diagonal_positions, const key_part_type &key_part, CompressedNode<current_depth - fixed_keyparts + offset, tri> *contextless_compressed_result = nullptr,
 								size_t key_pos = 0)
 		-> std::conditional_t<(current_depth - fixed_keyparts + offset > 0),
 				std::pair<NodeContainer<current_depth - fixed_keyparts + offset, tri>, bool>,
@@ -297,7 +297,6 @@ namespace hypertrie::internal::node_based::raw {
 					if constexpr (result_depth > 0){ // return key/value
 						CompressedNodeContainer<result_depth, tri> nc;
 						if constexpr (tri::is_bool_valued and tri::is_lsb_unused and (result_depth == 1)){
-							size_t result_pos = 0;
 							while (key_pos < fixed_keyparts) {
 								if (not diagonal_positions[key_pos]){
 									CompressedNodeContainer<result_depth, tri> nc;

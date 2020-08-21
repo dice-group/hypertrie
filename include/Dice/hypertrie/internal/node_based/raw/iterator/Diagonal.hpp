@@ -1,6 +1,6 @@
 #ifndef HYPERTRIE_DIAGONAL_HPP
 #define HYPERTRIE_DIAGONAL_HPP
-
+#include <utility>
 #include "Dice/hypertrie/internal/node_based/raw/storage/NodeContext.hpp"
 #include "Dice/hypertrie/internal/node_based/ConfigHypertrieDepthLimit.hpp"
 #include "Dice/hypertrie/internal/util/IntegralTemplatedTuple.hpp"
@@ -11,8 +11,8 @@ namespace hypertrie::internal::node_based::raw {
 
 	template<size_t diag_depth, size_t depth, HypertrieInternalTrait tri_t>
 	class HashDiagonal<diag_depth, depth, NodeCompression::uncompressed, tri_t> {
-			static_assert(diag_depth <= depth);
-			stacic_assert(diag_depth > 0);
+//			static_assert(diag_depth <= depth);
+//			stacic_assert(diag_depth > 0);
 
 		static constexpr const size_t result_depth = depth - diag_depth;
 
@@ -31,9 +31,10 @@ namespace hypertrie::internal::node_based::raw {
 	private:
 		using child_iterator = typename UncompressedNode<depth, tri>::ChildrenType::const_iterator;
 
-		using IterValue = std::conditional_t<(result_depth > 0),
+		using IterValue = std::conditional_t<
+				(result_depth > 0),
 				std::pair<NodeContainer<result_depth, tri>, bool>,
-		value_type>
+				value_type>;
 
 	private:
 		UncompressedNodeContainer<depth, tri> *nodec_;
@@ -41,8 +42,8 @@ namespace hypertrie::internal::node_based::raw {
 		DiagonalPositions diag_poss_;
 		DiagonalPositions sub_diag_poss_;
 
-		child_iterator iter;
-		child_iterator end;
+		child_iterator iter_;
+		child_iterator end_;
 		CompressedNode<result_depth, tri> internal_compressed_node;
 		IterValue value_;
 
@@ -61,7 +62,7 @@ namespace hypertrie::internal::node_based::raw {
 							if (diag_poss_[pos])
 								return pos;
 				}();
-				// generate the diagonal positions mask to apply the diagonal to the values of iter
+				// generate the diagonal positions mask to apply the diagonal to the values of iter_
 				if constexpr (diag_depth > 1) {
 					bool skipped = false;
 					for(auto pos : iter::range(diag_poss_.size()))
@@ -73,16 +74,16 @@ namespace hypertrie::internal::node_based::raw {
 				}
 
 				const auto &min_dim_edges = nodec_->uncompressed_node()->edges(min_card_pos);
-				diag.iter = min_dim_edges.begin();
-				diag.end = min_dim_edges.end();
+				iter_ = min_dim_edges.begin();
+				end_ = min_dim_edges.end();
 				if (not ended()) {
 					if (not retrieveSubDiagonalValue()) {
-						inc(diag_ptr);
+						++(*this);
 					}
 				}
 			} else {
-				diag.iter = diag.rawboolhypertrie.edges.begin();
-				diag.end = diag.rawboolhypertrie.edges.end();
+				iter_ = nodec_->uncompressed_node().edges(0).begin();
+				end_ = nodec_->uncompressed_node().edges(0).end();
 			}
 			return *this;
 		}
@@ -91,95 +92,85 @@ namespace hypertrie::internal::node_based::raw {
 			return false;
 		}
 
-		static void init(void *diag_ptr) {
-			reinterpret_cast<HashDiagonal *>(diag_ptr)->begin();
-		}
-
 		auto operator[](key_part_type key_part){
-			iter_value = node_context_.template diagonal_slice<depth, diag_depth>(*nodec_, diag_poss_, key_part, *internal_compressed_node);
-			return iter_value;
+			value_ = node_context_.template diagonal_slice<depth, diag_depth>(*nodec_, diag_poss_, key_part, *internal_compressed_node);
+			return value_;
 		}
 		
 	private:
 		bool retrieveSubDiagonalValue() {
 			static_assert(diag_depth > 1);
-			NodeContainer<depth - 1, tri> child_node = node_context_.storage.getNode(iter->second);
-			key_part_type key_part = iter->first;
-			iter_value = node_context_.template diagonal_slice<depth - 1, diag_depth>(child_node, sub_diag_poss_, key_part, *internal_compressed_node);
+			NodeContainer<depth - 1, tri> child_node = node_context_.storage.getNode(iter_->second);
+			key_part_type key_part = iter_->first;
+			value_ = node_context_.template diagonal_slice<depth - 1, diag_depth>(child_node, sub_diag_poss_, key_part, *internal_compressed_node);
 			if constexpr(result_depth == 0)
-				return value_ != {};
+				return value_ != IterValue{};
 			else
 				return not value_.first.empty();
 		} 
 	public:
-		static bool find(void *diag_ptr, key_part_type key_part) {
-			auto &diag = *reinterpret_cast<HashDiagonal *>(diag_ptr);
-			diag[key_part];
+		bool find(key_part_type key_part) {
+			this->operator[](key_part);
 			if constexpr(result_depth == 0)
-				return value_ != {};
+				return value_ != IterValue{};
 			else
 				return not value_.first.empty();
 		}
 
 
-		static key_part_type currentKeyPart(void const *diag_ptr) {
-			auto &diag = *static_cast<RawHashDiagonal const *>(diag_ptr);
+		const key_part_type &currentKeyPart() const {
 			if constexpr (depth == 1 and tri::is_bool_valued)
-				return *diag.iter;
+				return *iter_;
 			else
-				return diag.iter->first;
-
+				return iter_->first;
 		}
 
-		static value_type *currentValue(void const *diag_ptr) {
-			auto &diag = *static_cast<RawHashDiagonal const *>(diag_ptr);
-			return &diag.value_;
+		const IterValue &currentValue() const {
+			return value_;
+		}
+
+		std::pair<std::reference_wrapper<const key_part_type>,std::reference_wrapper<const IterValue>> operator*() const{
+			return std::make_pair(currentKeyPart(), value_);
 		}
 
 		HashDiagonal& operator++(){
 			if constexpr (depth > 1) {
-				assert(not empty(diag_ptr));
+				assert(not empty());
 				do {
-					++iter;
+					++iter_;
 				} while (not ended() and not retrieveSubDiagonalValue());
 			} else {
-				++diag.iter;
+				++iter_;
 			}
 			return *this;
 		}
 
-		std::pair<key_part_type, IterValue> operator*() const{
-			return {iter->first, value_};
-		}
-
-	   static void inc(void *diag_ptr) {
-		   reinterpret_cast<HashDiagonal *>(diag_ptr)->operator++();
-		}
-
-		operator(bool) const noexcept {
-			return iter != end;
+		operator bool() const noexcept {
+			return iter_ != end_;
 		}
 
 		bool ended() const noexcept {
 			return not bool(*this);
 		}
 
-		static bool ended_static(void const *diag_ptr) {
-			return reinterpret_cast<HashDiagonal const *>(diag_ptr)->ended();
+		bool empty() const noexcept {
+			return nodec_->empty();
 		}
 
 		size_t size() const noexcept {
 
-			if constexpr (depth > 1) {
-				const auto min_card_pos = diag.rawboolhypertrie.minCardPos();
-				return diag.rawboolhypertrie.edges[min_card_pos].size();
-			} else {
-				return diag.rawboolhypertrie.size();
-			}
-		}
+			if (not empty()) {
+				if constexpr (depth > 1) {
 
-		static size_t size_static(void const *diag_ptr) {
-			reinterpret_cast<HashDiagonal const *>(diag_ptr)->size();
+					const auto min_card_pos = nodec_->uncompressed_node()->minCardPos(diag_poss_);
+					return nodec_->uncompressed_node()->edges(min_card_pos).size();
+
+				} else {
+					return nodec_->uncompressed_node()->size();
+				}
+			} else {
+				return 0UL;
+			}
 		}
 	};
 

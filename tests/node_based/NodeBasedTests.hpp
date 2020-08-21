@@ -3,6 +3,7 @@
 #include "TestHypertrie.hpp"
 #include "TestNode.hpp"
 #include "TestNodeContainer.hpp"
+#include "TestRawIterator.hpp"
 #include "TestRawDiagonal.hpp"
 #include "TestNodeContext.hpp"
 #include "TestNodeContextRandomized.hpp"

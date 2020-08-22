@@ -60,15 +60,16 @@ namespace hypertrie::internal::node_based::raw {
 
 		HashDiagonal &begin() {
 			if constexpr (depth > 1) {
-				const auto min_card_pos = [&]() {
+				const size_t min_card_pos = [&]() {
 					if constexpr (diag_depth > 1)
 						return nodec_->uncompressed_node()->minCardPos(diag_poss_);
 					else // diag_depth == 1
-						for (auto pos : iter::range(diag_poss_.size()))
+						for (const size_t pos : iter::range(diag_poss_.size()))
 							if (diag_poss_[pos])
 								return pos;
+					assert(false); return 0UL;
 				}();
-				// generate the diagonal positions mask to apply the diagonal to the values of iter_
+				// generate the sub_diag_poss_ diagonal positions mask to apply the diagonal to the values of iter_
 				if constexpr (diag_depth > 1) {
 					bool skipped = false;
 					for(auto pos : iter::range(diag_poss_.size()))
@@ -82,14 +83,14 @@ namespace hypertrie::internal::node_based::raw {
 				const auto &min_dim_edges = nodec_->uncompressed_node()->edges(min_card_pos);
 				iter_ = min_dim_edges.begin();
 				end_ = min_dim_edges.end();
-				if (not ended()) {
-					if (not retrieveSubDiagonalValue()) {
+				if constexpr (diag_depth > 1)
+					if (not ended() and not retrieveSubDiagonalValue())
 						++(*this);
-					}
-				}
-			} else {
+			} else { // depth == 1
 				iter_ = nodec_->uncompressed_node()->edges(0).begin();
 				end_ = nodec_->uncompressed_node()->edges(0).end();
+				if constexpr (tri::is_bool_valued)
+					value_ = not ended();
 			}
 			return *this;
 		}
@@ -110,7 +111,7 @@ namespace hypertrie::internal::node_based::raw {
 			key_part_type key_part = iter_->first;
 			value_ = node_context_->template diagonal_slice<depth - 1, diag_depth>(child_node, sub_diag_poss_, key_part, *internal_compressed_node);
 			if constexpr(result_depth == 0)
-				return value_ != IterValue{};
+				return value_ != value_type{};
 			else
 				return not value_.first.empty();
 		} 
@@ -118,7 +119,7 @@ namespace hypertrie::internal::node_based::raw {
 		bool find(key_part_type key_part) {
 			this->operator[](key_part);
 			if constexpr(result_depth == 0)
-				return value_ != IterValue{};
+				return value_ != value_type{};
 			else
 				return not value_.first.empty();
 		}
@@ -131,16 +132,26 @@ namespace hypertrie::internal::node_based::raw {
 				return iter_->first;
 		}
 
-		const IterValue &currentValue() const {
-			return value_;
+		auto currentValue() const {
+			if constexpr (depth == 1){
+				if constexpr (tri::is_bool_valued)
+					return value_;
+				else
+					return std::make_pair(node_context_->storage.template getNode<depth -1>(iter_->second),true);
+			} else {
+				if constexpr (diag_depth > 1)
+					return value_;
+				else
+					return std::make_pair(node_context_->storage.template getNode<depth -1>(iter_->second),true);
+			}
 		}
 
-		std::pair<std::reference_wrapper<const key_part_type>,std::reference_wrapper<const IterValue>> operator*() const{
-			return std::make_pair(currentKeyPart(), value_);
+		std::pair<key_part_type,IterValue> operator*() const{
+			return std::make_pair(currentKeyPart(), currentValue());
 		}
 
 		HashDiagonal& operator++(){
-			if constexpr (depth > 1) {
+			if constexpr (diag_depth > 1) {
 				assert(not empty());
 				do {
 					++iter_;

@@ -208,8 +208,6 @@ namespace hypertrie::internal::node_based::raw {
 		using DiagonalPositions = typename tri::template DiagonalPositions<depth>;
 
 	private:
-		using child_iterator = typename UncompressedNode<depth, tri>::ChildrenType::const_iterator;
-
 		using IterValue = std::conditional_t<
 				(result_depth > 0),
 				std::pair<NodeContainer<result_depth, tri>, bool>,
@@ -223,6 +221,8 @@ namespace hypertrie::internal::node_based::raw {
 		std::pair<key_part_type, IterValue> value_;
 		bool ended_ = true;
 		bool contains;
+
+	public:
 
 		explicit HashDiagonal(CompressedNodeContainer<depth, tri> &nodec, DiagonalPositions diag_poss) : nodec_{&nodec}
 		, diag_poss_(diag_poss) {
@@ -238,16 +238,34 @@ namespace hypertrie::internal::node_based::raw {
 			}();
 			
 			contains = [&]() {
-				if constexpr (diag_depth <= 1 ){
+				if constexpr (depth == 1){
 					return true;
 				} else {
-					auto diag_result = this->node_context_->template diagonal_slice<depth, diag_depth>(*nodec_, diag_poss_, this->key_part, *internal_compressed_node);
+					// set key
+					const auto &key = nodec_->compressed_node()->key();
+					bool contains = true;
+					size_t res_pos = 0;
+					for(auto pos : iter::range(depth))
+						if (this->diag_poss_[pos]) {
+							if (key[pos] != value_.first){
+							contains = false;
+							break;
+							}
+						} else {
+							if constexpr (result_depth != 0)
+								internal_compressed_node.key()[res_pos++] = key[any_diag_pos];
+						}
+					// set value
+					if constexpr(not tri::is_bool_valued)
+						internal_compressed_node.value() = nodec_->compressed_node()->value();
+
+					value_.second.first.hash() = TensorHash().addFirstEntry(internal_compressed_node.key(), internal_compressed_node.value());
+					value_.second.first.compressed_node() = &internal_compressed_node;
+					value_.second.second = true;
 					if constexpr (result_depth == 0) {
-						value_.second = {diag_result.first,true};
 						return value_.second != value_type{};
 					} else {
-						value_.second = {diag_result.first,true};
-						return value_.second.empty();
+						return not value_.second.first.empty();
 					}
 				}
 			}();

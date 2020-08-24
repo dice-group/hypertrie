@@ -193,6 +193,119 @@ namespace hypertrie::internal::node_based::raw {
 
 	template<size_t diag_depth, size_t depth, HypertrieInternalTrait tri_t>
 	class HashDiagonal<diag_depth, depth, NodeCompression::compressed, tri_t> {
+		static constexpr const size_t result_depth = depth - diag_depth;
+
+	public:
+		using tri = tri_t;
+		using tr = typename tri::tr;
+		using key_part_type = typename tri::key_part_type;
+		using value_type = typename tri::value_type;
+		template<typename key, typename value>
+		using map_type = typename tri::template map_type<key, value>;
+		template<typename key>
+		using set_type = typename tri::template set_type<key>;
+
+		using DiagonalPositions = typename tri::template DiagonalPositions<depth>;
+
+	private:
+		using child_iterator = typename UncompressedNode<depth, tri>::ChildrenType::const_iterator;
+
+		using IterValue = std::conditional_t<
+				(result_depth > 0),
+				std::pair<NodeContainer<result_depth, tri>, bool>,
+		value_type>;
+
+	private:
+		CompressedNodeContainer<depth, tri> *nodec_;
+		DiagonalPositions diag_poss_;
+
+		CompressedNode<(result_depth>0)?result_depth :1, tri> internal_compressed_node;
+		std::pair<key_part_type, IterValue> value_;
+		bool ended_ = true;
+		bool contains;
+
+		explicit HashDiagonal(CompressedNodeContainer<depth, tri> &nodec, DiagonalPositions diag_poss) : nodec_{&nodec}
+		, diag_poss_(diag_poss) {
+			size_t any_diag_pos = 0;
+			for (; any_diag_pos< diag_depth; ++any_diag_pos)
+				if (diag_poss_[any_diag_pos])
+					break;
+			value_.first = [&]() { // key_part
+				if constexpr (depth == 1 and diag_depth == 1 and tri::is_bool_valued and tri::is_lsb_unused)
+					return nodec_->hash().getKeyPart();
+				else
+					return nodec_->compressed_node()->key()[any_diag_pos];
+			}();
+			
+			contains = [&]() {
+				if constexpr (diag_depth <= 1 ){
+					return true;
+				} else {
+					auto diag_result = this->node_context_->template diagonal_slice<depth, diag_depth>(*nodec_, diag_poss_, this->key_part, *internal_compressed_node);
+					if constexpr (result_depth == 0) {
+						value_.second = {diag_result.first,true};
+						return value_.second != value_type{};
+					} else {
+						value_.second = {diag_result.first,true};
+						return value_.second.empty();
+					}
+				}
+			}();
+		}
+
+		HashDiagonal &begin() {
+			if (contains)
+				ended_ = false;
+			return *this;
+		}
+
+		bool end() const {
+			return false;
+		}
+
+		auto operator[](key_part_type key_part){
+			return value_.second;
+		}
+
+	public:
+		bool find(key_part_type key_part) {
+			return  (key_part == value_.first);
+		}
+
+
+		const key_part_type &currentKeyPart() const {
+			return value_.first;
+		}
+
+		auto currentValue() const {
+			return value_.second;
+		}
+
+		const std::pair<key_part_type,IterValue> &operator*() const{
+			return value_;
+		}
+
+		HashDiagonal& operator++(){
+			ended_ = true;
+			return *this;
+		}
+
+		operator bool() const noexcept {
+			return not ended_;
+		}
+
+		bool ended() const noexcept {
+			return ended_;
+		}
+
+		bool empty() const noexcept {
+			return not contains;
+		}
+
+		size_t size() const noexcept {
+
+			return size_t(contains);
+		}
 	};
 
 };

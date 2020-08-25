@@ -10,6 +10,7 @@
 #include "Dice/hypertrie/internal/node_based/raw/storage/RekNodeModification.hpp"
 #include "Dice/hypertrie/internal/util/CONSTANTS.hpp"
 
+#include <Dice/hypertrie/internal/node_based/raw/iterator/IterationNodeContainer.hpp>
 #include <itertools.hpp>
 
 namespace hypertrie::internal::node_based::raw {
@@ -254,22 +255,21 @@ namespace hypertrie::internal::node_based::raw {
 		}
 
 	public:
-		template<size_t depth, size_t fixed_keyparts>
-		auto diagonal_slice(const NodeContainer<depth, tri> &nodec, const DiagonalPositions<depth> &diagonal_positions, const key_part_type &key_part, CompressedNode<depth - fixed_keyparts, tri> *contextless_compressed_result = nullptr)
-		-> std::conditional_t<(depth > fixed_keyparts), std::pair<NodeContainer<depth - fixed_keyparts, tri>,bool>, value_type> {
-			return diagonal_slice_rek(nodec, diagonal_positions, key_part, contextless_compressed_result);
+		template<size_t depth, size_t fixed_keyparts, size_t result_depth = depth - fixed_keyparts, typename ccn = std::nullptr_t >
+		auto diagonal_slice(const NodeContainer<depth, tri> &nodec,
+							const DiagonalPositions<depth> &diagonal_positions, const key_part_type &key_part,
+							ccn contextless_compressed_result = nullptr)
+		-> std::conditional_t<(result_depth > 0), IterationNodeContainer<result_depth, tri>, value_type> {
+			return diagonal_slice_rek<depth, fixed_keyparts>(nodec, diagonal_positions, key_part, contextless_compressed_result);
 		}
 
 
 	private:
-		template<size_t current_depth, size_t fixed_keyparts, size_t offset = 0>
-		auto diagonal_slice_rek(const NodeContainer<current_depth, tri> &nodec, const DiagonalPositions<current_depth + offset> &diagonal_positions, const key_part_type &key_part, CompressedNode<current_depth - fixed_keyparts + offset, tri> *contextless_compressed_result = nullptr,
+		template<size_t current_depth, size_t fixed_keyparts, size_t offset = 0, size_t result_depth = current_depth - fixed_keyparts + offset, typename ccn = std::nullptr_t >
+		auto diagonal_slice_rek(const NodeContainer<current_depth, tri> &nodec, const DiagonalPositions<current_depth + offset> &diagonal_positions, const key_part_type &key_part, ccn contextless_compressed_result = nullptr,
 								size_t key_pos = 0)
-		-> std::conditional_t<(current_depth - fixed_keyparts + offset > 0),
-				std::pair<NodeContainer<current_depth - fixed_keyparts + offset, tri>, bool>,
-				value_type> {
+		-> std::conditional_t<(result_depth > 0), IterationNodeContainer<result_depth, tri>, value_type>  {
 
-			constexpr static const size_t result_depth = current_depth - fixed_keyparts + offset;
 			if constexpr (offset >= fixed_keyparts) // break condition
 				return {nodec, true};
 			else { // recursion
@@ -278,10 +278,14 @@ namespace hypertrie::internal::node_based::raw {
 					while(not diagonal_positions[key_pos])
 						++key_pos;
 					auto child = this->template getChild(uncompressed_nodec, key_pos - offset, key_part);
+					if constexpr (current_depth == 1)
+						return child;
+					else {
 					if (child.empty())
 						return {};
 					else
-						return diagonal_slice_rek<current_depth - 1, fixed_keyparts, offset +1> (child, diagonal_positions, key_part, key_pos);
+						return diagonal_slice_rek<current_depth - 1, fixed_keyparts, offset +1> (child, diagonal_positions, key_part, contextless_compressed_result, key_pos);
+					}
 
 				} else { // nodec.isCompressed()
 					// check if key-parts match the slice key

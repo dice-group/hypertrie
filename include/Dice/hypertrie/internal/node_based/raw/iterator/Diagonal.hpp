@@ -1,6 +1,8 @@
 #ifndef HYPERTRIE_DIAGONAL_HPP
 #define HYPERTRIE_DIAGONAL_HPP
+
 #include <utility>
+#include "Dice/hypertrie/internal/node_based/raw/iterator/IterationNodeContainer.hpp"
 #include "Dice/hypertrie/internal/node_based/raw/storage/NodeContext.hpp"
 #include "Dice/hypertrie/internal/node_based/ConfigHypertrieDepthLimit.hpp"
 #include "Dice/hypertrie/internal/util/IntegralTemplatedTuple.hpp"
@@ -27,20 +29,21 @@ namespace hypertrie::internal::node_based::raw {
 		using set_type = typename tri::template set_type<key>;
 
 		using DiagonalPositions = typename tri::template DiagonalPositions<depth>;
+		using SubDiagonalPositions = typename tri::template DiagonalPositions<(depth>1) ? depth - 1 : 0>;
 
 	private:
 		using child_iterator = typename UncompressedNode<depth, tri>::ChildrenType::const_iterator;
 
 		using IterValue = std::conditional_t<
 				(result_depth > 0),
-				std::pair<NodeContainer<result_depth, tri>, bool>,
+				IterationNodeContainer<result_depth, tri>,
 				value_type>;
 
 	private:
 		UncompressedNodeContainer<depth, tri> *nodec_;
 		NodeContext<hypertrie_depth_limit - 1, tri> *node_context_;
 		DiagonalPositions diag_poss_;
-		DiagonalPositions sub_diag_poss_;
+		SubDiagonalPositions sub_diag_poss_;
 
 		child_iterator iter_;
 		child_iterator end_;
@@ -100,20 +103,26 @@ namespace hypertrie::internal::node_based::raw {
 		}
 
 		auto operator[](key_part_type key_part){
-			value_ = node_context_->template diagonal_slice<depth, diag_depth>(*nodec_, diag_poss_, key_part, *internal_compressed_node);
+			if constexpr (result_depth > 0)
+				value_ = node_context_->template diagonal_slice<depth, diag_depth>(*nodec_, diag_poss_, key_part, &internal_compressed_node);
+			else
+				value_ = node_context_->template diagonal_slice<depth, diag_depth>(*nodec_, diag_poss_, key_part);
 			return value_;
 		}
 		
 	private:
 		bool retrieveSubDiagonalValue() {
 			static_assert(diag_depth > 1);
-			NodeContainer<depth - 1, tri> child_node = node_context_->storage.getNode(iter_->second);
+			NodeContainer<depth - 1, tri> child_node = node_context_->storage.template getNode<depth - 1>(iter_->second);
 			key_part_type key_part = iter_->first;
-			value_ = node_context_->template diagonal_slice<depth - 1, diag_depth>(child_node, sub_diag_poss_, key_part, *internal_compressed_node);
+			if constexpr (result_depth > 0)
+				value_ = node_context_->template diagonal_slice<depth - 1, diag_depth - 1>(child_node, sub_diag_poss_, key_part, &internal_compressed_node);
+			else
+				value_ = node_context_->template diagonal_slice<depth - 1, diag_depth - 1>(child_node, sub_diag_poss_, key_part);
 			if constexpr(result_depth == 0)
 				return value_ != value_type{};
 			else
-				return not value_.first.empty();
+				return not value_.nodec.empty();
 		} 
 	public:
 		bool find(key_part_type key_part) {
@@ -121,7 +130,7 @@ namespace hypertrie::internal::node_based::raw {
 			if constexpr(result_depth == 0)
 				return value_ != value_type{};
 			else
-				return not value_.first.empty();
+				return not value_.nodec.empty();
 		}
 
 
@@ -137,12 +146,14 @@ namespace hypertrie::internal::node_based::raw {
 				if constexpr (tri::is_bool_valued)
 					return value_;
 				else
-					return std::make_pair(node_context_->storage.template getNode<depth -1>(iter_->second),true);
+					return IterationNodeContainer<result_depth, tri>
+					        {node_context_->storage.template getNode<depth -1>(iter_->second),true};
 			} else {
 				if constexpr (diag_depth > 1)
 					return value_;
 				else
-					return std::make_pair(node_context_->storage.template getNode<depth -1>(iter_->second),true);
+					return IterationNodeContainer<result_depth, tri>
+					        {node_context_->storage.template getNode<depth -1>(iter_->second),true};
 			}
 		}
 
@@ -210,7 +221,7 @@ namespace hypertrie::internal::node_based::raw {
 	private:
 		using IterValue = std::conditional_t<
 				(result_depth > 0),
-				std::pair<NodeContainer<result_depth, tri>, bool>,
+				IterationNodeContainer<result_depth, tri>,
 		value_type>;
 
 	private:
@@ -224,8 +235,8 @@ namespace hypertrie::internal::node_based::raw {
 
 	public:
 
-		explicit HashDiagonal(CompressedNodeContainer<depth, tri> &nodec, DiagonalPositions diag_poss) : nodec_{&nodec}
-		, diag_poss_(diag_poss) {
+		HashDiagonal(CompressedNodeContainer<depth, tri> &nodec, DiagonalPositions diag_poss)
+			: nodec_{&nodec}, diag_poss_(diag_poss) {
 			size_t any_diag_pos = 0;
 			for (; any_diag_pos< diag_depth; ++any_diag_pos)
 				if (diag_poss_[any_diag_pos])
@@ -239,6 +250,7 @@ namespace hypertrie::internal::node_based::raw {
 			
 			contains = [&]() {
 				if constexpr (depth == 1){
+					value_.second = nodec_->compressed_node()->value();
 					return true;
 				} else {
 					// set key
@@ -259,13 +271,17 @@ namespace hypertrie::internal::node_based::raw {
 					if constexpr(not tri::is_bool_valued)
 						internal_compressed_node.value() = nodec_->compressed_node()->value();
 
-					value_.second.first.hash() = TensorHash().addFirstEntry(internal_compressed_node.key(), internal_compressed_node.value());
-					value_.second.first.compressed_node() = &internal_compressed_node;
-					value_.second.second = true;
+					if constexpr (result_depth > 0){
+						value_.second.nodec.hash() = TensorHash().addFirstEntry(internal_compressed_node.key(), internal_compressed_node.value());
+						value_.second.nodec.compressed_node() = &internal_compressed_node;
+						value_.second.is_managed = true;
+					} else {
+						value_.second = nodec_->compressed_node()->value();
+					}
 					if constexpr (result_depth == 0) {
 						return value_.second != value_type{};
 					} else {
-						return not value_.second.first.empty();
+						return not value_.second.nodec.empty();
 					}
 				}
 			}();
@@ -281,8 +297,11 @@ namespace hypertrie::internal::node_based::raw {
 			return false;
 		}
 
-		auto operator[](key_part_type key_part){
-			return value_.second;
+		IterValue operator[](key_part_type key_part){
+			if (value_.first == key_part)
+				return value_.second;
+			else
+				return {};
 		}
 
 	public:

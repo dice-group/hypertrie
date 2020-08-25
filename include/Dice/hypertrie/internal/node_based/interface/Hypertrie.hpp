@@ -108,7 +108,18 @@ namespace hypertrie::internal::node_based {
 
 		[[nodiscard]] std::vector<size_t> getCards(const std::vector<pos_type> &positions) const;
 
-		[[nodiscard]] size_t size() const;
+		[[nodiscard]] size_t size() const{
+			return compiled_switch<hypertrie_depth_limit, 1>::switch_(
+					this->depth_,
+					[&](auto depth_arg)  -> size_t {
+					  const auto &node_container = *reinterpret_cast<const raw::NodeContainer<depth_arg, tri> *>(&this->node_container_);
+					  if (node_container.isCompressed())
+							return node_container.compressed_node()->size();
+						else
+							return node_container.uncompressed_node()->size();
+					},
+					[]() -> size_t { assert(false); return 0; });
+		}
 
 		[[nodiscard]] constexpr bool empty() const noexcept {
 			return this->node_container_.hash_sized == 0;

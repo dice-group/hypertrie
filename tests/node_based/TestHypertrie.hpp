@@ -82,6 +82,35 @@ namespace hypertrie::tests::node_based::node_context {
 
 	}
 
+	TEST_CASE("test_diagonal", "[BoolHypertrie]") {
+		using tr = default_bool_Hypertrie_t;
+		constexpr const size_t depth = 4;
+		using key_part_type = typename tr::key_part_type;
+		using value_type = typename tr::value_type;
+
+		utils::EntryGenerator<depth, key_part_type, value_type,1,15> gen{};
+		auto keys = gen.keys(150);
+
+//		std::cout << keys << std::endl;
+		{
+		HypertrieContext<tr> context;
+		Hypertrie<tr> t{depth, context};
+			t.set({1,2,3,4}, true);
+			HashDiagonal d{t,{2}};
+			d.begin();
+			std::cout << d.currentKeyPart() << std::endl;
+			auto value = d.currentHypertrie();
+			std::cout << std::string(value) << std::endl;
+			++d;
+			REQUIRE(d == d.end());
+			FAIL("that result is very wrong.");
+
+//			for(auto entry : HashDiagonal{t,{2}})
+//				std::cout << "entry.first" << entry.first << std:: endl;
+		}
+
+	}
+
 	TEST_CASE("test_slice", "[BoolHypertrie]") {
 		using tr = default_bool_Hypertrie_t;
 		constexpr const size_t depth = 4;

@@ -210,6 +210,10 @@ namespace hypertrie::internal::node_based {
 			return not raw_methods->ended(raw_hash_diagonal);
 		}
 
+		bool ended() const {
+			return raw_methods->ended(raw_hash_diagonal);
+		}
+
 		bool operator==(bool other) const {
 			return bool(*this) == other;
 		}

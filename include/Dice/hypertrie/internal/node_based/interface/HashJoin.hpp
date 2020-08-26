@@ -3,31 +3,28 @@
 
 #include <utility>
 
-#include "Dice/hypertrie/internal/BoolHypertrie.hpp"
+#include "Dice/hypertrie/internal/node_based/interface/Hypertrie.hpp"
 #include "Dice/hypertrie/internal/util/PermutationSort.hpp"
 #include "Dice/hypertrie/internal/util/CONSTANTS.hpp"
-#include "Dice/hypertrie/internal/container/TslMap.hpp"
-#include "Dice/hypertrie/internal/container/BoostFlatSet.hpp"
-#include "Dice/hypertrie/internal/util/CONSTANTS.hpp"
-#include "Dice/hypertrie/internal/Join_impl.hpp"
+#include "Dice/hypertrie/internal/util/FrontSkipIterator.hpp"
 
 
 
 
-namespace hypertrie::internal {
+namespace hypertrie::internal::node_based {
 
-	template<typename key_part_type,
-			template<typename, typename> class map_type,
-			template<typename> class set_type>
+	template<HypertrieTrait tr>
 	class HashJoin {
+		using key_part_type = typename tr::key_part_type;
+		using value_type = typename tr::value_type;
 
 	public:
-		using const_BoolHypertrie = typename interface::boolhypertrie<key_part_type, map_type, set_type>::const_BoolHypertrie;
-		using Diagonal = typename interface::boolhypertrie<key_part_type, map_type, set_type>::HashDiagonal;
+		using const_Hypertrie = typename node_based::const_Hypertrie<tr>;
+		using Diagonal = typename node_based::HashDiagonal<tr>;
 		using poss_type = std::vector<pos_type>;
 
 	private:
-		std::vector<const_BoolHypertrie> hypertries;
+		std::vector<const_Hypertrie> hypertries;
 		std::vector<poss_type> positions;
 
 	public:
@@ -39,14 +36,14 @@ namespace hypertrie::internal {
 		HashJoin(const HashJoin &) = default;
 
 
-		HashJoin(std::vector<const_BoolHypertrie> hypertries, std::vector<poss_type> positions)
+		HashJoin(std::vector<const_Hypertrie> hypertries, std::vector<poss_type> positions)
 				: hypertries(std::move(hypertries)), positions(std::move(positions)) {}
 
 		class iterator {
 
 		public:
 			using iterator_category = std::forward_iterator_tag;
-			using value_type = std::pair<std::vector<const_BoolHypertrie>, key_part_type>;
+			using value_type = std::pair<std::vector<const_Hypertrie>, key_part_type>;
 			using difference_type = ptrdiff_t;
 			using pointer = value_type *;
 			using reference = value_type &;
@@ -82,13 +79,13 @@ namespace hypertrie::internal {
 						}
 					} else {
 						assert(hypertrie.depth() != 0); // TODO: currently not possible
-						value.first.push_back(hypertrie); // this stays unchanged during the itration
+						value.first.push_back(hypertrie); // this stays unchanged during the iteration
 						++out_pos;
 					}
 				}
 				optimizeOperandOrder();
 				raw_outs.resize(ops.size());
-				ops.front().init();
+				ops.front().begin();
 				next();
 			}
 
@@ -98,14 +95,14 @@ namespace hypertrie::internal {
 				// _current_key_part is increased if containsAndUpdateLower returns false
 				Diagonal &smallest_operand = ops.front();
 
-				while (not smallest_operand.empty()) {
+				while (not smallest_operand.ended()) {
 
 					value.second = smallest_operand.currentKeyPart();
 
 					found = true;
 					// iterate all but the first Diagonal
 					for (const auto &operand: util::skip<1>(ops)) {
-						if (not operand.contains(value.second)) {
+						if (not operand.find(value.second)) {
 							found = false;
 							break;
 						}
@@ -113,7 +110,7 @@ namespace hypertrie::internal {
 					if (found) {
 						for (const auto &[op_pos, raw_op_ptr]: iter::enumerate(raw_outs)) {
 							if (const auto &result_depth = result_depths[op_pos]; result_depth)
-								value.first[pos_in_out[op_pos]] = const_BoolHypertrie::instance(result_depth, ops[op_pos].currentValue());
+								value.first[pos_in_out[op_pos]] = const_Hypertrie::instance(result_depth, ops[op_pos].currentValue());
 						}
 						++smallest_operand;
 						return;

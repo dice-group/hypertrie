@@ -1,5 +1,6 @@
 #ifndef HYPERTRIE_FRONTSKIPITERATOR_HPP
 #define HYPERTRIE_FRONTSKIPITERATOR_HPP
+#include <iterator>
 
 namespace hypertrie::internal::util {
 	namespace {

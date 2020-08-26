@@ -98,14 +98,39 @@ namespace hypertrie::tests::node_based::node_context {
 			t.set({1,2,3,4}, true);
 			HashDiagonal d{t,{2}};
 			d.begin();
-			std::cout << d.currentKeyPart() << std::endl;
-			auto value = d.currentHypertrie();
-			std::cout << std::string(value) << std::endl;
+			REQUIRE(d != d.end());
+			std::cout << d.currentKeyPart() <<" → " << std::string(d.currentHypertrie())  << std::endl;
 			++d;
 			REQUIRE(d == d.end());
+		}
 
-//			for(auto entry : HashDiagonal{t,{2}})
-//				std::cout << "entry.first" << entry.first << std:: endl;
+		{
+			HypertrieContext<tr> context;
+			Hypertrie<tr> t{depth, context};
+			t.set({1,5,3,4}, true);
+			t.set({1,2,3,4}, true);
+			HashDiagonal d{t,{1}};
+			d.begin();
+			REQUIRE(d != d.end());
+			std::cout << d.currentKeyPart() <<" → " << std::string(d.currentHypertrie())  << std::endl;
+			++d;
+			REQUIRE(d != d.end());
+			std::cout << d.currentKeyPart() <<" → " << std::string(d.currentHypertrie())  << std::endl;
+			++d;
+			REQUIRE(d == d.end());
+		}
+
+		{
+			HypertrieContext<tr> context;
+			Hypertrie<tr> t{depth, context};
+			t.set({1,5,3,4}, true);
+			t.set({1,2,3,4}, true);
+			HashDiagonal d{t,{3}};
+			d.begin();
+			REQUIRE(d != d.end());
+			std::cout << d.currentKeyPart() <<" → " << std::string(d.currentHypertrie())  << std::endl;
+			++d;
+			REQUIRE(d == d.end());
 		}
 
 	}

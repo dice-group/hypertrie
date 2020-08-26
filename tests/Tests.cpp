@@ -2,11 +2,11 @@
 
 #include <catch2/catch.hpp>
 
-#include "TestRawBoolhypertrie.cpp"
-#include "TestRawDiagonal.cpp"
-#include "TestBoolHypertrie.cpp"
-#include "TestHashDiagonal.cpp"
-#include "TestHashJoin.cpp"
+//#include "TestRawBoolhypertrie.cpp"
+//#include "TestRawDiagonal.cpp"
+//#include "TestBoolHypertrie.cpp"
+//#include "TestHashDiagonal.cpp"
+//#include "TestHashJoin.cpp"
 
 #include "node_based/NodeBasedTests.hpp"
 #ifdef HYPERTRIE_ENABLE_LIBTORCH

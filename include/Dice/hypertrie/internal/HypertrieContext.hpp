@@ -9,14 +9,14 @@
 #include <memory>
 
 
-namespace hypertrie::internal {
+namespace hypertrie {
 
 	template<HypertrieTrait tr = default_bool_Hypertrie_t>
 	class HypertrieContext {
 	private:
 		static constexpr const size_t depth_ = hypertrie_depth_limit -1;
 	public:
-		using NodeContext = typename raw::template NodeContext<depth_, typename raw::template Hypertrie_internal_t<tr>>;
+		using NodeContext = typename internal::raw::template NodeContext<depth_, typename internal::raw::template Hypertrie_internal_t<tr>>;
 
 	public:
 		NodeContext raw_context{};

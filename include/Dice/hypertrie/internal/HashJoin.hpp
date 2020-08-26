@@ -9,7 +9,7 @@
 #include "Dice/hypertrie/internal/Hypertrie.hpp"
 
 
-namespace hypertrie::internal {
+namespace hypertrie {
 
 	template<HypertrieTrait tr>
 	class HashJoin {
@@ -99,7 +99,7 @@ namespace hypertrie::internal {
 
 					found = true;
 					// iterate all but the first Diagonal
-					for (const auto &operand: util::skip<1>(ops)) {
+					for (const auto &operand: internal::util::skip<1>(ops)) {
 						if (not operand.find(value.second)) {
 							found = false;
 							break;
@@ -134,10 +134,11 @@ namespace hypertrie::internal {
 
 		private:
 			void optimizeOperandOrder() {
-				const auto permutation = util::sort_permutation::get<Diagonal>(ops);
-				util::sort_permutation::apply(ops, permutation);
-				util::sort_permutation::apply(pos_in_out, permutation);
-				util::sort_permutation::apply(result_depths, permutation);
+				using namespace internal::util;
+				const auto permutation = sort_permutation::get<Diagonal>(ops);
+				sort_permutation::apply(ops, permutation);
+				sort_permutation::apply(pos_in_out, permutation);
+				sort_permutation::apply(result_depths, permutation);
 			}
 
 		};

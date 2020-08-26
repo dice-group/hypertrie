@@ -5,21 +5,21 @@
 #include "Dice/hypertrie/internal/HypertrieContext.hpp"
 #include "Dice/hypertrie/internal/Hypertrie_predeclare.hpp"
 
-namespace hypertrie::internal {
+namespace hypertrie {
 
 	template<HypertrieTrait tr_t = default_bool_Hypertrie_t>
 	class HashDiagonal {
 		using tr = tr_t;
-		using tri = raw::Hypertrie_internal_t<tr>;
-		using NodeContainer = typename raw::RawNodeContainer;
+		using tri = internal::raw::Hypertrie_internal_t<tr>;
+		using NodeContainer = typename internal::raw::RawNodeContainer;
 		using KeyPositions = typename tr::KeyPositions;
 		template <size_t depth>
 		using RawKeyPositions = typename  tri::template DiagonalPositions<depth>;
 		using key_part_type = typename tr::key_part_type;
 		using value_type = typename tr::value_type;
-		using NodeCompression = typename raw::NodeCompression;
+		using NodeCompression = typename internal::raw::NodeCompression;
 		template <size_t diag_depth, size_t depth, NodeCompression compression>
-		using RawHashDiagonal = typename raw::template HashDiagonal<diag_depth, depth, compression, tri>;
+		using RawHashDiagonal = typename internal::raw::template HashDiagonal<diag_depth, depth, compression, tri>;
 	protected:
 		using Key = typename tr::Key;
 
@@ -53,7 +53,7 @@ namespace hypertrie::internal {
 			return RawMethods(
 					// construct
 					[](const const_Hypertrie<tr> &hypertrie, const KeyPositions &diagonal_poss) -> void * {
-				using NodecType = typename raw::template SpecificNodeContainer<depth, compression, tri>;
+				using NodecType = typename internal::raw::template SpecificNodeContainer<depth, compression, tri>;
 
 				RawKeyPositions<depth> raw_diag_poss;
 				for (auto pos : diagonal_poss)
@@ -91,7 +91,7 @@ namespace hypertrie::internal {
 					if (value.is_managed) {
 						return const_Hypertrie<tr>(result_depth, context, {value.nodec.hash().hash(), value.nodec.node()});
 					} else {
-						return const_Hypertrie<tr>(result_depth, nullptr, {value.nodec.hash().hash(), new raw::CompressedNode<result_depth, tri>(*value.nodec.compressed_node())});
+						return const_Hypertrie<tr>(result_depth, nullptr, {value.nodec.hash().hash(), new internal::raw::CompressedNode<result_depth, tri>(*value.nodec.compressed_node())});
 					}
 				} else {
 					assert(false);
@@ -132,6 +132,7 @@ namespace hypertrie::internal {
 		}
 
 		inline static const std::vector<std::vector<std::vector<RawMethods>>> raw_method_cache = []() {
+			using namespace internal;
 		  std::vector<std::vector<std::vector<RawMethods>>> raw_methods(2);
 			raw_methods[0] = std::vector<std::vector<RawMethods>>(hypertrie_depth_limit);
 			raw_methods[1] = std::vector<std::vector<RawMethods>>(hypertrie_depth_limit);

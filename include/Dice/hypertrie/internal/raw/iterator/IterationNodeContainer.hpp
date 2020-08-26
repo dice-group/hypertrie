@@ -4,7 +4,7 @@
 #include "Dice/hypertrie/internal/raw/Hypertrie_internal_traits.hpp"
 #include "Dice/hypertrie/internal/raw/node/NodeContainer.hpp"
 
-namespace hypertrie::internal::node_based::raw {
+namespace hypertrie::internal::raw {
 
 	/**
 	 * Container for results of Diagonal and Iterator.

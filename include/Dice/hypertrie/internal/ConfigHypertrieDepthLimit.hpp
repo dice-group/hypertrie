@@ -2,7 +2,7 @@
 #define HYPERTRIE_CONFIGHYPERTRIEDEPTHLIMIT_HPP
 #include <cctype>
 
-namespace hypertrie::internal::node_based {
+namespace hypertrie::internal {
 static constexpr const std::size_t hypertrie_depth_limit = 6;
 }
 #endif//HYPERTRIE_CONFIGHYPERTRIEDEPTHLIMIT_HPP

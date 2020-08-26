@@ -9,13 +9,13 @@
 #include "../utils/AssetGenerator.hpp"
 #include "../utils/NameOfType.hpp"
 #include "TestTensor.hpp"
-namespace hypertrie::tests::node_based::raw::node_context::diagonal_test {
+namespace hypertrie::tests::raw::node_context::diagonal_test {
 
 	using namespace hypertrie::tests::utils;
 
-	using namespace hypertrie::internal::node_based::raw;
+	using namespace hypertrie::internal::raw;
 
-	using namespace hypertrie::internal::node_based;
+	using namespace hypertrie::internal;
 
 
 	TEST_CASE("bool depth 1 uncompressed d", "[raw diagonal]") {
@@ -37,7 +37,7 @@ namespace hypertrie::tests::node_based::raw::node_context::diagonal_test {
 
 		typename tri::DiagonalPositions<depth> diag_poss {true};
 
-		auto diag = hypertrie::internal::node_based::raw::HashDiagonal<1,depth, NodeCompression::uncompressed, tri>(nc, diag_poss, context);
+		auto diag = hypertrie::internal::raw::HashDiagonal<1,depth, NodeCompression::uncompressed, tri>(nc, diag_poss, context);
 
 		for(auto res : diag){
 			key_part_type k =  res.first;
@@ -71,7 +71,7 @@ namespace hypertrie::tests::node_based::raw::node_context::diagonal_test {
 		std::cout << "0:" << diag_poss[0] << std::endl;
 		std::cout << "1:" << diag_poss[1] << std::endl;
 
-		auto diag = hypertrie::internal::node_based::raw::HashDiagonal<1,depth, NodeCompression::uncompressed, tri>(nc, diag_poss, context);
+		auto diag = hypertrie::internal::raw::HashDiagonal<1,depth, NodeCompression::uncompressed, tri>(nc, diag_poss, context);
 
 		for(auto res : diag){
 			key_part_type k =  res.first;
@@ -102,7 +102,7 @@ namespace hypertrie::tests::node_based::raw::node_context::diagonal_test {
 		std::cout << "1:" << diag_poss[1] << std::endl;
 
 		auto c_nc = nc.compressed();
-		auto diag = hypertrie::internal::node_based::raw::HashDiagonal<1,depth, NodeCompression::compressed, tri>(c_nc, diag_poss);
+		auto diag = hypertrie::internal::raw::HashDiagonal<1,depth, NodeCompression::compressed, tri>(c_nc, diag_poss);
 
 		for(auto res : diag){
 			key_part_type k =  res.first;

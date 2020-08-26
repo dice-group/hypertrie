@@ -14,7 +14,7 @@
 #include <vector>
 #include <itertools.hpp>
 
-namespace hypertrie::internal::node_based {
+namespace hypertrie::internal {
 
 	template<HypertrieTrait tr>
 	class const_Hypertrie {

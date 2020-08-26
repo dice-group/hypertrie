@@ -10,11 +10,11 @@
 #include "../utils/AssetGenerator.hpp"
 #include "../utils/NameOfType.hpp"
 
-namespace hypertrie::tests::node_based::raw::node {
+namespace hypertrie::tests::raw::node {
 
 	using namespace hypertrie::tests::utils;
 
-	using namespace hypertrie::internal::node_based::raw;
+	using namespace hypertrie::internal::raw;
 
 	template<size_t depth, typename key_part_type>
 	using Key = hypertrie::internal::RawKey<depth, key_part_type>;
@@ -86,6 +86,6 @@ namespace hypertrie::tests::node_based::raw::node {
 		createEmptyUncompressed<default_double_Hypertrie_internal_t, 3>();
 	}
 
-};// namespace hypertrie::tests::node_based::node
+};// namespace hypertrie::tests::node
 
 #endif//HYPERTRIE_TESTNODE_HPP

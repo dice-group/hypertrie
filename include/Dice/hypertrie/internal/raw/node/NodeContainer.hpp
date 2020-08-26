@@ -5,7 +5,7 @@
 #include "Dice/hypertrie/internal/raw/node/NodePtr.hpp"
 #include "Dice/hypertrie/internal/raw/node/TensorHash.hpp"
 
-namespace hypertrie::internal::node_based::raw {
+namespace hypertrie::internal::raw {
 
 	/**
 	 * The sole purpose of this class is to have the same memory layout as a template instantiation of SpecificNodeContainer and NodeContainer.
@@ -177,8 +177,8 @@ namespace hypertrie::internal::node_based::raw {
 
 		operator NodeContainer<depth, tri_t>() const noexcept { return {this->repr_, this->node_ptr_}; }
 		operator NodeContainer<depth, tri_t> &&() const noexcept { return {this->repr_, this->node_ptr_}; }
-	};// namespace hypertrie::internal::node_based
+	};// namespace hypertrie::internal
 
 
-}// namespace hypertrie::internal::node_based
+}// namespace hypertrie::internal
 #endif//HYPERTRIE_NODECONTAINER_HPP

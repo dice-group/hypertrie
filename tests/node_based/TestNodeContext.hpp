@@ -11,13 +11,13 @@
 #include "TestTensor.hpp"
 
 
-namespace hypertrie::tests::node_based::raw::node_context {
+namespace hypertrie::tests::raw::node_context {
 
 	using namespace hypertrie::tests::utils;
 
-	using namespace hypertrie::internal::node_based::raw;
+	using namespace hypertrie::internal::raw;
 
-	using namespace hypertrie::internal::node_based;
+	using namespace hypertrie::internal;
 
 	template<size_t depth, typename key_part_type>
 	using Key = hypertrie::internal::RawKey<depth, key_part_type>;
@@ -560,6 +560,6 @@ namespace hypertrie::tests::node_based::raw::node_context {
 	}
 
 
-};// namespace hypertrie::tests::node_based::node_context
+};// namespace hypertrie::tests::node_context
 
 #endif//HYPERTRIE_TESTNODECONTEXT_H

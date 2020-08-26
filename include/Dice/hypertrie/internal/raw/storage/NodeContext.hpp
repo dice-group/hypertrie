@@ -13,7 +13,7 @@
 #include <Dice/hypertrie/internal/raw/iterator/IterationNodeContainer.hpp>
 #include <itertools.hpp>
 
-namespace hypertrie::internal::node_based::raw {
+namespace hypertrie::internal::raw {
 
 	template<size_t max_depth,
 			 HypertrieInternalTrait tri_t = Hypertrie_internal_t<>,
@@ -355,6 +355,6 @@ namespace hypertrie::internal::node_based::raw {
 				nodec.uncompressed_node()->size();
 		}
 	};
-}// namespace hypertrie::internal::node_based
+}// namespace hypertrie::internal
 
 #endif//HYPERTRIE_NODECONTEXT_HPP

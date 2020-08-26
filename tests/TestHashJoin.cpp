@@ -13,7 +13,7 @@
 namespace hypertrie::tests::hashjoin {
 	namespace {
 		using namespace fmt::literals;
-		using namespace hypertrie::internal::node_based;
+		using namespace hypertrie::internal;
 		using tr = default_bool_Hypertrie_t ;
 		using Key = typename tr::Key;
 		using SliceKey = typename tr::SliceKey;

@@ -7,7 +7,7 @@
 #include "Dice/hypertrie/internal/container/AllContainer.hpp"
 #include "Dice/hypertrie/internal/util/Key.hpp"
 
-namespace hypertrie::internal::node_based {
+namespace hypertrie::internal {
 
 	template<typename key_part_type_t = unsigned long,
 			 typename value_type_t = bool,
@@ -96,6 +96,6 @@ namespace hypertrie::internal::node_based {
 												   hypertrie::internal::container::tsl_sparse_map,
 												   hypertrie::internal::container::tsl_sparse_set>;
 
-};// namespace hypertrie::internal::node_based
+};// namespace hypertrie::internal
 
 #endif//HYPERTRIE_HYPERTRIE_TRAIT_HPP

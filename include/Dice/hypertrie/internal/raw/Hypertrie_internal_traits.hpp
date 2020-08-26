@@ -5,7 +5,7 @@
 
 #include "Dice/hypertrie/internal/util/RawKey.hpp"
 
-namespace hypertrie::internal::node_based::raw {
+namespace hypertrie::internal::raw {
 
 	template<HypertrieTrait tr_t = default_bool_Hypertrie_t>
 	struct Hypertrie_internal_t {
@@ -124,6 +124,6 @@ namespace hypertrie::internal::node_based::raw {
 	using default_long_Hypertrie_internal_t = Hypertrie_internal_t<default_long_Hypertrie_t>;
 
 	using default_double_Hypertrie_internal_t = Hypertrie_internal_t<default_double_Hypertrie_t>;
-};// namespace hypertrie::internal::node_based
+};// namespace hypertrie::internal
 
 #endif//HYPERTRIE_HYPERTRIE_INTERNAL_TRAITS_HPP

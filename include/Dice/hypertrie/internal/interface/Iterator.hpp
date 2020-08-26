@@ -4,7 +4,7 @@
 #include "Dice/hypertrie/internal/raw/iterator/Iterator.hpp"
 #include "Dice/hypertrie/internal/interface/Hypertrie_predeclare.hpp"
 
-namespace hypertrie::internal::node_based {
+namespace hypertrie::internal {
 
 	template<HypertrieTrait tr_t = default_bool_Hypertrie_t>
 	struct Iterator {

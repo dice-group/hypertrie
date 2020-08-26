@@ -9,7 +9,7 @@
 #include "Dice/hypertrie/internal/interface/Hypertrie.hpp"
 
 
-namespace hypertrie::internal::node_based {
+namespace hypertrie::internal {
 
 	template<HypertrieTrait tr>
 	class HashJoin {
@@ -17,8 +17,8 @@ namespace hypertrie::internal::node_based {
 		using value_type = typename tr::value_type;
 
 	public:
-		using const_Hypertrie = typename node_based::const_Hypertrie<tr>;
-		using Diagonal = typename node_based::HashDiagonal<tr>;
+		using const_Hypertrie = const_Hypertrie<tr>;
+		using Diagonal = HashDiagonal<tr>;
 		using poss_type = std::vector<pos_type>;
 
 	private:

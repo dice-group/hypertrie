@@ -4,7 +4,7 @@
 #include "Dice/hypertrie/internal/ConfigHypertrieDepthLimit.hpp"
 #include "Dice/hypertrie/internal/raw/storage/NodeContext.hpp"
 #include "Dice/hypertrie/internal/util/IntegralTemplatedTuple.hpp"
-namespace hypertrie::internal::node_based::raw {
+namespace hypertrie::internal::raw {
 
 	template<HypertrieInternalTrait tri_t>
 	class base_iterator {
@@ -282,6 +282,6 @@ namespace hypertrie::internal::node_based::raw {
 			}
 		}
 	};
-};// namespace hypertrie::internal::node_based::raw
+};// namespace hypertrie::internal::raw
 
 #endif//HYPERTRIE_RAWITERATOR_HPP

@@ -6,7 +6,7 @@
 #include "Dice/hypertrie/internal/raw/storage/Entry.hpp"
 
 
-namespace hypertrie::internal::node_based::raw {
+namespace hypertrie::internal::raw {
 
 
 	enum struct ModificationOperations : unsigned int {

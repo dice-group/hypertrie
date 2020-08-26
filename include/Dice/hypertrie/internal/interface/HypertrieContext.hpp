@@ -9,7 +9,7 @@
 #include <memory>
 
 
-namespace hypertrie::internal::node_based {
+namespace hypertrie::internal {
 
 	template<HypertrieTrait tr = default_bool_Hypertrie_t>
 	class HypertrieContext {

@@ -7,7 +7,7 @@
 #include "Dice/hypertrie/internal/util/CONSTANTS.hpp"
 #include "Dice/hypertrie/internal/util/IntegralTemplatedTuple.hpp"
 
-namespace hypertrie::internal::node_based::raw {
+namespace hypertrie::internal::raw {
 
 	template<size_t depth,
 			 HypertrieInternalTrait tri_t = Hypertrie_internal_t<>,
@@ -260,6 +260,6 @@ namespace hypertrie::internal::node_based::raw {
 	};
 
 
-}// namespace hypertrie::internal::node_based
+}// namespace hypertrie::internal
 
 #endif//HYPERTRIE_LEVELNODESTORAGE_HPP

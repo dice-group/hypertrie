@@ -4,7 +4,7 @@
 #include "Dice/hypertrie/internal/raw/Hypertrie_internal_traits.hpp"
 
 
-namespace hypertrie::internal::node_based::raw {
+namespace hypertrie::internal::raw {
 
 	template<size_t depth, HypertrieInternalTrait tri_t>
 	struct RawEntry_t{

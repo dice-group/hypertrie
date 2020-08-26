@@ -13,11 +13,11 @@
 #include "TestTensor.hpp"
 
 
-namespace hypertrie::tests::node_based::node_context {
+namespace hypertrie::tests::node_context {
 	using namespace fmt::literals;
 	using namespace hypertrie::tests::utils;
 
-	using namespace hypertrie::internal::node_based;
+	using namespace hypertrie::internal;
 
 
 
@@ -160,6 +160,6 @@ namespace hypertrie::tests::node_based::node_context {
 
 	}
 
-};// namespace hypertrie::tests::node_based::node_context
+};// namespace hypertrie::tests::node_context
 
 #endif//HYPERTRIE_TESTHYPERTRIE_H

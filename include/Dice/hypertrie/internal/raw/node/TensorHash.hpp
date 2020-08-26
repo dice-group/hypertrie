@@ -10,7 +10,7 @@
 #include "Dice/hypertrie/internal/util/PosType.hpp"
 #include "Dice/hypertrie/internal/util/RawKey.hpp"
 
-namespace hypertrie::internal::node_based::raw {
+namespace hypertrie::internal::raw {
 
 	/**
 	 * primitive type representation of TensorHash
@@ -247,24 +247,24 @@ namespace hypertrie::internal::node_based::raw {
 		}
 	};
 
-}// namespace hypertrie::internal::node_based
+}// namespace hypertrie::internal
 
 template<>
-struct fmt::formatter<hypertrie::internal::node_based::raw::TensorHash> {
+struct fmt::formatter<hypertrie::internal::raw::TensorHash> {
 	auto parse(format_parse_context &ctx) {
 		return ctx.begin();
 	}
 
 	template<typename FormatContext>
-	auto format(const hypertrie::internal::node_based::raw::TensorHash &hash, FormatContext &ctx) {
+	auto format(const hypertrie::internal::raw::TensorHash &hash, FormatContext &ctx) {
 			return fmt::format_to(ctx.out(), "{}", (std::string) hash);
 	}
 };
 
 namespace std {
 	template<>
-	struct hash<::hypertrie::internal::node_based::raw::TensorHash> {
-		size_t operator()(const ::hypertrie::internal::node_based::raw::TensorHash &hash) const noexcept {
+	struct hash<::hypertrie::internal::raw::TensorHash> {
+		size_t operator()(const ::hypertrie::internal::raw::TensorHash &hash) const noexcept {
 			return hash.hash();
 		}
 	};

@@ -6,11 +6,11 @@
 #include "../utils/AssetGenerator.hpp"
 
 
-namespace hypertrie::tests::node_based::raw::node_container {
+namespace hypertrie::tests::raw::node_container {
 
 	TEST_CASE("TODO", "[NodeContainer]") {
 	}
 
-};// namespace hypertrie::tests::node_based::node_container
+};// namespace hypertrie::tests::node_container
 
 #endif//HYPERTRIE_TESTNODECONTAINER_H

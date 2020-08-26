@@ -6,7 +6,7 @@
 #include "Dice/hypertrie/internal/util/IntegralTemplatedTuple.hpp"
 #include "Dice/hypertrie/internal/raw/iterator/IterationNodeContainer.hpp"
 #include <utility>
-namespace hypertrie::internal::node_based::raw {
+namespace hypertrie::internal::raw {
 
 	template<size_t diag_depth, size_t depth, NodeCompression compression, HypertrieInternalTrait tri_t>
 	class HashDiagonal;

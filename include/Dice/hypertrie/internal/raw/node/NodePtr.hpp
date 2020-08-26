@@ -3,7 +3,7 @@
 
 #include "Dice/hypertrie/internal/raw/node/Node.hpp"
 
-namespace hypertrie::internal::node_based::raw {
+namespace hypertrie::internal::raw {
 	/**
 	 * NodePtr is a union class of CompressedNode* and UncompressedNode*.
 	 * @tparam depth
@@ -45,6 +45,6 @@ namespace hypertrie::internal::node_based::raw {
 			return *this;
 		}
 	};
-}// namespace hypertrie::internal::node_based
+}// namespace hypertrie::internal
 
 #endif//HYPERTRIE_NODEPTR_HPP

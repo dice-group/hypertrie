@@ -8,7 +8,7 @@
 #include "Dice/hypertrie/internal/raw/node/TensorHash.hpp"
 #include <range.hpp>
 
-namespace hypertrie::internal::node_based::raw {
+namespace hypertrie::internal::raw {
 
 	/**
 	 * A super class to provide counting references in a Node.
@@ -369,17 +369,17 @@ namespace hypertrie::internal::node_based::raw {
 			 HypertrieInternalTrait tri = Hypertrie_internal_t<>>
 	using UncompressedNode = Node<depth, NodeCompression::uncompressed, tri>;
 
-}// namespace hypertrie::internal::node_based
+}// namespace hypertrie::internal
 
-template<size_t depth, hypertrie::internal::node_based::raw::NodeCompression compressed, hypertrie::internal::node_based::raw::HypertrieInternalTrait tri_t, typename enabled>
-std::ostream &operator<<(std::ostream &os, const hypertrie::internal::node_based::raw::Node<depth, compressed, tri_t, enabled> &node) {
+template<size_t depth, hypertrie::internal::raw::NodeCompression compressed, hypertrie::internal::raw::HypertrieInternalTrait tri_t, typename enabled>
+std::ostream &operator<<(std::ostream &os, const hypertrie::internal::raw::Node<depth, compressed, tri_t, enabled> &node) {
 	return os << (std::string) node;
 }
 
-template<size_t depth, hypertrie::internal::node_based::raw::NodeCompression compressed, hypertrie::internal::node_based::raw::HypertrieInternalTrait tri_t, typename enabled>
-struct fmt::formatter<hypertrie::internal::node_based::raw::Node<depth, compressed, tri_t, enabled>> {
+template<size_t depth, hypertrie::internal::raw::NodeCompression compressed, hypertrie::internal::raw::HypertrieInternalTrait tri_t, typename enabled>
+struct fmt::formatter<hypertrie::internal::raw::Node<depth, compressed, tri_t, enabled>> {
 private:
-	using node_type = hypertrie::internal::node_based::raw::Node<depth, compressed, tri_t, enabled>;
+	using node_type = hypertrie::internal::raw::Node<depth, compressed, tri_t, enabled>;
 
 public:
 	auto parse(format_parse_context &ctx) { return ctx.begin(); }

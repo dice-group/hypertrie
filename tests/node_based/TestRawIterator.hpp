@@ -13,13 +13,13 @@
 #include "TestTensor.hpp"
 
 
-namespace hypertrie::tests::node_based::raw::node_context::iterator_test {
+namespace hypertrie::tests::raw::node_context::iterator_test {
 
 	using namespace hypertrie::tests::utils;
 
-	using namespace hypertrie::internal::node_based::raw;
+	using namespace hypertrie::internal::raw;
 
-	using namespace hypertrie::internal::node_based;
+	using namespace hypertrie::internal;
 
 
 	TEST_CASE("bool depth 1 uncompressed", "[raw iterator]") {

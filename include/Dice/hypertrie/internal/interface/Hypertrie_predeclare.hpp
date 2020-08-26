@@ -3,7 +3,7 @@
 
 #include "Dice/hypertrie/internal/interface/Hypertrie_traits.hpp"
 
-namespace hypertrie::internal::node_based {
+namespace hypertrie::internal {
 
 	template<HypertrieTrait tr = default_bool_Hypertrie_t>
 	class const_Hypertrie;

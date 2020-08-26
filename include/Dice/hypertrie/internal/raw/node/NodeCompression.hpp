@@ -1,7 +1,7 @@
 #ifndef HYPERTRIE_NODECOMPRESSION_HPP
 #define HYPERTRIE_NODECOMPRESSION_HPP
 
-namespace hypertrie::internal::node_based::raw {
+namespace hypertrie::internal::raw {
 	enum class NodeCompression : bool {
 		uncompressed = false,
 		compressed = true

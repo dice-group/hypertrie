@@ -13,7 +13,7 @@
 #include <robin_hood.h>
 #include <tsl/hopscotch_map.h>
 
-namespace hypertrie::internal::node_based::raw {
+namespace hypertrie::internal::raw {
 
 	template<size_t node_storage_depth,
 			 size_t update_depth,
@@ -647,6 +647,6 @@ namespace hypertrie::internal::node_based::raw {
 
 
 	};
-}// namespace hypertrie::internal::node_based
+}// namespace hypertrie::internal
 
 #endif//HYPERTRIE_REKNODEMODIFICATION_HPP

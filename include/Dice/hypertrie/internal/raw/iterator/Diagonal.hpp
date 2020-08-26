@@ -86,9 +86,22 @@ namespace hypertrie::internal::raw {
 				const auto &min_dim_edges = nodec_->uncompressed_node()->edges(min_card_pos);
 				iter_ = min_dim_edges.begin();
 				end_ = min_dim_edges.end();
-				if constexpr (diag_depth > 1)
-					if (not ended() and not retrieveSubDiagonalValue())
-						++(*this);
+				if (not ended()) {
+					if constexpr (diag_depth > 1) {
+						if (not retrieveSubDiagonalValue())
+							++(*this);
+					} else {
+						if constexpr (result_depth == 0) {
+							if constexpr (tri::is_bool_valued)
+								value_ = true;
+							else
+								value_ = iter_->second;
+						} else {
+							NodeContainer<result_depth, tri> child_node = node_context_->storage.template getNode<result_depth>(iter_->second);
+							value_ = {child_node,true};
+						}
+					}
+				}
 			} else { // depth == 1
 				iter_ = nodec_->uncompressed_node()->edges(0).begin();
 				end_ = nodec_->uncompressed_node()->edges(0).end();
@@ -142,19 +155,7 @@ namespace hypertrie::internal::raw {
 		}
 
 		auto currentValue() const {
-			if constexpr (depth == 1){
-				if constexpr (tri::is_bool_valued)
-					return value_;
-				else
-					return IterationNodeContainer<result_depth, tri>
-					        {node_context_->storage.template getNode<depth -1>(iter_->second),true};
-			} else {
-				if constexpr (diag_depth > 1)
-					return value_;
-				else
-					return IterationNodeContainer<result_depth, tri>
-					        {node_context_->storage.template getNode<depth -1>(iter_->second),true};
-			}
+			return value_;
 		}
 
 		std::pair<key_part_type,IterValue> operator*() const{
@@ -169,6 +170,16 @@ namespace hypertrie::internal::raw {
 				} while (not ended() and not retrieveSubDiagonalValue());
 			} else {
 				++iter_;
+				if constexpr (result_depth == 0) {
+					if constexpr (tri::is_bool_valued)
+						value_ = true;
+					else
+						value_ = iter_->second;
+				} else {
+					NodeContainer<result_depth, tri> child_node = node_context_->storage.template getNode<result_depth>(iter_->second);
+					value_ = {child_node, true};
+				}
+
 			}
 			return *this;
 		}

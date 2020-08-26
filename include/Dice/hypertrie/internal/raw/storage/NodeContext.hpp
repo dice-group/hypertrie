@@ -330,7 +330,7 @@ namespace hypertrie::internal::raw {
 							if constexpr (not tri::is_bool_valued)
 								nc.compressed_node()->value() = nodec.compressed_node()->value();
 							nc.hash() = TensorHash().addFirstEntry(nc.compressed_node()->key(), nc.compressed_node()->value());
-							return {nc,false};
+							return {nc, contextless_compressed_result != nullptr};
 						}
 					} else { // return just the mapped value
 						if constexpr (tri::is_bool_valued)

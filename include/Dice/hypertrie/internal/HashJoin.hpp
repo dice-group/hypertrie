@@ -49,7 +49,6 @@ namespace hypertrie {
 			poss_type pos_in_out{};
 			std::vector<pos_type> result_depths{};
 			std::vector<Diagonal> ops{};
-			std::vector<void*> raw_outs{};
 
 			bool ended = false;
 
@@ -82,7 +81,6 @@ namespace hypertrie {
 					}
 				}
 				optimizeOperandOrder();
-				raw_outs.resize(ops.size());
 				ops.front().begin();
 				next();
 			}
@@ -106,7 +104,7 @@ namespace hypertrie {
 						}
 					}
 					if (found) {
-						for (const auto &[op_pos, raw_op_ptr]: iter::enumerate(raw_outs)) {
+						for (const auto op_pos : iter::range(ops.size())) {
 							if (const auto &result_depth = result_depths[op_pos]; result_depth)
 								value.first[pos_in_out[op_pos]] = const_Hypertrie(ops[op_pos].currentHypertrie());
 						}

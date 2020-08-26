@@ -2,8 +2,8 @@
 #define HYPERTRIE_HASHDIAGONAL_HPP
 
 #include "Dice/hypertrie/internal/raw/iterator/Diagonal.hpp"
-#include "Dice/hypertrie/internal/interface/HypertrieContext.hpp"
-#include "Dice/hypertrie/internal/interface/Hypertrie_predeclare.hpp"
+#include "Dice/hypertrie/internal/HypertrieContext.hpp"
+#include "Dice/hypertrie/internal/Hypertrie_predeclare.hpp"
 
 namespace hypertrie::internal {
 

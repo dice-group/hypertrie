@@ -1,14 +1,14 @@
 #ifndef HYPERTRIE_REKNODEMODIFICATION_HPP
 #define HYPERTRIE_REKNODEMODIFICATION_HPP
 
-#include "Dice/hypertrie/internal/interface/Hypertrie_traits.hpp"
+#include "Dice/hypertrie/internal/Hypertrie_traits.hpp"
 #include "Dice/hypertrie/internal/raw/node/NodeContainer.hpp"
 #include "Dice/hypertrie/internal/raw/node/TensorHash.hpp"
-#include "Dice/hypertrie/internal/util/CONSTANTS.hpp"
-#include "Dice/hypertrie/internal/util/IntegralTemplatedTuple.hpp"
 #include "Dice/hypertrie/internal/raw/storage/Entry.hpp"
 #include "Dice/hypertrie/internal/raw/storage/NodeModificationPlan.hpp"
 #include "Dice/hypertrie/internal/raw/storage/NodeStorage.hpp"
+#include "Dice/hypertrie/internal/util/CONSTANTS.hpp"
+#include "Dice/hypertrie/internal/util/IntegralTemplatedTuple.hpp"
 
 #include <robin_hood.h>
 #include <tsl/hopscotch_map.h>

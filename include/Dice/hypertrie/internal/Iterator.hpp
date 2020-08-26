@@ -2,7 +2,7 @@
 #define HYPERTRIE_ITERATOR_HPP
 
 #include "Dice/hypertrie/internal/raw/iterator/Iterator.hpp"
-#include "Dice/hypertrie/internal/interface/Hypertrie_predeclare.hpp"
+#include "Dice/hypertrie/internal/Hypertrie_predeclare.hpp"
 
 namespace hypertrie::internal {
 

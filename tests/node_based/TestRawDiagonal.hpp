@@ -1,9 +1,9 @@
 #ifndef HYPERTRIE_TESTRAWDIAGONAL_HPP
 #define HYPERTRIE_TESTRAWDIAGONAL_HPP
 
-#include <Dice/hypertrie/internal/raw/storage/NodeContext.hpp>
-#include <Dice/hypertrie/internal/interface/Hypertrie_traits.hpp>
+#include <Dice/hypertrie/internal/Hypertrie_traits.hpp>
 #include <Dice/hypertrie/internal/raw/iterator/Diagonal.hpp>
+#include <Dice/hypertrie/internal/raw/storage/NodeContext.hpp>
 #include <fmt/format.h>
 
 #include "../utils/AssetGenerator.hpp"

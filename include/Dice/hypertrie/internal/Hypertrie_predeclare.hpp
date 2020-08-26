@@ -1,7 +1,7 @@
 #ifndef HYPERTRIE_HYPERTRIEPREDECLARE_HPP
 #define HYPERTRIE_HYPERTRIEPREDECLARE_HPP
 
-#include "Dice/hypertrie/internal/interface/Hypertrie_traits.hpp"
+#include "Dice/hypertrie/internal/Hypertrie_traits.hpp"
 
 namespace hypertrie::internal {
 

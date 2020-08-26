@@ -1,8 +1,8 @@
 #ifndef HYPERTRIE_TESTNODECONTEXT_H
 #define HYPERTRIE_TESTNODECONTEXT_H
 
+#include <Dice/hypertrie/internal/Hypertrie_traits.hpp>
 #include <Dice/hypertrie/internal/raw/storage/NodeContext.hpp>
-#include <Dice/hypertrie/internal/interface/Hypertrie_traits.hpp>
 
 #include <fmt/format.h>
 

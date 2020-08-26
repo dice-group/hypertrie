@@ -6,7 +6,7 @@
 #include "Dice/hypertrie/internal/util/CONSTANTS.hpp"
 #include "Dice/hypertrie/internal/util/FrontSkipIterator.hpp"
 #include "Dice/hypertrie/internal/util/PermutationSort.hpp"
-#include "Dice/hypertrie/internal/interface/Hypertrie.hpp"
+#include "Dice/hypertrie/internal/Hypertrie.hpp"
 
 
 namespace hypertrie::internal {

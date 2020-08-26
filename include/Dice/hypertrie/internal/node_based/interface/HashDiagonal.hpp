@@ -55,7 +55,7 @@ namespace hypertrie::internal::node_based {
 					[](const const_Hypertrie<tr> &hypertrie, const KeyPositions &diagonal_poss) -> void * {
 				using NodecType = typename raw::template SpecificNodeContainer<depth, compression, tri>;
 
-				RawKeyPositions<depth> raw_diag_poss{};
+				RawKeyPositions<depth> raw_diag_poss;
 				for (auto pos : diagonal_poss)
 					raw_diag_poss[pos] = true;
 				auto &nodec = *const_cast<NodecType *>(reinterpret_cast<const NodecType *>(hypertrie.rawNodeContainer()));
@@ -89,9 +89,9 @@ namespace hypertrie::internal::node_based {
 					const auto &raw_diagonal = *reinterpret_cast<const RawDiagonalHash_t *>(raw_diagonal_ptr);
 					const auto &value = raw_diagonal.currentValue();
 					if (value.is_managed) {
-						return const_Hypertrie<tr>(depth, context, {value.nodec.hash().hash(), value.nodec.node()});
+						return const_Hypertrie<tr>(result_depth, context, {value.nodec.hash().hash(), value.nodec.node()});
 					} else {
-						return const_Hypertrie<tr>(depth, nullptr, {value.nodec.hash().hash(), new raw::CompressedNode<result_depth, tri>(*value.nodec.compressed_node())});
+						return const_Hypertrie<tr>(result_depth, nullptr, {value.nodec.hash().hash(), new raw::CompressedNode<result_depth, tri>(*value.nodec.compressed_node())});
 					}
 				} else {
 					assert(false);

@@ -238,7 +238,7 @@ namespace hypertrie::internal::node_based::raw {
 		HashDiagonal(CompressedNodeContainer<depth, tri> &nodec, DiagonalPositions diag_poss)
 			: nodec_{&nodec}, diag_poss_(diag_poss) {
 			size_t any_diag_pos = 0;
-			for (; any_diag_pos< diag_depth; ++any_diag_pos)
+			for (; any_diag_pos< depth; ++any_diag_pos)
 				if (diag_poss_[any_diag_pos])
 					break;
 			value_.first = [&]() { // key_part
@@ -265,7 +265,7 @@ namespace hypertrie::internal::node_based::raw {
 							}
 						} else {
 							if constexpr (result_depth != 0)
-								internal_compressed_node.key()[res_pos++] = key[any_diag_pos];
+								internal_compressed_node.key()[res_pos++] = key[pos];
 						}
 					// set value
 					if constexpr(not tri::is_bool_valued)

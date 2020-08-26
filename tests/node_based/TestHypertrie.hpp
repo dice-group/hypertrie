@@ -103,7 +103,6 @@ namespace hypertrie::tests::node_based::node_context {
 			std::cout << std::string(value) << std::endl;
 			++d;
 			REQUIRE(d == d.end());
-			FAIL("that result is very wrong.");
 
 //			for(auto entry : HashDiagonal{t,{2}})
 //				std::cout << "entry.first" << entry.first << std:: endl;

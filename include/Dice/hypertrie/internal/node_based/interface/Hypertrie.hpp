@@ -78,6 +78,8 @@ namespace hypertrie::internal::node_based {
 			}
 		}
 
+		const_Hypertrie() = default;
+
 		explicit const_Hypertrie(size_t depth) : depth_(depth) {}
 
 		void *rawNode() const {
@@ -192,6 +194,16 @@ namespace hypertrie::internal::node_based {
 		[[nodiscard]]
 		bool cend() const { return false; }
 
+		[[nodiscard]]
+		bool operator==(const const_Hypertrie<tr> &other) const noexcept {
+			return this->hash() == other.hash() and this->depth() == other.depth();
+		}
+
+		[[nodiscard]]
+		bool operator==(const Hypertrie<tr> &other) const noexcept {
+			return this->hash() == other.hash() and this->depth() == other.depth();
+		}
+
 		operator std::string() {
 			std::vector<std::string> mappings;
 			for (const auto &entry : *this){
@@ -234,7 +246,6 @@ namespace hypertrie::internal::node_based {
 		}
 
 		Hypertrie(const const_Hypertrie<tr> &hypertrie) : const_Hypertrie<tr>(hypertrie) {
-			// TODO: increase reference counter
 			compiled_switch<hypertrie_depth_limit, 1>::switch_void(
 					this->depth_,
 					[&](auto depth_arg){ this->context_->template incRefCount<depth_arg>(reinterpret_cast<raw::NodeContainer<depth_arg, tri> *>(this->node_container_));},

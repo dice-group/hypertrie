@@ -288,7 +288,7 @@ namespace hypertrie::internal::raw {
 					if (child.empty())
 						return {};
 					else
-						return diagonal_slice_rek<current_depth - 1, fixed_keyparts, offset +1> (child, diagonal_positions, key_part, contextless_compressed_result, key_pos);
+						return diagonal_slice_rek<current_depth - 1, fixed_keyparts, offset +1> (child, diagonal_positions, key_part, contextless_compressed_result, key_pos + 1);
 					}
 
 				} else { // nodec.isCompressed()

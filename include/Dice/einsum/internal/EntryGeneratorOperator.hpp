@@ -5,11 +5,10 @@
 
 namespace einsum::internal {
 
-	template<typename value_type, typename key_part_type, template<typename, typename> class map_type,
-			template<typename> class set_type>
-	class EntryGeneratorOperator : public Operator<value_type, key_part_type, map_type, set_type> {
+	template<typename value_type, HypertrieTrait tr_t>
+	class EntryGeneratorOperator : public Operator<value_type, tr_t> {
 #include "Dice/einsum/internal/OperatorMemberTypealiases.hpp"
-		using EntryGeneratorOperator_t = EntryGeneratorOperator<value_type, key_part_type, map_type, set_type>;
+		using EntryGeneratorOperator_t = EntryGeneratorOperator<value_type, tr>;
 
 		bool _ended = true;
 
@@ -28,7 +27,7 @@ namespace einsum::internal {
 			return static_cast<const EntryGeneratorOperator *>(self_raw)->_ended;
 		}
 
-		static void load(void *self_raw, std::vector<const_BoolHypertrie_t> operands, Entry<key_part_type, value_type> &entry) {
+		static void load(void *self_raw, std::vector<const_Hypertrie<tr>> operands, Entry_t &entry) {
 			static_cast<EntryGeneratorOperator *>(self_raw)->load_impl(std::move(operands), entry);
 		}
 
@@ -37,8 +36,8 @@ namespace einsum::internal {
 		}
 
 	private:
-		inline void load_impl([[maybe_unused]]std::vector<const_BoolHypertrie_t> operands,
-							  Entry <key_part_type, value_type> &entry) {
+		inline void load_impl([[maybe_unused]]std::vector<const_Hypertrie<tr>> operands,
+							  Entry_t &entry) {
 			if constexpr(_debugeinsum_) fmt::print("EntryGen {}\n", this->subscript);
 			this->entry = &entry;
 			this->entry->value = value_type(1);

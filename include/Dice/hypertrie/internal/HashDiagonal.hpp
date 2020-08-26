@@ -160,7 +160,7 @@ namespace hypertrie {
 		};
 
 	protected:
-		RawMethods const * const raw_methods = nullptr;
+		RawMethods const * raw_methods = nullptr;
 		void* raw_hash_diagonal;
 		HypertrieContext<tr> *context_;
 
@@ -169,12 +169,36 @@ namespace hypertrie {
 			: raw_methods(&getRawMethods(hypertrie.depth(), diag_poss.size(), hypertrie.size() == 1)),
 			  raw_hash_diagonal(raw_methods->construct(hypertrie, diag_poss)), context_(hypertrie.context()) {}
 
+		HashDiagonal(HashDiagonal &&other)
+			: raw_methods(other.raw_methods),
+			  raw_hash_diagonal(other.raw_hash_diagonal),
+			  context_(other.context_) {
+			other.raw_hash_diagonal = nullptr;
+			other.context_ = nullptr;
+		}
+
+
+		HashDiagonal &operator=(HashDiagonal &&other) {
+			if (raw_hash_diagonal != nullptr) {
+				raw_methods->destruct(raw_hash_diagonal);
+				raw_hash_diagonal = nullptr;
+			}
+			this->raw_methods = other.raw_methods;
+			this->raw_hash_diagonal = other.raw_hash_diagonal;
+			this->context_ = other.context_;
+			other.raw_hash_diagonal = nullptr;
+			other.context_ = nullptr;
+			return *this;
+		}
+
 		~HashDiagonal() {
 			if (raw_hash_diagonal != nullptr){
 				raw_methods->destruct(raw_hash_diagonal);
 				raw_hash_diagonal = nullptr;
 			}
 		}
+
+
 
 		HashDiagonal & begin() {
 			raw_methods->begin(raw_hash_diagonal);
@@ -219,8 +243,12 @@ namespace hypertrie {
 			return bool(*this) == other;
 		}
 
+		bool operator<(const HashDiagonal &other) const {
+			return this->size() < other.size();
+		}
+
 		size_t size() const {
-			raw_methods->size(raw_hash_diagonal);
+			return raw_methods->size(raw_hash_diagonal);
 		}
 
 	};

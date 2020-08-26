@@ -208,6 +208,17 @@ namespace hypertrie::internal::raw {
 		}
 
 		[[nodiscard]]
+		std::vector<size_t> getCards(const std::vector<pos_type> &positions) const {
+			std::vector<size_t> cards(positions.size());
+			for (auto i : iter::range(positions.size())){
+				auto pos = positions[i];
+				assert(pos < depth);
+				cards[i] = edges(pos).size();
+			}
+			return cards;
+		}
+
+		[[nodiscard]]
 		size_t minCardPos(const typename tri::template DiagonalPositions<depth> &positions_mask) const {
 			assert(positions_mask.any());
 			auto min_pos = 0;

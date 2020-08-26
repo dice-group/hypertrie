@@ -5,16 +5,15 @@
 
 namespace einsum::internal {
 
-	template<typename value_type, typename key_part_type, template<typename, typename> class map_type,
-			template<typename> class set_type>
-	class ResolveOperator : public Operator<value_type, key_part_type, map_type, set_type> {
+	template<typename value_type, HypertrieTrait tr_t>
+	class ResolveOperator : public Operator<value_type, tr_t> {
 #include "Dice/einsum/internal/OperatorMemberTypealiases.hpp"
-		using ResolveOperator_t = ResolveOperator<value_type, key_part_type, map_type, set_type>;
+		using ResolveOperator_t = ResolveOperator<value_type, tr>;
 
 		LabelPossInOperand label_pos_in_result;
 		bool ended_;
 
-		typename const_BoolHypertrie_t::const_iterator operand_iter;
+		typename const_Hypertrie<tr>::const_iterator operand_iter;
 
 	public:
 		ResolveOperator(const std::shared_ptr<Subscript> &subscript, const std::shared_ptr<Context> &context)
@@ -51,7 +50,7 @@ namespace einsum::internal {
 		}
 
 		static void
-		load(void *self_raw, std::vector<const_BoolHypertrie_t> operands, Entry <key_part_type, value_type> &entry) {
+		load(void *self_raw, std::vector<const_Hypertrie<tr>> operands, Entry_t &entry) {
 			auto &self = *static_cast<ResolveOperator *>(self_raw);
 			self.load_impl(std::move(operands), entry);
 		}
@@ -62,7 +61,7 @@ namespace einsum::internal {
 		}
 
 	private:
-		inline void load_impl(std::vector<const_BoolHypertrie_t> operands, Entry <key_part_type, value_type> &entry) {
+		inline void load_impl(std::vector<const_Hypertrie<tr>> operands, Entry_t &entry) {
 			if constexpr(_debugeinsum_) fmt::print("Resolve {}\n", this->subscript);
 			this->entry = &entry;
 			assert(operands.size() == 1); // only one operand must be left to be resolved

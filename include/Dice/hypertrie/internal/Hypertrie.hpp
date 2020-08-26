@@ -99,7 +99,7 @@ namespace hypertrie {
 		}
 
 		size_t hash() const {
-			return node_container_.hash_sized;
+			return node_container_.hash_sized.hash();
 		}
 
 
@@ -108,8 +108,6 @@ namespace hypertrie {
 		using Key = typename tr::Key;
 		using SliceKey = typename tr::SliceKey;
 		using value_type = typename tr::value_type;
-
-		[[nodiscard]] std::vector<size_t> getCards(const std::vector<pos_type> &positions) const;
 
 		[[nodiscard]] size_t size() const{
 			return internal::compiled_switch<hypertrie_depth_limit, 1>::switch_(
@@ -177,6 +175,30 @@ namespace hypertrie {
 
 						});
 				return result;
+			}
+		}
+
+		[[nodiscard]]
+		std::vector<size_t> getCards(const std::vector<pos_type> &positions) const {
+			assert(positions.size() <= depth());
+			if (positions.size() == 0) // no positions provided
+				return {};
+			else if (empty()) {
+				return std::vector<size_t>(positions.size(), 0);
+			} if (depth() == 1){
+				return {size()};
+			} else if (size() == 1) {
+				return std::vector<size_t>(positions.size(),1);
+			} else {
+				return internal::compiled_switch<hypertrie_depth_limit, 2>::switch_(
+						this->depth_,
+						[&](auto depth_arg) -> std::vector<size_t> {
+							const auto &node_container = *reinterpret_cast<const internal::raw::UncompressedNodeContainer<depth_arg, tri> *>(&this->node_container_);
+							return node_container.uncompressed_node()->getCards(positions);
+						},
+						[&]() ->std::vector<size_t> {
+							assert(false); return {};
+						});
 			}
 		}
 

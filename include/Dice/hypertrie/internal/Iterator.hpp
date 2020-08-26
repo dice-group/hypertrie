@@ -62,7 +62,7 @@ namespace hypertrie {
 
 
 	protected:
-		RawMethods const * const raw_methods = nullptr;
+		RawMethods const * raw_methods = nullptr;
 		RawBaseIterator raw_iterator;
 
 	public:

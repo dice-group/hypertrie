@@ -6,12 +6,11 @@
 
 namespace einsum::internal {
 
-	template<typename value_type, typename key_part_type, template<typename, typename> class map_type,
-			template<typename> class set_type>
-	class CartesianOperator : public Operator<value_type, key_part_type, map_type, set_type> {
+	template<typename value_type, HypertrieTrait tr_t>
+	class CartesianOperator : public Operator<value_type, tr_t> {
 #include "Dice/einsum/internal/OperatorMemberTypealiases.hpp"
 
-		using CartesianOperator_t = CartesianOperator<value_type, key_part_type, map_type, set_type>;
+		using CartesianOperator_t = CartesianOperator<value_type, tr>;
 
 		using SubResult = tsl::sparse_map<Key < key_part_type>, size_t, absl::Hash<Key < key_part_type> >>;
 
@@ -35,7 +34,7 @@ namespace einsum::internal {
 			for (const auto &sub_subscript : sub_subscripts) {
 				sub_operators.push_back(Operator_t::construct(sub_subscript, context));
 				sub_entries.push_back(
-						{value_type(0), typename Entry_t::key_type(sub_subscript->resultLabelCount(), default_key_part)});
+						{value_type(0), typename Entry_t::Key(sub_subscript->resultLabelCount(), default_key_part)});
 			}
 
 		}
@@ -83,17 +82,17 @@ namespace einsum::internal {
 		}
 
 		static void
-		load(void *self_raw, std::vector<const_BoolHypertrie_t> operands, Entry_t &entry) {
+		load(void *self_raw, std::vector<const_Hypertrie<tr>> operands, Entry_t &entry) {
 			static_cast<CartesianOperator *>(self_raw)->load_impl(std::move(operands), entry);
 		}
 
 
 	private:
 
-		std::vector<const_BoolHypertrie_t>
-		extractOperands(CartesianOperandPos cart_op_pos, const std::vector<const_BoolHypertrie_t> &operands) {
+		std::vector<const_Hypertrie<tr>>
+		extractOperands(CartesianOperandPos cart_op_pos, const std::vector<const_Hypertrie<tr>> &operands) {
 
-			std::vector<const_BoolHypertrie_t> sub_operands;
+			std::vector<const_Hypertrie<tr>> sub_operands;
 
 			for (const auto &original_op_pos : this->subscript->getCartesianSubscript().getOriginalOperandPoss(
 					cart_op_pos))
@@ -102,7 +101,7 @@ namespace einsum::internal {
 			return sub_operands;
 		}
 
-		inline void load_impl(std::vector<const_BoolHypertrie_t> operands, Entry_t &entry) {
+		inline void load_impl(std::vector<const_Hypertrie<tr>> operands, Entry_t &entry) {
 			if constexpr(_debugeinsum_) fmt::print("Cartesian {}\n", this->subscript);
 			this->entry = &entry;
 			ended_ = false;
@@ -175,8 +174,8 @@ namespace einsum::internal {
 
 
 		static void
-		updateEntryKey(const OriginalResultPoss &original_result_poss, Entry <key_part_type, value_type> &sink,
-					   const typename Entry<key_part_type, value_type>::key_type &source_key) {
+		updateEntryKey(const OriginalResultPoss &original_result_poss, Entry_t &sink,
+					   const typename Entry_t::Key &source_key) {
 			for (auto i : iter::range(original_result_poss.size()))
 				sink.key[original_result_poss[i]] = source_key[i];
 		}

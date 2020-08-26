@@ -47,6 +47,8 @@ namespace hypertrie::internal::raw {
 		value_t &val() noexcept { if (not tri::is_bool_valued) return entry.second; }
 
 	public:
+		base_iterator() = default;
+
 		base_iterator(void *nodeContext, void *nodec, NodeCompression compression, bool ended) : node_context_(nodeContext), nodec_(nodec), compression_(compression), ended_(ended) {}
 	};
 

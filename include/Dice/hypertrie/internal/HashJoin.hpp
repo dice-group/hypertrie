@@ -11,7 +11,7 @@
 
 namespace hypertrie {
 
-	template<HypertrieTrait tr>
+	template<HypertrieTrait tr =default_bool_Hypertrie_t>
 	class HashJoin {
 		using key_part_type = typename tr::key_part_type;
 		using value_type = typename tr::value_type;
@@ -99,7 +99,7 @@ namespace hypertrie {
 
 					found = true;
 					// iterate all but the first Diagonal
-					for (const auto &operand: internal::util::skip<1>(ops)) {
+					for (auto &operand: internal::util::skip<1>(ops)) {
 						if (not operand.find(value.second)) {
 							found = false;
 							break;
@@ -108,7 +108,7 @@ namespace hypertrie {
 					if (found) {
 						for (const auto &[op_pos, raw_op_ptr]: iter::enumerate(raw_outs)) {
 							if (const auto &result_depth = result_depths[op_pos]; result_depth)
-								value.first[pos_in_out[op_pos]] = const_Hypertrie::instance(result_depth, ops[op_pos].currentValue());
+								value.first[pos_in_out[op_pos]] = const_Hypertrie(ops[op_pos].currentHypertrie());
 						}
 						++smallest_operand;
 						return;

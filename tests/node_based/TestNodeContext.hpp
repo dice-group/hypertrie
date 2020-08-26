@@ -147,8 +147,15 @@ namespace hypertrie::tests::node_based::raw::node_context {
 
 			SECTION("add another entry to the nc"){
 				context.template set<depth>(nc, {1, 5, 3}, 2);
+				tt.set({1, 5, 3}, 2);
 
 				tt.checkContext(context);
+				SECTION("remove the nc") {
+					context.template decrRefCount<depth>(nc);
+					tt = TestTensor<depth, tr>::getPrimary();
+
+					tt.checkContext(context);
+				}
 			}
 
 

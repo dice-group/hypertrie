@@ -155,6 +155,20 @@ namespace hypertrie::internal::node_based::raw {
 				else
 					update.modOp() = ModificationOperations::INSERT_INTO_UNCOMPRESSED_NODE;
 			}
+
+			if(not update.hashAfter().empty()) {
+				auto nc_after = node_storage.template getNode<update_depth>(update.hashAfter());
+				if (not nc_after.empty()) {
+					planChangeCount<update_depth>(update.hashAfter(), INC_COUNT_DIFF_AFTER);
+					if(not update.hashBefore().empty()) {
+						planChangeCount<update_depth>(update.hashBefore(), DEC_COUNT_DIFF_AFTER);
+					}
+					apply_update_rek<update_depth>();
+					nodec = nc_after;
+					return;
+				}
+			}
+
 			planUpdate(std::move(update), INC_COUNT_DIFF_AFTER);
 			apply_update_rek<update_depth>();
 		}
@@ -316,7 +330,8 @@ namespace hypertrie::internal::node_based::raw {
 
 			node_storage.template deleteNode<depth>(hash);
 			if constexpr (depth == update_depth)
-				this->nodec = {};
+				if (this->nodec.hash() == hash)
+					this->nodec = {};
 		}
 
 		template<size_t depth, bool reuse_node_before = false>

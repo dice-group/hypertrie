@@ -52,16 +52,20 @@ namespace hypertrie::internal::node_based::raw {
 		template<size_t depth>
 		void incRefCount(NodeContainer<depth, tri> &nodec) {
 			if constexpr (depth == 1 and tri::is_bool_valued and tri::is_lsb_unused)
-				return; // there is no real node to be counted
-			else
-				if (nodec.compressed())
-					nodec.compressed_node()->ref_count()++;
-				else
-					nodec.uncompressed_node()->ref_count()++;
+				return;// there is no real node to be counted
+			else {
+				assert(nodec.ref_count() > 0);
+				nodec.ref_count()++;
+			}
 		}
 		template<size_t depth>
-		void decrRefCount([[maybe_unused]]NodeContainer<depth, tri> &nodec) {
-			// TODO: implement
+		void decrRefCount(NodeContainer<depth, tri> &nodec) {
+			if constexpr (depth == 1 and tri::is_bool_valued and tri::is_lsb_unused)
+				return;
+			else {
+				RekNodeModification<max_depth, depth, tri> update{this->storage, nodec};
+				update.apply_decrement_ref_count();
+			}
 		}
 
 		/**

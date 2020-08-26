@@ -103,6 +103,11 @@ namespace hypertrie::internal::node_based::raw {
 		RekNodeModification(NodeStorage_t<node_storage_depth> &nodeStorage, NodeContainer<update_depth, tri> &nodec)
 			: node_storage(nodeStorage), nodec{nodec} {}
 
+		void apply_decrement_ref_count(const size_t decrement = 1) {
+			planChangeCount<update_depth>(nodec.hash(), decrement * DEC_COUNT_DIFF_AFTER);
+			apply_update_rek<update_depth>();
+		}
+
 		auto apply_update(std::vector<RawKey<update_depth>> keys) {
 			Modification_t<update_depth> update{};
 			if (keys.empty())
@@ -310,6 +315,8 @@ namespace hypertrie::internal::node_based::raw {
 					this->template updateChildrenCountDiff<depth>(node, children_count_diff);
 
 			node_storage.template deleteNode<depth>(hash);
+			if constexpr (depth == update_depth)
+				this->nodec = {};
 		}
 
 		template<size_t depth, bool reuse_node_before = false>

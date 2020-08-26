@@ -80,9 +80,23 @@ namespace hypertrie::tests::node_based::raw::node_context {
 
 		template<size_t context_depth>
 		void checkContext(NodeContext<context_depth, tri> &context) {
-			typename TestTensor<depth, tri>::Hash2Instance nodes{};
-			nodes[this->hash()] = std::make_shared<TestTensor<depth, tri>>(*this);
-			 checkContext<context_depth, depth>(context, nodes);
+			if (entries.empty()) {
+				validateEmpty<context_depth,depth>(context);
+			} else {
+				typename TestTensor<depth, tri>::Hash2Instance nodes{};
+				nodes[this->hash()] = std::make_shared<TestTensor<depth, tri>>(*this);
+				 checkContext<context_depth, depth>(context, nodes);
+			}
+		}
+
+		template<size_t context_depth, size_t node_depth>
+		void static validateEmpty(NodeContext<context_depth, tri> &context) {
+			auto & storage = context.storage;
+			REQUIRE(storage.template getNodeStorage<node_depth, NodeCompression::uncompressed>().empty());
+			if constexpr (not (node_depth == 1 and tri::is_bool_valued and tri::is_lsb_unused))
+				REQUIRE(storage.template getNodeStorage<node_depth, NodeCompression::compressed>().empty());
+			if constexpr (node_depth > 1)
+				validateEmpty<context_depth,node_depth -1>(context);
 		}
 
 		template<size_t context_depth, size_t node_depth>

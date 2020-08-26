@@ -115,6 +115,46 @@ namespace hypertrie::tests::node_based::raw::node_context {
 		}
 	}
 
+	TEST_CASE("Increment decrement counter", "[NodeContext]") {
+		using tr = default_long_Hypertrie_internal_t;
+		constexpr pos_type depth = 3;
+
+		NodeContext<depth, tr> context{};
+		// create emtpy primary node
+		NodeContainer<depth, tr> nc{};
+		auto tt = TestTensor<depth, tr>::getPrimary();
+
+		SECTION("write a single entry") {
+			context.template set<depth>(nc, {1, 2, 3}, 1);
+			tt.set({1, 2, 3}, 1);
+
+			tt.checkContext(context);
+
+			SECTION("remove the nc") {
+				context.template decrRefCount<depth>(nc);
+				tt = TestTensor<depth, tr>::getPrimary();
+
+				tt.checkContext(context);
+			}
+
+			SECTION("write the same nc a second time and remove it"){
+				NodeContainer<depth, tr> nc2{};
+				context.template set<depth>(nc2, {1, 2, 3}, 1);
+				context.template decrRefCount<depth>(nc2);
+
+				tt.checkContext(context);
+			}
+
+			SECTION("add another entry to the nc"){
+				context.template set<depth>(nc, {1, 5, 3}, 2);
+
+				tt.checkContext(context);
+			}
+
+
+		}
+	}
+
 	TEST_CASE("Test specific case bulk long -> bool", "[NodeContext]") {
 		using tr = default_bool_Hypertrie_internal_t;
 		constexpr pos_type depth = 3;

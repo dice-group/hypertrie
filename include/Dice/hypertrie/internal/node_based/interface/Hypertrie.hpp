@@ -248,16 +248,23 @@ namespace hypertrie::internal::node_based {
 		Hypertrie(const const_Hypertrie<tr> &hypertrie) : const_Hypertrie<tr>(hypertrie) {
 			compiled_switch<hypertrie_depth_limit, 1>::switch_void(
 					this->depth_,
-					[&](auto depth_arg){ this->context_->template incRefCount<depth_arg>(reinterpret_cast<raw::NodeContainer<depth_arg, tri> *>(this->node_container_));},
-					[&](auto depth_arg){ throw std::logic_error{fmt::format("Hypertrie depth {} invalid. allowed range: [1,{})", depth_arg, hypertrie_depth_limit)}; }
+					[&](auto depth_arg){
+					  	auto &typed_nodec = *reinterpret_cast<raw::NodeContainer<depth_arg, tri> *>(&this->node_container_);
+						this->context_->rawContext().template incRefCount<depth_arg>(typed_nodec);}
 					);
 		}
 
 		~Hypertrie() {
-			// TODO: decrease reference counter
+			compiled_switch<hypertrie_depth_limit, 1>::switch_void(
+					this->depth_,
+					[&](auto depth_arg){
+						auto &typed_nodec = *reinterpret_cast<raw::NodeContainer<depth_arg, tri> *>(&this->node_container_);
+						this->context_->rawContext().template decrRefCount<depth_arg>(typed_nodec);
+					}
+			);
 		}
 
-		Hypertrie(size_t depth, HypertrieContext<tr> &context = DefaultHypertrieContext<tr>::instance())
+		Hypertrie(size_t depth = 1, HypertrieContext<tr> &context = DefaultHypertrieContext<tr>::instance())
 			: const_Hypertrie<tr>(depth, &context) {}
 	};
 

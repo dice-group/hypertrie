@@ -1,8 +1,8 @@
 #ifndef HYPERTRIE_ITERATOR_HPP
 #define HYPERTRIE_ITERATOR_HPP
 
-#include "Dice/hypertrie/internal/node_based/raw/iterator/Iterator.hpp"
-#include "Dice/hypertrie/internal/node_based/interface/Hypertrie_predeclare.hpp"
+#include "Dice/hypertrie/internal/raw/iterator/Iterator.hpp"
+#include "Dice/hypertrie/internal/interface/Hypertrie_predeclare.hpp"
 
 namespace hypertrie::internal::node_based {
 

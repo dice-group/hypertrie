@@ -5,7 +5,7 @@
 #include <enumerate.hpp>
 #include <fmt/format.h>
 
-#include <Dice/hypertrie/internal/node_based/raw/node/Node.hpp>
+#include <Dice/hypertrie/internal/raw/node/Node.hpp>
 
 #include "../utils/AssetGenerator.hpp"
 #include "../utils/NameOfType.hpp"

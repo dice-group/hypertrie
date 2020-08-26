@@ -2,11 +2,11 @@
 #define HYPERTRIE_HYPERTRIECONTEXT_HPP
 
 
-#include <memory>
-#include <fmt/format.h>
-#include "Dice/hypertrie/internal/node_based/raw/storage/NodeContext.hpp"
+#include "Dice/hypertrie/internal/ConfigHypertrieDepthLimit.hpp"
+#include "Dice/hypertrie/internal/raw/storage/NodeContext.hpp"
 #include "Dice/hypertrie/internal/util/SwitchTemplateFunctions.hpp"
-#include "Dice/hypertrie/internal/node_based/ConfigHypertrieDepthLimit.hpp"
+#include <fmt/format.h>
+#include <memory>
 
 
 namespace hypertrie::internal::node_based {

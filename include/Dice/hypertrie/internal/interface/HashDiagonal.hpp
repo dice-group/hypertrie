@@ -1,9 +1,9 @@
 #ifndef HYPERTRIE_HASHDIAGONAL_HPP
 #define HYPERTRIE_HASHDIAGONAL_HPP
 
-#include "Dice/hypertrie/internal/node_based/interface/Hypertrie_predeclare.hpp"
-#include "Dice/hypertrie/internal/node_based/raw/iterator/Diagonal.hpp"
-#include "HypertrieContext.hpp"
+#include "Dice/hypertrie/internal/raw/iterator/Diagonal.hpp"
+#include "Dice/hypertrie/internal/interface/HypertrieContext.hpp"
+#include "Dice/hypertrie/internal/interface/Hypertrie_predeclare.hpp"
 
 namespace hypertrie::internal::node_based {
 

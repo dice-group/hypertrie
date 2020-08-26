@@ -1,8 +1,8 @@
 #ifndef HYPERTRIE_TESTHYPERTRIE_H
 #define HYPERTRIE_TESTHYPERTRIE_H
 
-#include <Dice/hypertrie/internal/node_based/interface/Hypertrie.hpp>
-#include <Dice/hypertrie/internal/node_based/interface/HypertrieContext.hpp>
+#include <Dice/hypertrie/internal/interface/Hypertrie.hpp>
+#include <Dice/hypertrie/internal/interface/HypertrieContext.hpp>
 
 
 #include <fmt/format.h>

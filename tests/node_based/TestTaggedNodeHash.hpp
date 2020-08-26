@@ -1,7 +1,7 @@
 #ifndef HYPERTRIE_TESTTAGGEDNODEHASH_HPP
 #define HYPERTRIE_TESTTAGGEDNODEHASH_HPP
 
-#include <Dice/hypertrie/internal/node_based/raw/node/TensorHash.hpp>
+#include <Dice/hypertrie/internal/raw/node/TensorHash.hpp>
 
 #include <Dice/hypertrie/internal/util/RawKey.hpp>
 

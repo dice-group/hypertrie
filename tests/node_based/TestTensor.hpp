@@ -1,6 +1,6 @@
 #ifndef HYPERTRIE_TESTTENSOR_HPP
 #define HYPERTRIE_TESTTENSOR_HPP
-#include <Dice/hypertrie/internal/node_based/raw/storage/NodeContext.hpp>
+#include <Dice/hypertrie/internal/raw/storage/NodeContext.hpp>
 #include <catch2/catch.hpp>
 #include <fmt/format.h>
 #include <itertools.hpp>

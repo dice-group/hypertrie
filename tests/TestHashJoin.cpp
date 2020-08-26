@@ -4,7 +4,7 @@
 #include <set>
 #include <unordered_set>
 
-#include <Dice/hypertrie/internal/node_based/interface/HashJoin.hpp>
+#include <Dice/hypertrie/internal/interface/HashJoin.hpp>
 
 #include "utils/GenerateTriples.hpp"
 #include "diagonal/DiagonalTestData.hpp"

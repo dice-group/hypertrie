@@ -3,12 +3,10 @@
 
 #include <utility>
 
-#include "Dice/hypertrie/internal/node_based/interface/Hypertrie.hpp"
-#include "Dice/hypertrie/internal/util/PermutationSort.hpp"
 #include "Dice/hypertrie/internal/util/CONSTANTS.hpp"
 #include "Dice/hypertrie/internal/util/FrontSkipIterator.hpp"
-
-
+#include "Dice/hypertrie/internal/util/PermutationSort.hpp"
+#include "Dice/hypertrie/internal/interface/Hypertrie.hpp"
 
 
 namespace hypertrie::internal::node_based {

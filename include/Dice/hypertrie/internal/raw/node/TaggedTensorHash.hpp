@@ -7,10 +7,10 @@
 #include <absl/hash/hash.h>
 #include <fmt/ostream.h>
 
-#include "Dice/hypertrie/internal/node_based/raw/Hypertrie_internal_traits.hpp"
+#include "Dice/hypertrie/internal/raw/Hypertrie_internal_traits.hpp"
 #include "Dice/hypertrie/internal/util/PosType.hpp"
 #include "Dice/hypertrie/internal/util/RawKey.hpp"
-#include "Dice/hypertrie/internal/node_based/raw/node/TensorHash.hpp"
+#include "Dice/hypertrie/internal/raw/node/TensorHash.hpp"
 
 namespace hypertrie::internal::node_based::raw {
 

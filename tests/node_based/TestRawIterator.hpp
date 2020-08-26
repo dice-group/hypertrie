@@ -2,10 +2,10 @@
 #define HYPERTRIE_TESTRAWITERATOR_HPP
 
 
-#include <Dice/hypertrie/internal/node_based/raw/storage/NodeContext.hpp>
-#include <Dice/hypertrie/internal/node_based/interface/Hypertrie_traits.hpp>
-#include <Dice/hypertrie/internal/node_based/raw/iterator/Iterator.hpp>
-#include <Dice/hypertrie/internal/node_based/raw/iterator/Diagonal.hpp>
+#include <Dice/hypertrie/internal/raw/storage/NodeContext.hpp>
+#include <Dice/hypertrie/internal/interface/Hypertrie_traits.hpp>
+#include <Dice/hypertrie/internal/raw/iterator/Iterator.hpp>
+#include <Dice/hypertrie/internal/raw/iterator/Diagonal.hpp>
 #include <fmt/format.h>
 
 #include "../utils/AssetGenerator.hpp"

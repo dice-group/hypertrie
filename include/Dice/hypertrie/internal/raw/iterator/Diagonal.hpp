@@ -1,11 +1,11 @@
 #ifndef HYPERTRIE_DIAGONAL_HPP
 #define HYPERTRIE_DIAGONAL_HPP
 
-#include <utility>
-#include "Dice/hypertrie/internal/node_based/raw/iterator/IterationNodeContainer.hpp"
-#include "Dice/hypertrie/internal/node_based/raw/storage/NodeContext.hpp"
-#include "Dice/hypertrie/internal/node_based/ConfigHypertrieDepthLimit.hpp"
+#include "Dice/hypertrie/internal/ConfigHypertrieDepthLimit.hpp"
+#include "Dice/hypertrie/internal/raw/storage/NodeContext.hpp"
 #include "Dice/hypertrie/internal/util/IntegralTemplatedTuple.hpp"
+#include "Dice/hypertrie/internal/raw/iterator/IterationNodeContainer.hpp"
+#include <utility>
 namespace hypertrie::internal::node_based::raw {
 
 	template<size_t diag_depth, size_t depth, NodeCompression compression, HypertrieInternalTrait tri_t>

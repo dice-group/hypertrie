@@ -3,14 +3,14 @@
 
 #include <compare>
 
-#include "Dice/hypertrie/internal/node_based/interface/Hypertrie_traits.hpp"
-#include "Dice/hypertrie/internal/node_based/raw/node/NodeContainer.hpp"
-#include "Dice/hypertrie/internal/node_based/raw/node/TensorHash.hpp"
-#include "Dice/hypertrie/internal/node_based/raw/storage/NodeStorage.hpp"
-#include "Dice/hypertrie/internal/node_based/raw/storage/RekNodeModification.hpp"
+#include "Dice/hypertrie/internal/interface/Hypertrie_traits.hpp"
+#include "Dice/hypertrie/internal/raw/node/NodeContainer.hpp"
+#include "Dice/hypertrie/internal/raw/node/TensorHash.hpp"
 #include "Dice/hypertrie/internal/util/CONSTANTS.hpp"
+#include "Dice/hypertrie/internal/raw/storage/NodeStorage.hpp"
+#include "Dice/hypertrie/internal/raw/storage/RekNodeModification.hpp"
 
-#include <Dice/hypertrie/internal/node_based/raw/iterator/IterationNodeContainer.hpp>
+#include <Dice/hypertrie/internal/raw/iterator/IterationNodeContainer.hpp>
 #include <itertools.hpp>
 
 namespace hypertrie::internal::node_based::raw {

@@ -1,8 +1,8 @@
 #ifndef HYPERTRIE_ITERATIONNODECONTAINER_HPP
 #define HYPERTRIE_ITERATIONNODECONTAINER_HPP
 
-#include "Dice/hypertrie/internal/node_based/raw/node/NodeContainer.hpp"
-#include "Dice/hypertrie/internal/node_based/raw/Hypertrie_internal_traits.hpp"
+#include "Dice/hypertrie/internal/raw/Hypertrie_internal_traits.hpp"
+#include "Dice/hypertrie/internal/raw/node/NodeContainer.hpp"
 
 namespace hypertrie::internal::node_based::raw {
 

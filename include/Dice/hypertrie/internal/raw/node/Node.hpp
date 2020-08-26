@@ -1,11 +1,11 @@
 #ifndef HYPERTRIE_NODE_HPP
 #define HYPERTRIE_NODE_HPP
 
-#include "Dice/hypertrie/internal/node_based/raw/Hypertrie_internal_traits.hpp"
+#include "Dice/hypertrie/internal/raw/Hypertrie_internal_traits.hpp"
 #include "Dice/hypertrie/internal/util/PosType.hpp"
-#include "Dice/hypertrie/internal/node_based/raw/node/NodeCompression.hpp"
-#include "Dice/hypertrie/internal/node_based/raw/node/TaggedTensorHash.hpp"
-#include "Dice/hypertrie/internal/node_based/raw/node/TensorHash.hpp"
+#include "Dice/hypertrie/internal/raw/node/NodeCompression.hpp"
+#include "Dice/hypertrie/internal/raw/node/TaggedTensorHash.hpp"
+#include "Dice/hypertrie/internal/raw/node/TensorHash.hpp"
 #include <range.hpp>
 
 namespace hypertrie::internal::node_based::raw {

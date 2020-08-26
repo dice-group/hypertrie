@@ -1,9 +1,9 @@
 #ifndef HYPERTRIE_NODECONTAINER_HPP
 #define HYPERTRIE_NODECONTAINER_HPP
 
-#include "Dice/hypertrie/internal/node_based/raw/node/Node.hpp"
-#include "Dice/hypertrie/internal/node_based/raw/node/NodePtr.hpp"
-#include "Dice/hypertrie/internal/node_based/raw/node/TensorHash.hpp"
+#include "Dice/hypertrie/internal/raw/node/Node.hpp"
+#include "Dice/hypertrie/internal/raw/node/NodePtr.hpp"
+#include "Dice/hypertrie/internal/raw/node/TensorHash.hpp"
 
 namespace hypertrie::internal::node_based::raw {
 

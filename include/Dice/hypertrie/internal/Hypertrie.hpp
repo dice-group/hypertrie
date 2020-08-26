@@ -230,7 +230,7 @@ namespace hypertrie {
 			return this->hash() == other.hash() and this->depth() == other.depth();
 		}
 
-		operator std::string() {
+		operator std::string() const {
 			std::vector<std::string> mappings;
 			for (const auto &entry : *this){
 				if constexpr (tr::is_bool_valued)
@@ -272,13 +272,22 @@ namespace hypertrie {
 		}
 
 		Hypertrie(const const_Hypertrie<tr> &hypertrie) : const_Hypertrie<tr>(hypertrie) {
-			internal::compiled_switch<hypertrie_depth_limit, 1>::switch_void(
-					this->depth_,
-					[&](auto depth_arg){
-					  	auto &typed_nodec = *reinterpret_cast<internal::raw::NodeContainer<depth_arg, tri> *>(&this->node_container_);
-						this->context_->rawContext().template incRefCount<depth_arg>(typed_nodec);}
-					);
+			if (hypertrie.contextless()) // TODO: add copying contextless hypertries
+				throw std::logic_error{"Copying contextless const_Hypertries is not yet supported."};
+			else
+				internal::compiled_switch<hypertrie_depth_limit, 1>::switch_void(
+						this->depth_,
+						[&](auto depth_arg){
+							auto &typed_nodec = *reinterpret_cast<internal::raw::NodeContainer<depth_arg, tri> *>(&this->node_container_);
+							this->context_->rawContext().template incRefCount<depth_arg>(typed_nodec);}
+						);
 		}
+
+		Hypertrie(Hypertrie<tr> &&other) : const_Hypertrie<tr>(other) {
+			other.node_container_ = {};
+		}
+
+
 
 		~Hypertrie() {
 			if (not this->empty())

@@ -80,6 +80,7 @@ int main(int argc, char *argv[]) {
 	unsigned int total = 0;
 	auto start = steady_clock::now();
 	{
+		BulkInserter<tr> bulk_inserter{hypertrie};
 		while (getline(file, line)) {
 			++total;
 			using boost::lexical_cast;

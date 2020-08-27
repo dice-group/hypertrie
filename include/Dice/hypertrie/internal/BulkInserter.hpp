@@ -31,26 +31,36 @@ namespace hypertrie {
 			}
 		}
 
+		~BulkInserter(){
+			flush();
+		}
+
 		void add(Entry&& entry) {
 			assert(EntryFunctions::key(entry).size() == hypertrie->depth());
-			if ((*hypertrie)[EntryFunctions::key(entry)] == value_type{})
+			if ((*hypertrie)[EntryFunctions::key(entry)] == value_type{}){
 				new_entries.insert(std::forward<Entry>(entry));
+				if (new_entries.size() > threshold)
+					flush();
+			}
 		}
 
 		void flush() {
 
-			std::vector<Entry> keys(new_entries.size());
-			for (auto [i, entry] : iter::enumerate(new_entries)){
-				keys[i] = std::move(entry);
-			}
-
-			new_entries.clear();
-
 			internal::compiled_switch<hypertrie_depth_limit, 1>::switch_void(
-					this->depth_,
+					hypertrie->depth(),
 					[&](auto depth_arg){
-					  auto &typed_nodec = *reinterpret_cast<internal::raw::NodeContainer<depth_arg, tri> *>(hypertrie->rawNodeContainer());
-					  hypertrie->context()->rawContext().bulk_insert(typed_nodec, std::move(keys));
+
+						using RawKey = typename tri::template RawKey<depth_arg>;
+						std::vector<RawKey> keys(new_entries.size());
+						for (auto [i, entry] : iter::enumerate(new_entries)){
+							RawKey &raw_key = keys[i];
+							for(auto i : iter::range(size_t(depth_arg)))
+								raw_key[i] = entry[i]; // todo: add support for non-boolean
+						}
+
+						new_entries.clear();
+					  auto &typed_nodec = *reinterpret_cast<internal::raw::NodeContainer<depth_arg, tri> *>(const_cast<hypertrie::internal::raw::RawNodeContainer *>(hypertrie->rawNodeContainer()));
+					  hypertrie->context()->rawContext().template bulk_insert<depth_arg>(typed_nodec, std::move(keys));
 					}
 			);
 

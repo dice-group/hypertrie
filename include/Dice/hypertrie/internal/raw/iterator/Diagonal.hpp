@@ -170,16 +170,17 @@ namespace hypertrie::internal::raw {
 				} while (not ended() and not retrieveSubDiagonalValue());
 			} else {
 				++iter_;
-				if constexpr (result_depth == 0) {
-					if constexpr (tri::is_bool_valued)
-						value_ = true;
-					else
-						value_ = iter_->second;
-				} else {
-					NodeContainer<result_depth, tri> child_node = node_context_->storage.template getNode<result_depth>(iter_->second);
-					value_ = {child_node, true};
+				if (not ended()) {
+					if constexpr (result_depth == 0) {
+						if constexpr (tri::is_bool_valued)
+							value_ = true;
+						else
+							value_ = iter_->second;
+					} else {
+						NodeContainer<result_depth, tri> child_node = node_context_->storage.template getNode<result_depth>(iter_->second);
+						value_ = {child_node, true};
+					}
 				}
-
 			}
 			return *this;
 		}

@@ -4,13 +4,12 @@
 #include <fstream>
 #include <iostream>
 
-#include <Dice/hypertrie/internal/node_based/raw/storage/NodeContext.hpp>
+#include <Dice/hypertrie/hypertrie.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
 
 #include <absl/hash/hash.h>
 #include <fmt/format.h>
-#include <tsl/hopscotch_set.h>
 
 
 using PhysicalMem = uint32_t;
@@ -44,7 +43,7 @@ inline PhysicalMem get_memory_usage() {
 
 int main(int argc, char *argv[]) {
 
-	using namespace hypertrie::internal::node_based;
+	using namespace hypertrie;
 	using namespace fmt::literals;
 	using namespace std::chrono;
 	if (argc != 2) {
@@ -58,34 +57,30 @@ int main(int argc, char *argv[]) {
 		exit(EXIT_FAILURE);
 	}
 
-	using tr = Hypertrie_internal_t<Hypertrie_t<unsigned long,
+	using tr = Hypertrie_t<unsigned long,
 			bool,
 			hypertrie::internal::container::tsl_sparse_map,
 			hypertrie::internal::container::tsl_sparse_set,
-			true>>;
+			false>;
 	constexpr hypertrie::pos_type depth = 3;
 
 	using key_part_type = typename tr::key_part_type;
 	using value_type = typename tr::value_type;
-	using Key = typename tr::template RawKey<depth>;
+	using Key = typename tr::Key;
 
-	NodeContext<depth, tr> context{};
 	// create emtpy primary node
-	NodeContainer<depth, tr> hypertrie{};
+	Hypertrie<tr> hypertrie (depth);
+
+	BulkInserter<tr> bulk_inserter{hypertrie};
 
 	std::ifstream file(rdf_file);
 
 	std::string line = "";
 	// Iterate through each line and split the content using delimeter
 	unsigned int total = 0;
-	unsigned int count = 0;
 	auto start = steady_clock::now();
-	auto start_part = steady_clock::now();
 	{
-		tsl::hopscotch_set<Key, absl::Hash<Key>> next_entries{};
-		next_entries.reserve(1'000'000);
 		while (getline(file, line)) {
-			++count;
 			++total;
 			using boost::lexical_cast;
 			std::vector<std::string> id_triple;
@@ -94,30 +89,13 @@ int main(int argc, char *argv[]) {
 			//		std::cout << count << " #    # " << line << std::endl;
 
 			Key key{lexical_cast<key_part_type>(id_triple[0]), lexical_cast<key_part_type>(id_triple[1]), lexical_cast<key_part_type>(id_triple[2])};
-			if (not context.template get(hypertrie, key))
-				next_entries.insert(std::move(key));
-
-			if (next_entries.size() == 1'000'000) {
-				std::vector<Key> keys(next_entries.size());
-				for (auto [i, key] : iter::enumerate(next_entries))
-					keys[i] = std::move(key);
-				next_entries.clear();
-				context.template bulk_insert(hypertrie, std::move(keys));
-
-				auto short_duration = steady_clock::now() - start_part;
-				start_part = steady_clock::now();
-				std::cerr << "{:>9.3f} mio triples processed."_format(double(count)/1'000'000.0) <<                                                                                            //
-						"\ttook: {:>4d}.{:03d} s."_format(duration_cast<seconds>(short_duration).count(), (duration_cast<milliseconds>(short_duration) % 1000).count()) <<//
-						"\tdistinct triples: {:>9.03f} mio"_format(hypertrie.uncompressed().node()->size()/1'000'000.0) <<                                                                                    //
-						"\ttriple/GB: {}"_format(long(hypertrie.uncompressed().node()->size() / (double(get_memory_usage()) / (1000 * 1000)))) <<                                      //
-						"\tB/triple: {:.1f}"_format(double(get_memory_usage()) * 1000.0 / hypertrie.uncompressed().node()->size()) << std::endl;
-			}
+			bulk_inserter.add(std::move(key));
 		}
 	}
 	auto end = steady_clock::now();
 	file.close();
 	std::cerr << "{:} mio triples processed."_format(double(total)) << std::endl;
-	std::cerr << "hypertrie entries: {:d}."_format(hypertrie.uncompressed().node()->size()) << std::endl;
+	std::cerr << "hypertrie entries: {:d}."_format(hypertrie.size()) << std::endl;
 	std::cerr << "hypertrie size estimation: {:d} kB."_format(get_memory_usage()) << std::endl;
 	auto duration = end - start;
 

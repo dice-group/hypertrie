@@ -224,7 +224,7 @@ namespace hypertrie::internal::raw {
 									++slice_pos;
 									continue;
 								} else {
-									nc.hash() = TaggedTensorHash(nodec.compressed_node()->key()[nodec_pos]);
+									nc.hash() = TaggedTensorHash<tri>(nodec.compressed_node()->key()[nodec_pos]);
 									return {nc,false};
 								}
 							}
@@ -308,7 +308,7 @@ namespace hypertrie::internal::raw {
 							while (key_pos < fixed_keyparts) {
 								if (not diagonal_positions[key_pos]){
 									CompressedNodeContainer<result_depth, tri> nc;
-									nc.hash() = TaggedTensorHash(nodec.compressed_node()->key()[key_pos - offset]);
+									nc.hash() = TaggedTensorHash<tri>(nodec.compressed_node()->key()[key_pos - offset]);
 									return {nc,false};
 								}
 								++key_pos;

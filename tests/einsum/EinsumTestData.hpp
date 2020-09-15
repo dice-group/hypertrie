@@ -25,9 +25,14 @@ namespace hypertrie::tests::einsum {
 
 		using namespace ::fmt::literals;
 		using namespace ::hypertrie;
-		using BH = ::hypertrie::Hypertrie<>;
-		using const_BH = ::hypertrie::const_Hypertrie<>;
-		using Join = ::hypertrie::HashJoin<>;
+		using tr = hypertrie::Hypertrie_t<unsigned long,
+				bool,
+				hypertrie::internal::container::tsl_sparse_map,
+				hypertrie::internal::container::tsl_sparse_set,
+				false>;
+		using BH = ::hypertrie::Hypertrie<tr>;
+		using const_BH = ::hypertrie::const_Hypertrie<tr>;
+		using Join = ::hypertrie::HashJoin<tr>;
 		using Key = BH::Key;
 		using SliceKey = BH::SliceKey;
 		using pos_type = uint8_t;

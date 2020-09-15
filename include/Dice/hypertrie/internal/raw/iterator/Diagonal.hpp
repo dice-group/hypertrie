@@ -97,7 +97,19 @@ namespace hypertrie::internal::raw {
 							else
 								value_ = iter_->second;
 						} else {
-							NodeContainer<result_depth, tri> child_node = node_context_->storage.template getNode<result_depth>(iter_->second);
+							TensorHash next_result_hash;
+							if constexpr (result_depth == 1 and tri::is_lsb_unused) {
+								if (iter_->second.isCompressed()){
+									value_.nodec.hash() = iter_->second;
+									value_.is_managed = true;
+									return *this;
+								} else {
+									next_result_hash = iter_->second.hash();
+								}
+							} else {
+								next_result_hash = iter_->second;
+							}
+							NodeContainer<result_depth, tri> child_node = node_context_->storage.template getNode<result_depth>(next_result_hash);
 							value_ = {child_node,true};
 						}
 					}
@@ -126,16 +138,28 @@ namespace hypertrie::internal::raw {
 	private:
 		bool retrieveSubDiagonalValue() {
 			static_assert(diag_depth > 1);
-			NodeContainer<depth - 1, tri> child_node = node_context_->storage.template getNode<depth - 1>(iter_->second);
-			key_part_type key_part = iter_->first;
-			if constexpr (result_depth > 0)
-				value_ = node_context_->template diagonal_slice<depth - 1, diag_depth - 1>(child_node, sub_diag_poss_, key_part, &internal_compressed_node);
-			else
-				value_ = node_context_->template diagonal_slice<depth - 1, diag_depth - 1>(child_node, sub_diag_poss_, key_part);
-			if constexpr(result_depth == 0)
-				return value_ != value_type{};
-			else
-				return not value_.nodec.empty();
+			const key_part_type key_part = iter_->first;
+			if constexpr (not (tri::is_lsb_unused and depth - 1 == 1)){
+				NodeContainer<depth - 1, tri> child_node = node_context_->storage.template getNode<depth - 1>(iter_->second);
+				if constexpr (result_depth > 0)
+					value_ = node_context_->template diagonal_slice<depth - 1, diag_depth - 1>(child_node, sub_diag_poss_, key_part, &internal_compressed_node);
+				else
+					value_ = node_context_->template diagonal_slice<depth - 1, diag_depth - 1>(child_node, sub_diag_poss_, key_part);
+				if constexpr(result_depth == 0)
+					return value_ != value_type{};
+				else
+					return not value_.nodec.empty();
+			} else {
+				static_assert(depth == 2);
+				if (iter_->second.isCompressed()){
+					value_ = iter_->second.getKeyPart() == key_part;
+					return value_;
+				} else {
+					NodeContainer<depth - 1, tri> child_node = node_context_->storage.template getNode<depth - 1>(iter_->second.hash());
+					value_ = node_context_->template diagonal_slice<depth - 1, diag_depth - 1>(child_node, sub_diag_poss_, key_part);
+					return value_;
+				}
+			}
 		} 
 	public:
 		bool find(key_part_type key_part) {
@@ -177,7 +201,19 @@ namespace hypertrie::internal::raw {
 						else
 							value_ = iter_->second;
 					} else {
-						NodeContainer<result_depth, tri> child_node = node_context_->storage.template getNode<result_depth>(iter_->second);
+						TensorHash next_result_hash;
+						if constexpr (result_depth == 1 and tri::is_lsb_unused) {
+							if (iter_->second.isCompressed()){
+								value_.nodec.hash() = iter_->second;
+								value_.is_managed = true;
+								return *this;
+							} else {
+								next_result_hash = iter_->second.hash();
+							}
+						} else {
+							next_result_hash = iter_->second;
+						}
+						NodeContainer<result_depth, tri> child_node = node_context_->storage.template getNode<result_depth>(next_result_hash);
 						value_ = {child_node, true};
 					}
 				}

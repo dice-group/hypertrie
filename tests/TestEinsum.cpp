@@ -22,7 +22,7 @@ namespace hypertrie::tests::einsum {
 
 	template<typename T>
 	void runTest(long excl_max, TestEinsum &test_einsum, std::chrono::milliseconds timeout_duration = 0ms) {
-		auto einsum = &hypertrie::einsum2map<T>;
+		auto einsum = &hypertrie::einsum2map<T,tr>;
 		// result how it is
 		auto start_time = std::chrono::steady_clock::now();
 		auto timeout = (timeout_duration != 0ms) ? start_time + timeout_duration : time_point::max();

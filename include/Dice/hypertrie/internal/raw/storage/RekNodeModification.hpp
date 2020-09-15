@@ -139,7 +139,7 @@ namespace hypertrie::internal::raw {
 			bool value_changes = old_value != value_type{};
 
 			Modification_t<update_depth> update{};
-			update.hashBefore() = nodec;
+			update.hashBefore() = nodec.hash().hash();
 			update.addEntry(key, value);
 			if (value_deleted) {
 				update.modOp() = ModificationOperations::REMOVE_FROM_UC;

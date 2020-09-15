@@ -209,7 +209,11 @@ namespace hypertrie::internal::raw {
 					return *this->nodec();
 				} else {
 					auto &parent_iter = this->template getIter<current_depth>();
-					const auto hash = parent_iter->second;
+					TensorHash hash;
+					if constexpr (current_depth == 1 and tri::is_lsb_unused)
+						hash = parent_iter->second.hash();
+					else
+						hash = parent_iter->second;
 
 					return this->node_context()->storage.template getUncompressedNode<current_depth>(hash);
 				}

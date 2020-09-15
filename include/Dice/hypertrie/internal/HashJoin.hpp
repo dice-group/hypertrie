@@ -17,12 +17,10 @@ namespace hypertrie {
 		using value_type = typename tr::value_type;
 
 	public:
-		using const_Hypertrie = const_Hypertrie<tr>;
-		using Diagonal = HashDiagonal<tr>;
 		using poss_type = std::vector<pos_type>;
 
 	private:
-		std::vector<const_Hypertrie> hypertries;
+		std::vector<const_Hypertrie<tr>> hypertries;
 		std::vector<poss_type> positions;
 
 	public:
@@ -34,21 +32,21 @@ namespace hypertrie {
 		HashJoin(const HashJoin &) = default;
 
 
-		HashJoin(std::vector<const_Hypertrie> hypertries, std::vector<poss_type> positions)
+		HashJoin(std::vector<const_Hypertrie<tr>> hypertries, std::vector<poss_type> positions)
 				: hypertries(std::move(hypertries)), positions(std::move(positions)) {}
 
 		class iterator {
 
 		public:
 			using iterator_category = std::forward_iterator_tag;
-			using value_type = std::pair<std::vector<const_Hypertrie>, key_part_type>;
+			using value_type = std::pair<std::vector<const_Hypertrie<tr>>, key_part_type>;
 			using difference_type = ptrdiff_t;
 			using pointer = value_type *;
 			using reference = value_type &;
 		private:
 			poss_type pos_in_out{};
 			std::vector<pos_type> result_depths{};
-			std::vector<Diagonal> ops{};
+			std::vector<HashDiagonal<tr>> ops{};
 
 			bool ended = false;
 
@@ -66,7 +64,7 @@ namespace hypertrie {
 				for (const auto &[pos, join_poss, hypertrie] : iter::zip(iter::range(join.hypertries.size()), join.positions,
 				                                                   join.hypertries)) {
 					if (size(join_poss) > 0) {
-						ops.emplace_back(Diagonal{hypertrie, join_poss});
+						ops.emplace_back(HashDiagonal<tr>{hypertrie, join_poss});
 						auto result_depth = result_depths.emplace_back(hypertrie.depth() - size(join_poss));
 						if (result_depth) {
 							pos_in_out.push_back(out_pos++);
@@ -89,7 +87,7 @@ namespace hypertrie {
 				// check if the end was reached
 				static bool found;
 				// _current_key_part is increased if containsAndUpdateLower returns false
-				Diagonal &smallest_operand = ops.front();
+				HashDiagonal<tr> &smallest_operand = ops.front();
 
 				while (not smallest_operand.ended()) {
 
@@ -106,7 +104,7 @@ namespace hypertrie {
 					if (found) {
 						for (const auto op_pos : iter::range(ops.size())) {
 							if (const auto &result_depth = result_depths[op_pos]; result_depth)
-								value.first[pos_in_out[op_pos]] = const_Hypertrie(ops[op_pos].currentHypertrie());
+								value.first[pos_in_out[op_pos]] = const_Hypertrie<tr>(ops[op_pos].currentHypertrie());
 						}
 						++smallest_operand;
 						return;
@@ -133,7 +131,7 @@ namespace hypertrie {
 		private:
 			void optimizeOperandOrder() {
 				using namespace internal::util;
-				const auto permutation = sort_permutation::get<Diagonal>(ops);
+				const auto permutation = sort_permutation::get<HashDiagonal<tr>>(ops);
 				sort_permutation::apply(ops, permutation);
 				sort_permutation::apply(pos_in_out, permutation);
 				sort_permutation::apply(result_depths, permutation);

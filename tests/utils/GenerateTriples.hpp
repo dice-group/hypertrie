@@ -110,8 +110,6 @@ namespace hypertrie::tests::utils {
 				sample = container.distribution(container.randomNumberGenerator);
 			}
 
-			bool operator==(const iterator &other) { return i == other.i; }
-
 			bool operator!=(const iterator &other) { return i != other.i; }
 		};
 

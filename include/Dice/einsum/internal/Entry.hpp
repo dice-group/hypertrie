@@ -1,5 +1,5 @@
-#ifndef HYPERTRIE_ENTRY_HPP
-#define HYPERTRIE_ENTRY_HPP
+#ifndef HYPERTRIE_EINSUMENTRY_HPP
+#define HYPERTRIE_EINSUMENTRY_HPP
 //#define DEBUGEINSUM
 #ifdef DEBUGEINSUM
 #include <fmt/format.h>
@@ -13,26 +13,21 @@ constexpr bool _debugeinsum_ = true;
 constexpr bool _debugeinsum_ = false;
 #endif
 
+#include "Dice/hypertrie/hypertrie.hpp"
+#include <Dice/hypertrie/internal/Hypertrie.hpp>
 #include <boost/container_hash/hash.hpp>
 #include <type_traits>
-#include "Dice/hypertrie/internal/BoolHypertrie.hpp"
-#include "Dice/hypertrie/internal/Join.hpp"
-
 
 
 namespace einsum::internal {
 
-	namespace {
-		template<typename key_part_type, template<typename, typename> class map_type,
-				template<typename> class set_type>
-		using const_BoolHypertrie = typename ::hypertrie::internal::interface::boolhypertrie<key_part_type, map_type, set_type>::const_BoolHypertrie;
-		template<typename key_part_type, template<typename, typename> class map_type,
-				template<typename> class set_type>
-		using Join = typename ::hypertrie::internal::interface::join<key_part_type, map_type, set_type>::HashJoin;
-		template<typename key_part_type, template<typename, typename> class map_type,
-				template<typename> class set_type>
-		using Diagonal = typename ::hypertrie::internal::interface::boolhypertrie<key_part_type, map_type, set_type>::RawDiagonal;
-	}
+	template<class T>
+	concept HypertrieTrait = hypertrie::internal::hypertrie_trait::is_instance<T, hypertrie::Hypertrie_t>::value;
+
+	template<HypertrieTrait tr>
+	using const_Hypertrie = typename hypertrie::const_Hypertrie<tr>;
+	template<HypertrieTrait tr>
+	using Hypertrie = typename hypertrie::Hypertrie<tr>;
 
 	template<typename key_part_type>
 	using Key = std::vector<key_part_type>;
@@ -44,15 +39,17 @@ namespace einsum::internal {
 		}
 	};
 
-	template<typename key_part_type_, typename value_type_ = size_t, typename = std::enable_if_t<(std::is_integral_v<value_type_>)>>
+	template<typename value_type_t, HypertrieTrait tr_t, typename = std::enable_if_t<(std::is_integral_v<value_type_t>)>>
 	struct Entry {
-		using key_part_type = key_part_type_;
-		using key_type = Key<key_part_type>;
-		using value_type = value_type_;
+		using tr = tr_t;
+		using key_part_type = typename tr::key_part_type;
+		using Key = typename tr::Key;
+		using value_type = value_type_t;
+
 		value_type value;
-		key_type key;
+		Key key;
 	};
 
 }
-#endif //HYPERTRIE_ENTRY_HPP
+#endif //HYPERTRIE_EINSUMENTRY_HPP
 

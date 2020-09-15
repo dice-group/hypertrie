@@ -10,6 +10,58 @@
 using Vec = const std::vector<int>;
 using iter::range;
 
+TEST_CASE("range: .start(), .stop(), and .step()", "[range]") {
+  SECTION("one arg") {
+    auto r = range(3);
+    REQUIRE(r.start() == 0);
+    REQUIRE(r.stop() == 3);
+    REQUIRE(r.step() == 1);
+
+    // make sure iterators aren't changing the value
+    auto it = r.begin();
+    ++it;
+
+    REQUIRE(r.start() == 0);
+    REQUIRE(r.stop() == 3);
+    REQUIRE(r.step() == 1);
+  }
+
+  SECTION("two args") {
+    auto r = range(2, 10);
+    REQUIRE(r.start() == 2);
+    REQUIRE(r.stop() == 10);
+    REQUIRE(r.step() == 1);
+  }
+
+  SECTION("three args") {
+    auto r = range(-6, 20, 3);
+    REQUIRE(r.start() == -6);
+    REQUIRE(r.stop() == 20);
+    REQUIRE(r.step() == 3);
+  }
+
+  SECTION("one arg (double)") {
+    auto r = range(3.5);
+    REQUIRE(r.start() == 0);
+    REQUIRE(r.stop() == Approx(3.5));
+    REQUIRE(r.step() == Approx(1.0));
+  }
+
+  SECTION("two args (double)") {
+    auto r = range(20.1, 31.7);
+    REQUIRE(r.start() == Approx(20.1));
+    REQUIRE(r.stop() == Approx(31.7));
+    REQUIRE(r.step() == Approx(1.0));
+  }
+
+  SECTION("three args (double)") {
+    auto r = range(-6.3, 5.7, 0.1);
+    REQUIRE(r.start() == Approx(-6.3));
+    REQUIRE(r.stop() == Approx(5.7));
+    REQUIRE(r.step() == Approx(0.1));
+  }
+}
+
 TEST_CASE("range: works with only stop", "[range]") {
   auto r = range(5);
   Vec v(std::begin(r), std::end(r));
@@ -259,4 +311,75 @@ TEST_CASE("range: iterator meets forward iterator requirements", "[range]") {
   auto r2 = range(5.0);
   REQUIRE(itertest::IsForwardIterator<decltype(std::begin(r))>::value);
   REQUIRE(itertest::IsForwardIterator<decltype(std::begin(r2))>::value);
+}
+
+TEST_CASE("range: operator[] simple tests", "[range]") {
+  SECTION("range(start)") {
+    auto r = range(4);
+    REQUIRE(r[0] == 0);
+    REQUIRE(r[1] == 1);
+    REQUIRE(r[2] == 2);
+    REQUIRE(r[3] == 3);
+  }
+  SECTION("range(start, stop)") {
+    auto r = range(10, 14);
+    REQUIRE(r[0] == 10);
+    REQUIRE(r[1] == 11);
+    REQUIRE(r[2] == 12);
+    REQUIRE(r[3] == 13);
+  }
+  SECTION("range(start, stop, step)") {
+    auto r = range(20, 30, 3);
+    REQUIRE(r[0] == 20);
+    REQUIRE(r[1] == 23);
+    REQUIRE(r[2] == 26);
+    REQUIRE(r[3] == 29);
+  }
+  SECTION("range(start, stop, step) with double") {
+    auto r = range(50.0, 50.99, 0.2);
+    REQUIRE(r[0] == Approx(50.0));
+    REQUIRE(r[1] == Approx(50.2));
+    REQUIRE(r[2] == Approx(50.4));
+    REQUIRE(r[3] == Approx(50.6));
+    REQUIRE(r[4] == Approx(50.8));
+  }
+}
+
+TEMPLATE_TEST_CASE("range: .size() with signed integrals", "[range]",
+    signed char, short, int, long, long long) {
+  constexpr TestType N = 5;
+  constexpr TestType INC = 1;
+  for (TestType start = -N; start < N; start += INC) {
+    for (TestType stop = -N; stop < N; stop += INC) {
+      for (TestType step = -N; step < N; step += INC) {
+        if (step == 0) {
+          continue;
+        }
+        auto r = range(start, stop, step);
+        REQUIRE(r.size()
+                == static_cast<std::size_t>(
+                       std::distance(std::begin(r), std::end(r))));
+      }
+    }
+  }
+}
+
+TEMPLATE_TEST_CASE("range: .size() with unsigned integrals", "[range]",
+    unsigned char, unsigned short, unsigned int, unsigned long,
+    unsigned long long) {
+  constexpr TestType N = 5;
+  constexpr TestType INC = 1;
+  for (TestType start = 0; start < N; start += INC) {
+    for (TestType stop = 0; stop < N; stop += INC) {
+      for (TestType step = 0; step < N; step += INC) {
+        if (step == 0) {
+          continue;
+        }
+        auto r = range(start, stop, step);
+        REQUIRE(r.size()
+                == static_cast<std::size_t>(
+                       std::distance(std::begin(r), std::end(r))));
+      }
+    }
+  }
 }

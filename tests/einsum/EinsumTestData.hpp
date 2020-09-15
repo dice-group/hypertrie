@@ -7,7 +7,9 @@
 #include <unordered_set>
 #include <iostream>
 
-#include <Dice/hypertrie/boolhypertrie.hpp>
+#include <Dice/hypertrie/hypertrie.hpp>
+#include <Dice/einsum/internal/Subscript.hpp>
+
 
 #include <torch/torch.h>
 
@@ -20,16 +22,15 @@ namespace hypertrie::tests::einsum {
 
 		using namespace ::hypertrie::tests::utils;
 		using namespace ::einsum::internal;
-		using bh_ns = ::hypertrie::boolhypertrie<unsigned long, ::hypertrie::internal::container::tsl_sparse_map ,
-				::hypertrie::internal::container::tsl_sparse_set >;
+
 		using namespace ::fmt::literals;
 		using namespace ::hypertrie;
-		using BH = bh_ns::BoolHypertrie;
-		using const_BH = bh_ns::const_BoolHypertrie;
-		using Join = bh_ns::HashJoin;
+		using BH = ::hypertrie::Hypertrie<>;
+		using const_BH = ::hypertrie::const_Hypertrie<>;
+		using Join = ::hypertrie::HashJoin<>;
 		using Key = BH::Key;
 		using SliceKey = BH::SliceKey;
-		using pos_type = bh_ns::pos_type;
+		using pos_type = uint8_t;
 	}
 
 	int resolve(const torch::Tensor &tensor, std::vector<unsigned long> key) {

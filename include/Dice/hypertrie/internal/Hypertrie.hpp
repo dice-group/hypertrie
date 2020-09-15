@@ -28,7 +28,7 @@ namespace hypertrie {
 		template<size_t depth>
 		using RawSliceKey = typename tri::template RawSliceKey<depth>;
 
-		using NodeContainer = typename internal::raw::RawNodeContainer;
+		typedef typename internal::raw::RawNodeContainer NodeContainer;
 
 	protected:
 		NodeContainer node_container_;
@@ -269,6 +269,17 @@ namespace hypertrie {
 						return this->context_->rawContext().template set<depth_arg>(node_container, raw_key, value);
 					},
 					[]() -> value_type { assert(false); return {}; });
+		}
+
+		Hypertrie(const Hypertrie<tr> &hypertrie) : const_Hypertrie<tr>(hypertrie) {
+			if (not this->empty())
+				internal::compiled_switch<hypertrie_depth_limit, 1>::switch_void(
+						this->depth_,
+						[&](auto depth_arg){
+						  auto &typed_nodec = *reinterpret_cast<internal::raw::NodeContainer<depth_arg, tri> *>(&this->node_container_);
+						  this->context_->rawContext().template incRefCount<depth_arg>(typed_nodec);
+						}
+				);
 		}
 
 		Hypertrie(const const_Hypertrie<tr> &hypertrie) : const_Hypertrie<tr>(hypertrie) {

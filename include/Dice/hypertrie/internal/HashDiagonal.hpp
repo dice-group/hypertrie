@@ -11,13 +11,13 @@ namespace hypertrie {
 	class HashDiagonal {
 		using tr = tr_t;
 		using tri = internal::raw::Hypertrie_internal_t<tr>;
-		using NodeContainer = typename internal::raw::RawNodeContainer;
+		typedef typename internal::raw::RawNodeContainer NodeContainer;
 		using KeyPositions = typename tr::KeyPositions;
 		template <size_t depth>
 		using RawKeyPositions = typename  tri::template DiagonalPositions<depth>;
 		using key_part_type = typename tr::key_part_type;
 		using value_type = typename tr::value_type;
-		using NodeCompression = typename internal::raw::NodeCompression;
+		typedef typename internal::raw::NodeCompression NodeCompression;
 		template <size_t diag_depth, size_t depth, NodeCompression compression>
 		using RawHashDiagonal = typename internal::raw::template HashDiagonal<diag_depth, depth, compression, tri>;
 	protected:

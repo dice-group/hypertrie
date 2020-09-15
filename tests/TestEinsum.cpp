@@ -71,7 +71,7 @@ namespace hypertrie::tests::einsum {
 					auto subscript = std::make_shared<Subscript>(subscript_string);
 					std::vector<TestOperand> operands{};
 					for (const auto &operand_sc : subscript->getRawSubscript().operands) {
-						TestOperand &operand = operands.emplace_back(operand_sc.size(), excl_max, empty);
+						[[maybe_unused]] TestOperand &operand = operands.emplace_back(operand_sc.size(), excl_max, empty);
 //						WARN(operand.torch_tensor);
 					}
 					runTest<T>(excl_max, operands, subscript, timeout_duration);

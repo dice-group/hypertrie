@@ -65,7 +65,6 @@ int main(int argc, char *argv[]) {
 	constexpr hypertrie::pos_type depth = 3;
 
 	using key_part_type = typename tr::key_part_type;
-	using value_type = typename tr::value_type;
 	using Key = typename tr::Key;
 
 	// create emtpy primary node

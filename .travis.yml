@@ -1,21 +1,21 @@
 os: linux
-dist: bionic
+dist: focal
 language: cpp
 
 addons:
   apt:
     packages:
-      - g++-8
+      - g++-10
+      - clang-10
       - make
+      - cmake
       - python3-pip # used for installing conan
       - python3-setuptools # required for installing conan
       - python3-wheel
 
 install:
-  - if [ "$CXX" = "g++" ]; then export CXX="g++-8" CC="gcc-8"; fi
+  - if [ "$CXX" = "g++" ]; then export CXX="clang++-10" CC="gcc-10"; fi
   - pip3 install --user conan
-  - pip3 install --user cmake==3.13.3
-  - cmake --version
   - conan --version
 
 cache:
@@ -26,9 +26,11 @@ cache:
 before_script:
   - mkdir -p build #build dir
   - conan user #conan setup
-  - conan profile new --detect default || true
-  - conan profile update settings.compiler.libcxx=libstdc++11 default # use "new" C++ ABI
-  - conan remote add tsl https://api.bintray.com/conan/tessil/tsl && conan remote add public-conan https://api.bintray.com/conan/bincrafters/public-conan && conan remote add stiffstream https://api.bintray.com/conan/stiffstream/public
+  - mkdir -p ~/.conan/profiles/
+  - cp clang10_conan_profile ~/.conan/profiles/default
+  - conan remote add tsl https://api.bintray.com/conan/tessil/tsl
+#    conan remote add public-conan https://api.bintray.com/conan/bincrafters/public-conan && \
+#    conan remote add stiffstream https://api.bintray.com/conan/stiffstream/public
   # install libtorch
   - if [ ! -d libtorch ]; then ( wget -O libtorch.zip https://download.pytorch.org/libtorch/cpu/libtorch-cxx11-abi-shared-with-deps-1.4.0%2Bcpu.zip ) fi
   - if [ ! -d libtorch ]; then ( unzip libtorch.zip ) fi

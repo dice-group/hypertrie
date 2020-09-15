@@ -28,7 +28,7 @@ before_script:
   - conan user #conan setup
   - mkdir -p ~/.conan/profiles/
   - cp clang10_conan_profile ~/.conan/profiles/default
-  #  - conan remote add tsl https://api.bintray.com/conan/tessil/tsl && \
+  - conan remote add tsl https://api.bintray.com/conan/tessil/tsl
 #    conan remote add public-conan https://api.bintray.com/conan/bincrafters/public-conan && \
 #    conan remote add stiffstream https://api.bintray.com/conan/stiffstream/public
   # install libtorch

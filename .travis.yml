@@ -26,7 +26,7 @@ cache:
 before_script:
   - mkdir -p build #build dir
   - conan user #conan setup
-  - mkdir -r ~/.conan/profiles/
+  - mkdir -p ~/.conan/profiles/
   - cp clang10_conan_profile ~/.conan/profiles/default
   #  - conan remote add tsl https://api.bintray.com/conan/tessil/tsl && \
 #    conan remote add public-conan https://api.bintray.com/conan/bincrafters/public-conan && \

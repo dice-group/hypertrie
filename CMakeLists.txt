@@ -67,11 +67,12 @@ target_link_libraries(hypertrie INTERFACE
         CONAN_PKG::robin-hood-hashing
         )
 
-
+if (HYPERTRIE_ENABLE_TOOLS)
 add_executable(ids2hypertrie tools/IDs2Hypertrie.cpp)
 
 target_link_libraries(ids2hypertrie
         hypertrie)
+endif()
 
 # testing
 option(hypertrie_BUILD_TESTS "Build test programs" OFF)

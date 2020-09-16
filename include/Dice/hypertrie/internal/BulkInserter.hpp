@@ -40,7 +40,7 @@ namespace hypertrie {
 			assert(EntryFunctions::key(entry).size() == hypertrie->depth());
 			if ((*hypertrie)[EntryFunctions::key(entry)] == value_type{}) {
 				new_entries.insert(std::forward<Entry>(entry));
-				if (new_entries.size() > threshold)
+				if (threshold != 0 and new_entries.size() > threshold)
 					flush();
 			}
 		}
@@ -62,6 +62,10 @@ namespace hypertrie {
 						auto &typed_nodec = *reinterpret_cast<internal::raw::NodeContainer<depth_arg, tri> *>(const_cast<hypertrie::internal::raw::RawNodeContainer *>(hypertrie->rawNodeContainer()));
 						hypertrie->context()->rawContext().template bulk_insert<depth_arg>(typed_nodec, std::move(keys));
 					});
+		}
+
+		[[nodiscard]] size_t size() const{
+			return new_entries.size();
 		}
 	};
 }// namespace hypertrie

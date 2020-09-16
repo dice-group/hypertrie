@@ -122,7 +122,7 @@ namespace hypertrie::internal::raw {
 			else
 				update.modOp() = ModificationOperations::INSERT_INTO_UNCOMPRESSED_NODE;
 
-			update.hashBefore() = nodec.hash();
+			update.hashBefore() = nodec.hash().hash();
 			update.entries() = std::move(keys);
 
 			planUpdate(std::move(update), INC_COUNT_DIFF_AFTER);

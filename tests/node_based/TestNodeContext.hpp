@@ -29,7 +29,7 @@ namespace hypertrie::tests::raw::node_context {
 
 		SECTION(fmt::format("depth = {}, key_part_type = {}, value_type = {}",
 							depth, nameOfType<key_part_type>(), nameOfType<value_type>())) {
-			utils::RawGenerator<depth, key_part_type, value_type> gen{};
+			utils::RawGenerator<depth, key_part_type, value_type, size_t(tri::is_lsb_unused)> gen{};
 			for ([[maybe_unused]]auto i : iter::range(5000)) {
 				// create context
 				NodeContext<depth, tri> context{};
@@ -69,15 +69,19 @@ namespace hypertrie::tests::raw::node_context {
 
 	TEST_CASE("Test setting independent keys", "[NodeContext]") {
 		basicUsage<default_bool_Hypertrie_internal_t, 1>();
+		basicUsage<lsbunused_bool_Hypertrie_internal_t, 1>();
 		basicUsage<default_long_Hypertrie_internal_t, 1>();
 		basicUsage<default_double_Hypertrie_internal_t, 1>();
 		basicUsage<default_bool_Hypertrie_internal_t, 2>();
+		basicUsage<lsbunused_bool_Hypertrie_internal_t, 2>();
 		basicUsage<default_long_Hypertrie_internal_t, 2>();
 		basicUsage<default_double_Hypertrie_internal_t, 2>();
 		basicUsage<default_bool_Hypertrie_internal_t, 3>();
+		basicUsage<lsbunused_bool_Hypertrie_internal_t, 3>();
 		basicUsage<default_long_Hypertrie_internal_t, 3>();
 		basicUsage<default_double_Hypertrie_internal_t, 3>();
 		basicUsage<default_bool_Hypertrie_internal_t, 5>();
+		basicUsage<lsbunused_bool_Hypertrie_internal_t, 5>();
 		basicUsage<default_long_Hypertrie_internal_t, 5>();
 		basicUsage<default_double_Hypertrie_internal_t, 5>();
 	}

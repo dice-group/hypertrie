@@ -43,7 +43,8 @@ namespace hypertrie::tests::utils {
 
 	template<size_t depth, typename key_part_type, typename value_type,
 			key_part_type min = std::numeric_limits<key_part_type>::min(),
-			key_part_type max = std::numeric_limits<key_part_type>::max()>
+			key_part_type max = std::numeric_limits<key_part_type>::max(),
+			 size_t unused_lsb_bits = 0>
 	class RawGenerator : public AssetGenerator {
 	protected:
 
@@ -61,7 +62,7 @@ namespace hypertrie::tests::utils {
 
 		auto key() {
 			RawKey key_{};
-			std::generate(key_.begin(), key_.end(), [&]() { return key_part_dist(rand); });
+			std::generate(key_.begin(), key_.end(), [&]() { return key_part_dist(rand) << unused_lsb_bits; });
 			return key_;
 		}
 
@@ -107,9 +108,10 @@ namespace hypertrie::tests::utils {
 
 	template<size_t depth, typename key_part_type, typename value_type,
 			key_part_type min = std::numeric_limits<key_part_type>::min(),
-			key_part_type max = std::numeric_limits<key_part_type>::max()>
-	class EntryGenerator : public RawGenerator<depth, key_part_type, value_type, min, max> {
-		using super = RawGenerator<depth, key_part_type, value_type, min, max>;
+			key_part_type max = std::numeric_limits<key_part_type>::max(),
+			size_t unused_lsb_bits = 0>
+	class EntryGenerator : public RawGenerator<depth, key_part_type, value_type, min, max, unused_lsb_bits> {
+		using super = RawGenerator<depth, key_part_type, value_type, min, max, unused_lsb_bits>;
 
 		using RawKey = hypertrie::internal::RawKey<depth, key_part_type>;
 		using Key = hypertrie::Key<key_part_type>;

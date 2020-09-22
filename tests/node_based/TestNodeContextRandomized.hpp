@@ -18,52 +18,59 @@ namespace hypertrie::tests::raw::node_context::randomized {
 
 	using namespace hypertrie::internal::raw;
 
-	template<size_t depth, typename key_part_type>
-	using Key = hypertrie::internal::RawKey<depth, key_part_type>;
 
-	TEST_CASE("Test Randomized bulk long -> bool", "[NodeContext]") {
-		using tr = default_bool_Hypertrie_internal_t;
-		constexpr pos_type depth = 3;
+	template<HypertrieInternalTrait tri, size_t depth>
+	void randomized_bulk_load() {
+		SECTION("{}"_format(tri::to_string())) {
+			static_assert(std::is_same_v<typename tri::value_type, bool>, "bulk-loading is only supported for boolean valued hypertries yet.");
+			using key_part_type = typename tri::key_part_type;
+			using value_type = typename tri::value_type;
+			using Key = typename tri::template RawKey<depth>;
 
-		using key_part_type = typename tr::key_part_type;
-		using value_type = typename tr::value_type;
-		using Key = typename tr::template RawKey<depth>;
+			static utils::RawGenerator<depth, key_part_type, value_type, 0, 10, size_t(tri::is_lsb_unused)> gen{};
 
-		static utils::RawGenerator<depth, key_part_type, value_type, 0, 10> gen{};
-
-		NodeContext<depth, tr> context{};
-		// create emtpy primary node
-		UncompressedNodeContainer<depth, tr> nc{};
-		auto tt = TestTensor<depth, tr>::getPrimary();
+			NodeContext<depth, tri> context{};
+			// create emtpy primary node
+			NodeContainer<depth, tri> nc{};
+			auto tt = TestTensor<depth, tri>::getPrimary();
 
 
-		for (size_t count : iter::range(3,10))
-			SECTION("insert {} key "_format(count)) {
-				for (const auto i : iter::range(10)) {
-					SECTION("{}"_format(i)) {
-						// generate entries
-						auto temp_keys = gen.keys(count);
-						std::vector<Key> keys{temp_keys.begin(), temp_keys.end()};
+			for (size_t count : iter::range(3, 10))
+				SECTION("insert {} keys "_format(count)) {
+					for (const auto i : iter::range(10)) {
+						SECTION("{}"_format(i)) {
+							// generate entries
+							auto temp_keys = gen.keys(count);
+							std::vector<Key> keys{temp_keys.begin(), temp_keys.end()};
 
-						// print entries
-						std::string print_entries{};
-						for (auto &key : keys)
-							print_entries += "{} → true\n"_format(key);
-						WARN(print_entries);
+							// print entries
+							std::string print_entries{};
+							for (auto &key : keys)
+								print_entries += "{} → true\n"_format(key);
+							WARN(print_entries);
 
-						// insert entries into test tensor
-						for (auto &key : keys) {
-							tt.set(key, true);
+							// insert entries into test tensor
+							for (auto &key : keys) {
+								tt.set(key, true);
+							}
+
+							// bulk insert keys
+							context.template bulk_insert<depth>(nc, keys);
+							WARN("\n\n\nresulting hypertrie \n{}\n\n"_format((std::string) context.storage));
+							// check if they were inserted correctly
+							tt.checkContext(context);
 						}
-
-						// bulk insert keys
-						context.template bulk_insert<depth>(nc, keys);
-						WARN("\n\n\nresulting hypertrie \n{}\n\n"_format((std::string) context.storage));
-						// check if they were inserted correctly
-						tt.checkContext(context);
 					}
 				}
-			}
+		}
+	}
+
+	TEMPLATE_TEST_CASE_SIG("Randomized bulk loading [bool]", "[NodeContext]", ((size_t depth), depth), 1, 2, 3, 4, 5) {
+		randomized_bulk_load<default_bool_Hypertrie_internal_t, size_t(depth)>();
+	}
+
+	TEMPLATE_TEST_CASE_SIG("Randomized bulk loading [bool lsb-unused]", "[NodeContext]", ((size_t depth), depth), 1, 2, 3, 4, 5) {
+		randomized_bulk_load<lsbunused_bool_Hypertrie_internal_t, size_t(depth)>();
 	}
 
 	TEST_CASE("Test Randomized double bulk long -> bool", "[NodeContext]") {

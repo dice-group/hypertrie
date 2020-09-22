@@ -67,19 +67,19 @@ namespace hypertrie::tests::raw::node_context::randomized {
 	}
 
 	TEST_CASE("Test Randomized double bulk long -> bool", "[NodeContext]") {
-		using tr = default_bool_Hypertrie_internal_t;
+		using tri = default_bool_Hypertrie_internal_t;
 		constexpr pos_type depth = 3;
 
-		using key_part_type = typename tr::key_part_type;
-		using value_type = typename tr::value_type;
-		using Key = typename tr::template RawKey<depth>;
+		using key_part_type = typename tri::key_part_type;
+		using value_type = typename tri::value_type;
+		using Key = typename tri::template RawKey<depth>;
 
 		static utils::RawGenerator<depth, key_part_type, value_type, 0, 10> gen{};
 
-		NodeContext<depth, tr> context{};
+		NodeContext<depth, tri> context{};
 		// create emtpy primary node
-		UncompressedNodeContainer<depth, tr> nc{};
-		auto tt = TestTensor<depth, tr>::getPrimary();
+		UncompressedNodeContainer<depth, tri> nc{};
+		auto tt = TestTensor<depth, tri>::getPrimary();
 
 
 		for (size_t count : iter::range(3,50))
@@ -118,23 +118,23 @@ namespace hypertrie::tests::raw::node_context::randomized {
 	}
 
 	TEST_CASE("Test Randomized double bulk long -> bool, unused_lsb", "[NodeContext]") {
-		using tr = Hypertrie_internal_t<Hypertrie_t<unsigned long,
+		using tri = Hypertrie_internal_t<Hypertrie_t<unsigned long,
 				bool,
 				hypertrie::internal::container::std_map,
 				hypertrie::internal::container::std_set,
 				true>>;
 		constexpr pos_type depth = 3;
 
-		using key_part_type = typename tr::key_part_type;
-		using value_type = typename tr::value_type;
-		using Key = typename tr::template RawKey<depth>;
+		using key_part_type = typename tri::key_part_type;
+		using value_type = typename tri::value_type;
+		using Key = typename tri::template RawKey<depth>;
 
 		static utils::RawGenerator<depth, key_part_type, value_type, 0, 10> gen{};
 
-		NodeContext<depth, tr> context{};
+		NodeContext<depth, tri> context{};
 		// create emtpy primary node
-		UncompressedNodeContainer<depth, tr> nc{};
-		auto tt = TestTensor<depth, tr>::getPrimary();
+		UncompressedNodeContainer<depth, tri> nc{};
+		auto tt = TestTensor<depth, tri>::getPrimary();
 
 
 		for (size_t count : iter::range(3,50))
@@ -180,19 +180,19 @@ namespace hypertrie::tests::raw::node_context::randomized {
 	}
 
 	TEST_CASE("Test Randomized long -> bool", "[NodeContext]") {
-		using tr = default_bool_Hypertrie_internal_t;
+		using tri = default_bool_Hypertrie_internal_t;
 		constexpr pos_type depth = 3;
 
-		using key_part_type = typename tr::key_part_type;
-		using value_type = typename tr::value_type;
-		using Key = typename tr::template RawKey<depth>;
+		using key_part_type = typename tri::key_part_type;
+		using value_type = typename tri::value_type;
+		using Key = typename tri::template RawKey<depth>;
 
 		static utils::RawGenerator<depth, key_part_type, value_type, 0, 10> gen{};
 
-		NodeContext<depth, tr> context{};
+		NodeContext<depth, tri> context{};
 		// create emtpy primary node
-		UncompressedNodeContainer<depth, tr> nc{};
-		auto tt = TestTensor<depth, tr>::getPrimary();
+		UncompressedNodeContainer<depth, tri> nc{};
+		auto tt = TestTensor<depth, tri>::getPrimary();
 
 
 		for (size_t count : iter::range(1,500))
@@ -226,23 +226,23 @@ namespace hypertrie::tests::raw::node_context::randomized {
 	}
 
 	TEST_CASE("Test Randomized long -> bool, unused_lsb", "[NodeContext]") {
-		using tr = Hypertrie_internal_t<Hypertrie_t<unsigned long,
+		using tri = Hypertrie_internal_t<Hypertrie_t<unsigned long,
 				bool,
 				hypertrie::internal::container::std_map,
 				hypertrie::internal::container::std_set,
 													  true>>;
 		constexpr pos_type depth = 3;
 
-		using key_part_type = typename tr::key_part_type;
-		using value_type = typename tr::value_type;
-		using Key = typename tr::template RawKey<depth>;
+		using key_part_type = typename tri::key_part_type;
+		using value_type = typename tri::value_type;
+		using Key = typename tri::template RawKey<depth>;
 
 		static utils::RawGenerator<depth, key_part_type, value_type, 0, 10> gen{};
 
-		NodeContext<depth, tr> context{};
+		NodeContext<depth, tri> context{};
 		// create emtpy primary node
-		UncompressedNodeContainer<depth, tr> nc{};
-		auto tt = TestTensor<depth, tr>::getPrimary();
+		UncompressedNodeContainer<depth, tri> nc{};
+		auto tt = TestTensor<depth, tri>::getPrimary();
 
 
 		for (size_t count : iter::range(1,500))
@@ -280,19 +280,19 @@ namespace hypertrie::tests::raw::node_context::randomized {
 	}
 
 	TEST_CASE("Test Randomized long -> long", "[NodeContext]") {
-		using tr = default_long_Hypertrie_internal_t;
+		using tri = default_long_Hypertrie_internal_t;
 		constexpr pos_type depth = 3;
 
-		using key_part_type = typename tr::key_part_type;
-		using value_type = typename tr::value_type;
-		using Key = typename tr::template RawKey<depth>;
+		using key_part_type = typename tri::key_part_type;
+		using value_type = typename tri::value_type;
+		using Key = typename tri::template RawKey<depth>;
 
 		static utils::RawGenerator<depth, key_part_type, value_type, 0, 10> gen{0, 5};
 
-		NodeContext<depth, tr> context{};
+		NodeContext<depth, tri> context{};
 		// create emtpy primary node
-		UncompressedNodeContainer<depth, tr> nc{};
-		auto tt = TestTensor<depth, tr>::getPrimary();
+		UncompressedNodeContainer<depth, tri> nc{};
+		auto tt = TestTensor<depth, tri>::getPrimary();
 
 
 		for (size_t count : iter::range(1, 500))
@@ -324,19 +324,19 @@ namespace hypertrie::tests::raw::node_context::randomized {
 	}
 
 	TEST_CASE("Test Randomized long -> long many keys", "[NodeContext]") {
-		using tr = default_long_Hypertrie_internal_t;
+		using tri = default_long_Hypertrie_internal_t;
 		constexpr pos_type depth = 3;
 
-		using key_part_type = typename tr::key_part_type;
-		using value_type = typename tr::value_type;
-		using Key = typename tr::template RawKey<depth>;
+		using key_part_type = typename tri::key_part_type;
+		using value_type = typename tri::value_type;
+		using Key = typename tri::template RawKey<depth>;
 
 		static utils::RawGenerator<depth, key_part_type, value_type, 0, 10> gen{0, 5};
 
-		NodeContext<depth, tr> context{};
+		NodeContext<depth, tri> context{};
 		// create emtpy primary node
-		UncompressedNodeContainer<depth, tr> nc{};
-		auto tt = TestTensor<depth, tr>::getPrimary();
+		UncompressedNodeContainer<depth, tri> nc{};
+		auto tt = TestTensor<depth, tri>::getPrimary();
 
 		auto count = 500;
 		SECTION("insert {} key "_format(count)) {

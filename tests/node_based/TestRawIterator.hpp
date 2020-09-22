@@ -69,6 +69,34 @@ namespace hypertrie::tests::raw::node_context::iterator_test {
 		}
 	}
 
+	TEST_CASE("bool depth 1 compressed - lsb_unused", "[raw iterator]") {
+		using tri = Hypertrie_internal_t<Hypertrie_t<unsigned long,
+				bool,
+				hypertrie::internal::container::tsl_sparse_map ,
+				hypertrie::internal::container::tsl_sparse_set ,
+				true>>;
+		constexpr const size_t depth = 1;
+		using key_part_type = typename tri::key_part_type;
+		using value_type = typename tri::value_type;
+
+		utils::RawGenerator<depth, key_part_type, value_type> gen{};
+
+		NodeContext<depth, tri> context{};
+		CompressedNodeContainer<depth, tri> nc{};
+
+		nc.hash() = TaggedTensorHash<tri>{4UL};
+
+// 		currently broken
+//		context.template set<depth>(nc, {4}, true);
+
+
+		for(auto iter = iterator<depth, tri>(nc, context); iter != false; ++iter){
+			auto key = *iter;
+			fmt::print("[{}] -> {}\n", key[0], true);
+//			fmt::print("[{} {} {}] -> {}", key[0], key[1], key[2], true);
+		}
+	}
+
 	TEST_CASE("bool depth 2 uncompressed", "[raw iterator]") {
 		using tri = default_bool_Hypertrie_internal_t;
 		constexpr const size_t depth = 2;

@@ -141,10 +141,14 @@ namespace hypertrie::internal::raw {
 
 			// child is compressed
 			if constexpr (tri::is_bool_valued and tri::is_lsb_unused and node_depth == 1) {
-				auto &iter = this->template getIter<node_depth>();
-				auto hash = iter->second;
-				// set key_part stored in TaggedTensorHash
-				this->key()[depth - 1] = hash.getKeyPart();
+				if constexpr (depth == 1)
+					this->key()[0] = nodec()->compressed().hash().getKeyPart();
+				else {
+					auto &iter = this->template getIter<node_depth>();
+					auto hash = iter->second;
+					// set key_part stored in TaggedTensorHash
+					this->key()[depth - 1] = hash.getKeyPart();
+				}
 			} else {
 				// set rest of the key (and value) with the data in the compressed node
 				auto *node = [&]() {

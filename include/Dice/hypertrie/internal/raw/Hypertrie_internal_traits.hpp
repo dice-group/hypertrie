@@ -122,6 +122,8 @@ namespace hypertrie::internal::raw {
 
 	using default_bool_Hypertrie_internal_t = Hypertrie_internal_t<default_bool_Hypertrie_t>;
 
+	using lsbunused_bool_Hypertrie_internal_t = Hypertrie_internal_t<lsbunused_bool_Hypertrie_t>;
+
 	using default_long_Hypertrie_internal_t = Hypertrie_internal_t<default_long_Hypertrie_t>;
 
 	using default_double_Hypertrie_internal_t = Hypertrie_internal_t<default_double_Hypertrie_t>;

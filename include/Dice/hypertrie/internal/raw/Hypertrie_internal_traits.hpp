@@ -100,6 +100,10 @@ namespace hypertrie::internal::raw {
 			else
 				return map_it->second;
 		}
+
+		static auto to_string() {
+			return tr::to_string();
+		}
 	};
 
 	namespace internal::hypertrie_internal_trait {

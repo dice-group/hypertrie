@@ -3,6 +3,10 @@
 
 #include <optional>
 #include <vector>
+#include <string>
+
+#include <fmt/format.h>
+#include <boost/type_index.hpp>
 
 #include "Dice/hypertrie/internal/container/AllContainer.hpp"
 #include "Dice/hypertrie/internal/util/Key.hpp"
@@ -42,6 +46,25 @@ namespace hypertrie {
 		};
 
 		using KeyPositions = std::vector<uint8_t>;
+
+	private:
+		template<typename T>
+		static std::string nameOfType() {
+			std::string string = boost::typeindex::type_id<T>().pretty_name();
+			auto pos = string.find('<');
+			return string.substr(0,pos);
+		}
+
+	public:
+		static auto to_string() {
+			return std::string{fmt::format(
+					"< key_part = {}, value = {}, map = {}, set = {}, lsb_unused = {} >",
+					nameOfType<key_part_type>(),
+					nameOfType<value_type>(),
+					nameOfType<map_type<key_part_type, value_type>>(),
+					nameOfType<set_type<key_part_type>>(),
+					lsb_unused)};
+		}
 	};
 
 	namespace internal::hypertrie_trait {

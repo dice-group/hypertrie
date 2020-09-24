@@ -72,7 +72,7 @@ namespace hypertrie::tests::utils {
 		void setValueMinMax(value_type value_min, value_type value_max) {
 			this->value_min = value_min;
 			this->value_max = value_max;
-			value_dist = uniform_dist<value_type>{value_min, value_max};
+			value_dist = uniform_dist<dist_value_type>{value_min, value_max};
 		}
 
 		void setKeyPartMinMax(key_part_type key_part_min, key_part_type key_part_max) {

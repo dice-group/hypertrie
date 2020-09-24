@@ -3,6 +3,7 @@
 #include <Dice/hypertrie/internal/raw/storage/NodeContext.hpp>
 #include <catch2/catch.hpp>
 #include <fmt/format.h>
+#include <tsl/sparse_map.h>
 #include <itertools.hpp>
 
 namespace hypertrie::tests::raw::node_context {
@@ -23,7 +24,7 @@ namespace hypertrie::tests::raw::node_context {
 		using NodeRepr_t = std::conditional_t<(not (node_depth == 1 and tri_t::is_bool_valued and tri_t::is_lsb_unused)), TensorHash, TaggedTensorHash<tri_t>>;
 		using NodeRepr = NodeRepr_t<depth>;
 		template <size_t node_depth>
-		using Hash2Instance_t = std::map<NodeRepr_t<node_depth>, std::shared_ptr<TestTensor<node_depth, tri>>>;
+		using Hash2Instance_t = tsl::sparse_map<NodeRepr_t<node_depth>, std::shared_ptr<TestTensor<node_depth, tri>>>;
 		using Hash2Instance = Hash2Instance_t<depth>;
 
 
@@ -33,7 +34,7 @@ namespace hypertrie::tests::raw::node_context {
 		using value_type = typename tri::value_type;
 		using key_part_type = typename tri::key_part_type;
 
-		std::map<RawKey<depth>, value_type> entries{};
+		tsl::sparse_map<RawKey<depth>, value_type, absl::Hash<RawKey<depth>>> entries{};
 
 		size_t ref_count_;
 
@@ -46,8 +47,8 @@ namespace hypertrie::tests::raw::node_context {
 		}
 
 	public:
-		explicit TestTensor(size_t ref_count = 0, std::map<RawKey<depth>, value_type> entries = {}) : entries(entries), ref_count_(ref_count) {
-			hash_ = calcHash(this->entries);
+		explicit TestTensor(size_t ref_count = 0, tsl::sparse_map<RawKey<depth>, value_type, absl::Hash<RawKey<depth>>> entries = {}) : entries(entries), ref_count_(ref_count) {
+			hash_ = this->calcHash(this->entries);
 		}
 
 		static auto getPrimary() {
@@ -62,7 +63,7 @@ namespace hypertrie::tests::raw::node_context {
 			return sub_key;
 		}
 
-		const std::map<RawKey<depth>, value_type> &getEntries() const {
+		const tsl::sparse_map<RawKey<depth>, value_type, absl::Hash<RawKey<depth>>> &getEntries() const {
 			return entries;
 		}
 
@@ -209,8 +210,8 @@ namespace hypertrie::tests::raw::node_context {
 
 		auto getSubEntriesByPos(size_t pos) {
 			if constexpr(depth > 1){
-				std::map<key_part_type,
-						std::map<RawKey<depth - 1>, value_type>
+				tsl::sparse_map<key_part_type,
+						tsl::sparse_map<RawKey<depth - 1>, value_type, absl::Hash<RawKey<depth -1>>>
 				> mapped_entries{};
 
 				// find all entries of sub-tensors for that position
@@ -226,9 +227,9 @@ namespace hypertrie::tests::raw::node_context {
 				auto sub_entries = getSubEntriesByPos(pos);
 
 				// hash them
-				std::map<key_part_type, NodeRepr_t<depth -1>> edges{};
+				tsl::sparse_map<key_part_type, NodeRepr_t<depth -1>> edges{};
 				for (const auto &[key_part, child_entries] : sub_entries)
-					edges[key_part] = calcHash<depth - 1>(child_entries);
+					edges[key_part] = this->calcHash<depth - 1>(child_entries);
 
 				return edges;
 			}
@@ -261,7 +262,7 @@ namespace hypertrie::tests::raw::node_context {
 		}
 
 		template<size_t key_depth>
-		static NodeRepr_t<key_depth> calcHash(std::map<RawKey<key_depth>, value_type> entries) {
+		static NodeRepr_t<key_depth> calcHash(tsl::sparse_map<RawKey<key_depth>, value_type, absl::Hash<RawKey<key_depth>>> entries) {
 			if constexpr (tri::is_bool_valued and tri::is_lsb_unused and key_depth == 1) {
 				if (entries.size() == 1) {
 					return {entries.begin()->first[0]};

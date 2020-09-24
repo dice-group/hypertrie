@@ -441,22 +441,22 @@ namespace einsum::internal {
 	using CartesianSubSubscripts = Subscript::CartesianSubSubscripts;
 }
 
-std::ostream &operator<<(std::ostream &stream, const std::shared_ptr<einsum::internal::Subscript> &sub_script) {
+inline std::ostream &operator<<(std::ostream &stream, const std::shared_ptr<einsum::internal::Subscript> &sub_script) {
 	stream << sub_script->to_string();
 	return stream;
 }
 
-std::ostream &operator<<(std::ostream &stream, std::shared_ptr<einsum::internal::Subscript> sub_script) {
+inline std::ostream &operator<<(std::ostream &stream, std::shared_ptr<einsum::internal::Subscript> sub_script) {
 	stream << sub_script->to_string();
 	return stream;
 }
 
-std::ostream &operator<<(std::ostream &stream, einsum::internal::Subscript const *const sub_script) {
+inline std::ostream &operator<<(std::ostream &stream, einsum::internal::Subscript const *const sub_script) {
 	stream << sub_script->to_string();
 	return stream;
 }
 
-std::ostream &operator<<(std::ostream &stream, const einsum::internal::Subscript &sub_script) {
+inline std::ostream &operator<<(std::ostream &stream, const einsum::internal::Subscript &sub_script) {
 	stream << sub_script.to_string();
 	return stream;
 }

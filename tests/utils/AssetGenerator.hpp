@@ -81,9 +81,13 @@ namespace hypertrie::tests::utils {
 			key_part_dist = uniform_dist<key_part_type>{key_part_min, key_part_max};
 		}
 
+		auto key_part() {
+			return key_part_dist(rand) << unused_lsb_bits;
+		}
+
 		auto key() {
 			RawKey key_{};
-			std::generate(key_.begin(), key_.end(), [&]() { return key_part_dist(rand) << unused_lsb_bits; });
+			std::generate(key_.begin(), key_.end(), [&]() { return key_part(); });
 			return key_;
 		}
 
@@ -127,9 +131,7 @@ namespace hypertrie::tests::utils {
 		}
 	};
 
-	template<size_t depth, typename key_part_type, typename value_type,
-
-			 size_t unused_lsb_bits = 0>
+	template<size_t depth, typename key_part_type, typename value_type, size_t unused_lsb_bits = 0>
 	class EntryGenerator : public RawGenerator<depth, key_part_type, value_type, unused_lsb_bits> {
 		using super = RawGenerator<depth, key_part_type, value_type, unused_lsb_bits>;
 

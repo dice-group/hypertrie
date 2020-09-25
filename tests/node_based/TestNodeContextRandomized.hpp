@@ -104,7 +104,7 @@ namespace hypertrie::tests::raw::node_context::randomized {
 				gen.setKeyPartMinMax(0, count / depth + 1);
 				gen.setValueMinMax(value_type(0), value_type(count/10 + 1));
 				SECTION("insert {} keys "_format(count)) {
-					auto runs = (count != 300) ? 25 : 3;
+					auto runs = (count != 300) ? 25 : 1;
 					for (const auto i : iter::range(runs)) {
 						SECTION("{}"_format(i)) {
 							// generate entries

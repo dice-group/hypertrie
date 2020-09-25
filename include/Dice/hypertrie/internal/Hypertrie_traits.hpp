@@ -41,8 +41,12 @@ namespace hypertrie {
 					return entry.first;
 			}
 
-			template<typename = std::enable_if_t<(is_bool_valued)>>
-			static value_type &value(IteratorEntry &entry) noexcept { return entry.second; }
+			static auto value(IteratorEntry &entry) noexcept {
+				if constexpr (is_bool_valued)
+					return true;
+				else
+					return entry.second;
+			}
 		};
 
 		using KeyPositions = std::vector<uint8_t>;

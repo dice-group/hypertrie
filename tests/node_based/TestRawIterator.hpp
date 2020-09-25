@@ -53,7 +53,6 @@ namespace hypertrie::tests::raw::node_context::iterator_test {
 							context.template set<depth>(nodec, key, value);
 
 						std::set<Key> found_keys{};
-						auto count_actual_entries = 0;
 						for (auto iter = iterator<depth, tri>(nodec, context); iter != false; ++iter) {
 							IteratorEntry entry = *iter;
 							auto actual_key = iter_funcs::key(entry);
@@ -72,7 +71,6 @@ namespace hypertrie::tests::raw::node_context::iterator_test {
 							REQUIRE(not found_keys.count(actual_rawkey));
 							found_keys.insert(actual_rawkey);
 
-							count_actual_entries++;
 							WARN("[{}] -> {}\n"_format(fmt::join(actual_key, ", "), actual_value));
 						}
 						REQUIRE(found_keys.size() == entries.size());

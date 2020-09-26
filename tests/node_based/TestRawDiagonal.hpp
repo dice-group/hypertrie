@@ -58,55 +58,61 @@ namespace hypertrie::tests::raw::node_context::diagonal_test {
 		for (const auto &diagonal_positions : all_diagonal_positions) {
 			SECTION("diagonal positions: {}"_format(fmt::join(diagonal_positions, ","))) {
 				for (auto diagonal_size : iter::chain(iter::range(2, 5), iter::range(50, 51))) {
-					SECTION("diagonal entries: {}"_format(fmt::join(diagonal_positions, ","))) {
+					SECTION("diagonal size: {}"_format(diagonal_size)) {
 						for (auto total_size :
-							 iter::imap([&](double x) { return size_t(diagonal_size * x); },
-										std::vector<double>{1.0, 1.2, 2.0, 5.0})) {
-							SECTION("entries: {}"_format(total_size)) {
-								auto diag_data = gen.diag_data(total_size, diagonal_size, diagonal_positions);
+							 iter::unique_everseen(iter::imap([&](double x) { return size_t(diagonal_size * x); },
+															  std::vector<double>{1.0, 1.2, 2.0, 5.0}))) {
+							SECTION("tensor size: {}"_format(total_size)) {
+
+								for (auto i : iter::range(50)) {
+									SECTION("{}"_format(i)) {
+										auto diag_data = gen.diag_data(total_size, diagonal_size, diagonal_positions);
 
 
-								std::string print_entries{};
-								for (const auto &[key, value] : diag_data.tensor_entries)
-									print_entries += "{} → {}\n"_format(key, value);
-								WARN("entries:\n"+print_entries);
+										std::string print_entries{};
+										for (const auto &[key, value] : diag_data.tensor_entries)
+											print_entries += "{} → {}\n"_format(key, value);
+										WARN("entries:\n" + print_entries);
 
-								auto raw_diag_poss = tri::template rawDiagonalPositions<depth>(diagonal_positions);
+										auto raw_diag_poss = tri::template rawDiagonalPositions<depth>(diagonal_positions);
 
-								for (const auto &[raw_key, value] : diag_data.tensor_entries)
-									context.template set<depth>(nodec, raw_key, value);
+										for (const auto &[raw_key, value] : diag_data.tensor_entries)
+											context.template set<depth>(nodec, raw_key, value);
 
-								std::set<key_part_type> found_key_parts{};
+										std::set<key_part_type> found_key_parts{};
 
-								HashDiagonal<diag_depth, depth, NodeCompression::uncompressed, tri> diag(nodec, raw_diag_poss, context) ;
+										HashDiagonal<diag_depth, depth, NodeCompression::uncompressed, tri> diag(nodec, raw_diag_poss, context);
 
-								for (auto iter = diag.begin(); iter != false; ++iter) {
-									auto actual_key_part = iter.currentKeyPart();
+										for (auto iter = diag.begin(); iter != false; ++iter) {
+											auto actual_key_part = iter.currentKeyPart();
 
-									// check if the key_part is valid
-									REQUIRE(diag_data.diagonal_entries.count(actual_key_part));
+											// check if the key_part is valid
+											REQUIRE(diag_data.diagonal_entries.count(actual_key_part));
 
-									// check that the key_part was not already found
-									REQUIRE(not found_key_parts.count(actual_key_part));
-									found_key_parts.insert(actual_key_part);
+											// check that the key_part was not already found
+											REQUIRE(not found_key_parts.count(actual_key_part));
+											found_key_parts.insert(actual_key_part);
 
-									WARN("diagonal key part: {}\n"_format(actual_key_part));
+											WARN("diagonal key part: {}\n"_format(actual_key_part));
 
-									if constexpr (depth != diag_depth) {
-										auto actual_iter_entry = iter.currentValue();
+											if constexpr (depth != diag_depth) {
+												auto actual_iter_entry = iter.currentValue();
 
-										auto expected_entries = diag_data.diagonal_entries[actual_key_part];
-										for (auto &[raw_key, expected_value] : expected_entries) {
-											auto actual_value = context.template get(actual_iter_entry.nodec, raw_key);
-											REQUIRE(actual_value == expected_value);
+												auto expected_entries = diag_data.diagonal_entries[actual_key_part];
+												for (auto &[raw_key, expected_value] : expected_entries) {
+													auto actual_value = context.template get(actual_iter_entry.nodec, raw_key);
+													REQUIRE(actual_value == expected_value);
+												}
+
+												size_t size = context.template size(actual_iter_entry.nodec);
+												REQUIRE(size == expected_entries.size());
+
+												REQUIRE(actual_iter_entry.is_managed == true);
+											}
 										}
-
-										REQUIRE(context.template size(actual_iter_entry.nodec) == expected_entries.size());
-
-										REQUIRE(actual_iter_entry.is_managed == true);
+										REQUIRE(found_key_parts.size() == diagonal_size);
 									}
 								}
-								REQUIRE(found_key_parts.size() == diagonal_size);
 							}
 						}
 					}

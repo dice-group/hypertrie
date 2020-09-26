@@ -57,7 +57,7 @@ namespace hypertrie::tests::utils {
 			assert(diagonal_size <= size);
 
 			this->setValueMinMax(1, value_type(5));
-			this->setKeyPartMinMax(key_part_type(0), key_part_type((size + diagonal_size) / depth + 1));
+			this->setKeyPartMinMax(key_part_type(0), diagonal_size);
 			DiagonalTestData_t test_data{};
 			test_data.diagonal_positions = diagonal_positions;
 

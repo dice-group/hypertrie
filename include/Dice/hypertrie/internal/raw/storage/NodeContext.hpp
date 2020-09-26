@@ -329,10 +329,11 @@ namespace hypertrie::internal::raw {
 							else
 								nc.node() = contextless_compressed_result;
 							size_t result_pos = 0;
-							while (key_pos < fixed_keyparts) {
+							while (result_pos < result_depth) {
 								if (not diagonal_positions[key_pos])
 									nc.compressed_node()->key()[result_pos++] = nodec.compressed_node()->key()[key_pos - offset];
-								++key_pos;
+								else
+									++key_pos;
 							}
 							if constexpr (not tri::is_bool_valued)
 								nc.compressed_node()->value() = nodec.compressed_node()->value();
@@ -359,7 +360,7 @@ namespace hypertrie::internal::raw {
 			else if (nodec.isCompressed())
 				return 1;
 			else
-				nodec.uncompressed_node()->size();
+				return nodec.uncompressed_node()->size();
 		}
 	};
 }// namespace hypertrie::internal

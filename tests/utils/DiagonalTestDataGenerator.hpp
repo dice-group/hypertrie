@@ -5,23 +5,26 @@
 #include <set>
 namespace hypertrie::tests::utils {
 
-	template<size_t depth, typename key_part_type, typename value_type>
+	template<size_t diag_depth, size_t depth, typename key_part_type, typename value_type>
 	struct DiagonalTestData {
+		static_assert(diag_depth != 0 and diag_depth <= depth);
 		using Key = hypertrie::Key<key_part_type>;
-		using DiagonalPositions = std::vector<size_t>;
+		template<size_t depth_>
+		using RawKey = hypertrie::internal::RawKey<depth_, key_part_type>;
+		using DiagonalPositions = std::vector<uint8_t>;
 		using Entry = std::pair<Key, value_type>;
 
 
 		DiagonalPositions diagonal_positions;
-		std::map<Key, value_type> tensor_entries;
+		std::map<RawKey<depth>, value_type> tensor_entries;
 		std::map<key_part_type,
-				 std::map<Key, value_type>>
+				 std::map<RawKey<depth - diag_depth>, value_type>>
 				diagonal_entries;
 
 		bool validate() {
-			if (depth > diagonal_positions.size())
+			if (diag_depth != diagonal_positions.size())
 				return false;
-			else if (std::set<Entry>{diagonal_positions}.size() != diagonal_positions.size())
+			else if (std::set{diagonal_positions.begin(), diagonal_positions.end()}.size() != diagonal_positions.size())
 				return false;
 			else if ([&]() { for(auto pos : diagonal_positions) if ( pos >= depth ) return true; return false; }())
 				return false;
@@ -30,14 +33,15 @@ namespace hypertrie::tests::utils {
 		}
 	};
 
-	template<size_t depth, typename key_part_type, typename value_type, size_t unused_lsb_bits = 0>
+	template<size_t diag_depth, size_t depth, typename key_part_type, typename value_type, size_t unused_lsb_bits = 0>
 	class DiagonalTestDataGenerator : public RawGenerator<depth, key_part_type, value_type, unused_lsb_bits> {
 		using super = RawGenerator<depth, key_part_type, value_type, unused_lsb_bits>;
 
-		using RawKey = hypertrie::internal::RawKey<depth, key_part_type>;
+		template<size_t depth_>
+		using RawKey = hypertrie::internal::RawKey<depth_, key_part_type>;
 		using Key = hypertrie::Key<key_part_type>;
 
-		using DiagonalTestData_t = DiagonalTestData<depth, key_part_type, value_type>;
+		using DiagonalTestData_t = DiagonalTestData<diag_depth, depth, key_part_type, value_type>;
 
 		using DiagonalPositions = typename DiagonalTestData_t::DiagonalPositions;
 		using Entry = std::pair<Key, value_type>;
@@ -50,10 +54,10 @@ namespace hypertrie::tests::utils {
 			: RawGenerator<depth, key_part_type, value_type>(min, max, valueMin, valueMax) {}
 
 		DiagonalTestData_t diag_data(size_t size, size_t diagonal_size, const DiagonalPositions &diagonal_positions) {
-			assert(diagonal_size < size);
+			assert(diagonal_size <= size);
 
-			setValueMinMax(1, value_type(5));
-			setKeyPartMinMax(key_part_type(0), key_part_type((size + diagonal_size) / depth + 1));
+			this->setValueMinMax(1, value_type(5));
+			this->setKeyPartMinMax(key_part_type(0), key_part_type((size + diagonal_size) / depth + 1));
 			DiagonalTestData_t test_data{};
 			test_data.diagonal_positions = diagonal_positions;
 
@@ -64,8 +68,11 @@ namespace hypertrie::tests::utils {
 				return tmp;
 			}();
 
-			for (auto diag_key_part : iter::range(diag_key_parts))
-				test_data.tensor_entries[diagonal_entry(diag_key_part, diagonal_positions)] = this->value();
+			for (auto diag_key_part : diag_key_parts){
+
+				RawKey<depth> diag_key = diagonal_entry(diag_key_part, diagonal_positions);
+				test_data.tensor_entries[diag_key] = this->value();
+			}
 
 			while (test_data.tensor_entries.size() < size) {
 				auto key_candidate = this->key();
@@ -80,7 +87,21 @@ namespace hypertrie::tests::utils {
 			for (const auto &[key, value] : test_data.tensor_entries) {
 				auto diag_key_part_opt = is_diagonal(key, diagonal_positions);
 				if (diag_key_part_opt.has_value()) {
-					test_data.diagonal_entries[diag_key_part_opt.value()][key] = value;
+					RawKey<depth - diag_depth> sub_key;
+					{
+						auto sub_key_pos = 0;
+						auto diag_pos = 0;
+						for (auto [pos, key_part] : iter::enumerate(key)) {
+							if (diagonal_positions[diag_pos] == pos) {
+								diag_pos++;
+								continue;
+							} else {
+								sub_key[sub_key_pos++] = key_part;
+							}
+						}
+					}
+					auto &x = test_data.diagonal_entries[diag_key_part_opt.value()];
+					x[sub_key] = value;
 				}
 			}
 			assert(test_data.validate());
@@ -88,10 +109,10 @@ namespace hypertrie::tests::utils {
 		}
 
 		auto diagonal_entry(key_part_type diagonal_key_part, const DiagonalPositions &diagonal_positions) {
-			RawKey key_{};
+			RawKey<depth> key_{};
 			auto diag_pos_iter = diagonal_positions.cbegin();
 			for (auto [pos, key_part] : iter::enumerate(key_)) {
-				if (diag_pos_iter != diag_pos_iter.cend() and *diag_pos_iter == pos) {
+				if (diag_pos_iter != diagonal_positions.cend() and *diag_pos_iter == pos) {
 					key_part = diagonal_key_part;
 					diag_pos_iter++;
 				} else {
@@ -103,7 +124,7 @@ namespace hypertrie::tests::utils {
 			return key_;
 		}
 
-		std::optional<key_part_type> is_diagonal(const RawKey &key_, const DiagonalPositions &diagonal_positions) {
+		std::optional<key_part_type> is_diagonal(const RawKey<depth> &key_, const DiagonalPositions &diagonal_positions) {
 			bool first = true;
 			std::optional<key_part_type> result;
 			for (const auto &diag_pos : diagonal_positions) {

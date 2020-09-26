@@ -2,6 +2,8 @@
 #define HYPERTRIE_HYPERTRIE_INTERNAL_TRAITS_HPP
 
 #include <bitset>
+#include <enumerate.hpp>
+#include <zip.hpp>
 
 #include "Dice/hypertrie/internal/Hypertrie_traits.hpp"
 #include "Dice/hypertrie/internal/util/RawKey.hpp"
@@ -67,6 +69,39 @@ namespace hypertrie::internal::raw {
 		// TODO: rename to key_positions
 		template<size_t depth>
 		using DiagonalPositions = std::bitset<depth>;
+
+		template<size_t depth>
+		static inline DiagonalPositions<depth> rawDiagonalPositions(const typename tr::KeyPositions &diagonal_positions) {
+			DiagonalPositions<depth> raw_diag_poss;
+			for (const auto &pos : diagonal_positions)
+				raw_diag_poss[pos] = true;
+			return raw_diag_poss;
+		}
+
+		template<size_t depth>
+		static inline typename tr::KeyPositions diagonalPositions(const DiagonalPositions<depth> &raw_diagonal_positions) {
+			typename tr::KeyPositions diagonal_positions;
+			for(auto [pos, is_diag_pos] : iter::enumerate(raw_diagonal_positions))
+				if (is_diag_pos)
+					diagonal_positions.push_back(pos);
+			return diagonal_positions;
+		}
+
+		template<size_t depth>
+		static inline RawKey<depth> rawKey(const Key &key) {
+			RawKey<depth> raw_key;
+			  for (auto [raw_key_part, non_raw_key_part] : iter::zip(raw_key, key))
+				  raw_key_part = non_raw_key_part;
+			  return raw_key;
+		}
+
+		template<size_t depth>
+		static inline Key key(const RawKey<depth> &raw_key) {
+			Key key;
+			for (auto [raw_key_part, non_raw_key_part] : iter::zip(key, raw_key))
+				raw_key_part = non_raw_key_part;
+			return key;
+		}
 
 		constexpr static bool is_bool_valued = tr::is_bool_valued;
 		constexpr static const bool is_lsb_unused = tr::lsb_unused;

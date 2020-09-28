@@ -63,6 +63,8 @@ namespace hypertrie::tests::raw::node_context::diagonal_test {
 							 iter::unique_everseen(iter::imap([&](double x) { return size_t(diagonal_size * x); },
 															  std::vector<double>{1.0, 1.2, 2.0, 5.0}))) {
 							SECTION("tensor size: {}"_format(total_size)) {
+								if (depth == 1 and diag_depth == 1 and total_size != diagonal_size)
+									continue;
 
 								for (auto i : iter::range(50)) {
 									SECTION("{}"_format(i)) {
@@ -82,6 +84,8 @@ namespace hypertrie::tests::raw::node_context::diagonal_test {
 										std::set<key_part_type> found_key_parts{};
 
 										HashDiagonal<diag_depth, depth, NodeCompression::uncompressed, tri> diag(nodec, raw_diag_poss, context);
+
+										WARN((std::string) context.storage);
 
 										for (auto iter = diag.begin(); iter != false; ++iter) {
 											auto actual_key_part = iter.currentKeyPart();
@@ -121,101 +125,38 @@ namespace hypertrie::tests::raw::node_context::diagonal_test {
 		}
 	}
 
-	TEMPLATE_TEST_CASE_SIG("iterating hypertrie entries [bool]", "[RawDiagonal]", ((size_t depth), depth), 3) {
-		randomized_diagonal_test<default_bool_Hypertrie_internal_t, depth, 2>();
+	TEMPLATE_TEST_CASE_SIG("Depth 1 diagonals [bool]", "[RawDiagonal]", ((size_t depth), depth), 1, 2, 3, 4, 5) {
+		randomized_diagonal_test<lsbunused_bool_Hypertrie_internal_t, depth, 1>();
 	}
 
-	TEST_CASE("bool depth 1 uncompressed d", "[raw diagonal]") {
-		using tri = default_bool_Hypertrie_internal_t;
-		constexpr const size_t depth = 1;
-		using key_part_type = typename tri::key_part_type;
-		using value_type = typename tri::value_type;
-
-		utils::RawGenerator<depth, key_part_type, value_type> gen{};
-
-		NodeContext<depth, tri> context{};
-	UncompressedNodeContainer<depth, tri> nc{};
-
-		const auto entries = gen.entries(2);
-
-		context.template set<depth>(nc, {1}, true);
-		context.template set<depth>(nc, {2}, true);
-
-
-		typename tri::DiagonalPositions<depth> diag_poss {true};
-
-		auto diag = hypertrie::internal::raw::HashDiagonal<1,depth, NodeCompression::uncompressed, tri>(nc, diag_poss, context);
-
-		for(auto res : diag){
-			key_part_type k =  res.first;
-			fmt::print("{}\n", k);
-		}
+	TEMPLATE_TEST_CASE_SIG("Depth 1 diagonals [bool lsb-unused]", "[RawDiagonal]", ((size_t depth), depth), 1, 2, 3, 4, 5) {
+		randomized_diagonal_test<lsbunused_bool_Hypertrie_internal_t, depth, 1>();
 	}
 
-	TEST_CASE("bool depth 2 uncompressed d", "[raw diagonal]") {
-		using tri = default_bool_Hypertrie_internal_t;
-		constexpr const size_t depth = 2;
-		using key_part_type = typename tri::key_part_type;
-		using value_type = typename tri::value_type;
-
-		utils::RawGenerator<depth, key_part_type, value_type> gen{};
-
-		NodeContext<depth, tri> context{};
-		UncompressedNodeContainer<depth, tri> nc{};
-
-		const auto entries = gen.entries(2);
-
-		context.template set<depth>(nc, {1,1}, true);
-		context.template set<depth>(nc, {1,2}, true);
-		context.template set<depth>(nc, {2,1}, true);
-		context.template set<depth>(nc, {2,2}, true);
-
-
-		typename tri::DiagonalPositions<depth> diag_poss {};
-		diag_poss[0] = true;
-		diag_poss[1] = false;
-
-		std::cout << "0:" << diag_poss[0] << std::endl;
-		std::cout << "1:" << diag_poss[1] << std::endl;
-
-		auto diag = hypertrie::internal::raw::HashDiagonal<1,depth, NodeCompression::uncompressed, tri>(nc, diag_poss, context);
-
-		for(auto res : diag){
-			key_part_type k =  res.first;
-			fmt::print("{}\n", k);
-		}
+	TEMPLATE_TEST_CASE_SIG("Depth 2 diagonals [bool]", "[RawDiagonal]", ((size_t depth), depth), 2, 3, 4, 5) {
+		randomized_diagonal_test<lsbunused_bool_Hypertrie_internal_t, depth, 2>();
 	}
 
-	TEST_CASE("bool depth 2 compressed d", "[raw diagonal]") {
-		using tri = default_bool_Hypertrie_internal_t;
-		constexpr const size_t depth = 2;
-		using key_part_type = typename tri::key_part_type;
-		using value_type = typename tri::value_type;
-
-		utils::RawGenerator<depth, key_part_type, value_type> gen{};
-
-		NodeContext<depth, tri> context{};
-		NodeContainer<depth, tri> nc{};
-
-		const auto entries = gen.entries(2);
-
-		context.template set<depth>(nc, {1,1}, true);
-
-		typename tri::DiagonalPositions<depth> diag_poss {};
-		diag_poss[0] = true;
-		diag_poss[1] = false;
-
-		std::cout << "0:" << diag_poss[0] << std::endl;
-		std::cout << "1:" << diag_poss[1] << std::endl;
-
-		auto c_nc = nc.compressed();
-		auto diag = hypertrie::internal::raw::HashDiagonal<1,depth, NodeCompression::compressed, tri>(c_nc, diag_poss);
-
-		for(auto res : diag){
-			key_part_type k =  res.first;
-			fmt::print("{}\n", k);
-		}
+	TEMPLATE_TEST_CASE_SIG("Depth 2 diagonals [bool lsb-unused]", "[RawDiagonal]", ((size_t depth), depth), 2, 3, 4, 5) {
+		randomized_diagonal_test<lsbunused_bool_Hypertrie_internal_t, depth, 2>();
 	}
+
+	TEMPLATE_TEST_CASE_SIG("Depth 3 diagonals [bool]", "[RawDiagonal]", ((size_t depth), depth), 3, 4, 5) {
+		randomized_diagonal_test<lsbunused_bool_Hypertrie_internal_t, depth, 3>();
+	}
+
+	TEMPLATE_TEST_CASE_SIG("Depth 3 diagonals [bool lsb-unused]", "[RawDiagonal]", ((size_t depth), depth), 3, 4, 5) {
+		randomized_diagonal_test<lsbunused_bool_Hypertrie_internal_t, depth, 3>();
+	}
+
+	TEMPLATE_TEST_CASE_SIG("Depth 4 diagonals [bool]", "[RawDiagonal]", ((size_t depth), depth), 4, 5) {
+		randomized_diagonal_test<lsbunused_bool_Hypertrie_internal_t, depth, 4>();
+	}
+
+	TEMPLATE_TEST_CASE_SIG("Depth 4 diagonals [bool lsb-unused]", "[RawDiagonal]", ((size_t depth), depth), 4, 5) {
+		randomized_diagonal_test<lsbunused_bool_Hypertrie_internal_t, depth, 4>();
+	}
+
 };
 
 #endif//HYPERTRIE_TESTRAWDIAGONAL_HPP

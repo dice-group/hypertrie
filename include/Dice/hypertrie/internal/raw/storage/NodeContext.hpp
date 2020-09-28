@@ -280,6 +280,7 @@ namespace hypertrie::internal::raw {
 		auto diagonal_slice_rek(const NodeContainer<current_depth, tri> &nodec, const DiagonalPositions<current_depth + offset> &diagonal_positions, const key_part_type &key_part, ccn contextless_compressed_result = nullptr,
 								size_t key_pos = 0)
 		-> std::conditional_t<(result_depth > 0), IterationNodeContainer<result_depth, tri>, value_type>  {
+			constexpr static const size_t depth = current_depth + offset;
 
 			if constexpr (offset >= fixed_keyparts) // break condition
 				return {nodec, true};
@@ -300,13 +301,11 @@ namespace hypertrie::internal::raw {
 
 				} else { // nodec.isCompressed()
 					// check if key-parts match the slice key
-					auto key_pos_copy = key_pos;
-					while (key_pos_copy < fixed_keyparts) {
-						if (diagonal_positions[key_pos_copy])
-							if (nodec.compressed_node()->key()[key_pos_copy - offset] != key_part)
+					for (size_t pos : iter::range(key_pos, depth)) {
+						if (diagonal_positions[pos])
+							if (nodec.compressed_node()->key()[pos - offset] != key_part)
 								return {};
-
-						++key_pos_copy;
+						++pos;
 					}
 					// when this point is reached, the compressed node is a match
 					if constexpr (result_depth > 0){ // return key/value

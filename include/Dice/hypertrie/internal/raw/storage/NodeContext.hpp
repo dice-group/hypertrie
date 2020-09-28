@@ -331,8 +331,7 @@ namespace hypertrie::internal::raw {
 							while (result_pos < result_depth) {
 								if (not diagonal_positions[key_pos])
 									nc.compressed_node()->key()[result_pos++] = nodec.compressed_node()->key()[key_pos - offset];
-								else
-									++key_pos;
+								++key_pos;
 							}
 							if constexpr (not tri::is_bool_valued)
 								nc.compressed_node()->value() = nodec.compressed_node()->value();

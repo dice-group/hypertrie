@@ -24,7 +24,7 @@ namespace hypertrie::tests::utils {
 		bool validate() {
 			if (diag_depth != diagonal_positions.size())
 				return false;
-			else if (std::set{diagonal_positions.begin(), diagonal_positions.end()}.size() != diagonal_positions.size())
+			else if (std::set<uint8_t>{diagonal_positions.begin(), diagonal_positions.end()}.size() != diagonal_positions.size())
 				return false;
 			else if ([&]() { for(auto pos : diagonal_positions) if ( pos >= depth ) return true; return false; }())
 				return false;
@@ -57,7 +57,7 @@ namespace hypertrie::tests::utils {
 			assert(diagonal_size <= size);
 
 			this->setValueMinMax(1, value_type(5));
-			this->setKeyPartMinMax(key_part_type(0), diagonal_size);
+			this->setKeyPartMinMax(key_part_type(0), std::max(diagonal_size, (size / depth + 1)));
 			DiagonalTestData_t test_data{};
 			test_data.diagonal_positions = diagonal_positions;
 

@@ -314,11 +314,13 @@ namespace hypertrie::internal::raw {
 					if constexpr (result_depth > 0){ // return key/value
 						CompressedNodeContainer<result_depth, tri> nc;
 						if constexpr (tri::is_bool_valued and tri::is_lsb_unused and (result_depth == 1)){
-							while (key_pos < fixed_keyparts) {
+
+							size_t result_pos = 0;
+							while (result_pos < result_depth) {
 								if (not diagonal_positions[key_pos]){
 									CompressedNodeContainer<result_depth, tri> nc;
 									nc.hash() = TaggedTensorHash<tri>(nodec.compressed_node()->key()[key_pos - offset]);
-									return {nc,false};
+									return {nc, true};
 								}
 								++key_pos;
 							}

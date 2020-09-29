@@ -87,7 +87,7 @@ namespace hypertrie::tests::raw::node_context::diagonal_test {
 
 										HashDiagonal<diag_depth, depth, NodeCompression::uncompressed, tri> diag(unodec, raw_diag_poss, context);
 
-										WARN((std::string) context.storage);
+										INFO((std::string) context.storage);
 
 										for (auto iter = diag.begin(); iter != false; ++iter) {
 											auto actual_key_part = iter.currentKeyPart();
@@ -99,7 +99,7 @@ namespace hypertrie::tests::raw::node_context::diagonal_test {
 											REQUIRE(not found_key_parts.count(actual_key_part));
 											found_key_parts.insert(actual_key_part);
 
-											WARN("diagonal key part: {}\n"_format(actual_key_part));
+											INFO("diagonal key part: {}\n"_format(actual_key_part));
 
 											if constexpr (depth != diag_depth) {
 												auto actual_iter_entry = iter.currentValue();
@@ -128,7 +128,7 @@ namespace hypertrie::tests::raw::node_context::diagonal_test {
 	}
 
 	TEMPLATE_TEST_CASE_SIG("Depth 1 diagonals [bool]", "[RawDiagonal]", ((size_t depth), depth), 1, 2, 3, 4, 5) {
-		randomized_diagonal_test<lsbunused_bool_Hypertrie_internal_t, depth, 1>();
+		randomized_diagonal_test<default_bool_Hypertrie_internal_t, depth, 1>();
 	}
 
 	TEMPLATE_TEST_CASE_SIG("Depth 1 diagonals [bool lsb-unused]", "[RawDiagonal]", ((size_t depth), depth), 1, 2, 3, 4, 5) {
@@ -136,7 +136,7 @@ namespace hypertrie::tests::raw::node_context::diagonal_test {
 	}
 
 	TEMPLATE_TEST_CASE_SIG("Depth 2 diagonals [bool]", "[RawDiagonal]", ((size_t depth), depth), 2, 3, 4, 5) {
-		randomized_diagonal_test<lsbunused_bool_Hypertrie_internal_t, depth, 2>();
+		randomized_diagonal_test<default_bool_Hypertrie_internal_t, depth, 2>();
 	}
 
 	TEMPLATE_TEST_CASE_SIG("Depth 2 diagonals [bool lsb-unused]", "[RawDiagonal]", ((size_t depth), depth), 2, 3, 4, 5) {
@@ -144,7 +144,7 @@ namespace hypertrie::tests::raw::node_context::diagonal_test {
 	}
 
 	TEMPLATE_TEST_CASE_SIG("Depth 3 diagonals [bool]", "[RawDiagonal]", ((size_t depth), depth), 3, 4, 5) {
-		randomized_diagonal_test<lsbunused_bool_Hypertrie_internal_t, depth, 3>();
+		randomized_diagonal_test<default_bool_Hypertrie_internal_t, depth, 3>();
 	}
 
 	TEMPLATE_TEST_CASE_SIG("Depth 3 diagonals [bool lsb-unused]", "[RawDiagonal]", ((size_t depth), depth), 3, 4, 5) {
@@ -152,7 +152,7 @@ namespace hypertrie::tests::raw::node_context::diagonal_test {
 	}
 
 	TEMPLATE_TEST_CASE_SIG("Depth 4 diagonals [bool]", "[RawDiagonal]", ((size_t depth), depth), 4, 5) {
-		randomized_diagonal_test<lsbunused_bool_Hypertrie_internal_t, depth, 4>();
+		randomized_diagonal_test<default_bool_Hypertrie_internal_t, depth, 4>();
 	}
 
 	TEMPLATE_TEST_CASE_SIG("Depth 4 diagonals [bool lsb-unused]", "[RawDiagonal]", ((size_t depth), depth), 4, 5) {

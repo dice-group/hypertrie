@@ -51,7 +51,7 @@ namespace hypertrie::tests::utils {
 								  key_part_type max = std::numeric_limits<key_part_type>::max(),
 								  value_type valueMin = std::numeric_limits<value_type>::min(),
 								  value_type valueMax = std::numeric_limits<value_type>::max())
-			: RawGenerator<depth, key_part_type, value_type>(min, max, valueMin, valueMax) {}
+			: RawGenerator<depth, key_part_type, value_type, unused_lsb_bits>(min, max, valueMin, valueMax) {}
 
 		DiagonalTestData_t diag_data(size_t size, size_t diagonal_size, const DiagonalPositions &diagonal_positions) {
 			assert(diagonal_size <= size);

@@ -115,7 +115,8 @@ namespace hypertrie {
 	using lsbunused_bool_Hypertrie_t = Hypertrie_t<unsigned long,
 												   bool,
 												   hypertrie::internal::container::tsl_sparse_map,
-												   hypertrie::internal::container::tsl_sparse_set>;
+												   hypertrie::internal::container::tsl_sparse_set,
+												   true>;
 
 	using default_long_Hypertrie_t = Hypertrie_t<unsigned long,
 												 long,

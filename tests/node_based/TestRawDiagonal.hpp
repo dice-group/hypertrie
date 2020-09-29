@@ -52,7 +52,7 @@ namespace hypertrie::tests::raw::node_context::diagonal_test {
 		static utils::DiagonalTestDataGenerator<diag_depth, depth, key_part_type, value_type, size_t(tri::is_lsb_unused)> gen{};
 
 		NodeContext<depth, tri> context{};
-		UncompressedNodeContainer<depth, tri> nodec{};
+		NodeContainer<depth, tri> nodec{};
 
 		static auto all_diagonal_positions = getAllCombinations(depth, diag_depth);
 		for (const auto &diagonal_positions : all_diagonal_positions) {
@@ -83,7 +83,9 @@ namespace hypertrie::tests::raw::node_context::diagonal_test {
 
 										std::set<key_part_type> found_key_parts{};
 
-										HashDiagonal<diag_depth, depth, NodeCompression::uncompressed, tri> diag(nodec, raw_diag_poss, context);
+										auto unodec = nodec.uncompressed();
+
+										HashDiagonal<diag_depth, depth, NodeCompression::uncompressed, tri> diag(unodec, raw_diag_poss, context);
 
 										WARN((std::string) context.storage);
 

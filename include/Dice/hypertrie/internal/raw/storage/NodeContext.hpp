@@ -79,8 +79,7 @@ namespace hypertrie::internal::raw {
 		auto set(NodeContainer<depth, tri> &nodec, const RawKey<depth> &key, value_type value) -> value_type {
 			if constexpr (depth == 1 and tri::is_bool_valued and tri::is_lsb_unused)
 				if (nodec.empty()){
-					if (value)
-						nodec.hash() = TaggedTensorHash<tri>{key[0]};
+					storage.setLSBCompressedLeaf(nodec, key[0], value);
 					return false;
 				}
 

@@ -121,11 +121,10 @@ namespace hypertrie::internal::raw {
 			Modification_t<update_depth> update{};
 			if (keys.empty())
 				return;
+			else if(keys.size() == 1)
+				return apply_update(keys[0], true, false);
 			else if (nodec.empty())
-				if (keys.size() == 1)
-					update.modOp() = ModificationOperations::NEW_COMPRESSED_NODE;
-				else
-					update.modOp() = ModificationOperations::NEW_UNCOMPRESSED_NODE;
+				update.modOp() = ModificationOperations::NEW_UNCOMPRESSED_NODE;
 			else if (nodec.isCompressed())
 				update.modOp() = ModificationOperations::INSERT_INTO_COMPRESSED_NODE;
 			else
@@ -143,6 +142,10 @@ namespace hypertrie::internal::raw {
 			if (value == old_value)
 				return;
 
+			if constexpr(update_depth == 1 and tri::is_bool_valued and tri::is_lsb_unused)
+				if (nodec.empty())
+					return node_storage.setLSBCompressedLeaf(nodec, key[0], value);
+
 			bool value_deleted = value == value_type{};
 
 			bool value_changes = old_value != value_type{};
@@ -159,9 +162,14 @@ namespace hypertrie::internal::raw {
 			} else {// new entry
 				if (nodec.empty())
 					update.modOp() = ModificationOperations::NEW_COMPRESSED_NODE;
-				else if (nodec.isCompressed())
-					update.modOp() = ModificationOperations::INSERT_INTO_COMPRESSED_NODE;
-				else
+				else if (nodec.isCompressed()) {
+					if constexpr (update_depth == 1 and tri::is_bool_valued and tri::is_lsb_unused) {
+						update.hashBefore() = {};
+						update.modOp() = ModificationOperations::NEW_UNCOMPRESSED_NODE;
+						update.addEntry({nodec.hash().getKeyPart()}, true);
+					} else
+						update.modOp() = ModificationOperations::INSERT_INTO_COMPRESSED_NODE;
+				} else
 					update.modOp() = ModificationOperations::INSERT_INTO_UNCOMPRESSED_NODE;
 			}
 

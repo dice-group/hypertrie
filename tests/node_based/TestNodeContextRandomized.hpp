@@ -64,7 +64,7 @@ namespace hypertrie::tests::raw::node_context::randomized {
 
 									// bulk insert keys
 									context.template bulk_insert<depth>(nc, keys);
-									WARN("\n\n\nresulting hypertrie \n{}\n\n"_format((std::string) context.storage));
+									INFO("\n\n\nresulting hypertrie \n{}\n\n"_format((std::string) context.storage));
 									// check if they were inserted correctly
 									tt.checkContext(context);
 								}
@@ -137,7 +137,7 @@ namespace hypertrie::tests::raw::node_context::randomized {
 								test_tensor.set(key, value);
 
 								// print current state
-								WARN("state {} : {}"_format(i++, (std::string) context.storage));
+								INFO("state {} : {}"_format(i++, (std::string) context.storage));
 
 								// check if everything is alight
 								if (not (count == 300 and i != 300)) // check only the final result for inserting 500 entries

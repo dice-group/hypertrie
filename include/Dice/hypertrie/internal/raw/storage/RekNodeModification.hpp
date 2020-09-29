@@ -79,8 +79,17 @@ namespace hypertrie::internal::raw {
 		// extract a change from count_changes
 		template<size_t updates_depth>
 		void planChangeCount(const TensorHash hash, const long count_change) {
-			LevelRefChanges<updates_depth> &count_changes = getRefChanges<updates_depth>();
-			count_changes[hash].count_diff += count_change;
+			assert(count_change != 0); // 0 count changes should not result in an unnecessary function call
+			auto change_ref = [&](){
+			  LevelRefChanges<updates_depth> &count_changes = getRefChanges<updates_depth>();
+			  count_changes[hash].count_diff += count_change;
+			};
+			if constexpr(tri::is_bool_valued and tri::is_lsb_unused and updates_depth == 1) {
+				if (hash.isUncompressed())
+					change_ref();
+			} else {
+				change_ref();
+			}
 		};
 
 
@@ -208,6 +217,8 @@ namespace hypertrie::internal::raw {
 				assert(not hash.empty());
 				if (diff_u_ptr.count_diff == 0)
 					continue;
+				if constexpr (tri::is_bool_valued and tri::is_lsb_unused and depth == 1)
+					assert(not hash.isCompressed());
 				auto nodec = node_storage.template getNode<depth>(hash);
 				if (not nodec.null()){
 					size_t &ref_count = nodec.ref_count();

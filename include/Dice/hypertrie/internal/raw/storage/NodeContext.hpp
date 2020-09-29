@@ -151,13 +151,17 @@ namespace hypertrie::internal::raw {
 			if (nodec.empty())
 				return {};
 			else if (nodec.isCompressed()) {
-				auto *node = nodec.compressed_node();
-				if (node->key() == key) {
-					if constexpr (tri::is_bool_valued) return true;
-					else
-						return node->value();
-				} else
-					return {};
+				if constexpr (tri::is_lsb_unused and depth == 1){
+					return nodec.hash().getKeyPart() == key[0];
+				} else {
+					auto *node = nodec.compressed_node();
+					if (node->key() == key) {
+						if constexpr (tri::is_bool_valued) return true;
+						else
+							return node->value();
+					} else
+						return {};
+				}
 			} else {
 				UncompressedNodeContainer<depth, tri> nc = nodec.uncompressed();
 				if constexpr (depth > 1) {

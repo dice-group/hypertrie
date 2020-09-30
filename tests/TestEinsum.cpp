@@ -28,6 +28,13 @@ namespace hypertrie::tests::einsum {
 		auto start_time = std::chrono::steady_clock::now();
 		auto timeout = (timeout_duration != 0ms) ? start_time + timeout_duration : time_point::max();
 		auto actual_result = einsum(test_einsum.subscript, test_einsum.hypertrieOperands(), timeout);
+		std::string actual_result_str= [&](){
+			std::vector<std::string> elements;
+			for(auto &[key, value] : actual_result)
+				elements.push_back(fmt::format("⟨{} → {}⟩", fmt::join(key, ", "), value));
+			return fmt::format("[ {} ]", fmt::join(elements, ", "));
+		}();
+		WARN(actual_result_str);
 		WARN("result entries: {}"_format(actual_result.size()));
 		auto end_time = std::chrono::steady_clock::now();
 		WARN(fmt::format("hypertrie: {}ms ",

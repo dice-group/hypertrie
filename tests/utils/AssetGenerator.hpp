@@ -3,6 +3,7 @@
 
 #include <random>
 #include <algorithm>
+#include <set>
 
 #include <Dice/hypertrie/internal/util/RawKey.hpp>
 #include <Dice/hypertrie/internal/util/Key.hpp>
@@ -131,11 +132,10 @@ namespace hypertrie::tests::utils {
 		}
 	};
 
-	template<size_t depth, typename key_part_type, typename value_type, size_t unused_lsb_bits = 0>
-	class EntryGenerator : public RawGenerator<depth, key_part_type, value_type, unused_lsb_bits> {
-		using super = RawGenerator<depth, key_part_type, value_type, unused_lsb_bits>;
+	template<typename key_part_type, typename value_type, size_t unused_lsb_bits = 0>
+	class EntryGenerator : public RawGenerator<1, key_part_type, value_type, unused_lsb_bits> {
+		using super = RawGenerator<1, key_part_type, value_type, unused_lsb_bits>;
 
-		using RawKey = hypertrie::internal::RawKey<depth, key_part_type>;
 		using Key = hypertrie::Key<key_part_type>;
 
 	public:
@@ -143,7 +143,17 @@ namespace hypertrie::tests::utils {
 					   key_part_type max = std::numeric_limits<key_part_type>::max(),
 					   value_type valueMin = std::numeric_limits<value_type>::min(),
 					   value_type valueMax = std::numeric_limits<value_type>::max())
-			: RawGenerator<depth, key_part_type, value_type>(min, max, valueMin, valueMax) {}
+			: RawGenerator<1, key_part_type, value_type>(min, max, valueMin, valueMax) {}
+
+		auto key(const size_t depth = 1) {
+			Key key_(depth);
+			std::generate(key_.begin(), key_.end(), [&]() { return this->key_part(); });
+			return key_;
+		}
+
+		auto entry(const size_t depth = 1) {
+			return std::pair{key(depth), this->value()};
+		}
 
 		auto keys(size_t size) {
 			auto raw_key_set = super::keys(size);
@@ -152,6 +162,19 @@ namespace hypertrie::tests::utils {
 				key_set.insert({raw_key.begin(), raw_key.end()});
 			}
 			return key_set;
+		}
+
+		auto entries(const size_t &size, const size_t &depth = 1) {
+			std::set<Key> unique_keys;
+			std::set<std::pair<Key, value_type>> entry_set;
+			while (entry_set.size() < size) {
+				auto next_entry = this->entry(depth);
+				if (unique_keys.count(next_entry.first))
+					continue;
+				unique_keys.insert(next_entry.first);
+				entry_set.insert(next_entry);
+			}
+			return entry_set;
 		}
 	};
 }

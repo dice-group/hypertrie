@@ -143,7 +143,7 @@ namespace hypertrie::tests::utils {
 					   key_part_type max = std::numeric_limits<key_part_type>::max(),
 					   value_type valueMin = std::numeric_limits<value_type>::min(),
 					   value_type valueMax = std::numeric_limits<value_type>::max())
-			: RawGenerator<1, key_part_type, value_type>(min, max, valueMin, valueMax) {}
+			: RawGenerator<1, key_part_type, value_type, unused_lsb_bits>(min, max, valueMin, valueMax) {}
 
 		auto key(const size_t depth = 1) {
 			Key key_(depth);

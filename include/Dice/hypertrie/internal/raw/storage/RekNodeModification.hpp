@@ -133,6 +133,19 @@ namespace hypertrie::internal::raw {
 			update.hashBefore() = nodec.hash().hash();
 			update.entries() = std::move(keys);
 
+			if(not update.hashAfter().empty()) {
+				auto nc_after = node_storage.template getNode<update_depth>(update.hashAfter());
+				if (not nc_after.empty()) {
+					planChangeCount<update_depth>(update.hashAfter(), INC_COUNT_DIFF_AFTER);
+					if(not update.hashBefore().empty()) {
+						planChangeCount<update_depth>(update.hashBefore(), DEC_COUNT_DIFF_AFTER);
+					}
+					apply_update_rek<update_depth>();
+					nodec = nc_after;
+					return;
+				}
+			}
+
 			planUpdate(std::move(update), INC_COUNT_DIFF_AFTER);
 
 			apply_update_rek<update_depth>();

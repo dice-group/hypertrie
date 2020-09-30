@@ -332,11 +332,17 @@ namespace hypertrie::internal::raw {
 								nc.node() = new CompressedNode<result_depth, tri>();
 							else
 								nc.node() = contextless_compressed_result;
+							size_t read_pos = 0;
 							size_t result_pos = 0;
+							size_t local_offset = 0;
 							while (result_pos < result_depth) {
-								if (not diagonal_positions[key_pos])
-									nc.compressed_node()->key()[result_pos++] = nodec.compressed_node()->key()[key_pos - offset];
-								++key_pos;
+								if (not diagonal_positions[read_pos])
+									nc.compressed_node()->key()[result_pos++] = nodec.compressed_node()->key()[read_pos - local_offset];
+								// we need to revisit all positions. Thus, we need to use a new local_offset.
+								// As we do not prune the available key-positions anymore like done by the recursion
+								// the local_offset must not grow beyond the recursion's offset
+								else if (local_offset < offset) local_offset++;
+								++read_pos;
 							}
 							if constexpr (not tri::is_bool_valued)
 								nc.compressed_node()->value() = nodec.compressed_node()->value();

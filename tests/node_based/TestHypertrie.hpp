@@ -55,7 +55,7 @@ namespace hypertrie::tests::node_context {
 		using key_part_type = typename tr::key_part_type;
 		using value_type = typename tr::value_type;
 
-		utils::EntryGenerator<depth, key_part_type, value_type,1,15> gen{};
+		utils::EntryGenerator<depth, key_part_type, value_type> gen{1,15};
 		auto keys = gen.keys(150);
 
 //		std::cout << keys << std::endl;
@@ -88,7 +88,7 @@ namespace hypertrie::tests::node_context {
 		using key_part_type = typename tr::key_part_type;
 		using value_type = typename tr::value_type;
 
-		utils::EntryGenerator<depth, key_part_type, value_type,1,15> gen{};
+		utils::EntryGenerator<depth, key_part_type, value_type> gen{1,15};
 		auto keys = gen.keys(150);
 
 //		std::cout << keys << std::endl;

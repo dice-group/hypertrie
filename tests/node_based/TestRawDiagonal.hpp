@@ -85,7 +85,7 @@ namespace hypertrie::tests::raw::node_context::diagonal_test {
 
 										auto unodec = nodec.uncompressed();
 
-										HashDiagonal<diag_depth, depth, NodeCompression::uncompressed, tri> diag(unodec, raw_diag_poss, context);
+										::hypertrie::internal::raw::HashDiagonal<diag_depth, depth, NodeCompression::uncompressed, tri> diag(unodec, raw_diag_poss, context);
 
 										INFO((std::string) context.storage);
 

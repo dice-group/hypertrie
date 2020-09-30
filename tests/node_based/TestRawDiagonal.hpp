@@ -159,6 +159,8 @@ namespace hypertrie::tests::raw::node_context::diagonal_test {
 		randomized_diagonal_test<lsbunused_bool_Hypertrie_internal_t, depth, 4>();
 	}
 
+	// TODO: test long valued diagonals
+
 };
 
 #endif//HYPERTRIE_TESTRAWDIAGONAL_HPP

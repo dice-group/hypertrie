@@ -86,6 +86,33 @@ namespace hypertrie::tests::raw::node_context {
 		basicUsage<default_double_Hypertrie_internal_t, 5>();
 	}
 
+	TEST_CASE("Create the same hypertrie twice", "[NodeContext]") {
+		using tri = default_bool_Hypertrie_internal_t;
+		constexpr pos_type depth = 1;
+
+		NodeContext<depth, tri> context{};
+		// create emtpy primary node
+		NodeContainer<depth, tri> nc{};
+
+		SECTION("fill first") {
+			context.template set(nc, {1}, true);
+			context.template set(nc, {2}, true);
+			WARN("0 {}"_format((std::string) context.storage));
+			SECTION("fill second") {
+				NodeContainer<depth, tri> nc2{};
+				context.template set(nc2, {1}, true);
+				context.template set(nc2, {2}, true);
+				WARN("1 {}"_format((std::string) context.storage));
+			}
+			SECTION("fill second with bulkloading") {
+				NodeContainer<depth, tri> nc2{};
+				std::vector<typename  tri::RawKey<depth>> keys{{1},{2}};
+				context.template bulk_insert(nc2, {{1},{2}});
+				WARN("2 {}"_format((std::string) context.storage));
+			}
+		}
+	}
+
 	TEST_CASE("Test Long valued", "[NodeContext]") {
 		using tri = default_long_Hypertrie_internal_t;
 		constexpr pos_type depth = 3;

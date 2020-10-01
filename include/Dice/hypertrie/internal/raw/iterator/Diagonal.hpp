@@ -270,13 +270,13 @@ namespace hypertrie::internal::raw {
 		using IterValue = std::conditional_t<
 				(result_depth > 0),
 				IterationNodeContainer<result_depth, tri>,
-		value_type>;
+				value_type>;
 
 	private:
 		CompressedNodeContainer<depth, tri> *nodec_;
 		DiagonalPositions diag_poss_;
 
-		CompressedNode<(result_depth>0)?result_depth :1, tri> internal_compressed_node;
+		CompressedNode<(result_depth > 0) ? result_depth : 1, tri> internal_compressed_node;
 		std::pair<key_part_type, IterValue> value_;
 		bool ended_ = true;
 		bool contains;
@@ -320,39 +320,37 @@ namespace hypertrie::internal::raw {
 			} else {
 
 				contains = [&]() {
-					if constexpr (depth == 1) {
-						value_.second = nodec_->compressed_node()->value();
-						return true;
-					} else {
-						// set key
-						const auto &key = nodec_->compressed_node()->key();
-						size_t res_pos = 0;
-						for (auto pos : iter::range(depth))
-							if (this->diag_poss_[pos]) {
-								if (key[pos] != value_.first) {
-									return false;// not contained
-								}
-							} else {
-								if constexpr (result_depth != 0)
-									internal_compressed_node.key()[res_pos++] = key[pos];
+					// set key
+					const auto &key = nodec_->compressed_node()->key();
+					size_t res_pos = 0;
+					for (auto pos : iter::range(depth))
+						if (this->diag_poss_[pos]) {
+							if (key[pos] != value_.first) {
+								return false;// not contained
 							}
-						// set value
-						if constexpr (not tri::is_bool_valued)
-							internal_compressed_node.value() = nodec_->compressed_node()->value();
+						} else {
+							if constexpr (result_depth != 0) {
+								if constexpr (tri::is_bool_valued and tri::is_lsb_unused and result_depth == 1) {
+									reinterpret_cast<CompressedNodeContainer<1, tri> *>(&value_.second.nodec)->hash() = TaggedTensorHash<tri>(key[pos]);
+								} else {
+									internal_compressed_node.key()[res_pos++] = key[pos];
+								}
+							}
+						}
+					// set value
+					if constexpr (not tri::is_bool_valued)
+						internal_compressed_node.value() = nodec_->compressed_node()->value();
 
-						if constexpr (result_depth > 0) {
+					if constexpr (result_depth > 0) {
+						value_.second.is_managed = true;
+						if constexpr (not(tri::is_bool_valued and tri::is_lsb_unused and result_depth == 1)) {
 							value_.second.nodec.hash() = TensorHash().addFirstEntry(internal_compressed_node.key(), internal_compressed_node.value());
 							value_.second.nodec.compressed_node() = &internal_compressed_node;
-							value_.second.is_managed = true;
-						} else {
-							value_.second = nodec_->compressed_node()->value();
 						}
-						if constexpr (result_depth == 0) {
-							return value_.second != value_type{};
-						} else {
-							return not value_.second.nodec.empty();
-						}
+					} else {
+						value_.second = nodec_->compressed_node()->value();
 					}
+					return true;
 				}();
 			}
 		}

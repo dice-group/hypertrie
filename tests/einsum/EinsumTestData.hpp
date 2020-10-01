@@ -1,6 +1,7 @@
 #ifndef HYPERTRIE_EINSUMTESTDATA_HPP
 #define HYPERTRIE_EINSUMTESTDATA_HPP
 
+#include <ranges>
 #include <fmt/core.h>
 #include <fmt/format.h>
 #include <set>
@@ -44,7 +45,7 @@ namespace hypertrie::tests::einsum {
 					  std::is_same_v<dtype, double>);
 		torch::Tensor torch_tensor;
 		hypertrie::Hypertrie<tr> hypertrie;
-		long excl_max;
+		size_t excl_max;
 		uint8_t depth;
 
 		inline static utils::EntryGenerator<unsigned long, unsigned long, size_t(tri::is_lsb_unused)> gen{};
@@ -57,7 +58,7 @@ namespace hypertrie::tests::einsum {
 
 		TestOperand(TestOperand &&) = default;
 
-		TestOperand(uint8_t depth, long excl_max = 10, bool empty = false) :
+		TestOperand(uint8_t depth, size_t excl_max = 10, bool empty = false) :
 				torch_tensor(torch::zeros(std::vector<long>(depth, excl_max), torch::TensorOptions().dtype<long>())),
 				hypertrie{depth},
 				excl_max(excl_max),
@@ -82,6 +83,13 @@ namespace hypertrie::tests::einsum {
 //			WARN((std::string) hypertrie.context()->raw_context.storage);
 			assert(hypertrie.size() == std::size_t(torch_tensor.sum().item<long>()));
 
+		}
+
+		void set(const Key &key, const dtype &value){
+			std::ranges::for_each(key, [&](const auto &i){assert(i < excl_max);});
+			this->hypertrie.set(key, value);
+			long &value_ref = TorchHelper<long>::resolve(this->torch_tensor, key);
+			value_ref = long(value);
 		}
 	};
 

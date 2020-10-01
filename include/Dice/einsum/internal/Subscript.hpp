@@ -469,7 +469,7 @@ namespace fmt {
 
 		template<typename FormatContext>
 		auto format(const std::shared_ptr<einsum::internal::Subscript> &sub_script, FormatContext &ctx) {
-			return format_to(ctx.begin(), "{}", sub_script->to_string());
+			return format_to(ctx.out(), "{}", sub_script->to_string());
 		}
 	};
 }

@@ -8,7 +8,6 @@
 //#include "TestHashDiagonal.cpp"
 //#include "TestHashJoin.cpp"
 
-#include "node_based/NodeBasedTests.hpp"
 #ifdef HYPERTRIE_ENABLE_LIBTORCH
 #include "TestEinsum.cpp"
 #endif

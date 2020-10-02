@@ -155,11 +155,10 @@ namespace hypertrie::tests::utils {
 			return std::pair{key(depth), this->value()};
 		}
 
-		auto keys(size_t size) {
-			auto raw_key_set = super::keys(size);
+		auto keys(size_t size, const size_t depth = 1) {
 			std::set<Key> key_set;
-			for (auto raw_key : raw_key_set) {
-				key_set.insert({raw_key.begin(), raw_key.end()});
+			while (key_set.size() < size) {
+				key_set.insert(this->key(depth));
 			}
 			return key_set;
 		}

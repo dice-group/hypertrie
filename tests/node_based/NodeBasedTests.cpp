@@ -1,5 +1,10 @@
 #ifndef NODEBASED_HYPERTRIE_TESTS_H
 #define NODEBASED_HYPERTRIE_TESTS_H
+
+#define CATCH_CONFIG_MAIN  // This tells Catch to provide a main() - only do this in one cpp file
+
+#include <catch2/catch.hpp>
+
 #include "TestHypertrie.hpp"
 #include "TestNode.hpp"
 #include "TestNodeContainer.hpp"
@@ -9,6 +14,4 @@
 #include "TestNodeContextRandomized.hpp"
 #include "TestTaggedNodeHash.hpp"
 
-#ifdef HYPERTRIE_ENABLE_LIBTORCH
-#endif//HYPERTRIE_ENABLE_LIBTORCH
 #endif//NODEBASED_HYPERTRIE_TESTS_H

@@ -87,25 +87,13 @@ namespace hypertrie::tests::einsum {
 		}
 	}
 
-	TEST_CASE("Problematic Case 1", "[einsum]") {
-		using tr = default_bool_Hypertrie_t;
-		using Key = typename tr::Key;
+	template<HypertrieTrait tr>
+	void run_single_cases(
+			const std::string subscript_str,
+			const std::vector<std::set<std::pair<typename tr::Key, typename tr::value_type>>> &operands_entries) {
 		using value_type = typename tr::value_type;
-		using Entry = std::pair<Key, value_type>;
 		auto einsum = &hypertrie::einsum2map<value_type, tr>;
 
-
-		auto subscript_str = "caa->ca";
-		std::vector<std::set<Entry>> operands_entries{
-				{
-						{{3, 2, 2}, true},
-						{{3, 1, 3}, true},
-						{{2, 1, 1}, true},
-						{{0, 3, 1}, true},
-						{{1, 3, 1}, true},
-						{{1, 1, 1}, true}// op0
-				}                        //op0
-		};
 
 		auto subscript = std::make_shared<Subscript>(Subscript::from_string(subscript_str));
 		size_t result_depth = subscript->resultLabelCount();
@@ -130,18 +118,18 @@ namespace hypertrie::tests::einsum {
 			for (const auto &[key, value] : op_entries) {
 				operand.set(key, value);
 			}
-			WARN(fmt::format("operand {}:\n{}", op_pos, (std::string)operand.hypertrie));
+			WARN(fmt::format("operand {}:\n{}", op_pos, (std::string) operand.hypertrie));
 			test_operands.push_back(std::move(operand));
 		}
 
 		TestEinsum<tr> test_einsum(subscript, test_operands);
 
-		auto actual_result = einsum(test_einsum.subscript, test_einsum.hypertrieOperands(),TimePoint::max());
-		std::string actual_result_str= [&](){
-		  std::vector<std::string> elements;
-		  for(auto &[key, value] : actual_result)
-			  elements.push_back(fmt::format("⟨{}⟩ → {}", fmt::join(key, ", "), value));
-		  return fmt::format("[ {} ]", fmt::join(elements, ", "));
+		auto actual_result = einsum(test_einsum.subscript, test_einsum.hypertrieOperands(), TimePoint::max());
+		std::string actual_result_str = [&]() {
+			std::vector<std::string> elements;
+			for (auto &[key, value] : actual_result)
+				elements.push_back(fmt::format("⟨{}⟩ → {}", fmt::join(key, ", "), value));
+			return fmt::format("[ {} ]", fmt::join(elements, ", "));
 		}();
 		WARN(fmt::format("actual result:\n{}", actual_result_str));
 
@@ -154,6 +142,45 @@ namespace hypertrie::tests::einsum {
 			INFO("key: ({})"_format(fmt::join(key, ", ")));
 			INFO("expected: {}, actual {}"_format(TorchHelper<long>::resolve(expected_result, key), actual_entry));
 			REQUIRE(actual_entry == expected_entry);
+		}
+	}
+
+	TEST_CASE("Problematic Cases", "[einsum]") {
+		using namespace std::string_literals;
+		using tr = default_bool_Hypertrie_t;
+		using Key = typename tr::Key;
+		using value_type = typename tr::value_type;
+		using Entry = std::pair<Key, value_type>;
+
+		std::vector<std::tuple<std::string, std::vector<std::set<Entry>>>> configurations{
+				{std::string{"caa->ca"},
+				 {
+						 {
+								 {{3, 2, 2}, true},
+								 {{3, 1, 3}, true},
+								 {{2, 1, 1}, true},
+								 {{0, 3, 1}, true},
+								 {{1, 3, 1}, true},
+								 {{1, 1, 1}, true}// op0}
+						 }                        //op0
+				 }},                              // caa->ca
+				{
+						std::string{"caa->ca"},
+						{
+								{{{2, 2, 2}, true},
+								 {{2, 2, 3}, true},
+								 {{2, 3, 3}, true},
+								 {{0, 1, 1}, true},
+								 {{3, 2, 2}, true},
+								 {{3, 2, 0}, true}}// op0
+						}                          //op0
+				},                                 // caa->ca
+		};
+		auto i = 0;
+		for (const auto &[subscript_str, operands_entries] : configurations) {
+			SECTION("case {}: {}"_format(i++, subscript_str)) {
+				run_single_cases<tr>(subscript_str, operands_entries);
+			}
 		}
 	}
 
@@ -198,7 +225,7 @@ namespace hypertrie::tests::einsum {
 				"a,bbc,cdc,cf->f",
 				"ab,bc,ca->abc",
 				"ab,bc,ca,ax,xy,ya->a",
-				"aa,ae,ac,ad,a,ab->abcde"};
+				"aa,ae,ac,ad,a,ab->ab"};
 		using tr = default_bool_Hypertrie_t;
 		for (bool empty : {false, true}) {
 			SECTION("empty = {}"_format(empty))

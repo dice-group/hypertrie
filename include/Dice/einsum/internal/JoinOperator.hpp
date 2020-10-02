@@ -61,7 +61,7 @@ namespace einsum::internal {
 					sub_operator->load(std::move(next_operands), *this->entry);
 				} else {
 					ended_ = true;
-					break;
+					return;
 				}
 			}
 			if (is_result_label)

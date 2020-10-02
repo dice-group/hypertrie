@@ -80,14 +80,17 @@ namespace hypertrie {
 				}
 				optimizeOperandOrder();
 				ops.front().begin();
-				next();
+				next(true);
 			}
 
-			inline void next() {
+			inline void next(bool init = false) {
+
 				// check if the end was reached
 				static bool found;
 				// _current_key_part is increased if containsAndUpdateLower returns false
 				HashDiagonal<tr> &smallest_operand = ops.front();
+				if (not init and not smallest_operand.ended())
+					++smallest_operand;
 
 				while (not smallest_operand.ended()) {
 
@@ -106,7 +109,6 @@ namespace hypertrie {
 							if (const auto &result_depth = result_depths[op_pos]; result_depth)
 								value.first[pos_in_out[op_pos]] = const_Hypertrie<tr>(ops[op_pos].currentHypertrie());
 						}
-						++smallest_operand;
 						return;
 					}
 					++smallest_operand;

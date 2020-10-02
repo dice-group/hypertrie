@@ -17,8 +17,14 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 endif ()
 
 find_package(Catch2 REQUIRED CONFIG)
-add_executable(tests Tests.cpp)
-target_link_libraries(tests PRIVATE
+add_executable(raw_hypertrie_tests node_based/NodeBasedTests.cpp)
+set_target_properties(raw_hypertrie_tests PROPERTIES LINKER_LANGUAGE CXX)
+add_executable(hypertrie_lib_tests Tests.cpp)
+target_link_libraries(raw_hypertrie_tests PRIVATE
+        Catch2::Catch2
+        hypertrie::hypertrie
+        )
+target_link_libraries(hypertrie_lib_tests PRIVATE
         Catch2::Catch2
         hypertrie::hypertrie
         )
@@ -28,7 +34,7 @@ if (hypertrie_LIBTORCH_PATH)
     list(APPEND CMAKE_PREFIX_PATH ${hypertrie_LIBTORCH_PATH})
     find_package(Torch REQUIRED)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
-    target_link_libraries(tests PRIVATE
+    target_link_libraries(hypertrie_lib_tests PRIVATE
             ${TORCH_LIBRARIES}
             )
     # define C++ preprocess flag to include the tests depending on pytorch
@@ -39,7 +45,8 @@ endif ()
 
 include(CTest)
 include(Catch)
-catch_discover_tests(tests)
+catch_discover_tests(raw_hypertrie_tests)
+catch_discover_tests(hypertrie_lib_tests)
 
 # copy files for testing to the binary folder
 file(COPY data DESTINATION ${CMAKE_CURRENT_BINARY_DIR})

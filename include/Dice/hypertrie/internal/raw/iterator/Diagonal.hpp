@@ -270,69 +270,89 @@ namespace hypertrie::internal::raw {
 		using IterValue = std::conditional_t<
 				(result_depth > 0),
 				IterationNodeContainer<result_depth, tri>,
-		value_type>;
+				value_type>;
 
 	private:
 		CompressedNodeContainer<depth, tri> *nodec_;
 		DiagonalPositions diag_poss_;
 
-		CompressedNode<(result_depth>0)?result_depth :1, tri> internal_compressed_node;
+		CompressedNode<(result_depth > 0) ? result_depth : 1, tri> internal_compressed_node;
 		std::pair<key_part_type, IterValue> value_;
 		bool ended_ = true;
 		bool contains;
 
 	public:
-
 		HashDiagonal(CompressedNodeContainer<depth, tri> &nodec, DiagonalPositions diag_poss)
 			: nodec_{&nodec}, diag_poss_(diag_poss) {
 			size_t any_diag_pos = 0;
-			for (; any_diag_pos< depth; ++any_diag_pos)
+			for (; any_diag_pos < depth; ++any_diag_pos)
 				if (diag_poss_[any_diag_pos])
 					break;
-			value_.first = [&]() { // key_part
+			value_.first = [&]() {// key_part
 				if constexpr (depth == 1 and diag_depth == 1 and tri::is_bool_valued and tri::is_lsb_unused)
 					return nodec_->hash().getKeyPart();
 				else
 					return nodec_->compressed_node()->key()[any_diag_pos];
 			}();
-			
-			contains = [&]() {
-				if constexpr (depth == 1){
-					value_.second = nodec_->compressed_node()->value();
-					return true;
+
+			if constexpr (diag_depth == 1) {
+				contains = true;
+				if constexpr (result_depth > 0) {
+					value_.second.is_managed = true;
+					size_t res_pos = 0;
+					for (auto pos : iter::range(depth))
+						if (pos != any_diag_pos) {
+							if constexpr (tri::is_bool_valued and tri::is_lsb_unused and result_depth == 1) {
+								reinterpret_cast<CompressedNodeContainer<1, tri> *>(&value_.second.nodec)->hash() = TaggedTensorHash<tri>(nodec_->compressed_node()->key()[pos]);
+								return;
+							}
+							internal_compressed_node.key()[res_pos++] = nodec_->compressed_node()->key()[pos];
+						}
+					value_.second.nodec.hash() = TensorHash().addFirstEntry(internal_compressed_node.key(), internal_compressed_node.value());
+					value_.second.nodec.compressed_node() = &internal_compressed_node;
+					if constexpr (not tri::is_bool_valued)
+						internal_compressed_node.value() = nodec_->compressed_node()->value();
 				} else {
+					value_.second = nodec_->compressed_node()->value();
+				}
+
+
+			} else {
+
+				contains = [&]() {
 					// set key
 					const auto &key = nodec_->compressed_node()->key();
-					bool contains = true;
 					size_t res_pos = 0;
-					for(auto pos : iter::range(depth))
+					for (auto pos : iter::range(depth))
 						if (this->diag_poss_[pos]) {
-							if (key[pos] != value_.first){
-							contains = false;
-							break;
+							if (key[pos] != value_.first) {
+								return false;// not contained
 							}
 						} else {
-							if constexpr (result_depth != 0)
-								internal_compressed_node.key()[res_pos++] = key[pos];
+							if constexpr (result_depth != 0) {
+								if constexpr (tri::is_bool_valued and tri::is_lsb_unused and result_depth == 1) {
+									reinterpret_cast<CompressedNodeContainer<1, tri> *>(&value_.second.nodec)->hash() = TaggedTensorHash<tri>(key[pos]);
+								} else {
+									internal_compressed_node.key()[res_pos++] = key[pos];
+								}
+							}
 						}
 					// set value
-					if constexpr(not tri::is_bool_valued)
+					if constexpr (not tri::is_bool_valued)
 						internal_compressed_node.value() = nodec_->compressed_node()->value();
 
-					if constexpr (result_depth > 0){
-						value_.second.nodec.hash() = TensorHash().addFirstEntry(internal_compressed_node.key(), internal_compressed_node.value());
-						value_.second.nodec.compressed_node() = &internal_compressed_node;
+					if constexpr (result_depth > 0) {
 						value_.second.is_managed = true;
+						if constexpr (not(tri::is_bool_valued and tri::is_lsb_unused and result_depth == 1)) {
+							value_.second.nodec.hash() = TensorHash().addFirstEntry(internal_compressed_node.key(), internal_compressed_node.value());
+							value_.second.nodec.compressed_node() = &internal_compressed_node;
+						}
 					} else {
 						value_.second = nodec_->compressed_node()->value();
 					}
-					if constexpr (result_depth == 0) {
-						return value_.second != value_type{};
-					} else {
-						return not value_.second.nodec.empty();
-					}
-				}
-			}();
+					return true;
+				}();
+			}
 		}
 
 		HashDiagonal &begin() {

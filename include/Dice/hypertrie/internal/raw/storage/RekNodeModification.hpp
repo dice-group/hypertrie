@@ -79,8 +79,17 @@ namespace hypertrie::internal::raw {
 		// extract a change from count_changes
 		template<size_t updates_depth>
 		void planChangeCount(const TensorHash hash, const long count_change) {
-			LevelRefChanges<updates_depth> &count_changes = getRefChanges<updates_depth>();
-			count_changes[hash].count_diff += count_change;
+			assert(count_change != 0); // 0 count changes should not result in an unnecessary function call
+			auto change_ref = [&](){
+			  LevelRefChanges<updates_depth> &count_changes = getRefChanges<updates_depth>();
+			  count_changes[hash].count_diff += count_change;
+			};
+			if constexpr(tri::is_bool_valued and tri::is_lsb_unused and updates_depth == 1) {
+				if (hash.isUncompressed())
+					change_ref();
+			} else {
+				change_ref();
+			}
 		};
 
 
@@ -112,11 +121,10 @@ namespace hypertrie::internal::raw {
 			Modification_t<update_depth> update{};
 			if (keys.empty())
 				return;
+			else if(keys.size() == 1)
+				return apply_update(keys[0], true, false);
 			else if (nodec.empty())
-				if (keys.size() == 1)
-					update.modOp() = ModificationOperations::NEW_COMPRESSED_NODE;
-				else
-					update.modOp() = ModificationOperations::NEW_UNCOMPRESSED_NODE;
+				update.modOp() = ModificationOperations::NEW_UNCOMPRESSED_NODE;
 			else if (nodec.isCompressed())
 				update.modOp() = ModificationOperations::INSERT_INTO_COMPRESSED_NODE;
 			else
@@ -124,6 +132,19 @@ namespace hypertrie::internal::raw {
 
 			update.hashBefore() = nodec.hash().hash();
 			update.entries() = std::move(keys);
+
+			if(not update.hashAfter().empty()) {
+				auto nc_after = node_storage.template getNode<update_depth>(update.hashAfter());
+				if (not nc_after.empty()) {
+					planChangeCount<update_depth>(update.hashAfter(), INC_COUNT_DIFF_AFTER);
+					if(not update.hashBefore().empty()) {
+						planChangeCount<update_depth>(update.hashBefore(), DEC_COUNT_DIFF_AFTER);
+					}
+					apply_update_rek<update_depth>();
+					nodec = nc_after;
+					return;
+				}
+			}
 
 			planUpdate(std::move(update), INC_COUNT_DIFF_AFTER);
 
@@ -133,6 +154,10 @@ namespace hypertrie::internal::raw {
 		void apply_update(const RawKey<update_depth> &key, const value_type value, const value_type old_value) {
 			if (value == old_value)
 				return;
+
+			if constexpr(update_depth == 1 and tri::is_bool_valued and tri::is_lsb_unused)
+				if (nodec.empty())
+					return node_storage.setLSBCompressedLeaf(nodec, key[0], value);
 
 			bool value_deleted = value == value_type{};
 
@@ -150,9 +175,14 @@ namespace hypertrie::internal::raw {
 			} else {// new entry
 				if (nodec.empty())
 					update.modOp() = ModificationOperations::NEW_COMPRESSED_NODE;
-				else if (nodec.isCompressed())
-					update.modOp() = ModificationOperations::INSERT_INTO_COMPRESSED_NODE;
-				else
+				else if (nodec.isCompressed()) {
+					if constexpr (update_depth == 1 and tri::is_bool_valued and tri::is_lsb_unused) {
+						update.hashBefore() = {};
+						update.modOp() = ModificationOperations::NEW_UNCOMPRESSED_NODE;
+						update.addEntry({nodec.hash().getKeyPart()}, true);
+					} else
+						update.modOp() = ModificationOperations::INSERT_INTO_COMPRESSED_NODE;
+				} else
 					update.modOp() = ModificationOperations::INSERT_INTO_UNCOMPRESSED_NODE;
 			}
 
@@ -208,6 +238,8 @@ namespace hypertrie::internal::raw {
 				assert(not hash.empty());
 				if (diff_u_ptr.count_diff == 0)
 					continue;
+				if constexpr (tri::is_bool_valued and tri::is_lsb_unused and depth == 1)
+					assert(not hash.isCompressed());
 				auto nodec = node_storage.template getNode<depth>(hash);
 				if (not nodec.null()){
 					size_t &ref_count = nodec.ref_count();

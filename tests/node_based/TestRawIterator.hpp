@@ -21,236 +21,80 @@ namespace hypertrie::tests::raw::node_context::iterator_test {
 
 	using namespace hypertrie::internal;
 
-
-	TEST_CASE("bool depth 1 uncompressed", "[raw iterator]") {
-		using tri = default_bool_Hypertrie_internal_t;
-		constexpr const size_t depth = 1;
-		using key_part_type = typename tri::key_part_type;
-		using value_type = typename tri::value_type;
-
-		utils::RawGenerator<depth, key_part_type, value_type> gen{};
-
-		NodeContext<depth, tri> context{};
-		UncompressedNodeContainer<depth, tri> nc{};
-
-		const auto entries = gen.entries(2);
-
-		context.template set<depth>(nc, {1}, true);
-		context.template set<depth>(nc, {2}, true);
-
-
-		for(auto iter = iterator<depth, tri>(nc, context); iter != false; ++iter){
-			auto key = *iter;
-			fmt::print("[{}] -> {}\n", key[0], true);
-//			fmt::print("[{} {} {}] -> {}", key[0], key[1], key[2], true);
-		}
-	}
-
-	TEST_CASE("bool depth 1 compressed", "[raw iterator]") {
-		using tri = default_bool_Hypertrie_internal_t;
-		constexpr const size_t depth = 1;
-		using key_part_type = typename tri::key_part_type;
-		using value_type = typename tri::value_type;
-
-		utils::RawGenerator<depth, key_part_type, value_type> gen{};
-
-		NodeContext<depth, tri> context{};
-		UncompressedNodeContainer<depth, tri> nc{};
-
-		const auto entries = gen.entries(2);
-
-		context.template set<depth>(nc, {5}, true);
-
-
-		for(auto iter = iterator<depth, tri>(nc, context); iter != false; ++iter){
-			auto key = *iter;
-			fmt::print("[{}] -> {}\n", key[0], true);
-//			fmt::print("[{} {} {}] -> {}", key[0], key[1], key[2], true);
-		}
-	}
-
-	TEST_CASE("bool depth 1 compressed - lsb_unused", "[raw iterator]") {
-		using tri = Hypertrie_internal_t<Hypertrie_t<unsigned long,
-				bool,
-				hypertrie::internal::container::tsl_sparse_map ,
-				hypertrie::internal::container::tsl_sparse_set ,
-				true>>;
-		constexpr const size_t depth = 1;
-		using key_part_type = typename tri::key_part_type;
-		using value_type = typename tri::value_type;
-
-		utils::RawGenerator<depth, key_part_type, value_type> gen{};
-
-		NodeContext<depth, tri> context{};
-		CompressedNodeContainer<depth, tri> nc{};
-
-		nc.hash() = TaggedTensorHash<tri>{4UL};
-
-// 		currently broken
-//		context.template set<depth>(nc, {4}, true);
-
-
-		for(auto iter = iterator<depth, tri>(nc, context); iter != false; ++iter){
-			auto key = *iter;
-			fmt::print("[{}] -> {}\n", key[0], true);
-//			fmt::print("[{} {} {}] -> {}", key[0], key[1], key[2], true);
-		}
-	}
-
-	TEST_CASE("bool depth 2 uncompressed", "[raw iterator]") {
-		using tri = default_bool_Hypertrie_internal_t;
-		constexpr const size_t depth = 2;
-		using key_part_type = typename tri::key_part_type;
-		using value_type = typename tri::value_type;
-
-		utils::RawGenerator<depth, key_part_type, value_type> gen{};
-
-		NodeContext<depth, tri> context{};
-		UncompressedNodeContainer<depth, tri> nc{};
-
-		context.template set<depth>(nc, {1,3}, true);
-		context.template set<depth>(nc, {1,4}, true);
-
-
-		for(auto iter = iterator<depth, tri>(nc, context); iter != false; ++iter){
-			auto key = *iter;
-			fmt::print("[{} {} ] -> {}\n", key[0], key[1],true);
-		}
-	}
-
-	TEST_CASE("long depth 2 uncompressed", "[raw iterator]") {
-		using tri = default_long_Hypertrie_internal_t;
-		constexpr const size_t depth = 2;
-		using key_part_type = typename tri::key_part_type;
-		using value_type = typename tri::value_type;
-
-		utils::RawGenerator<depth, key_part_type, value_type> gen{};
-
-		NodeContext<depth, tri> context{};
-		UncompressedNodeContainer<depth, tri> nc{};
-
-		context.template set<depth>(nc, {2,3}, 7);
-		context.template set<depth>(nc, {1,4}, 8);
-
-
-		for(auto iter = iterator<depth, tri>(nc, context); iter != false; ++iter){
-			auto key = iter->first;
-			auto value = iter->second;
-			fmt::print("[{} {} ] -> {}\n", key[0], key[1],value);
-		}
-	}
-
-	TEST_CASE("bool depth 2 compressed", "[raw iterator]") {
-		using tri = default_bool_Hypertrie_internal_t;
-		constexpr const size_t depth = 2;
-		using key_part_type = typename tri::key_part_type;
-		using value_type = typename tri::value_type;
-
-		utils::RawGenerator<depth, key_part_type, value_type> gen{};
-
-		NodeContext<depth, tri> context{};
-		UncompressedNodeContainer<depth, tri> nc{};
-
-		const auto entries = gen.entries(2);
-
-		context.template set<depth>(nc, {5,7}, true);
-
-
-		for(auto iter = iterator<depth, tri>(nc, context); iter != false; ++iter){
-			auto key = *iter;
-			fmt::print("[{} {}] -> {}\n", key[0], key[1], true);
-//			fmt::print("[{} {} {}] -> {}", key[0], key[1], key[2], true);
-		}
-	}
-
-	TEST_CASE("long depth 2 compressed", "[raw iterator]") {
-		using tri = default_long_Hypertrie_internal_t;
-		constexpr const size_t depth = 2;
-		using key_part_type = typename tri::key_part_type;
-		using value_type = typename tri::value_type;
-
-		utils::RawGenerator<depth, key_part_type, value_type> gen{};
-
-		NodeContext<depth, tri> context{};
-		UncompressedNodeContainer<depth, tri> nc{};
-
-		const auto entries = gen.entries(2);
-
-		context.template set<depth>(nc, {5,7}, 3);
-
-
-		for(auto iter = iterator<depth, tri>(nc, context); iter != false; ++iter){
-			auto key = iter->first;
-			auto value = iter->second;
-			fmt::print("[{} {}] -> {}\n", key[0], key[1], value);
-		}
-	}
-
-
 	template<HypertrieInternalTrait tri, size_t depth>
-	void randomized_raw_iterator_test() {
+	void randomized_iterator_test() {
+		using tr = typename tri::tr;
+		using IteratorEntry = typename tr::IteratorEntry;
+		using iter_funcs = typename tr::iterator_entry;
 		using key_part_type = typename tri::key_part_type;
 		using value_type = typename tri::value_type;
-		using Key = typename tri::Key;
+		using Key = typename tri::template RawKey<depth>;
 
-		static utils::RawGenerator<depth, key_part_type, value_type> gen{};
+		static utils::RawGenerator<depth, key_part_type, value_type, size_t(tri::is_lsb_unused)> gen{};
 
-		SECTION(fmt::format("depth = {}, key_part_type = {}, value_type = {}",
-							depth, nameOfType<key_part_type>(), nameOfType<value_type>())) {
+		NodeContext<depth, tri> context{};
+		UncompressedNodeContainer<depth, tri> nodec{};
 
-			for ([[maybe_unused]]auto number_of_entries : iter::range(0,500)) {
-				SECTION(fmt::format("number of entries = {}", number_of_entries)) {
+		for (size_t count : iter::range(0, 30)) {
+			gen.setKeyPartMinMax(0, size_t((count / depth + 1) * 1.5));
+			gen.setValueMinMax(value_type(1), value_type(5));
+			SECTION("{} entries"_format(count)) {
+				for (const auto i : iter::range(10)) {
+					SECTION("{}"_format(i)) {
+						auto entries = [&]() {
+							auto entries = gen.entries(count);
+							std::map<Key, value_type> entries_map;
+							for (const auto &[key, value] : entries)
+								entries_map[key] = value;
+							return entries_map;
+						}();
 
-					for ([[maybe_unused]]auto run : iter::range(0,30)) {
-						// create context
-						NodeContext<depth, tri> context{};
-						// create emtpy primary node
-						UncompressedNodeContainer<depth, tri> nc{};
+						for (const auto &[key, value] : entries)
+							context.template set<depth>(nodec, key, value);
 
-						const auto entries = gen.entries(number_of_entries);
-
-
-						for (const auto &entry : entries)
-							context.template set<depth>(nc, entry.first, entry.second);
-
-						using IteratorEntry = std::conditional_t<(tri::is_bool_valued), Key, std::pair<Key, value_type>>;
-
-						std::vector<IteratorEntry> iterator_entries;
-
-						for (auto iter = iterator<depth, tri>(nc, context); iter != false; ++iter) {
-							iterator_entries.push_back(*iter);
-						}
-
-						REQUIRE(entries.size() == iterator_entries.size());
-
-						for (auto entry : entries) {
-							IteratorEntry actual_entry = [&]() -> IteratorEntry {
-								if constexpr (tri::is_bool_valued) return {entry.first.begin(), entry.first.end()};
-								else
-									return {Key{entry.first.begin(), entry.first.end()}, entry.second};
+						std::set<Key> found_keys{};
+						for (auto iter = iterator<depth, tri>(nodec, context); iter != false; ++iter) {
+							IteratorEntry entry = *iter;
+							auto actual_key = iter_funcs::key(entry);
+							auto actual_rawkey = [&]() {
+								Key raw_key;
+								for (auto [raw_key_part, non_raw_key_part] : iter::zip(raw_key, actual_key))
+									raw_key_part = non_raw_key_part;
+								return raw_key;
 							}();
-							REQUIRE(std::find(iterator_entries.begin(), iterator_entries.end(), actual_entry) != iterator_entries.end());
+							auto actual_value = iter_funcs::value(entry);
+							// check if the key is valid
+							REQUIRE(entries.count(actual_rawkey));
+							// check if the value is valid
+							REQUIRE(entries[actual_rawkey] == actual_value);
+							// check that the entry was not already found
+							REQUIRE(not found_keys.count(actual_rawkey));
+							found_keys.insert(actual_rawkey);
+
+							WARN("[{}] -> {}\n"_format(fmt::join(actual_key, ", "), actual_value));
 						}
+						REQUIRE(found_keys.size() == entries.size());
 					}
 				}
 			}
 		}
 	}
 
-	template <size_t depth>
-	void randomized_raw_iterator_tests() {
-		randomized_raw_iterator_test<default_bool_Hypertrie_internal_t, depth>();
-		randomized_raw_iterator_test<default_long_Hypertrie_internal_t, depth>();
-		randomized_raw_iterator_test<default_double_Hypertrie_internal_t, depth>();
+	TEMPLATE_TEST_CASE_SIG("iterating hypertrie entries [bool]", "[RawIterator]", ((size_t depth), depth), 1, 2, 3, 4, 5) {
+		randomized_iterator_test<default_bool_Hypertrie_internal_t, depth>();
 	}
 
-
-	TEST_CASE("randomized tests", "[raw iterator]") {
-		randomized_raw_iterator_tests<1>();
-		randomized_raw_iterator_tests<2>();
-		randomized_raw_iterator_tests<3>();
-		randomized_raw_iterator_tests<4>();
+	TEMPLATE_TEST_CASE_SIG("iterating hypertrie entries [bool lsb-unused]", "[RawIterator]", ((size_t depth), depth), 1, 2, 3, 4, 5) {
+		randomized_iterator_test<lsbunused_bool_Hypertrie_internal_t, depth>();
 	}
-}
+
+	TEMPLATE_TEST_CASE_SIG("iterating hypertrie entries [long]", "[RawIterator]", ((size_t depth), depth), 1, 2, 3, 4, 5) {
+		randomized_iterator_test<default_long_Hypertrie_internal_t, depth>();
+	}
+
+	TEMPLATE_TEST_CASE_SIG("iterating hypertrie entries [double]", "[RawIterator]", ((size_t depth), depth), 1, 2, 3, 4, 5) {
+		randomized_iterator_test<default_double_Hypertrie_internal_t, depth>();
+	}
+}// namespace hypertrie::tests::raw::node_context::iterator_test
 
 #endif//HYPERTRIE_TESTRAWITERATOR_HPP

@@ -126,7 +126,7 @@ namespace hypertrie {
 		}
 
 		[[nodiscard]] constexpr bool empty() const noexcept {
-			return this->node_container_.hash_sized == 0;
+			return this->node_container_.hash_sized.empty();
 		}
 
 		[[nodiscard]] value_type operator[](const Key &key) const {

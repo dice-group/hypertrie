@@ -224,6 +224,11 @@ namespace hypertrie::internal::raw {
 			nodes.erase(it);
 		}
 
+		void setLSBCompressedLeaf(NodeContainer<1, tri> &nodec, const key_part_type &key_part, const bool &value) {
+			if (value)
+				nodec.hash() = TaggedTensorHash<tri>{key_part};
+		}
+
 		template<size_t depth>
 		void deleteNode(const TensorHash &node_hash) {
 			if (node_hash.isCompressed()) {

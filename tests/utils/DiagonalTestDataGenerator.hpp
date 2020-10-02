@@ -1,8 +1,14 @@
 #ifndef HYPERTRIE_DIAGONALTESTDATAGENERATOR_HPP
 #define HYPERTRIE_DIAGONALTESTDATAGENERATOR_HPP
 
-#include "AssetGenerator.hpp"
 #include <set>
+#include <map>
+#include <cassert>
+
+#include <itertools.hpp>
+
+#include "AssetGenerator.hpp"
+
 namespace hypertrie::tests::utils {
 
 	template<size_t diag_depth, size_t depth, typename key_part_type, typename value_type>
@@ -57,7 +63,8 @@ namespace hypertrie::tests::utils {
 			assert(diagonal_size <= size);
 
 			this->setValueMinMax(1, value_type(5));
-			this->setKeyPartMinMax(key_part_type(0), std::max(diagonal_size, (size / depth + 1)));
+			const size_t partMax = (size != 1) ? std::max(diagonal_size, (size / depth + 1)) : depth - 1;
+			this->setKeyPartMinMax(key_part_type(0), partMax);
 			DiagonalTestData_t test_data{};
 			test_data.diagonal_positions = diagonal_positions;
 

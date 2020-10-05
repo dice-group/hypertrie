@@ -13,5 +13,6 @@
 #include "TestNodeContext.hpp"
 #include "TestNodeContextRandomized.hpp"
 #include "TestTaggedNodeHash.hpp"
+#include "TestSlicing.hpp"
 
 #endif//NODEBASED_HYPERTRIE_TESTS_H

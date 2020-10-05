@@ -48,6 +48,8 @@ namespace hypertrie::internal::raw {
 			std::array<FixedValue, fixed_depth> fixed_values;
 
 		public:
+			RawSliceKey() : fixed_values{} {}
+
 			explicit RawSliceKey(const SliceKey &slice_key) {
 				assert(sliceKeyDepth(slice_key) == fixed_depth);
 				size_t pos = 0;
@@ -59,11 +61,53 @@ namespace hypertrie::internal::raw {
 				}
 			}
 
-			const FixedValue &operator[](size_t pos) const { return fixed_values[pos]; }
+			const FixedValue &operator[](size_t pos) const {
+				// TODO: fix
+				return fixed_values[pos];
+			}
 
-			auto begin() const { return fixed_values.cbegin(); }
+			auto begin() { return fixed_values.begin(); }
 
-			auto end() const { return fixed_values.cend(); }
+			auto end() { return fixed_values.end(); }
+
+			auto begin() const { return fixed_values.begin(); }
+
+			auto end() const { return fixed_values.end(); }
+
+			template<size_t depth>
+			bool satisfiedBy(const RawKey<depth> &raw_key) const {
+				for (const auto &[pos, fixed_key_part] : *this)
+					if (raw_key[pos] != fixed_key_part)
+						return false;
+				return true;
+			}
+
+			template<size_t depth>
+			RawKey<depth - fixed_depth> slice(const RawKey<depth> &raw_key) const {
+				if constexpr (fixed_depth == 0) {
+					return raw_key;
+				} else {
+					RawKey<depth - fixed_depth> result_key;
+
+					size_t result_pos = 0;
+					size_t input_pos = 0;
+					auto slice_key_iter = this->begin();
+					auto slice_key_end = this->end();
+					while (result_pos < depth - fixed_depth) {
+						if (slice_key_iter != slice_key_end and
+							input_pos == slice_key_iter->pos) {
+							// do nothing
+							slice_key_iter++;
+						} else {
+							// write the key-part to the result
+							result_key[result_pos] = raw_key[input_pos];
+							result_pos++;
+						}
+						input_pos++;
+					}
+					return result_key;
+				}
+			}
 		};
 
 		// TODO: rename to key_positions

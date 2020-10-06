@@ -46,7 +46,7 @@ namespace hypertrie::tests::raw::node_context::slicing {
 
 		std::string print_entries{};
 		for (auto &[key, value] : entries)
-			print_entries += "{} → value\n"_format(key);
+			print_entries += "{} → {}\n"_format(key, value);
 		WARN(print_entries);
 
 
@@ -65,47 +65,51 @@ namespace hypertrie::tests::raw::node_context::slicing {
 				// get all the combinations for slices of depth slice_depth
 				for (auto slice_poss_tmp : iter::combinations(iter::range(depth), size_t(fixed_depth))) {
 					std::vector<size_t> fixed_poss{slice_poss_tmp.begin(), slice_poss_tmp.end()};
-					// try all possible slices keys
-					for (auto key_parts : iter::product<size_t(fixed_depth)>(iter::range(0ul, max_key_part + 1))) {
-						// from std::tuple to std::array
-						auto &key_parts_reint = *reinterpret_cast<std::array<size_t, size_t(fixed_depth)> *>(&key_parts);
+					SECTION("positions: {}"_format(fmt::join(fixed_poss, ", "))) {
+						// try all possible slices keys
+						for (auto key_parts : iter::product<size_t(fixed_depth)>(iter::range(0ul, max_key_part + 1))) {
+
+							// from std::tuple to std::array
+							auto &key_parts_reint = *reinterpret_cast<std::array<size_t, size_t(fixed_depth)> *>(&key_parts);
+							SECTION("fixed key-parts: {}"_format(fmt::join(key_parts_reint, ", "))) {
+
+								CAPTURE(raw_slice_key, fixed_poss, key_parts_reint);
+
+								for (auto [slice_key_part, slice_pos, key_part] : iter::zip(raw_slice_key, fixed_poss, key_parts_reint))
+									slice_key_part = {slice_pos, key_part};
+
+								CAPTURE(raw_slice_key, fixed_poss, key_parts_reint);
+
+								TestSlice<tri, depth, fixed_depth> expected_slice{entries, raw_slice_key};
+								auto expected_slice_container = context.template slice(nc, raw_slice_key);
 
 
-						CAPTURE(raw_slice_key, fixed_poss, key_parts_reint);
+								if constexpr (depth > size_t(fixed_depth)) {
+									auto [actual_nodec, actual_is_managed] = expected_slice_container;
 
-						for (auto [slice_key_part, slice_pos, key_part] : iter::zip(raw_slice_key, fixed_poss, key_parts_reint))
-							slice_key_part = {slice_pos, key_part};
+									// check whether the slice is empty
+									REQUIRE(actual_nodec.empty() == expected_slice.empty());
 
-						CAPTURE(raw_slice_key, fixed_poss, key_parts_reint);
+									// check if the result is managed, i.e. not a slice of compressed key
+									// TODO: refactor and reactivate once implemented
+									//							REQUIRE(expected_slice.isManaged(context) == actual_is_managed);
 
-						TestSlice<tri, depth, fixed_depth> expected_slice{entries, raw_slice_key};
-						auto expected_slice_container = context.template slice(nc, raw_slice_key);
+									// check size
+									REQUIRE(context.template size(actual_nodec) == expected_slice.size());
 
+									// check the entries
+									for (const auto &[expected_key, expected_value] : expected_slice.sliceEntries()) {
+										REQUIRE(context.template get(actual_nodec, expected_key) == expected_value);
+									}
+								} else {
+									auto [actual_value, actual_is_managed] = expected_slice_container.value();
 
-						if constexpr (depth > size_t(fixed_depth)) {
-							auto [actual_nodec, actual_is_managed] = expected_slice_container;
+									// check if the result is managed, i.e. not a slice of compressed key
+									REQUIRE(expected_slice.isManaged(context) == actual_is_managed);
 
-							// check whether the slice is empty
-							REQUIRE(actual_nodec.empty() == expected_slice.empty());
-
-							// check if the result is managed, i.e. not a slice of compressed key
-							// TODO: refactor and reactivate once implemented
-							//							REQUIRE(expected_slice.isManaged(context) == actual_is_managed);
-
-							// check size
-							REQUIRE(context.template size(actual_nodec) == expected_slice.size());
-
-							// check the entries
-							for (const auto &[expected_key, expected_value] : expected_slice.sliceEntries()) {
-								REQUIRE(context.template get(actual_nodec, expected_key) == expected_value);
+									REQUIRE(actual_value = expected_slice.sliceEntries().begin()->second);
+								}
 							}
-						} else {
-							auto [actual_value, actual_is_managed] = expected_slice_container.value();
-
-							// check if the result is managed, i.e. not a slice of compressed key
-							REQUIRE(expected_slice.isManaged(context) == actual_is_managed);
-
-							REQUIRE(actual_value = expected_slice.sliceEntries().begin()->second);
 						}
 					}
 				}

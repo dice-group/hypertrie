@@ -29,14 +29,14 @@ namespace hypertrie::tests::raw::node_context::slicing {
 		 * fields
 		 */
 
-		std::set<std::pair<RawKey, value_type>> const *entries;
+		std::map<RawKey, value_type> const *entries;
 
 		RawSliceKey raw_slice_key;
 
 		std::map<RawResultKey, value_type> slice_entries;
 
 	public:
-		TestSlice(const std::set<std::pair<RawKey, value_type>> &entries, const RawSliceKey &raw_slice_key)
+		TestSlice(const std::map<RawKey, value_type> &entries, const RawSliceKey &raw_slice_key)
 			: entries(&entries), raw_slice_key(raw_slice_key) {
 			for (const auto &[key, value] : *this->entries)
 				if (raw_slice_key.satisfiedBy(key))

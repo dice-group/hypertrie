@@ -144,20 +144,19 @@ namespace hypertrie::tests::node_context {
 
 		HypertrieContext<tr> context;
 		Hypertrie<tr> t{depth, context};
-//			WARN(fmt::format("[ {} ]",fmt::join(key, ", ")));
-		t.set({1,2,3,4}, true);
-		t.set({1,5,6,7}, true);
-		t.set({1,8,9,10}, true);
+		//			WARN(fmt::format("[ {} ]",fmt::join(key, ", ")));
+		t.set({1, 2, 3, 4}, true);
+		t.set({1, 5, 6, 7}, true);
+		t.set({1, 8, 9, 10}, true);
 		WARN((std::string) t);
-		
+
 		typename tr::SliceKey slice_key = {1, 2, 3, {}};
 
-		const std::variant<std::optional<const_Hypertrie<tr>>, bool> &result = t[slice_key];
+		std::variant<const_Hypertrie<tr>, bool> result = t[slice_key];
 
-		const_Hypertrie sliced_hypertrie = std::get<0>(result).value();
+		const_Hypertrie sliced_hypertrie = std::get<0>(result);
 
 		WARN((std::string) sliced_hypertrie);
-
 	}
 
 };// namespace hypertrie::tests::node_context

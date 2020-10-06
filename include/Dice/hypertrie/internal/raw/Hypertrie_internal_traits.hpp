@@ -27,7 +27,7 @@ namespace hypertrie::internal::raw {
 		template<size_t depth>
 		using RawKey = hypertrie::internal::RawKey<depth, typename tr::key_part_type>;
 
-		static size_t sliceKeyDepth(const SliceKey &slice_key) {
+		static size_t sliceKeyFixedDepth(const SliceKey &slice_key) {
 			size_t fixed_depth = 0;
 			for (auto opt_key_part : slice_key) {
 				if (opt_key_part.has_value())
@@ -51,7 +51,7 @@ namespace hypertrie::internal::raw {
 			RawSliceKey() : fixed_values{} {}
 
 			explicit RawSliceKey(const SliceKey &slice_key) {
-				assert(sliceKeyDepth(slice_key) == fixed_depth);
+				assert(sliceKeyFixedDepth(slice_key) == fixed_depth);
 				size_t pos = 0;
 				size_t key_pos = 0;
 				for (const auto &opt_key_part : slice_key) {

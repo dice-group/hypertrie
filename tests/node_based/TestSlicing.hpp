@@ -84,7 +84,8 @@ namespace hypertrie::tests::raw::node_context::slicing {
 										REQUIRE(context.template get(actual_nodec, expected_key) == expected_value);
 									}
 
-									exec_slice_test<tri, depth - size_t(fixed_depth), max_key_part>(context, actual_nodec, expected_slice.sliceEntries());
+									if (not entries.empty()) // don't do the recursion if the parent was already empty
+										exec_slice_test<tri, depth - size_t(fixed_depth), max_key_part>(context, actual_nodec, expected_slice.sliceEntries());
 								} else {
 									auto [actual_value, actual_is_managed] = actual_slice_container.value();
 
@@ -110,6 +111,7 @@ namespace hypertrie::tests::raw::node_context::slicing {
 
 
 		static utils::RawGenerator<depth, key_part_type, value_type, size_t(tri::is_lsb_unused)> gen{0, max_key_part};
+		gen.setValueMinMax(0, value_type(max_key_part*2));
 
 		for (auto number_of_entries : std::vector{0ul, 1ul, size_t(std::pow(max_key_part, depth) / 2), size_t(std::pow(max_key_part, depth) - depth)})
 			SECTION("entries in hypertrie: {}"_format(number_of_entries))
@@ -138,16 +140,20 @@ namespace hypertrie::tests::raw::node_context::slicing {
 
 	}
 
-	TEMPLATE_TEST_CASE_SIG("test slicing [bool]", "[Slicing]", ((size_t depth), depth), 2, 3, 4, 5) {
+	TEMPLATE_TEST_CASE_SIG("test slicing [bool]", "[Slicing]", ((size_t depth), depth), 2, 3) {
 		slicing_by_any_keypart<default_bool_Hypertrie_internal_t, depth>();
 	}
 
-	TEMPLATE_TEST_CASE_SIG("test slicing [bool lsb-unused]", "[Slicing]", ((size_t depth), depth), 2, 3, 4, 5) {
+	TEMPLATE_TEST_CASE_SIG("test slicing [bool lsb-unused]", "[Slicing]", ((size_t depth), depth), 2, 3) {
 		slicing_by_any_keypart<lsbunused_bool_Hypertrie_internal_t , depth>();
 	}
 
-	TEMPLATE_TEST_CASE_SIG("test slicing [long]", "[Slicing]", ((size_t depth), depth), 2, 3, 4, 5) {
+	TEMPLATE_TEST_CASE_SIG("test slicing [long]", "[Slicing]", ((size_t depth), depth), 2, 3) {
 		slicing_by_any_keypart<default_long_Hypertrie_internal_t , depth>();
+	}
+
+	TEMPLATE_TEST_CASE_SIG("test slicing [double]", "[Slicing]", ((size_t depth), depth), 2, 3) {
+		slicing_by_any_keypart<default_double_Hypertrie_internal_t , depth>();
 	}
 
 }// namespace hypertrie::tests::raw::node_context::slicing

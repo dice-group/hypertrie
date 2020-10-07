@@ -119,16 +119,14 @@ namespace hypertrie::tests::utils {
 		 * @return
 		 */
 		auto entries(size_t size) {
-			std::set<RawKey> unique_keys;
-			std::set<std::pair<RawKey, value_type>> entry_set;
-			while (entry_set.size() < size) {
+			std::map<RawKey, value_type> entry_map;
+			while (entry_map.size() < size) {
 				auto next_entry = this->entry();
-				if (unique_keys.count(next_entry.first))
+				if (entry_map.count(next_entry.first))
 					continue;
-				unique_keys.insert(next_entry.first);
-				entry_set.insert(next_entry);
+				entry_map.insert(next_entry);
 			}
-			return entry_set;
+			return entry_map;
 		}
 	};
 
@@ -164,16 +162,14 @@ namespace hypertrie::tests::utils {
 		}
 
 		auto entries(const size_t &size, const size_t &depth = 1) {
-			std::set<Key> unique_keys;
-			std::set<std::pair<Key, value_type>> entry_set;
-			while (entry_set.size() < size) {
+			std::map<Key, value_type> entry_map;
+			while (entry_map.size() < size) {
 				auto next_entry = this->entry(depth);
-				if (unique_keys.count(next_entry.first))
+				if (entry_map.count(next_entry.first))
 					continue;
-				unique_keys.insert(next_entry.first);
-				entry_set.insert(next_entry);
+				entry_map.insert(next_entry);
 			}
-			return entry_set;
+			return entry_map;
 		}
 	};
 }

@@ -275,6 +275,8 @@ namespace hypertrie::internal::raw {
 		using value_type = typename tri::value_type;
 
 	public:
+		Node() = default;
+
 		Node(const RawKey &key, value_type value, size_t ref_count = 0)
 			: ReferenceCounted(ref_count), Compressed<depth, tri_t>(key), Valued<tri_t>(value) {}
 

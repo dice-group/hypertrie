@@ -243,6 +243,7 @@ namespace hypertrie::internal::raw {
 
 						} else {
 							nc.node() = new CompressedNode<result_depth, tri>();
+							// todo: don't return a new node if the compressednode is not sliced
 							size_t slice_pos = 0;
 							size_t result_pos = 0;
 							for (auto nodec_pos : iter::range(current_depth)){

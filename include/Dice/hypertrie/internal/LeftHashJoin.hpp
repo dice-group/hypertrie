@@ -44,7 +44,7 @@ namespace hypertrie {
 
         private:
             // aliases
-            using value_type = std::pair<std::vector<const_Hypertrie<tr>>, key_part_type>;
+            using value_type = std::pair<std::vector<std::optional<const_Hypertrie<tr>>>, key_part_type>;
             // members
             poss_type pos_in_out{};
             std::vector<pos_type> result_depths{};
@@ -52,6 +52,10 @@ namespace hypertrie {
             bool ended = false;
             value_type value{};
             HashDiagonal<tr>* left_operand = nullptr;
+            static constexpr key_part_type default_key_part = []() {
+              if constexpr (std::is_pointer_v<typename tr::key_part_type>) return nullptr;
+              else return std::numeric_limits<typename tr::key_part_type>::max();
+            }();
 
         public:
 
@@ -99,18 +103,14 @@ namespace hypertrie {
                     auto &right_operand = ops[i];
                     // if the join was successful save the key of the right operand
                     if (right_operand.find(value.second)) {
-                        if(result_depths[i])
-                            value.first[pos_in_out[i]] = const_Hypertrie<tr>(right_operand.currentHypertrie());
-                    }
-					// if the join was not successful save the default key value
+						if (result_depths[i])
+							value.first[pos_in_out[i]] = const_Hypertrie<tr>(right_operand.currentHypertrie());
+					}
+                    // if the join was not successful save the default key value
                     else {
-                        if(result_depths[i]) {
-                            Key<key_part_type> null_key(result_depths[i], 10000);
-                            Hypertrie<tr> null_ht{result_depths[i]};
-                            null_ht.set(null_key, true);
-                            value.first[pos_in_out[i]] = const_Hypertrie<tr>(null_ht);
-                        }
-                    }
+						if (result_depths[i])
+							value.first[pos_in_out[i]] = std::nullopt;
+					}
                 }
                 ++(*left_operand);
             }

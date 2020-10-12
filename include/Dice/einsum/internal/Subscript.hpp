@@ -44,7 +44,7 @@ namespace einsum::internal {
 	class Subscript {
 	public:
 		enum class Type {
-			None = 0, Join, Cartesian, Resolve, Count, EntryGenerator, CarthesianMapping
+			None = 0, Join, LeftJoin, Cartesian, Resolve, Count, EntryGenerator, CarthesianMapping
 		};
 		using Label = char;
 
@@ -114,7 +114,7 @@ namespace einsum::internal {
 						original_result_poss.push_back(result_pos);
 					}
 
-				return {std::make_shared<Subscript>(operands_labels, result_labels),
+				return {std::make_shared<Subscript>(operands_labels, result_labels, subscripts.type),
 				        original_op_poss,
 				        original_result_poss};
 			}
@@ -152,6 +152,9 @@ namespace einsum::internal {
 
 		// Cartesian
 		CartesianSubSubscripts cartesian_sub_subscripts;
+
+		// Left Join
+		Label left_join_label;
 	public:
 		std::shared_ptr<Subscript> removeLabel(Label label) const {
 			auto iterator = sub_subscripts.find(label);
@@ -159,7 +162,7 @@ namespace einsum::internal {
 				return iterator->second;
 			else
 				return sub_subscripts.insert(
-								{label, std::make_shared<Subscript>(raw_subscript.removeLabel(label))})
+								{label, std::make_shared<Subscript>(raw_subscript.removeLabel(label), this->type)})
 						.first->second;
 		}
 
@@ -270,10 +273,29 @@ namespace einsum::internal {
 				  type((type == Type::CarthesianMapping) ? Type::CarthesianMapping : calcState(raw_subscript,
 				                                                                               operands_label_set,
 				                                                                               result_label_set,
-				                                                                               connected_components)),
+				                                                                               connected_components,
+                                                                                                type)),
 				  all_result_done(calcAllResultDone(operands_label_set, result_label_set)) {
 			switch (this->type) {
-
+				case Type::LeftJoin: {
+					// iterate the operands in the order they were provided and find the first join label
+					bool assigned = false;
+					for(auto outer_it = this->raw_subscript.operands.begin(); outer_it != this->raw_subscript.operands.end(); outer_it++) {
+                        for(auto label : *outer_it) {
+							for (auto inner_it = outer_it+1; inner_it != this->raw_subscript.operands.end(); inner_it++)
+								if (std::find((*inner_it).begin(), (*inner_it).end(), label) != (*inner_it).end()) {
+								    left_join_label = label;
+									assigned = true;
+									break;
+                                }
+							if(assigned)
+								break;
+						}
+						if(assigned)
+							break;
+					}
+					[[fallthrough]];
+				}
 				case Type::Join: {
 					label_poss_in_result = raw_subscript.getLabelPossInResult();
 
@@ -364,6 +386,10 @@ namespace einsum::internal {
 			return {std::move(operands_sc), std::move(result_sc)};
 		}
 
+		const Label& getLeftJoinLabel() const {
+			return left_join_label;
+		}
+
 		const RawSubscript &getRawSubscript() const {
 			return raw_subscript;
 		}
@@ -377,7 +403,8 @@ namespace einsum::internal {
 		Type calcState(const RawSubscript &raw_subscript,
 		               const tsl::hopscotch_set<Label> &operands_label_set,
 		               const tsl::hopscotch_set<Label> &result_label_set,
-		               const ConnectedComponents &connected_components) {
+		               const ConnectedComponents &connected_components,
+					   const Type type) {
 			switch (raw_subscript.operandsCount()) {
 				case 0:
 					return Type::EntryGenerator;
@@ -411,7 +438,8 @@ namespace einsum::internal {
 					break;
 				}
 			}
-			return Type::Join;
+//			return (type == Type::LeftJoin) ? Type::LeftJoin : Type::Join ;
+			return Type::LeftJoin; //TODO: support both types of join
 		}
 
 		static DependencyGraph calcDependencyGraph(const RawSubscript &raw_subscript) {

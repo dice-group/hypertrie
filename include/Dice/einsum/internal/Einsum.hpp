@@ -7,6 +7,7 @@
 #include "Dice/einsum/internal/Operator.hpp"
 #include "Dice/einsum/internal/CartesianOperator.hpp"
 #include "Dice/einsum/internal/JoinOperator.hpp"
+#include "Dice/einsum/internal/LeftJoinOperator.hpp"
 #include "Dice/einsum/internal/ResolveOperator.hpp"
 #include "Dice/einsum/internal/CountOperator.hpp"
 #include "Dice/einsum/internal/EntryGeneratorOperator.hpp"
@@ -21,6 +22,8 @@ namespace einsum::internal {
 		switch (subscript->type) {
 			case Subscript::Type::Join:
 				return std::make_shared<JoinOperator<value_type, tr>>(subscript, context);
+			case Subscript::Type::LeftJoin:
+				return std::make_shared<LeftJoinOperator<value_type, tr>>(subscript, context);
 			case Subscript::Type::Resolve:
 				return std::make_shared<ResolveOperator<value_type, tr>>(subscript, context);
 			case Subscript::Type::Count:

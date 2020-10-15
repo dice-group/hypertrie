@@ -52,7 +52,15 @@ namespace hypertrie::tests::einsum {
 		if (timeout_duration == 0ms) {
 			unsigned long result_depth = test_einsum.subscript->resultLabelCount();
 			for (const auto &key : product<std::size_t>(result_depth, excl_max)) {
-				auto actual_entry = (actual_result.count(key)) ? actual_result[key] : 0;
+				auto actual_entry = [&]{
+					if constexpr (tr::is_bool_valued and tr::lsb_unused){
+						auto shifted_key = key;
+						for(auto &key_part : shifted_key)
+							key_part <<= 2;
+						return (actual_result.count(shifted_key)) ? actual_result[shifted_key] : 0;
+					} else
+						return (actual_result.count(key)) ? actual_result[key] : 0;
+				}();
 				auto expected_entry = value_type(TorchHelper<long>::resolve(expected_result, key));// to bool
 				INFO("key: ({})"_format(fmt::join(key, ", ")));
 				INFO("expected: {}, actual {}"_format(TorchHelper<long>::resolve(expected_result, key), actual_entry));
@@ -75,7 +83,6 @@ namespace hypertrie::tests::einsum {
 		SECTION("{} [res:{}]"_format(subscript_string, result_type_str)) {
 			for (std::size_t run : iter::range(runs))
 				SECTION("run {}"_format(run)) {
-					torch::manual_seed(std::hash<std::size_t>()(run));
 					auto subscript = std::make_shared<Subscript>(subscript_string);
 					std::vector<TestOperand<tr>> operands{};
 					for (const auto &operand_sc : subscript->getRawSubscript().operands) {
@@ -145,9 +152,8 @@ namespace hypertrie::tests::einsum {
 		}
 	}
 
-	TEST_CASE("Problematic Cases", "[einsum]") {
+	TEMPLATE_TEST_CASE_SIG("Problematic Cases", "[einsum]", ((typename tr), tr), lsbunused_bool_Hypertrie_t, default_bool_Hypertrie_t) {
 		using namespace std::string_literals;
-		using tr = default_bool_Hypertrie_t;
 		using Key = typename tr::Key;
 		using value_type = typename tr::value_type;
 		using Entry = std::pair<Key, value_type>;
@@ -184,7 +190,7 @@ namespace hypertrie::tests::einsum {
 		}
 	}
 
-	TEST_CASE("default test cases", "[einsum]") {
+	TEMPLATE_TEST_CASE_SIG("default test cases", "[einsum]", ((typename tr), tr), lsbunused_bool_Hypertrie_t, default_bool_Hypertrie_t) {
 
 		std::vector<std::string> subscript_strs{
 				"a->a",
@@ -226,7 +232,6 @@ namespace hypertrie::tests::einsum {
 				"ab,bc,ca->abc",
 				"ab,bc,ca,ax,xy,ya->a",
 				"aa,ae,ac,ad,a,ab->ab"};
-		using tr = default_bool_Hypertrie_t;
 		for (bool empty : {false, true}) {
 			SECTION("empty = {}"_format(empty))
 			for (auto excl_max : {4, 7, 10, 15, 30}) {
@@ -239,7 +244,7 @@ namespace hypertrie::tests::einsum {
 		}
 	}
 
-	TEST_CASE("complex test cases", "[einsum]") {
+	TEMPLATE_TEST_CASE_SIG("complex test cases", "[einsum]", ((typename tr), tr), lsbunused_bool_Hypertrie_t, default_bool_Hypertrie_t) {
 
 		std::vector<std::string> subscript_strs{
 				"abc,dcebf,gdghg,bdg,ijibg->c",// is calculated faster
@@ -248,7 +253,6 @@ namespace hypertrie::tests::einsum {
 				"abbc,d,ebcfg,hdif,hhchj->b"
 
 		};
-		using tr = default_bool_Hypertrie_t;
 		for (bool empty : {false, true}) {
 			SECTION("empty = {}"_format(empty))
 			for (auto excl_max : {4, 7, 10, 15, 30}) {

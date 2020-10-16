@@ -6,7 +6,7 @@
 //#include "TestRawDiagonal.cpp"
 //#include "TestBoolHypertrie.cpp"
 //#include "TestHashDiagonal.cpp"
-//#include "TestHashJoin.cpp"
+#include "TestLeftJoin.cpp"
 
 #ifdef HYPERTRIE_ENABLE_LIBTORCH
 #include "TestEinsum.cpp"

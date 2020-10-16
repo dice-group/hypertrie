@@ -48,6 +48,8 @@ namespace hypertrie {
 
 		void destruct_contextless_node() noexcept {
 			if (contextless() and node_container_.hash_sized != 0) {
+				if (tr::is_bool_valued and tr::lsb_unused and depth_ == 1 and size() == 1)
+					return;
 				using namespace internal;
 				assert(node_container_.pointer_sized != nullptr);
 				compiled_switch<hypertrie_depth_limit, 1>::switch_void(
@@ -63,6 +65,7 @@ namespace hypertrie {
 
 		void copy_contextless_node() noexcept {
 			if (contextless() and not empty()) {
+				if (not (tr::is_bool_valued and tr::lsb_unused and depth_ == 1 and size() == 1))
 				internal::compiled_switch<hypertrie_depth_limit, 1>::switch_void(
 						this->depth_,
 						[&](auto depth_arg) {

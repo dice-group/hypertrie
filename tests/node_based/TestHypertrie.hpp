@@ -20,50 +20,47 @@ namespace hypertrie::tests::node_context {
 	using namespace hypertrie::internal;
 
 
-
-	template<int depth>
+	template<HypertrieTrait tr, int depth>
 	void test_single_write() {
-		using tr = default_bool_Hypertrie_t;
-
 		using key_part_type = typename tr::key_part_type;
 		using value_type = typename tr::value_type;
 		SECTION("Boolhypertrie depth {}"_format(depth)) {
-			utils::EntryGenerator<key_part_type, value_type> gen{};
+			utils::EntryGenerator<key_part_type, value_type, tr::lsb_unused> gen{};
 			auto keys = gen.keys(500, depth);
 			for (const auto &key : keys) {
 				HypertrieContext<tr> context;
 				Hypertrie<tr> t{depth, context};
-				WARN(fmt::format("[ {} ]",fmt::join(key, ", ")));
+				WARN(fmt::format("[ {} ]", fmt::join(key, ", ")));
 				t.set(key, true);
 				REQUIRE(t[key]);
 			}
 		}
 	}
 
-	TEST_CASE("test_single_write_read", "[BoolHypertrie]") {
-		utils::resetDefaultRandomNumberGenerator();
-		test_single_write<1>();
-		test_single_write<2>();
-		test_single_write<3>();
-		test_single_write<4>();
-		test_single_write<5>();
+	TEMPLATE_TEST_CASE("test_single_write_read", "[Hypertrie]", lsbunused_bool_Hypertrie_t, default_bool_Hypertrie_t, default_long_Hypertrie_t, default_double_Hypertrie_t) {
+		using tr = TestType;
+		test_single_write<tr, 1>();
+		test_single_write<tr, 2>();
+		test_single_write<tr, 3>();
+		test_single_write<tr, 4>();
+		test_single_write<tr, 5>();
 	}
 
-	TEST_CASE("test_iterator", "[BoolHypertrie]") {
-		using tr = default_bool_Hypertrie_t;
+	TEMPLATE_TEST_CASE("test_iterator", "[Hypertrie]", lsbunused_bool_Hypertrie_t, default_bool_Hypertrie_t) {
+		using tr = TestType;
 		constexpr const size_t depth = 4;
 		using key_part_type = typename tr::key_part_type;
 		using value_type = typename tr::value_type;
 
-		utils::EntryGenerator<key_part_type, value_type> gen{1,15};
+		utils::EntryGenerator<key_part_type, value_type, tr::lsb_unused> gen{1, 15};
 		auto keys = gen.keys(150, depth);
 
-//		std::cout << keys << std::endl;
+		//		std::cout << keys << std::endl;
 
 		HypertrieContext<tr> context;
 		Hypertrie<tr> t{depth, context};
 		for (const auto &key : keys) {
-//			WARN(fmt::format("[ {} ]",fmt::join(key, ", ")));
+			//			WARN(fmt::format("[ {} ]",fmt::join(key, ", ")));
 			t.set(key, true);
 			REQUIRE(t[key]);
 		}
@@ -79,27 +76,26 @@ namespace hypertrie::tests::node_context {
 		for (const auto &actual_key : actual_keys) {
 			REQUIRE(keys.count(actual_key));
 		}
-
 	}
 
-	TEST_CASE("test_diagonal", "[BoolHypertrie]") {
-		using tr = default_bool_Hypertrie_t;
+	TEMPLATE_TEST_CASE("test_diagonal", "[Hypertrie]", lsbunused_bool_Hypertrie_t, default_bool_Hypertrie_t) {
+		using tr = TestType;
 		constexpr const size_t depth = 4;
 		using key_part_type = typename tr::key_part_type;
 		using value_type = typename tr::value_type;
 
-		utils::EntryGenerator<key_part_type, value_type> gen{1,15};
+		utils::EntryGenerator<key_part_type, value_type, tr::lsb_unused> gen{1, 15};
 		auto keys = gen.keys(150, depth);
 
-//		std::cout << keys << std::endl;
+		//		std::cout << keys << std::endl;
 		{
-		HypertrieContext<tr> context;
-		Hypertrie<tr> t{depth, context};
-			t.set({1,2,3,4}, true);
-			HashDiagonal d{t,{2}};
+			HypertrieContext<tr> context;
+			Hypertrie<tr> t{depth, context};
+			t.set({2, 4, 6, 8}, true);
+			HashDiagonal d{t, {2}};
 			d.begin();
 			REQUIRE(d != d.end());
-			std::cout << d.currentKeyPart() <<" → " << std::string(d.currentHypertrie())  << std::endl;
+			std::cout << d.currentKeyPart() << " → " << std::string(d.currentHypertrie()) << std::endl;
 			++d;
 			REQUIRE(d == d.end());
 		}
@@ -107,15 +103,15 @@ namespace hypertrie::tests::node_context {
 		{
 			HypertrieContext<tr> context;
 			Hypertrie<tr> t{depth, context};
-			t.set({1,5,3,4}, true);
-			t.set({1,2,3,4}, true);
-			HashDiagonal d{t,{1}};
+			t.set({2, 10, 6, 8}, true);
+			t.set({2, 4, 6, 8}, true);
+			HashDiagonal d{t, {1}};
 			d.begin();
 			REQUIRE(d != d.end());
-			std::cout << d.currentKeyPart() <<" → " << std::string(d.currentHypertrie())  << std::endl;
+			std::cout << d.currentKeyPart() << " → " << std::string(d.currentHypertrie()) << std::endl;
 			++d;
 			REQUIRE(d != d.end());
-			std::cout << d.currentKeyPart() <<" → " << std::string(d.currentHypertrie())  << std::endl;
+			std::cout << d.currentKeyPart() << " → " << std::string(d.currentHypertrie()) << std::endl;
 			++d;
 			REQUIRE(d == d.end());
 		}
@@ -123,34 +119,30 @@ namespace hypertrie::tests::node_context {
 		{
 			HypertrieContext<tr> context;
 			Hypertrie<tr> t{depth, context};
-			t.set({1,5,3,4}, true);
-			t.set({1,2,3,4}, true);
-			HashDiagonal d{t,{3}};
+			t.set({2, 10, 6, 8}, true);
+			t.set({2, 4, 6, 8}, true);
+			HashDiagonal d{t, {3}};
 			d.begin();
 			REQUIRE(d != d.end());
-			std::cout << d.currentKeyPart() <<" → " << std::string(d.currentHypertrie())  << std::endl;
+			std::cout << d.currentKeyPart() << " → " << std::string(d.currentHypertrie()) << std::endl;
 			++d;
 			REQUIRE(d == d.end());
 		}
-
 	}
 
-	TEST_CASE("test_slice", "[BoolHypertrie]") {
-		using tr = default_bool_Hypertrie_t;
+	TEMPLATE_TEST_CASE("test_slice", "[Hypertrie]", lsbunused_bool_Hypertrie_t, default_bool_Hypertrie_t) {
+		using tr = lsbunused_bool_Hypertrie_t;
 		constexpr const size_t depth = 4;
-//		using key_part_type = typename tr::key_part_type;
-
-//		std::cout << keys << std::endl;
 
 		HypertrieContext<tr> context;
 		Hypertrie<tr> t{depth, context};
 		//			WARN(fmt::format("[ {} ]",fmt::join(key, ", ")));
-		t.set({1, 2, 3, 4}, true);
-		t.set({1, 5, 6, 7}, true);
-		t.set({1, 8, 9, 10}, true);
+		t.set({2, 4, 6, 8}, true);
+		t.set({2, 10, 12, 14}, true);
+		t.set({2, 16, 18, 20}, true);
 		WARN((std::string) t);
 
-		typename tr::SliceKey slice_key = {1, 2, 3, {}};
+		typename tr::SliceKey slice_key = {2, 4, 6, {}};
 
 		std::variant<const_Hypertrie<tr>, bool> result = t[slice_key];
 

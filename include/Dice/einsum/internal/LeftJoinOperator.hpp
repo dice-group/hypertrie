@@ -116,7 +116,7 @@ namespace einsum::internal {
 			// the subscript for the sub_operator
             std::shared_ptr<Subscript> sub_op_subscript;
 			// the labels of the operands of the sub_op_subscript
-            std::vector<std::vector<Label>> sub_op_ops_labels{};
+            std::vector<std::vector<Label>> sub_op_operands_labels{};
 			// the positions of the operands that take part in the left join
 			auto poss_operands_with_label = this->subscript->getPossOfOperandsWithLabel(label);
 			// the number of operands that do not take part in the left join
@@ -127,34 +127,36 @@ namespace einsum::internal {
             for(const auto[op_pos, join_ret_op] : iter::enumerate(*join_returned_operands)) {
 				if(join_ret_op.has_value()) {
 					next_operands.push_back(join_ret_op.value());
-					sub_op_ops_labels.push_back(next_subscript->getRawSubscript().operands[op_pos]);
+                    sub_op_operands_labels.push_back(next_subscript->getRawSubscript().operands[op_pos]);
 				}
 				else {
                     not_joined_dependent_labels.insert(next_subscript->getRawSubscript().operands[op_pos].begin(),
 													   next_subscript->getRawSubscript().operands[op_pos].end());
 				}
 			}
-			/* all operands were joined or no operands were returned */
+			// all operands were joined or no operands were returned
 			if (next_operands.size() == join_returned_operands->size()) {
                 sub_op_subscript = next_subscript;
 			}
-			/* no operands were joined */
+			// no operands were joined
 			else if (next_operands.size() == operands_without_label) {
-                sub_op_ops_labels.clear();
+                sub_op_operands_labels.clear();
 				next_operands.clear();
-				sub_op_subscript = std::make_shared<Subscript>(sub_op_ops_labels, next_subscript->getRawSubscript().result);
+				sub_op_subscript = std::make_shared<Subscript>(sub_op_operands_labels, next_subscript->getRawSubscript().result);
 			}
-			/* partial join */
+			// partial join
 			else {
-				remove_dependent_operands(not_joined_dependent_labels, &sub_op_ops_labels, &next_operands);
-                sub_op_subscript = std::make_shared<Subscript>(sub_op_ops_labels, next_subscript->getRawSubscript().result);
+				remove_dependent_operands(not_joined_dependent_labels, &sub_op_operands_labels, &next_operands);
+				// TODO: subscript cache
+                sub_op_subscript = std::make_shared<Subscript>(sub_op_operands_labels, next_subscript->getRawSubscript().result);
 			}
-            sub_operator = Operator_t::construct(sub_op_subscript, this->context);
+            if (not sub_operator or sub_operator->hash() != sub_op_subscript->hash())
+                sub_operator = Operator_t::construct(sub_op_subscript, this->context);
             sub_operator->load(std::move(next_operands), *this->entry);
 		}
 
 		// removes all operands and their labels which transitively depend on operands that were not joined
-		// example: a,ab,ac,bd,de->abcde, if ab was not joined then: a,ac->abcde
+		// example: a,ab,ac,bd,de->abcde, if ab was not joined then: a,ac->abcde (join label: a)
         void remove_dependent_operands(const std::set<Label>& dependent_labels,
 									   std::vector<std::vector<Label>>* ops_labels,
                                        std::vector<const_Hypertrie<tr>>* next_operands) {

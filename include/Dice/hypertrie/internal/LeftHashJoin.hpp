@@ -52,10 +52,6 @@ namespace hypertrie {
             bool ended = false;
             value_type value{};
             HashDiagonal<tr>* left_operand = nullptr;
-            static constexpr key_part_type default_key_part = []() {
-              if constexpr (std::is_pointer_v<typename tr::key_part_type>) return nullptr;
-              else return std::numeric_limits<typename tr::key_part_type>::max();
-            }();
 
         public:
 
@@ -106,7 +102,7 @@ namespace hypertrie {
 						if (result_depths[i])
 							value.first[pos_in_out[i]] = const_Hypertrie<tr>(right_operand.currentHypertrie());
 					}
-                    // if the join was not successful save the default key value
+                    // if the join was not successful do not return the operand
                     else {
 						if (result_depths[i])
 							value.first[pos_in_out[i]] = std::nullopt;

@@ -275,26 +275,25 @@ namespace einsum::internal {
 				                                                                               result_label_set,
 				                                                                               connected_components,
                                                                                                 type)),
-				  all_result_done(calcAllResultDone(operands_label_set, result_label_set)) {
+            all_result_done(calcAllResultDone(operands_label_set, result_label_set)) {
 			switch (this->type) {
 				case Type::LeftJoin: {
+                    label_poss_in_result = raw_subscript.getLabelPossInResult();
+
+                    for (const auto[op_pos, labels] : iter::enumerate(raw_subscript.operands))
+                        for (const Label label : labels)
+                            poss_of_operands_with_labels[label].push_back(op_pos);
 					// iterate the operands in the order they were provided and find the first join label
-					bool assigned = false;
 					for(auto outer_it = this->raw_subscript.operands.begin(); outer_it != this->raw_subscript.operands.end(); outer_it++) {
-                        for(auto label : *outer_it) {
-							for (auto inner_it = outer_it+1; inner_it != this->raw_subscript.operands.end(); inner_it++)
+						for (auto label : *outer_it) {
+							for (auto inner_it = outer_it + 1; inner_it != this->raw_subscript.operands.end(); inner_it++)
 								if (std::find((*inner_it).begin(), (*inner_it).end(), label) != (*inner_it).end()) {
-								    left_join_label = label;
-									assigned = true;
-									break;
-                                }
-							if(assigned)
-								break;
+									left_join_label = label;
+									return;
+								}
 						}
-						if(assigned)
-							break;
 					}
-					[[fallthrough]];
+					break;
 				}
 				case Type::Join: {
 					label_poss_in_result = raw_subscript.getLabelPossInResult();

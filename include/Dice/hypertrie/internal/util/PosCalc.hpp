@@ -6,7 +6,7 @@
 #include <boost/container/flat_map.hpp>
 #include <vector>
 #include <memory>
-#include <itertools.hpp>
+#include <cppitertools/itertools.hpp>
 
 
 namespace hypertrie::internal::util {

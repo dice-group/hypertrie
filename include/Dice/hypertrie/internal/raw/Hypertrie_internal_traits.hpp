@@ -2,8 +2,8 @@
 #define HYPERTRIE_HYPERTRIE_INTERNAL_TRAITS_HPP
 
 #include <bitset>
-#include <enumerate.hpp>
-#include <zip.hpp>
+#include <cppitertools/enumerate.hpp>
+#include <cppitertools/zip.hpp>
 
 #include "Dice/hypertrie/internal/Hypertrie_traits.hpp"
 #include "Dice/hypertrie/internal/util/RawKey.hpp"

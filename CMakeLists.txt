@@ -2,11 +2,11 @@ cmake_minimum_required(VERSION 3.13)
 project(hypertrie VERSION 0.5.2)
 set(CMAKE_CXX_STANDARD 20)
 
-include(${CMAKE_BINARY_DIR}/conan_paths.cmake)
-
-# robin_hood hashing builds only with this approach :/
-include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-conan_basic_setup(TARGETS)
+if(DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
+    set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+            CACHE STRING "")
+    message(" [INFO] VCPKG CMAKE_TOOLCHAIN_FILE = ${CMAKE_TOOLCHAIN_FILE}")
+endif()
 
 if (NOT EXISTS ${CMAKE_BINARY_DIR}/CMakeCache.txt)
     if (NOT CMAKE_BUILD_TYPE)
@@ -21,27 +21,27 @@ else ()
 endif ()
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -Wextra -g -O0")
 
-set(THREADS_PREFER_PTHREAD_FLAG)
-find_package(Threads REQUIRED)
-
-
 # installation directories
 set(hypertrie_INSTALL_INCLUDE_DIR "include" CACHE STRING "The installation include directory")
 set(hypertrie_INSTALL_CMAKE_DIR "share/hypertrie/cmake" CACHE STRING "The installation cmake directory")
 
-#include cppitertools, see https://github.com/ryanhaining/cppitertools
-add_library(cppitertools INTERFACE)
-add_library(cppitertools::cppitertools ALIAS cppitertools)
+set(THREADS_PREFER_PTHREAD_FLAG)
+find_package(Threads REQUIRED)
 
-target_include_directories(cppitertools INTERFACE
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/cppitertools/>
+find_package(absl CONFIG REQUIRED)
+find_package(tsl-hopscotch-map CONFIG REQUIRED)
+find_package(tsl-sparse-map CONFIG REQUIRED)
+find_package(fmt CONFIG REQUIRED)
+find_package(Catch2 CONFIG REQUIRED)
+find_package(cppitertools CONFIG REQUIRED)
+
+find_path(ROBIN_HOOD_HASHING_INCLUDE_DIRS "robin_hood.h")
+add_library(robin-hood-hashing INTERFACE)
+add_library(robin-hood-hashing::robin-hood-hashing ALIAS robin-hood-hashing)
+target_include_directories(robin-hood-hashing INTERFACE
+        $<BUILD_INTERFACE:${ROBIN_HOOD_HASHING_INCLUDE_DIRS}>
         $<INSTALL_INTERFACE:include>
         )
-
-find_package(absl REQUIRED)
-find_package(tsl-hopscotch-map REQUIRED)
-find_package(tsl-sparse-map REQUIRED)
-find_package(fmt REQUIRED)
 
 SET(Boost_USE_STATIC_LIBS ON)
 find_package(Boost REQUIRED COMPONENTS)
@@ -55,16 +55,15 @@ target_include_directories(hypertrie INTERFACE
         ${Boost_INCLUDE_DIRS}
         )
 
-
 target_link_libraries(hypertrie INTERFACE
-        cppitertools
-        absl::absl
-        tsl-hopscotch-map::tsl-hopscotch-map
+        cppitertools::cppitertools
+        absl::hash
+        tsl::hopscotch_map
         fmt::fmt
-        Boost::Boost
+        Boost::headers
         Threads::Threads
-        tsl-sparse-map::tsl-sparse-map
-        CONAN_PKG::robin-hood-hashing
+        tsl::hopscotch_map
+        robin-hood-hashing
         )
 
 if (HYPERTRIE_ENABLE_TOOLS)
@@ -89,14 +88,6 @@ include(CMakePackageConfigHelpers)
 write_basic_package_version_file(hypertrie-config-version.cmake COMPATIBILITY SameMajorVersion)
 
 # install and export target
-install(TARGETS hypertrie cppitertools EXPORT hypertrie-targets)
-
-install(EXPORT hypertrie-targets
-        FILE hypertrie-config.cmake
-        NAMESPACE Dice::
-        DESTINATION ${hypertrie_INSTALL_CMAKE_DIR}
-        )
-
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/hypertrie-config-version.cmake DESTINATION ${hypertrie_INSTALL_CMAKE_DIR})
 install(DIRECTORY include/ DESTINATION ${hypertrie_INSTALL_INCLUDE_DIR})
 

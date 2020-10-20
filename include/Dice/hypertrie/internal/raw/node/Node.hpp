@@ -6,7 +6,7 @@
 #include "Dice/hypertrie/internal/raw/node/NodeCompression.hpp"
 #include "Dice/hypertrie/internal/raw/node/TaggedTensorHash.hpp"
 #include "Dice/hypertrie/internal/raw/node/TensorHash.hpp"
-#include <range.hpp>
+#include <cppitertools/range.hpp>
 
 namespace hypertrie::internal::raw {
 

@@ -5,7 +5,7 @@
 #include <map>
 #include <cassert>
 
-#include <itertools.hpp>
+#include <cppitertools/itertools.hpp>
 
 #include "AssetGenerator.hpp"
 

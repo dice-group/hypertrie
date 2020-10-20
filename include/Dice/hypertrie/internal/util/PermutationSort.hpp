@@ -3,7 +3,7 @@
 
 #include <numeric>
 #include <vector>
-#include "itertools.hpp"
+#include <cppitertools/itertools.hpp>
 
 
 namespace hypertrie::internal::util::sort_permutation {

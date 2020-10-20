@@ -2,7 +2,7 @@
 #define HYPERTRIE_TESTNODE_HPP
 
 #include <boost/type_index.hpp>
-#include <enumerate.hpp>
+#include <cppitertools/enumerate.hpp>
 #include <fmt/format.h>
 
 #include <Dice/hypertrie/internal/raw/node/Node.hpp>

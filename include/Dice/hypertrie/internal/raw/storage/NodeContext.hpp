@@ -11,7 +11,7 @@
 #include "Dice/hypertrie/internal/util/CONSTANTS.hpp"
 
 #include <Dice/hypertrie/internal/raw/iterator/IterationNodeContainer.hpp>
-#include <itertools.hpp>
+#include <cppitertools/itertools.hpp>
 
 namespace hypertrie::internal::raw {
 

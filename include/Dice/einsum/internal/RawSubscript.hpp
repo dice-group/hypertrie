@@ -6,7 +6,7 @@
 #include <boost/container_hash/hash.hpp>
 #include <tsl/hopscotch_set.h>
 #include <tsl/hopscotch_map.h>
-#include <itertools.hpp>
+#include <cppitertools/itertools.hpp>
 
 namespace einsum::internal {
 	/**

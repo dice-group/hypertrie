@@ -4,7 +4,7 @@
 #include <Dice/hypertrie/internal/raw/storage/NodeContext.hpp>
 #include <catch2/catch.hpp>
 #include <fmt/format.h>
-#include <itertools.hpp>
+#include <cppitertools/itertools.hpp>
 #include <tsl/sparse_map.h>
 
 namespace hypertrie::tests::raw::node_context::slicing {

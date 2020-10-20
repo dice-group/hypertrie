@@ -3,7 +3,7 @@
 
 #include <array>
 #include <random>
-#include <itertools.hpp>
+#include <cppitertools/itertools.hpp>
 
 namespace hypertrie::tests::utils {
 	namespace {

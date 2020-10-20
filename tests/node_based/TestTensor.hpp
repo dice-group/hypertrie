@@ -4,7 +4,7 @@
 #include <catch2/catch.hpp>
 #include <fmt/format.h>
 #include <tsl/sparse_map.h>
-#include <itertools.hpp>
+#include <cppitertools/itertools.hpp>
 
 namespace hypertrie::tests::raw::node_context {
 

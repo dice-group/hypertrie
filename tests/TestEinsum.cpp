@@ -21,6 +21,26 @@ namespace hypertrie::tests::einsum {
 	using namespace std::literals::chrono_literals;
 	using time_point = std::chrono::steady_clock::time_point;
 
+	template<typename value_type, typename tr, typename HypertrieEinsumResultType>
+	void validateResult(const long excl_max, const TestEinsum<tr> &test_einsum, HypertrieEinsumResultType actual_result, torch::Tensor &expected_result) {
+		unsigned long result_depth = test_einsum.subscript->resultLabelCount();
+		for (const auto &key : product<std::size_t>(result_depth, excl_max)) {
+			auto actual_entry = [&] {
+				if constexpr (tr::is_bool_valued and tr::lsb_unused) {
+					auto shifted_key = key;
+					for (auto &key_part : shifted_key)
+						key_part <<= 2;
+					return (actual_result.count(shifted_key)) ? actual_result[shifted_key] : 0;
+				} else
+					return (actual_result.count(key)) ? actual_result[key] : 0;
+			}();
+			auto expected_entry = value_type(TorchHelper<long>::resolve(expected_result, key));// to bool
+			INFO("key: ({})"_format(fmt::join(key, ", ")));
+			INFO("expected: {}, actual {}"_format(TorchHelper<long>::resolve(expected_result, key), actual_entry))
+			REQUIRE(actual_entry == expected_entry);
+		}
+	}
+
 	template<HypertrieTrait tr, typename value_type>
 	void runTest(long excl_max, TestEinsum<tr> &test_einsum, std::chrono::milliseconds timeout_duration = 0ms) {
 		auto einsum = &hypertrie::einsum2map<value_type, tr>;
@@ -28,7 +48,7 @@ namespace hypertrie::tests::einsum {
 		auto start_time = std::chrono::steady_clock::now();
 		auto timeout = (timeout_duration != 0ms) ? start_time + timeout_duration : time_point::max();
 		auto actual_result = einsum(test_einsum.subscript, test_einsum.hypertrieOperands(), timeout);
-		std::string actual_result_str= [&](){
+		std::string actual_result_str = [&]() {
 			std::vector<std::string> elements;
 			for(auto &[key, value] : actual_result)
 				elements.push_back(fmt::format("⟨{}⟩ → {}", fmt::join(key, ", "), value));
@@ -50,14 +70,7 @@ namespace hypertrie::tests::einsum {
 		WARN(fmt::format("pytorch: {}ms ",
 						 std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count()));
 		if (timeout_duration == 0ms) {
-			unsigned long result_depth = test_einsum.subscript->resultLabelCount();
-			for (const auto &key : product<std::size_t>(result_depth, excl_max)) {
-				auto actual_entry = (actual_result.count(key)) ? actual_result[key] : 0;
-				auto expected_entry = value_type(TorchHelper<long>::resolve(expected_result, key));// to bool
-				INFO("key: ({})"_format(fmt::join(key, ", ")));
-				INFO("expected: {}, actual {}"_format(TorchHelper<long>::resolve(expected_result, key), actual_entry));
-				REQUIRE(actual_entry == expected_entry);
-			}
+			validateResult<value_type, tr>(excl_max, test_einsum, actual_result, expected_result);
 		}
 	}
 
@@ -75,7 +88,6 @@ namespace hypertrie::tests::einsum {
 		SECTION("{} [res:{}]"_format(subscript_string, result_type_str)) {
 			for (std::size_t run : iter::range(runs))
 				SECTION("run {}"_format(run)) {
-					torch::manual_seed(std::hash<std::size_t>()(run));
 					auto subscript = std::make_shared<Subscript>(subscript_string);
 					std::vector<TestOperand<tr>> operands{};
 					for (const auto &operand_sc : subscript->getRawSubscript().operands) {
@@ -96,7 +108,6 @@ namespace hypertrie::tests::einsum {
 
 
 		auto subscript = std::make_shared<Subscript>(Subscript::from_string(subscript_str));
-		size_t result_depth = subscript->resultLabelCount();
 
 		size_t excl_max = [&]() {
 			auto max = 0;
@@ -136,18 +147,12 @@ namespace hypertrie::tests::einsum {
 		torch::Tensor expected_result = at::einsum(test_einsum.str_subscript, test_einsum.torchOperands());
 
 
-		for (const auto &key : product<std::size_t>(result_depth, excl_max)) {
-			auto actual_entry = (actual_result.count(key)) ? actual_result[key] : 0;
-			auto expected_entry = value_type(TorchHelper<long>::resolve(expected_result, key));// to bool
-			INFO("key: ({})"_format(fmt::join(key, ", ")));
-			INFO("expected: {}, actual {}"_format(TorchHelper<long>::resolve(expected_result, key), actual_entry));
-			REQUIRE(actual_entry == expected_entry);
-		}
+		validateResult<value_type, tr>(excl_max, test_einsum, actual_result, expected_result);
 	}
 
-	TEST_CASE("Problematic Cases", "[einsum]") {
+	TEMPLATE_TEST_CASE("Problematic Cases", "[einsum]", lsbunused_bool_Hypertrie_t, default_bool_Hypertrie_t) {
+		using tr = TestType;
 		using namespace std::string_literals;
-		using tr = default_bool_Hypertrie_t;
 		using Key = typename tr::Key;
 		using value_type = typename tr::value_type;
 		using Entry = std::pair<Key, value_type>;
@@ -184,8 +189,8 @@ namespace hypertrie::tests::einsum {
 		}
 	}
 
-	TEST_CASE("default test cases", "[einsum]") {
-
+	TEMPLATE_TEST_CASE("default test cases", "[einsum]", lsbunused_bool_Hypertrie_t, default_bool_Hypertrie_t) {
+		using tr = TestType;
 		std::vector<std::string> subscript_strs{
 				"a->a",
 				"ab->a",
@@ -226,7 +231,6 @@ namespace hypertrie::tests::einsum {
 				"ab,bc,ca->abc",
 				"ab,bc,ca,ax,xy,ya->a",
 				"aa,ae,ac,ad,a,ab->ab"};
-		using tr = default_bool_Hypertrie_t;
 		for (bool empty : {false, true}) {
 			SECTION("empty = {}"_format(empty))
 			for (auto excl_max : {4, 7, 10, 15, 30}) {
@@ -239,8 +243,8 @@ namespace hypertrie::tests::einsum {
 		}
 	}
 
-	TEST_CASE("complex test cases", "[einsum]") {
-
+	TEMPLATE_TEST_CASE("complex test cases", "[einsum]", lsbunused_bool_Hypertrie_t, default_bool_Hypertrie_t) {
+		using tr = TestType;
 		std::vector<std::string> subscript_strs{
 				"abc,dcebf,gdghg,bdg,ijibg->c",// is calculated faster
 				"abc,dcebf,gdghg,ijibg->c",    // its minimal
@@ -248,7 +252,6 @@ namespace hypertrie::tests::einsum {
 				"abbc,d,ebcfg,hdif,hhchj->b"
 
 		};
-		using tr = default_bool_Hypertrie_t;
 		for (bool empty : {false, true}) {
 			SECTION("empty = {}"_format(empty))
 			for (auto excl_max : {4, 7, 10, 15, 30}) {

@@ -31,9 +31,9 @@ namespace hypertrie::tests::raw::node_context::slicing {
 	void exec_slice_test(NodeContext<5, tri> &context,
 						 NodeContainer<depth, tri> &nc,
 						 const std::map< typename tri::template RawKey<depth>, typename tri::value_type> &entries) {
-		using key_part_type = typename tri::key_part_type;
-		using value_type = typename tri::value_type;
-		using Key = typename tri::template RawKey<depth>;
+		using key_part_type [[maybe_unused]] = typename tri::key_part_type;
+		using value_type [[maybe_unused]] = typename tri::value_type;
+		using Key [[maybe_unused]] = typename tri::template RawKey<depth>;
 
 		// we need slices of each depth
 		hana::for_each(hana::range_c<size_t, 1, depth>, [&](auto fixed_depth) {
@@ -106,7 +106,7 @@ namespace hypertrie::tests::raw::node_context::slicing {
 	void slicing_by_any_keypart() {
 		using key_part_type = typename tri::key_part_type;
 		using value_type = typename tri::value_type;
-		using Key = typename tri::template RawKey<depth>;
+		using Key [[maybe_unused]] = typename tri::template RawKey<depth>;
 		static constexpr const size_t max_key_part = 3;
 
 

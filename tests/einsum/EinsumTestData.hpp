@@ -48,7 +48,7 @@ namespace hypertrie::tests::einsum {
 		size_t excl_max;
 		uint8_t depth;
 
-		inline static utils::EntryGenerator<unsigned long, unsigned long, size_t(tri::is_lsb_unused)> gen{};
+		inline static utils::EntryGenerator<unsigned long, unsigned long> gen{};
 
 		TestOperand() = default;
 
@@ -70,10 +70,14 @@ namespace hypertrie::tests::einsum {
 				// TODO: only supports boolean tensors so far
 				BulkInserter<tr> bulk_inserter{hypertrie};
 				for (auto [key, value] : entries){
+					auto key_cpy = key;
+					if constexpr (tr::is_bool_valued and tr::lsb_unused)
+						for (auto&key_part : key_cpy)
+							key_part <<= 2;
+					bulk_inserter.add(std::move(key_cpy));
+
 					long &value_ref = TorchHelper<long>::resolve(torch_tensor, key);
 					value_ref = long(dtype(value));
-					auto key_cpy = key;
-					bulk_inserter.add(std::move(key_cpy));
 				}
 			}
 			if (empty)
@@ -87,7 +91,11 @@ namespace hypertrie::tests::einsum {
 
 		void set(const Key &key, const dtype &value){
 			std::ranges::for_each(key, [&](const auto &i){assert(i < excl_max);});
-			this->hypertrie.set(key, value);
+			auto key_cpy = key;
+			if constexpr (tr::is_bool_valued and tr::lsb_unused)
+				for (auto&key_part : key_cpy)
+					key_part <<= 2;
+			this->hypertrie.set(std::move(key_cpy), value);
 			long &value_ref = TorchHelper<long>::resolve(this->torch_tensor, key);
 			value_ref = long(value);
 		}

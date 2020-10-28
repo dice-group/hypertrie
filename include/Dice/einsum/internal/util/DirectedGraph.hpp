@@ -35,6 +35,14 @@ namespace einsum::internal::util {
 
     public:
 
+		struct StrongComponent {
+			std::set<R> incoming_labels{};
+			std::set<R> component_labels{};
+			std::set<R> outgoing_labels{};
+		};
+
+		using StrongComponent_t = StrongComponent;
+
         DirectedGraph() = default;
 
 		void addVertex(T new_vertex) {
@@ -94,6 +102,49 @@ namespace einsum::internal::util {
 
 			return strongly_connected_components;
         }
+
+        [[nodiscard]] StrongComponent_t getIndependentStrongComponent() {
+
+			std::vector<int> component(num_vertices(graph)),
+					discover_time(num_vertices(graph));
+			std::vector<boost::default_color_type> color(num_vertices(graph));
+			std::vector<Vertex> root(num_vertices(graph));
+			int num_components = strong_components(graph,
+												   make_iterator_property_map(component.begin(), get(boost::vertex_index, graph)),
+												   root_map(make_iterator_property_map(root.begin(), get(boost::vertex_index, graph)))
+														   .color_map(
+																   make_iterator_property_map(color.begin(), get(boost::vertex_index, graph)))
+														   .discover_time_map(make_iterator_property_map(
+																   discover_time.begin(), get(boost::vertex_index, graph))));
+
+			std::vector<StrongComponent_t> strongly_connected_components(num_components);
+
+			for (std::vector<int>::size_type i = 0; i < component.size(); i++) {
+				auto cur_component_idx = component[i];
+				auto out_edges_iterator = boost::out_edges(i, graph);
+				for (auto out_edge = out_edges_iterator.first; out_edge != out_edges_iterator.second; out_edge++) {
+					auto out_vertex = boost::target(*out_edge, graph);
+					if(i == out_vertex)
+						continue;
+					auto out_edge_label = graph[*out_edge].label;
+					auto out_vertex_component_idx = component[out_vertex];
+					if (cur_component_idx == out_vertex_component_idx) {
+						strongly_connected_components[cur_component_idx].component_labels.insert(out_edge_label);
+					} else {
+						strongly_connected_components[cur_component_idx].outgoing_labels.insert(out_edge_label);
+						strongly_connected_components[out_vertex_component_idx].incoming_labels.insert(out_edge_label);
+					}
+				}
+			}
+			StrongComponent_t independent_sc;
+			for (auto scc : strongly_connected_components) {
+				if (!scc.incoming_labels.size()) {
+					independent_sc = scc;
+					break;
+				}
+		    }
+			return independent_sc;
+		}
 
     };
 

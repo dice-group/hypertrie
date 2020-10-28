@@ -45,7 +45,7 @@ namespace hypertrie::tests::leftjoin {
             operands.push_back(ht1);
 			operands.push_back(ht2);
 			std::vector<char> op1_labels{'a'};
-            std::vector<char> op2_labels{'a', 'b'};
+            std::vector<char> op2_labels{'[', 'a', 'b', ']'};
             operands_labels.push_back(op1_labels);
             operands_labels.push_back(op2_labels);
 			SECTION("project only left operand") {
@@ -70,12 +70,12 @@ namespace hypertrie::tests::leftjoin {
                 };
 			}
 		}
-        // ab,bc->abc
+        // ab,[bc]->abc
         SECTION("one left join, join label not at start") {
             operands.push_back(ht2);
             operands.push_back(ht3);
             std::vector<char> op1_labels{'a', 'b'};
-            std::vector<char> op2_labels{'b', 'c'};
+            std::vector<char> op2_labels{'[', 'b', 'c', ']'};
             operands_labels.push_back(op1_labels);
             operands_labels.push_back(op2_labels);
             result_labels.push_back('a');
@@ -89,14 +89,14 @@ namespace hypertrie::tests::leftjoin {
         }
 
 		SECTION("multiple left joins on the same label") {
-			//a,ab,ac->abc
+			//a,[ab],[ac]->abc
 			SECTION("three operands") {
                 operands.push_back(ht1);
                 operands.push_back(ht2);
                 operands.push_back(ht3);
                 std::vector<char> op1_labels{'a'};
-                std::vector<char> op2_labels{'a', 'b'};
-                std::vector<char> op3_labels{'a', 'c'};
+                std::vector<char> op2_labels{'[', 'a', 'b', ']'};
+                std::vector<char> op3_labels{'[', 'a', 'c', ']'};
                 operands_labels.push_back(op1_labels);
                 operands_labels.push_back(op2_labels);
                 operands_labels.push_back(op3_labels);
@@ -115,16 +115,16 @@ namespace hypertrie::tests::leftjoin {
                         {8, default_key_part, default_key_part}
                 };
 			}
-			//a,ab,ac,ad->abcd
+			//a,[ab],[ac],[ad]->abcd
             SECTION("four operands") {
                 operands.push_back(ht1);
                 operands.push_back(ht2);
                 operands.push_back(ht3);
 				operands.push_back(ht5);
                 std::vector<char> op1_labels{'a'};
-                std::vector<char> op2_labels{'a', 'b'};
-                std::vector<char> op3_labels{'a', 'c'};
-				std::vector<char> op4_labels{'a', 'd'};
+                std::vector<char> op2_labels{'[', 'a', 'b', ']'};
+                std::vector<char> op3_labels{'[', 'a', 'c', ']'};
+                std::vector<char> op4_labels{'[', 'a', 'd', ']'};
                 operands_labels.push_back(op1_labels);
                 operands_labels.push_back(op2_labels);
                 operands_labels.push_back(op3_labels);
@@ -147,14 +147,14 @@ namespace hypertrie::tests::leftjoin {
             }
 		}
 		SECTION("nested left joins") {
-            //a,ab,bc->abc
+            //a,[ab,[bc]]->abc
             SECTION("one nested join") {
 				operands.push_back(ht1);
 				operands.push_back(ht2);
 				operands.push_back(ht3);
 				std::vector<char> op1_labels{'a'};
-				std::vector<char> op2_labels{'a', 'b'};
-				std::vector<char> op3_labels{'b', 'c'};
+				std::vector<char> op2_labels{'[', 'a', 'b'};
+				std::vector<char> op3_labels{'[', 'b', 'c', ']', ']'};
 				operands_labels.push_back(op1_labels);
 				operands_labels.push_back(op2_labels);
 				operands_labels.push_back(op3_labels);
@@ -173,16 +173,16 @@ namespace hypertrie::tests::leftjoin {
 						{8, default_key_part, default_key_part}
 				};
 			}
-			// a,ab,bc,cd->abcd
+			// a,[ab,[bc,[cd]]]->abcd
             SECTION("two nested joins") {
                 operands.push_back(ht1);
                 operands.push_back(ht2);
                 operands.push_back(ht3);
                 operands.push_back(ht5);
                 std::vector<char> op1_labels{'a'};
-                std::vector<char> op2_labels{'a', 'b'};
-                std::vector<char> op3_labels{'b', 'c'};
-                std::vector<char> op4_labels{'c', 'd'};
+                std::vector<char> op2_labels{'[', 'a', 'b'};
+                std::vector<char> op3_labels{'[', 'b', 'c'};
+                std::vector<char> op4_labels{'[', 'c', 'd', ']', ']', ']'};
                 operands_labels.push_back(op1_labels);
                 operands_labels.push_back(op2_labels);
                 operands_labels.push_back(op3_labels);
@@ -204,15 +204,16 @@ namespace hypertrie::tests::leftjoin {
                 };
             }
 		}
+		// a,[ab],c,[cd]->abcd
         SECTION("left join and cartesian join") {
             operands.push_back(ht1);
             operands.push_back(ht2);
             operands.push_back(ht1);
             operands.push_back(ht3);
             std::vector<char> op1_labels{'a'};
-            std::vector<char> op2_labels{'a', 'b'};
+            std::vector<char> op2_labels{'[', 'a', 'b', ']'};
             std::vector<char> op3_labels{'c'};
-            std::vector<char> op4_labels{'c', 'd'};
+            std::vector<char> op4_labels{'[', 'c', 'd', ']'};
             operands_labels.push_back(op1_labels);
             operands_labels.push_back(op2_labels);
             operands_labels.push_back(op3_labels);
@@ -254,12 +255,12 @@ namespace hypertrie::tests::leftjoin {
         auto einsum = Einsum<size_t>(subscript, operands);
         std::vector<std::vector<default_bool_Hypertrie_t::key_part_type>> actual_results{};
         for(auto entry : einsum) {
-//			for(auto key_part : entry.key)
-//				std::cout << key_part << " ";
-//			std::cout << std::endl;
+			for(auto key_part : entry.key)
+				std::cout << key_part << " ";
+			std::cout << std::endl;
 			actual_results.push_back(entry.key);
 		}
-//		std::cout << "---" << std::endl;
+		std::cout << "---" << std::endl;
         REQUIRE(actual_results.size() == expected_results.size());
         for(auto actual_result : actual_results) {
             if(std::find(expected_results.begin(), expected_results.end(), actual_result) == expected_results.end()) {

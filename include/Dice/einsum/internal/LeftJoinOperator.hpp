@@ -96,7 +96,7 @@ namespace einsum::internal {
 					label_pos_in_result = this->subscript->getLabelPosInResult(label);
 			}
 			// prepare next_subscript by removing the active label from the current subscript
-			next_subscript = this->subscript->removeLabel(label);
+			next_subscript = this->subscript->removeLabel(label, true);
             // prepare left join
 			left_join = LeftJoin_t{operands, label_poss_in_ops};
 			left_join_iterator = left_join.begin();

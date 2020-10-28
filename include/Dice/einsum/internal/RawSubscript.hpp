@@ -50,6 +50,10 @@ namespace einsum::internal {
 	class RawSubscript {
 	public:
 		/**
+		 * The labels with angled brackets
+		 */
+        mutable OperandsSc original_operands{};
+		/**
 		 * The labels for each operand.
 		 */
 		mutable OperandsSc operands{};
@@ -83,9 +87,18 @@ namespace einsum::internal {
 		 * @param operands the labels of the operands
 		 * @param result the labels of the result
 		 */
-		RawSubscript(const OperandsSc &operands, const ResultSc &result) :
-				operands(operands), result(result),
-				hash(boost::hash_value(operands) + boost::hash_value(result)) {}
+		RawSubscript(OperandsSc &operands, const ResultSc &result) :
+				original_operands(operands), result(result),
+                hash(boost::hash_value(original_operands) + boost::hash_value(result)) {
+			for(auto& operand : operands) {
+				auto op_iter = std::find(operand.begin(), operand.end(), '[');
+				if(op_iter != operand.end())
+					operand.erase(op_iter);
+				for(op_iter = std::find(operand.begin(), operand.end(), ']'); op_iter != operand.end();)
+					operand.erase(op_iter);
+				this->operands.push_back(operand);
+			}
+		}
 
 		/**
 		 * Constructs a RawSubscript.
@@ -184,7 +197,7 @@ namespace einsum::internal {
 		[[nodiscard]] auto removeLabel(Label label) const noexcept {
 			assert(getOperandsLabelSet().count(label));
 			OperandsSc next_operands{};
-			for (const auto &operand: operands) {
+			for (const auto &operand: original_operands) {
 				OperandSc new_operand{};
 				for (auto current_label: operand)
 					if (current_label != label)
@@ -195,6 +208,38 @@ namespace einsum::internal {
 			}
 			return RawSubscript(next_operands, result);
 		}
+
+		// removes angled brackets that denote nested levels
+        [[nodiscard]] auto removeLabelNested(Label label) const noexcept {
+            assert(getOperandsLabelSet().count(label));
+            OperandsSc next_operands{};
+			uint8_t depth{0}; // used in order to properly delete right angled brackets
+            for (const auto &operand: original_operands) {
+                OperandSc new_operand{};
+                for (auto current_label : operand)
+                    if (current_label != label) {
+						// remove left angled brackets only if the label to be removed appears in the operand
+						if (current_label == '[') {
+							depth++;
+							if (std::find(operand.cbegin(), operand.cend(), label) != operand.cend())
+								continue;
+						}
+						if(current_label == ']') {
+							depth--;
+							// remove right angled brackets if:
+							// 1) the label to be removed appears in the operand
+							// 2) to match the previously removed left angled bracket
+							if(std::find(operand.cbegin(), operand.cend(), label) != operand.cend() || !depth)
+								continue;
+						}
+                        new_operand.push_back(current_label);
+					}
+                if (not new_operand.empty()) {
+                    next_operands.push_back(std::move(new_operand));
+                }
+            }
+            return RawSubscript(next_operands, result);
+        }
 
 		/**
 		 * Check if another Subscript is different. It is also different if the labels are ordered alike but other

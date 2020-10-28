@@ -14,6 +14,7 @@
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 
+#include "Dice/einsum/internal/util/DirectedGraph.hpp"
 #include "Dice/einsum/internal/util/UndirectedGraph.hpp"
 #include "Dice/einsum/internal/RawSubscript.hpp"
 
@@ -27,8 +28,12 @@
 namespace einsum::internal {
 
 	using DependencyGraph = util::UndirectedGraph<Label>;
+	using DirectedDependencyGraph = util::DirectedGraph<std::size_t, Label>;
 	using ConnectedComponent = std::set<Label>;
 	using ConnectedComponents = std::vector<ConnectedComponent>;
+
+	using WeaklyConnectedComponent = std::set<Label>;
+	using WeaklyConnectedComponents = std::vector<WeaklyConnectedComponent>;
 
 	using CartesianOperandPos = OperandPos;
 	using OriginalOperandPos = OperandPos;
@@ -61,9 +66,9 @@ namespace einsum::internal {
 
 			CartesianSubSubscripts(const Subscript &original_subscript) {
 				OperandsSc operands_labels{};
-				for (const auto &connected_component: original_subscript.connected_components) {
+				for (const auto &weakly_connected_component: original_subscript.weakly_connected_components) {
 					auto[cartesian_sub_subscript, original_op_poss, original_result_poss] =
-					extractCartesianSubSubscript(original_subscript, connected_component);
+					extractCartesianSubSubscript(original_subscript, weakly_connected_component);
 					operands_labels.push_back(cartesian_sub_subscript->raw_subscript.result);
 					sub_subscripts.emplace_back(std::move(cartesian_sub_subscript));
 					original_operand_poss_of_sub_subscript.emplace_back(std::move(original_op_poss));
@@ -91,20 +96,25 @@ namespace einsum::internal {
 
 		private:
 			static std::tuple<std::shared_ptr<Subscript>, OriginalOperandPoss, OriginalResultPoss>
-			extractCartesianSubSubscript(const Subscript &subscripts, const ConnectedComponent &label_subset) {
+			extractCartesianSubSubscript(const Subscript &subscripts, const WeaklyConnectedComponent &label_subset) {
 				OperandsSc operands_labels{};
 				OriginalOperandPoss original_op_poss{};
 				OriginalResultPoss original_result_poss{};
 				for (const auto &[parent_op_pos, parent_op_labels] :
-						iter::enumerate(subscripts.raw_subscript.operands)) {
+						iter::enumerate(subscripts.raw_subscript.original_operands)) {
 					OperandSc op_labels{};
 					for (const Label label : parent_op_labels)
-						if (label_subset.count(label))
+						if (label_subset.count(label) || label == '[' || label == ']') // TODO: better solution
 							op_labels.emplace_back(label);
 
 					if (not op_labels.empty()) {
-						operands_labels.push_back(op_labels);
-						original_op_poss.push_back(parent_op_pos);
+						for(auto& op_label : op_labels) {
+							if(op_label != '[' && op_label != ']') { // TODO: better solution
+                                operands_labels.push_back(op_labels);
+                                original_op_poss.push_back(parent_op_pos);
+								break;
+							}
+						}
 					}
 				}
 				ResultSc result_labels{};
@@ -138,7 +148,11 @@ namespace einsum::internal {
 
 		DependencyGraph dependency_graph{};
 
+		DirectedDependencyGraph directed_dependency_graph{};
+
 		ConnectedComponents connected_components{};
+
+		WeaklyConnectedComponents weakly_connected_components{};
 
 		// Join
 		mutable tsl::hopscotch_map<Label, LabelPossInOperands> label_poss_in_operands{};
@@ -155,15 +169,23 @@ namespace einsum::internal {
 
 		// Left Join
 		Label left_join_label;
+
+		// Join
+        tsl::hopscotch_set<Label> join_labels{};
 	public:
-		std::shared_ptr<Subscript> removeLabel(Label label) const {
+		std::shared_ptr<Subscript> removeLabel(Label label, bool remove_nested = false) const {
 			auto iterator = sub_subscripts.find(label);
 			if (iterator != sub_subscripts.end())
 				return iterator->second;
 			else
-				return sub_subscripts.insert(
-								{label, std::make_shared<Subscript>(raw_subscript.removeLabel(label), this->type)})
-						.first->second;
+				if(!remove_nested)
+                    return sub_subscripts.insert(
+                                    {label, std::make_shared<Subscript>(raw_subscript.removeLabel(label), this->type)})
+                            .first->second;
+			    else
+                    return sub_subscripts.insert(
+                                    {label, std::make_shared<Subscript>(raw_subscript.removeLabelNested(label), this->type)})
+                            .first->second;
 		}
 
 		const tsl::hopscotch_set<Label> &getLonelyNonResultLabelSet() const {
@@ -268,30 +290,28 @@ namespace einsum::internal {
 				: raw_subscript(raw_subscript),
 				  operands_label_set(raw_subscript.getOperandsLabelSet()),
 				  result_label_set(raw_subscript.getResultLabelSet()),
-				  dependency_graph(calcDependencyGraph(raw_subscript)),
-				  connected_components(dependency_graph.getConnectedComponents()),
-				  type((type == Type::CarthesianMapping) ? Type::CarthesianMapping : calcState(raw_subscript,
-				                                                                               operands_label_set,
-				                                                                               result_label_set,
-				                                                                               connected_components,
-                                                                                                type)),
-            all_result_done(calcAllResultDone(operands_label_set, result_label_set)) {
+                  directed_dependency_graph(calcDirectedDependencyGraph(raw_subscript)),
+                  weakly_connected_components(directed_dependency_graph.getWeaklyConnectedComponents()),
+                  type((type == Type::CarthesianMapping) ? Type::CarthesianMapping : calcState(raw_subscript,
+                                                                                               operands_label_set,
+                                                                                               result_label_set,
+                                                                                               weakly_connected_components)),
+                  all_result_done(calcAllResultDone(operands_label_set, result_label_set)) {
 			switch (this->type) {
 				case Type::LeftJoin: {
                     label_poss_in_result = raw_subscript.getLabelPossInResult();
 
                     for (const auto[op_pos, labels] : iter::enumerate(raw_subscript.operands))
                         for (const Label label : labels)
-                            poss_of_operands_with_labels[label].push_back(op_pos);
+							poss_of_operands_with_labels[label].push_back(op_pos);
 					// iterate the operands in the order they were provided and find the first join label
 					for(auto outer_it = this->raw_subscript.operands.begin(); outer_it != this->raw_subscript.operands.end(); outer_it++) {
-						for (auto label : *outer_it) {
+						for (auto label : *outer_it)
 							for (auto inner_it = outer_it + 1; inner_it != this->raw_subscript.operands.end(); inner_it++)
 								if (std::find((*inner_it).begin(), (*inner_it).end(), label) != (*inner_it).end()) {
 									left_join_label = label;
 									return;
 								}
-						}
 					}
 					break;
 				}
@@ -325,8 +345,7 @@ namespace einsum::internal {
 					operand2result_mapping_resolveType.reserve(resultLabelCount());
 					for (auto label: getOperandLabels(0))
 						operand2result_mapping_resolveType.emplace_back(
-								getLabelPosInResult(label)
-						);
+								getLabelPosInResult(label));
 					break;
 				}
 				case Type::Count:
@@ -342,12 +361,12 @@ namespace einsum::internal {
 
 
 		Subscript(OperandsSc operands, ResultSc result, Type type = Type::None) : Subscript{
-				RawSubscript{std::move(operands), std::move(result)}, type} {}
+				RawSubscript{operands, std::move(result)}, type} {}
 
 		std::string to_string() const {
 			std::vector<std::string> operand_strings;
-			operand_strings.reserve(raw_subscript.operands.size());
-			for (const auto &operand : raw_subscript.operands) {
+			operand_strings.reserve(raw_subscript.original_operands.size());
+			for (const auto &operand : raw_subscript.original_operands) {
 				operand_strings.push_back(fmt::format("{}", fmt::join(operand, "")));
 			}
 			return fmt::format("{}->{}", fmt::join(operand_strings, ","), fmt::join(raw_subscript.result, ""));
@@ -385,6 +404,10 @@ namespace einsum::internal {
 			return {std::move(operands_sc), std::move(result_sc)};
 		}
 
+        const tsl::hopscotch_set<Label>& getJoinLabelsSet() {
+			return join_labels;
+		}
+
 		const Label& getLeftJoinLabel() const {
 			return left_join_label;
 		}
@@ -402,8 +425,7 @@ namespace einsum::internal {
 		Type calcState(const RawSubscript &raw_subscript,
 		               const tsl::hopscotch_set<Label> &operands_label_set,
 		               const tsl::hopscotch_set<Label> &result_label_set,
-		               const ConnectedComponents &connected_components,
-					   const Type type) {
+		               const WeaklyConnectedComponents &weakly_connected_components) {
 			switch (raw_subscript.operandsCount()) {
 				case 0:
 					return Type::EntryGenerator;
@@ -411,7 +433,7 @@ namespace einsum::internal {
 					// single operand
 					if (auto operand_label_count = raw_subscript.labelCount(0);
 							operand_label_count == operands_label_set.size()) {
-						// at least one label occures multiple times and thus there is a diagonal
+						// at least one label occurs multiple times and thus there is a diagonal
 						// check if  all operand labels are either in result or all are not in result
 						// none of both may also be the case
 						bool all_in_result = true;
@@ -430,15 +452,27 @@ namespace einsum::internal {
 					break;
 				default: {
 					// multiple operands
-					if (connected_components.size() > 1) {
-						// more than one connected component means that there is a Cartesian product
+                    // more than one WEAKLY connected component means that there is a Cartesian product
+					if (weakly_connected_components.size() > 1) {
 						return Type::Cartesian;
 					}
 					break;
 				}
 			}
-//			return (type == Type::LeftJoin) ? Type::LeftJoin : Type::Join ;
-			return Type::LeftJoin; //TODO: support both types of join
+			// use the strongly connected components of the dependency graph in order to choose the proper join operation
+			// the strong components of a graph create a directed acyclic graph (independent strong component)
+			auto independent_strong_component = directed_dependency_graph.getIndependentStrongComponent();
+			// if the independent component contains multiple operands do a join
+			// if there are multiple operands in the independent component, component_labels will not be empty
+			if(independent_strong_component.component_labels.size() > 0) {
+				// store the labels of the edges inside the independent component -> join labels
+				join_labels.insert(independent_strong_component.component_labels.begin(),
+								   independent_strong_component.component_labels.end());
+				return Type::Join;
+			}
+			// if the independent component contains only one operand do a left join
+            // if there are multiple operands in the independent component, component_labels will be empty
+			return Type::LeftJoin;
 		}
 
 		static DependencyGraph calcDependencyGraph(const RawSubscript &raw_subscript) {
@@ -446,6 +480,44 @@ namespace einsum::internal {
 			for (const auto &operand : raw_subscript.operands)
 				label_dependency_graph.addCompleteGraph(operand);
 			return label_dependency_graph;
+		}
+
+		static DirectedDependencyGraph calcDirectedDependencyGraph(const RawSubscript &raw_subscript) {
+            DirectedDependencyGraph operand_directed_dependency_graph{};
+			// for each label stores the latest operand it appears in as well as the depth (nested level) of the operand
+			std::map<Label, std::pair<std::size_t, uint8_t>> label_to_operand_map{};
+            uint8_t depth{0};
+            for(const auto &[operand_pos, operand_labels] : iter::enumerate(raw_subscript.original_operands)) {
+				operand_directed_dependency_graph.addVertex(operand_pos);
+				for(auto &label : operand_labels) {
+					if(label == '[') {
+						depth++;
+						continue;
+					}
+                    else if(label == ']') {
+						depth--;
+						continue;
+					}
+					if(label_to_operand_map.contains(label)) {
+                        auto [parent_op, parent_depth] = label_to_operand_map[label];
+						// add directed edge from the previous (parent) operand to the current one
+                        operand_directed_dependency_graph
+                                .addEdge(label, label_to_operand_map[label].first, operand_pos);
+						// if the previous (parent) operand is in the same depth or in a deeper level add a reversed edge as well
+						// join case
+						if(parent_depth >= depth)
+                            operand_directed_dependency_graph
+                                    .addEdge(label, operand_pos, label_to_operand_map[label].first);
+					}
+					// if the operand has no incoming edges, add an edge to self
+					// needed for cartesian join
+					else
+                        operand_directed_dependency_graph.addEdge(label, operand_pos, operand_pos);
+                    label_to_operand_map[label] = std::make_pair(operand_pos, depth);
+
+                }
+			}
+			return operand_directed_dependency_graph;
 		}
 
 	public:

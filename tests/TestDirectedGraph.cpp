@@ -10,13 +10,13 @@ namespace hypertrie::tests::directedgraph {
 
     TEST_CASE("weakly connected components", "[directed graph]") {
         DirectedGraph g{};
-        g.addVertex(0);
-        g.addVertex(1);
-        g.addVertex(2);
-        g.addVertex(3);
-        g.addVertex(4);
-        g.addVertex(5);
-        g.addVertex(6);
+        g.addVertex();
+        g.addVertex();
+        g.addVertex();
+        g.addVertex();
+        g.addVertex();
+        g.addVertex();
+        g.addVertex();
         g.addEdge('x', 0, 1);
         g.addEdge('x', 1, 0);
         g.addEdge('a', 0, 1);
@@ -36,13 +36,13 @@ namespace hypertrie::tests::directedgraph {
 
     TEST_CASE("strongly connected components", "[directed graph]") {
         DirectedGraph g{};
-        g.addVertex(0);
-        g.addVertex(1);
-        g.addVertex(2);
-        g.addVertex(3);
-        g.addVertex(4);
-        g.addVertex(5);
-        g.addVertex(6);
+        g.addVertex();
+        g.addVertex();
+        g.addVertex();
+        g.addVertex();
+        g.addVertex();
+        g.addVertex();
+        g.addVertex();
         g.addEdge('x', 0, 1);
         g.addEdge('x', 1, 0);
         g.addEdge('v', 1, 5);

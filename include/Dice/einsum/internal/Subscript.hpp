@@ -28,7 +28,7 @@
 namespace einsum::internal {
 
 	using DependencyGraph = util::UndirectedGraph<Label>;
-	using DirectedDependencyGraph = util::DirectedGraph<std::size_t, Label>;
+	using DirectedDependencyGraph = util::DirectedGraph<Label>;
 	using ConnectedComponent = std::set<Label>;
 	using ConnectedComponents = std::vector<ConnectedComponent>;
 
@@ -488,7 +488,7 @@ namespace einsum::internal {
 			std::map<Label, std::pair<std::size_t, uint8_t>> label_to_operand_map{};
             uint8_t depth{0};
             for(const auto &[operand_pos, operand_labels] : iter::enumerate(raw_subscript.original_operands)) {
-				operand_directed_dependency_graph.addVertex(operand_pos);
+				operand_directed_dependency_graph.addVertex();
 				for(auto &label : operand_labels) {
 					if(label == '[') {
 						depth++;

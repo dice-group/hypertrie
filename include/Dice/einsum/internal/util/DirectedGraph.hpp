@@ -14,8 +14,9 @@
 
 namespace einsum::internal::util {
 
-    template<typename T = std::size_t, typename R = char>
+    template<typename R = char>
     class DirectedGraph {
+
 
     private:
 
@@ -28,9 +29,10 @@ namespace einsum::internal::util {
 												 boost::directedS,
 												 boost::no_property,
 												 EdgeLabel>;
-        using Vertex =  boost::graph_traits<BoostGraph>::vertex_descriptor;
+        using Vertex = boost::graph_traits<BoostGraph>::vertex_descriptor;
 
-		std::map<T, Vertex> vertex_name_map{};
+		static_assert(std::is_same_v<Vertex, std::size_t>);
+
 		BoostGraph graph{};
 
     public:
@@ -45,13 +47,12 @@ namespace einsum::internal::util {
 
         DirectedGraph() = default;
 
-		void addVertex(T new_vertex) {
-			auto new_v = boost::add_vertex(graph);
-			vertex_name_map[new_vertex] = new_v;
+		[[maybe_unused]] Vertex addVertex() {
+			return boost::add_vertex(graph);
 		}
 
-		void addEdge(R label, T source, T target) {
-			boost::add_edge(vertex_name_map[source], vertex_name_map[target], EdgeLabel{label}, graph);
+		void addEdge(R label, Vertex source, Vertex target) {
+			boost::add_edge(source, target, EdgeLabel{label}, graph);
 		}
 
 		// treats the directed graph as an undirected graph
@@ -59,14 +60,17 @@ namespace einsum::internal::util {
 		// returns the labels of each component
         [[nodiscard]] std::vector<std::set<R>> getWeaklyConnectedComponents() {
 
-            std::vector<int> component(boost::num_vertices(graph));
+			using ComponentID = std::size_t;
+
+			// stores by position (Vertex) which component it belongs to (entry value)
+            std::vector<ComponentID> component(boost::num_vertices(graph));
             auto num_components = boost::connected_components(graph, &component[0]);
 
             std::vector<std::set<R>> weakly_connected_components(num_components);
 
-			for(std::vector<int>::size_type i = 0; i < component.size(); i++) {
-                auto out_edge_iterators = boost::out_edges(i, graph);
-                for(auto out_edge_it = out_edge_iterators.first; out_edge_it != out_edge_iterators.second; out_edge_it++) {
+            for(std::size_t i : iter::range(component.size())) {
+                auto out_edges_iterator = boost::out_edges(i, graph);
+                for(auto out_edge_it = out_edges_iterator.first; out_edge_it != out_edges_iterator.second; out_edge_it++) {
 					weakly_connected_components[component[i]].insert(graph[*out_edge_it].label);
 				}
 			}
@@ -103,6 +107,14 @@ namespace einsum::internal::util {
 			return strongly_connected_components;
         }
 
+		/**
+		 * TODO: is this case handled?
+		 * SELECT * WHERE {
+		 *  ?x :a :b.
+		 *  ?y :a :b.
+		 *  }
+		 */
+
         [[nodiscard]] StrongComponent_t getIndependentStrongComponent() {
 
 			std::vector<int> component(num_vertices(graph)),
@@ -119,7 +131,7 @@ namespace einsum::internal::util {
 
 			std::vector<StrongComponent_t> strongly_connected_components(num_components);
 
-			for (std::vector<int>::size_type i = 0; i < component.size(); i++) {
+            for(std::size_t i : iter::range(component.size())) {
 				auto cur_component_idx = component[i];
 				auto out_edges_iterator = boost::out_edges(i, graph);
 				for (auto out_edge = out_edges_iterator.first; out_edge != out_edges_iterator.second; out_edge++) {

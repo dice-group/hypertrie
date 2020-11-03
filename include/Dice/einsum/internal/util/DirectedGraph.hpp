@@ -55,6 +55,15 @@ namespace einsum::internal::util {
 			boost::add_edge(source, target, EdgeLabel{label}, graph);
 		}
 
+		std::vector<Vertex> getTargetVerticesOfVertex(Vertex v) {
+			std::vector<Vertex> target_vertices{};
+            auto out_edges_iterators = boost::out_edges(v, graph);
+			for(auto out_edge_iter = out_edges_iterators.first; out_edge_iter != out_edges_iterators.second; out_edge_iter++) {
+				target_vertices.push_back(boost::target(*out_edge_iter, graph));
+			}
+			return target_vertices;
+		}
+
 		// treats the directed graph as an undirected graph
 		// finds the connected components of the undirected graph
 		// returns the labels of each component

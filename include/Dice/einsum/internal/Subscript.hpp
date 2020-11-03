@@ -208,6 +208,9 @@ namespace einsum::internal {
 				throw std::invalid_argument("label is not used in operands.");
 		}
 
+		std::vector<std::size_t> getDependentOperands(OperandPos operand_position) {
+			return directed_dependency_graph.getTargetVerticesOfVertex(operand_position);
+		}
 
 		/**
 		 * for Join
@@ -484,11 +487,13 @@ namespace einsum::internal {
 
 		static DirectedDependencyGraph calcDirectedDependencyGraph(const RawSubscript &raw_subscript) {
             DirectedDependencyGraph operand_directed_dependency_graph{};
-			// for each label stores the latest operand it appears in as well as the depth (nested level) of the operand
-			std::map<Label, std::pair<std::size_t, uint8_t>> label_to_operand_map{};
+			// for each label stores a map of nested level (depth) to operand
+			// for each nested level it stores the last seen operand
+			std::map<Label, std::map<uint8_t, std::size_t>> label_to_operand_map{};
             uint8_t depth{0};
             for(const auto &[operand_pos, operand_labels] : iter::enumerate(raw_subscript.original_operands)) {
 				operand_directed_dependency_graph.addVertex();
+				auto op_dependent_depth = depth;
 				for(auto &label : operand_labels) {
 					if(label == '[') {
 						depth++;
@@ -499,21 +504,27 @@ namespace einsum::internal {
 						continue;
 					}
 					if(label_to_operand_map.contains(label)) {
-                        auto [parent_op, parent_depth] = label_to_operand_map[label];
+						// https://stackoverflow.com/questions/1660195/c-how-to-find-the-biggest-key-in-a-stdmap
+                        std::size_t parent_op;
+						uint8_t parent_op_depth = op_dependent_depth;
+						if(label_to_operand_map[label].contains(op_dependent_depth))
+							parent_op = label_to_operand_map[label][op_dependent_depth];
+						else {
+							parent_op = label_to_operand_map[label].rbegin()->second;
+							parent_op_depth = label_to_operand_map[label].rbegin()->first;
+						}
 						// add directed edge from the previous (parent) operand to the current one
-                        operand_directed_dependency_graph
-                                .addEdge(label, label_to_operand_map[label].first, operand_pos);
+                        operand_directed_dependency_graph.addEdge(label, parent_op, operand_pos);
 						// if the previous (parent) operand is in the same depth or in a deeper level add a reversed edge as well
 						// join case
-						if(parent_depth >= depth)
-                            operand_directed_dependency_graph
-                                    .addEdge(label, operand_pos, label_to_operand_map[label].first);
+						if(parent_op_depth >= depth)
+                            operand_directed_dependency_graph.addEdge(label, operand_pos, parent_op);
 					}
 					// if the operand has no incoming edges, add an edge to self
 					// needed for cartesian join
 					else
                         operand_directed_dependency_graph.addEdge(label, operand_pos, operand_pos);
-                    label_to_operand_map[label] = std::make_pair(operand_pos, depth);
+                    label_to_operand_map[label][depth] = operand_pos;
 
                 }
 			}

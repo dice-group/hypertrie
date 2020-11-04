@@ -44,9 +44,10 @@ namespace hypertrie {
 
         private:
             // aliases
-            using value_type = std::pair<std::vector<std::optional<const_Hypertrie<tr>>>, key_part_type>;
+            using value_type = std::tuple<std::vector<std::optional<const_Hypertrie<tr>>>, key_part_type, poss_type>;
             // members
             poss_type pos_in_out{};
+			poss_type join_ops_in_out{};
             std::vector<pos_type> result_depths{};
             std::vector<HashDiagonal<tr>> ops{};
             bool ended = false;
@@ -70,15 +71,17 @@ namespace hypertrie {
                         ops.emplace_back(HashDiagonal<tr>{hypertrie, join_poss});
                         auto result_depth = result_depths.emplace_back(hypertrie.depth() - size(join_poss));
                         if (result_depth) {
-                            pos_in_out.push_back(out_pos++);
-                            value.first.push_back(hypertrie); // only a place holder, is to be replaced in next()
+                            pos_in_out.push_back(out_pos);
+                            join_ops_in_out.push_back(out_pos++);
+                            std::get<0>(value).push_back(hypertrie); // only a place holder, is to be replaced in next()
                         } else {
                             pos_in_out.push_back(std::numeric_limits<pos_type>::max());
+							join_ops_in_out.push_back(std::numeric_limits<pos_type>::max());
                         }
                     } else {
                         assert(hypertrie.depth() != 0); // TODO: currently not possible
-                        value.first.push_back(hypertrie); // this stays unchanged during the iteration
-                        ++out_pos;
+                        std::get<0>(value).push_back(hypertrie); // this stays unchanged during the iteration
+                        pos_in_out.push_back(out_pos++);
                     }
                 }
                 left_operand = &ops.front();
@@ -92,22 +95,24 @@ namespace hypertrie {
                     return;
                 }
 				if(result_depths[0])
-				    value.first[pos_in_out[0]] = const_Hypertrie<tr>(left_operand->currentHypertrie());
-                value.second = left_operand->currentKeyPart();
+                    std::get<0>(value)[pos_in_out[0]] = const_Hypertrie<tr>(left_operand->currentHypertrie());
+                std::get<1>(value) = left_operand->currentKeyPart();
                 // iterate all right operands
                 for (typename std::vector<tr>::size_type i = 1; i < ops.size(); i++) {
                     auto &right_operand = ops[i];
                     // if the join was successful save the key of the right operand
-                    if (right_operand.find(value.second)) {
+                    if (right_operand.find(std::get<1>(value))) {
 						if (result_depths[i])
-							value.first[pos_in_out[i]] = const_Hypertrie<tr>(right_operand.currentHypertrie());
+                            std::get<0>(value)[join_ops_in_out[i]] = const_Hypertrie<tr>(right_operand.currentHypertrie());
 					}
                     // if the join was not successful do not return the operand
                     else {
 						if (result_depths[i])
-							value.first[pos_in_out[i]] = std::nullopt;
+                            std::get<0>(value)[join_ops_in_out[i]] = std::nullopt;
 					}
                 }
+				// store the positions of the input operands in the results
+                std::get<2>(value) = pos_in_out;
                 ++(*left_operand);
             }
 

@@ -22,7 +22,7 @@ namespace hypertrie::tests::leftjoin {
 		ht.set({4, 12, 6}, true);
 		ht.set({3, 12, 5}, true);
 		ht.set({4, 13, 25}, true);
-		ht.set({3, 13, 25}, true);
+		ht.set({6, 13, 25}, true);
 		ht.set({5, 14, 30}, true);
 		ht.set({1, 14, 35}, true);
 		ht.set({8, 14, 30}, true);
@@ -64,7 +64,7 @@ namespace hypertrie::tests::leftjoin {
             };
         }
 		// a,[ab,bc]->abc
-        SECTION("lj_j_dl, join after left join, on different labels") {
+        SECTION("lj_j_dl" , "join after left join, on different labels") {
             operands.push_back(ht1);
             operands.push_back(ht2);
             operands.push_back(ht3);
@@ -166,6 +166,35 @@ namespace hypertrie::tests::leftjoin {
                     {8, default_key_part, default_key_part}
             };
         }
+        // a,[ab,bc],[ad]->abcd
+        SECTION("mlj_jdl", "multiple left joins on the same label, join after left join") {
+            operands.push_back(ht1);
+            operands.push_back(ht2);
+            operands.push_back(ht3);
+            operands.push_back(ht5);
+            std::vector<char> op1_labels{'a'};
+            std::vector<char> op2_labels{'[','a', 'b'};
+            std::vector<char> op3_labels{'b', 'c', ']'};
+            std::vector<char> op4_labels{'[', 'a', 'd', ']'};
+            operands_labels.push_back(op1_labels);
+            operands_labels.push_back(op2_labels);
+            operands_labels.push_back(op3_labels);
+            operands_labels.push_back(op4_labels);
+            result_labels.push_back('a');
+            result_labels.push_back('b');
+            result_labels.push_back('c');
+            result_labels.push_back('d');
+            expected_results = {
+                    {1, 3, 5, 35},
+                    {2, 4, 6, default_key_part},
+                    {3, default_key_part, default_key_part, default_key_part},
+                    {4, default_key_part, default_key_part, default_key_part},
+                    {5, default_key_part, default_key_part, 30},
+                    {6, default_key_part, default_key_part, default_key_part},
+                    {7, default_key_part, default_key_part, default_key_part},
+                    {8, default_key_part, default_key_part, 30}
+            };
+        }
         // a,[ab,bc,[ad]]->abcd
         SECTION("lj_jdl_nljsl", "join after left join on different label, nested left join on same label") {
             operands.push_back(ht1);
@@ -195,6 +224,38 @@ namespace hypertrie::tests::leftjoin {
                     {8, default_key_part, default_key_part, default_key_part}
             };
         }
+        // a,[ab,bc,ce,[ad]]->abcd
+        SECTION("lj_mjdl_nljsl", "multiple joins after left join on different label, nested left join on same label") {
+            operands.push_back(ht1);
+            operands.push_back(ht2);
+            operands.push_back(ht3);
+			operands.push_back(ht4);
+            operands.push_back(ht5);
+            std::vector<char> op1_labels{'a'};
+            std::vector<char> op2_labels{'[','a', 'b'};
+            std::vector<char> op3_labels{'b', 'c'};
+            std::vector<char> op4_labels{'c', 'e'};
+            std::vector<char> op5_labels{'[', 'a', 'd', ']', ']'};
+            operands_labels.push_back(op1_labels);
+            operands_labels.push_back(op2_labels);
+            operands_labels.push_back(op3_labels);
+            operands_labels.push_back(op4_labels);
+            operands_labels.push_back(op5_labels);
+            result_labels.push_back('a');
+            result_labels.push_back('b');
+            result_labels.push_back('c');
+            result_labels.push_back('d');
+            expected_results = {
+                    {1, default_key_part, default_key_part, default_key_part},
+                    {2, 4, 6, default_key_part},
+                    {3, default_key_part, default_key_part, default_key_part},
+                    {4, default_key_part, default_key_part, default_key_part},
+                    {5, default_key_part, default_key_part, default_key_part},
+                    {6, default_key_part, default_key_part, default_key_part},
+                    {7, default_key_part, default_key_part, default_key_part},
+                    {8, default_key_part, default_key_part, default_key_part}
+            };
+        }
 		// [ab],ac->abc
         SECTION("no_left_op", "left join without left operand") {
             operands.push_back(ht2);
@@ -209,6 +270,40 @@ namespace hypertrie::tests::leftjoin {
             expected_results = {
                     {1, 3, 5},
                     {2, 4, 6}
+            };
+        }
+        // a,[bc,[ad]]->abcd
+        SECTION("no_wd", "non well defined") {
+			operands.push_back(ht1);
+            operands.push_back(ht4);
+            operands.push_back(ht3);
+            std::vector<char> op1_labels{'a'};
+            std::vector<char> op2_labels{'[', 'b', 'c'};
+            std::vector<char> op3_labels{'[', 'a', 'd', ']', ']'};
+            operands_labels.push_back(op1_labels);
+            operands_labels.push_back(op2_labels);
+            operands_labels.push_back(op3_labels);
+            result_labels.push_back('a');
+            result_labels.push_back('b');
+            result_labels.push_back('c');
+            result_labels.push_back('d');
+            expected_results = {
+                    {1, 4, 25, 8},
+                    {2, 4, 25, default_key_part},
+                    {3, 4, 25, 5},
+                    {4, 4, 25, 6},
+                    {5, 4, 25, default_key_part},
+                    {6, 4, 25, default_key_part},
+                    {7, 4, 25, default_key_part},
+                    {8, 4, 25, default_key_part},
+                    {1, 6, 25, 8},
+                    {2, 6, 25, default_key_part},
+                    {3, 6, 25, 5},
+                    {4, 6, 25, 6},
+                    {5, 6, 25, default_key_part},
+                    {6, 6, 25, default_key_part},
+                    {7, 6, 25, default_key_part},
+                    {8, 6, 25, default_key_part}
             };
         }
         auto subscript = std::make_shared<Subscript>(operands_labels, result_labels);

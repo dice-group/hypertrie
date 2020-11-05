@@ -182,7 +182,7 @@ namespace hypertrie::tests::leftjoin {
 				};
 			}
 			// a,[ab,[bc,[cd]]]->abcd
-            SECTION("two nested joins") {
+            SECTION("two_nlj") {
                 operands.push_back(ht1);
                 operands.push_back(ht2);
                 operands.push_back(ht3);

@@ -43,11 +43,11 @@ namespace hypertrie::tests::raw::node_context::diagonal_test {
 	template<HypertrieInternalTrait tri, size_t depth, size_t diag_depth>
 	void randomized_diagonal_test() {
 		using tr = typename tri::tr;
-		using IteratorEntry = typename tr::IteratorEntry;
-		using iter_funcs = typename tr::iterator_entry;
+		using IteratorEntry [[maybe_unused]] = typename tr::IteratorEntry;
+		using iter_funcs [[maybe_unused]] = typename tr::iterator_entry;
 		using key_part_type = typename tri::key_part_type;
 		using value_type = typename tri::value_type;
-		using Key = typename tri::template RawKey<depth>;
+		using Key [[maybe_unused]] = typename tri::template RawKey<depth>;
 
 		static utils::DiagonalTestDataGenerator<diag_depth, depth, key_part_type, value_type, size_t(tri::is_lsb_unused)> gen{};
 
@@ -57,9 +57,9 @@ namespace hypertrie::tests::raw::node_context::diagonal_test {
 		static auto all_diagonal_positions = getAllCombinations(depth, diag_depth);
 		for (const auto &diagonal_positions : all_diagonal_positions) {
 			SECTION("diagonal positions: {}"_format(fmt::join(diagonal_positions, ","))) {
-				for (auto diagonal_size : iter::chain(iter::range(2, 5), iter::range(50, 51))) {
+				for (size_t diagonal_size : iter::chain(iter::range(2, 5), iter::range(50, 51))) {
 					SECTION("diagonal size: {}"_format(diagonal_size)) {
-						for (auto total_size :
+						for (size_t total_size :
 							 iter::unique_everseen(iter::imap([&](double x) { return size_t(diagonal_size * x); },
 															  std::vector<double>{1.0, 1.2, 2.0, 5.0}))) {
 							SECTION("tensor size: {}"_format(total_size)) {
@@ -130,11 +130,11 @@ namespace hypertrie::tests::raw::node_context::diagonal_test {
 	template<HypertrieInternalTrait tri, size_t depth, size_t diag_depth>
 	void randomized_diagonal_compressed_test() {
 		using tr = typename tri::tr;
-		using IteratorEntry = typename tr::IteratorEntry;
-		using iter_funcs = typename tr::iterator_entry;
+		using IteratorEntry [[maybe_unused]] = typename tr::IteratorEntry;
+		using iter_funcs [[maybe_unused]] = typename tr::iterator_entry;
 		using key_part_type = typename tri::key_part_type;
 		using value_type = typename tri::value_type;
-		using Key = typename tri::template RawKey<depth>;
+		using Key [[maybe_unused]] = typename tri::template RawKey<depth>;
 
 		static utils::DiagonalTestDataGenerator<diag_depth, depth, key_part_type, value_type, size_t(tri::is_lsb_unused)> gen{};
 

@@ -212,6 +212,10 @@ namespace einsum::internal {
 			return directed_dependency_graph.getTargetVerticesOfVertex(operand_position);
 		}
 
+		std::vector<std::size_t> getJoinDependentOperands(OperandPos operand_position) {
+			return directed_dependency_graph.getStrongComponentNeighbors(operand_position);
+		}
+
 		/**
 		 * for Join
 		 * @param label

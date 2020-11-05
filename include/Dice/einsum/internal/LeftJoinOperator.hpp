@@ -62,19 +62,6 @@ namespace einsum::internal {
 
 	private:
 
-		// this function will only be called if a sub operator does not yield any results
-		// it makes sure that the current left operand will be part of the result
-		// all the key parts of the corresponding to labels that do not appear on the left operand will be unbound
-		void sub_op_no_results(const_Hypertrie<tr> left_operand) {
-			auto left_op_labels = this->subscript->getRawSubscript().operands;
-			// resize in order to keep the labels of the first operand
-			left_op_labels.resize(1);
-            auto left_op_subscript = std::make_shared<Subscript>(left_op_labels,
-																 this->subscript->getRawSubscript().result);
-            sub_operator = Operator_t::construct(left_op_subscript, this->context);
-            sub_operator->load({left_operand}, *this->entry);
-		}
-
 		void find_next_valid() {
 			assert(left_join_iterator);
 			while (sub_operator->ended()) {
@@ -86,10 +73,6 @@ namespace einsum::internal {
                     std::vector<hypertrie::pos_type> pos_in_out;
 					std::tie(next_operands, current_key_part, pos_in_out) = *left_join_iterator;
                     init_load_sub_operator(&next_operands, pos_in_out);
-					// check if sub_operator yields a result
-					// if it does not, generate an entry for the current left operand
-					if(sub_operator->ended())
-                        sub_op_no_results(next_operands[0].value());
 				} else {
 					ended_ = true;
 					return;
@@ -122,17 +105,13 @@ namespace einsum::internal {
 			left_join_iterator = left_join.begin();
 			// check if left join has entries
 			if (left_join_iterator) {
-				std::vector<std::optional<const_Hypertrie<tr>>> next_operands;
+				std::vector<std::optional<const_Hypertrie<tr>>> right_operands;
                 // the positions of the operands of the original subscript in the next_subscript
                 // it is used in order to handle dependencies
                 std::vector<hypertrie::pos_type> pos_in_out;
-				std::tie(next_operands, current_key_part, pos_in_out) = *left_join_iterator;
+				std::tie(right_operands, current_key_part, pos_in_out) = *left_join_iterator;
 				// initialize and load sub_operator
-                init_load_sub_operator(&next_operands, pos_in_out);
-                // check if sub_operator yields a result
-                // if it does not, generate an entry for the current left operand
-                if(sub_operator->ended())
-                    sub_op_no_results(next_operands[0].value());
+				init_load_sub_operator(&right_operands, pos_in_out);
 				find_next_valid();
 			} else {
 				this->ended_ = true;
@@ -156,99 +135,81 @@ namespace einsum::internal {
 
         void init_load_sub_operator(std::vector<std::optional<const_Hypertrie<tr>>>* join_returned_operands,
 									const std::vector<hypertrie::pos_type>& pos_in_out) {
-			// the subscript for the sub_operator
-            std::shared_ptr<Subscript> sub_op_subscript;
-			// the labels of the operands of the sub_op_subscript
-            std::vector<std::vector<Label>> sub_op_operands_labels{};
-			// the positions of the operands that take part in the left join
-			auto poss_operands_with_label = this->subscript->getPossOfOperandsWithLabel(label);
-			// the number of operands that do not take part in the left join
-			auto operands_without_label = this->subscript->getRawSubscript().operands.size() - poss_operands_with_label.size();
-			// the operands of the next operator
+			// the labels of the operands to be considered
+			auto original_operands_labels = next_subscript->getRawSubscript().original_operands;
+			// the result labels
+			auto original_result_labels = next_subscript->getRawSubscript().result;
+			// the operands labels to be passed to the subscript of the sub_operator
+			decltype(original_operands_labels) next_operands_labels{};
+			// the next operands to be passed to the sub_operator
 			std::vector<const_Hypertrie<tr>> next_operands{};
-            std::set<Label> not_joined_dependent_labels{};
-//            for(auto op : *join_returned_operands) {
-//				if (op.has_value())
-//					std::cout << (std::string) op.value() << "\n------" << std::endl;
-//				else
-//                    std::cout << "nullopt" << "\n------" << std::endl;
-//			}
-			// remove dependent operands by setting their value to std::nullopt
-			for(const auto[op_pos, op_pos_in_out] : iter::enumerate(pos_in_out)) {
-				if(op_pos_in_out < std::numeric_limits<hypertrie::pos_type>::max())
-					if(!(*join_returned_operands)[op_pos_in_out].has_value())
-						remove_dependent_operands(op_pos, join_returned_operands, pos_in_out);
+
+			// if the left operand appears in the result save the operand and the label
+			if(pos_in_out[0] < std::numeric_limits<hypertrie::pos_type>::max()) {
+                next_operands_labels.push_back(original_operands_labels[0]);
+                next_operands.push_back(join_returned_operands->at(pos_in_out[0]).value());
 			}
-            for(const auto[op_pos, join_ret_op] : iter::enumerate(*join_returned_operands)) {
-				if(join_ret_op.has_value()) {
-					next_operands.push_back(join_ret_op.value());
-                    sub_op_operands_labels.push_back(next_subscript->getRawSubscript().operands[op_pos]);
+
+			// iterate over the right operands
+			for(auto right_operand : this->subscript->getDependentOperands(0)) {
+				// if a right operand does not yield a result we do not have to consider it nor its dependents operands
+				if(pos_in_out[right_operand] >= std::numeric_limits<hypertrie::pos_type>::max()
+                    or !(*join_returned_operands)[pos_in_out[right_operand]].has_value())
+					continue;
+				// check if the current right operand participates in a join
+				// the join operands
+				auto scc_neighbors = this->subscript->getJoinDependentOperands(right_operand);
+				// if the operand participates in a join find out if it returns a result
+				if(scc_neighbors.size()) {
+					bool break_join = false;
+					decltype(original_operands_labels) join_operands_labels{original_operands_labels[pos_in_out[right_operand]]};
+					decltype(next_operands) join_next_operands{join_returned_operands->at(pos_in_out[right_operand]).value()};
+					for(auto neighbor : scc_neighbors) {
+						// one of the join operands does not have value -> do not consider current operand
+						if(!join_returned_operands->at(pos_in_out[neighbor]).has_value()) {
+							break_join = true;
+							break;
+						}
+						join_operands_labels.push_back(original_operands_labels[pos_in_out[neighbor]]);
+                        join_next_operands.push_back(join_returned_operands->at(pos_in_out[neighbor]).value());
+					}
+					if(break_join)
+						continue;
+					auto join_subscript = std::make_shared<Subscript>(join_operands_labels, original_result_labels);
+					auto join_operator = Operator_t::construct(join_subscript, this->context);
+					join_operator->load(std::move(join_next_operands), *this->entry);
+					if(join_operator->ended())
+						continue;
+ 				}
+                next_operands.push_back(join_returned_operands->at(pos_in_out[right_operand]).value());
+                next_operands_labels.push_back(original_operands_labels[pos_in_out[right_operand]]);
+				// iterate over all (transitively) dependent operands of the current right operand
+				// check if they participate in the result and if the have returned an operand
+				std::set<std::size_t> visited{right_operand};
+				std::deque<std::size_t> check{};
+				for(auto right_operand_dependent : this->subscript->getDependentOperands(right_operand))
+					check.push_back(right_operand_dependent);
+                while(!check.empty()) {
+					auto right_operand_dependent = check.front();
+					check.pop_front();
+                    if(visited.find(right_operand_dependent) != visited.end())
+                        continue;
+                    visited.insert(right_operand_dependent);
+					if(pos_in_out[right_operand_dependent] >= std::numeric_limits<hypertrie::pos_type>::max()
+						or !(*join_returned_operands)[pos_in_out[right_operand_dependent]].has_value())
+						continue;
+                    next_operands.push_back(join_returned_operands->at(pos_in_out[right_operand_dependent]).value());
+                    next_operands_labels.push_back(original_operands_labels[pos_in_out[right_operand_dependent]]);
+					// check the operands that depend on the current operand as well
+                    for(auto nested_dependent : this->subscript->getDependentOperands(right_operand_dependent))
+						check.push_back(nested_dependent);
 				}
-				else {
-                    not_joined_dependent_labels.insert(next_subscript->getRawSubscript().operands[op_pos].begin(),
-													   next_subscript->getRawSubscript().operands[op_pos].end());
-				}
 			}
-			// all operands were joined or no operands were returned
-			if (next_operands.size() == join_returned_operands->size()) {
-                sub_op_subscript = next_subscript;
-			}
-			// no operands were joined
-			else if (next_operands.size() == operands_without_label) {
-                sub_op_operands_labels.clear();
-				next_operands.clear();
-				sub_op_subscript = std::make_shared<Subscript>(sub_op_operands_labels, next_subscript->getRawSubscript().result);
-			}
-			// partial join
-			else {
-				remove_dependent_labels(not_joined_dependent_labels, &sub_op_operands_labels, &next_operands);
-				// TODO: subscript cache
-                sub_op_subscript = std::make_shared<Subscript>(sub_op_operands_labels, next_subscript->getRawSubscript().result);
-			}
-            if (not sub_operator or sub_operator->hash() != sub_op_subscript->hash())
-                sub_operator = Operator_t::construct(sub_op_subscript, this->context);
+            auto sub_op_subscript = std::make_shared<Subscript>(next_operands_labels, original_result_labels);
+            sub_operator = Operator_t::construct(sub_op_subscript, this->context);
             sub_operator->load(std::move(next_operands), *this->entry);
 		}
 
-		void remove_dependent_operands(std::size_t operand_position,
-									   std::vector<std::optional<const_Hypertrie<tr>>>* left_join_result,
-									   const std::vector<hypertrie::pos_type>& pos_in_out) {
-			//TODO: use subscript instead of next_subscript. next_subscript does not maintain dependency edges
-            auto dependent_operands = this->subscript->getDependentOperands(operand_position);
-            for(auto& dep_op : dependent_operands)
-				if(pos_in_out[dep_op] < std::numeric_limits<hypertrie::pos_type>::max())
-				    left_join_result->at(pos_in_out[dep_op]) = std::nullopt;
-		}
-
-		// removes all operands and their labels which transitively depend on operands that were not joined
-		// example: a,ab,ac,bd,de->abcde, if ab was not joined then: a,ac->abcde (join label: a)
-        void remove_dependent_labels(const std::set<Label>& dependent_labels,
-									   std::vector<std::vector<Label>>* ops_labels,
-                                       std::vector<const_Hypertrie<tr>>* next_operands) {
-
-			std::set<Label> to_be_checked{};
-			for(auto dep_label : dependent_labels) {
-                for(auto [op_pos, op_labels] : iter::enumerate(*ops_labels))
-					if(std::find(op_labels.begin(), op_labels.end(), dep_label) != op_labels.end()) {
-						to_be_checked.insert(op_labels.begin(), op_labels.end());
-						ops_labels->erase(ops_labels->begin() + op_pos);
-						next_operands->erase(next_operands->begin() + op_pos);
-					}
-			}
-			while(to_be_checked.size()) {
-				auto current_check = to_be_checked;
-				to_be_checked.clear();
-                for(auto dep_label : current_check) {
-					for (auto [op_pos, op_labels] : iter::enumerate(*ops_labels)) {
-						if (std::find(op_labels.begin(), op_labels.end(), dep_label) != op_labels.end()) {
-							to_be_checked.insert(op_labels.begin(), op_labels.end());
-							ops_labels->erase(ops_labels->begin() + op_pos);
-                            next_operands->erase(next_operands->begin() + op_pos);
-						}
-					}
-				}
-            }
-		}
 	};
 }
 

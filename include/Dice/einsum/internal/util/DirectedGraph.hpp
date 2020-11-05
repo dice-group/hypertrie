@@ -33,6 +33,8 @@ namespace einsum::internal::util {
 
 		static_assert(std::is_same_v<Vertex, std::size_t>);
 
+        std::vector<int> strong_components;
+
 		BoostGraph graph{};
 
     public:
@@ -59,9 +61,24 @@ namespace einsum::internal::util {
 			std::vector<Vertex> target_vertices{};
             auto out_edges_iterators = boost::out_edges(v, graph);
 			for(auto out_edge_iter = out_edges_iterators.first; out_edge_iter != out_edges_iterators.second; out_edge_iter++) {
+				auto target = boost::target(*out_edge_iter, graph);
+				if(target == v)
+					continue;
 				target_vertices.push_back(boost::target(*out_edge_iter, graph));
 			}
 			return target_vertices;
+		}
+
+		std::vector<Vertex> getStrongComponentNeighbors(Vertex v) {
+			std::vector<Vertex> neighbors{};
+			auto component = strong_components[v];
+			for(auto n : iter::range(strong_components.size())) {
+				if(n == v)
+					continue;
+				if(strong_components[n] == component)
+					neighbors.emplace_back(n);
+			}
+			return neighbors;
 		}
 
 		// treats the directed graph as an undirected graph
@@ -92,7 +109,7 @@ namespace einsum::internal::util {
 		// https://www.boost.org/doc/libs/1_74_0/libs/graph/example/strong_components.cpp
         [[nodiscard]] std::vector<std::set<R>> getStronglyConnectedComponents() {
 
-            std::vector< int > component(num_vertices(graph)),
+            std::vector<int> component(num_vertices(graph)),
                     discover_time(num_vertices(graph));
             std::vector<boost::default_color_type > color(num_vertices(graph));
             std::vector<Vertex> root(num_vertices(graph));
@@ -105,6 +122,7 @@ namespace einsum::internal::util {
 																   discover_time.begin(), get(boost::vertex_index, graph))));
 
             std::vector<std::set<R>> strongly_connected_components(num_components);
+			strong_components = component;
 
             for(std::vector<int>::size_type i = 0; i < component.size(); i++) {
                 auto out_edge_iterators = boost::out_edges(i, graph);
@@ -130,7 +148,7 @@ namespace einsum::internal::util {
 					discover_time(num_vertices(graph));
 			std::vector<boost::default_color_type> color(num_vertices(graph));
 			std::vector<Vertex> root(num_vertices(graph));
-			int num_components = strong_components(graph,
+			int num_components = boost::strong_components(graph,
 												   make_iterator_property_map(component.begin(), get(boost::vertex_index, graph)),
 												   root_map(make_iterator_property_map(root.begin(), get(boost::vertex_index, graph)))
 														   .color_map(
@@ -139,6 +157,7 @@ namespace einsum::internal::util {
 																   discover_time.begin(), get(boost::vertex_index, graph))));
 
 			std::vector<StrongComponent_t> strongly_connected_components(num_components);
+			strong_components = component;
 
             for(std::size_t i : iter::range(component.size())) {
 				auto cur_component_idx = component[i];

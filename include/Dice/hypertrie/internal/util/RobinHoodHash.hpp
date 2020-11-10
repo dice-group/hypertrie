@@ -152,8 +152,27 @@ namespace hypertrie::internal::robin_hood {
 
 	template<typename T, std::size_t N>
 	struct hash<std::array<T, N>> {
+		static size_t arrayHash(std::array<T, N> const &arr) {
+			static constexpr uint64_t m = UINT64_C(0xc6a4a7935bd1e995);
+			static constexpr uint64_t seed = UINT64_C(0xe17a1465);
+			static constexpr size_t len = sizeof(T) * N;
+
+			std::size_t h = seed ^ (len * m);
+
+			static constexpr hash<T> hasher;
+			for (const auto &item : arr) {
+				h ^= hasher(item);
+				h *= m;
+			}
+			return h;
+		};
+
 		size_t operator()(std::array<T, N> const &arr) const noexcept {
-			return hash_bytes(arr.data(), sizeof(T) * N);
+			if constexpr (std::is_fundamental_v<T>)
+				return hash_bytes(arr.data(), sizeof(T) * N);
+			else {
+				return arrayHash(arr);
+			}
 		}
 	};
 

@@ -41,7 +41,7 @@ namespace hypertrie::internal::raw {
 		using Modification_t = NodeModificationPlan<depth, tri>;
 
 		template<size_t depth>
-		using LevelModifications_t = robin_hood::unordered_node_set<Modification_t<depth>, absl::Hash<Modification_t<depth>>>;
+		using LevelModifications_t = ::robin_hood::unordered_node_set<Modification_t<depth>, absl::Hash<Modification_t<depth>>>;
 
 		using PlannedModifications = util::IntegralTemplatedTuple<LevelModifications_t, 1, update_depth>;
 
@@ -521,7 +521,7 @@ namespace hypertrie::internal::raw {
 					// # group the subkeys by the key part at pos
 
 					// maps key parts to the keys to be inserted for that child
-					robin_hood::unordered_map<key_part_type, std::vector<Entry<depth - 1>>> children_inserted_keys{};
+					::robin_hood::unordered_map<key_part_type, std::vector<Entry<depth - 1>>> children_inserted_keys{};
 
 					// populate children_inserted_keys
 					for (const Entry<depth> &entry : update.entries())
@@ -609,7 +609,7 @@ namespace hypertrie::internal::raw {
 						// # group the subkeys by the key part at pos
 
 						// maps key parts to the keys to be inserted for that child
-						robin_hood::unordered_map<key_part_type, std::vector<Entry<depth - 1>>> children_inserted_keys{};
+						::robin_hood::unordered_map<key_part_type, std::vector<Entry<depth - 1>>> children_inserted_keys{};
 
 						// populate children_inserted_keys
 						for (const Entry<depth> &entry : update.entries())

@@ -178,8 +178,7 @@ namespace hypertrie::internal::robin_hood {
 
 	template<class... TupleArgs>
 	struct hash<std::tuple<TupleArgs...>> {
-		template<typename... Ts>
-		static constexpr std::size_t sum_size() { return (sizeof(Ts) + ...); }
+
 
 		template<typename T>
 		static std::size_t hash_func(T const &value) {
@@ -191,7 +190,7 @@ namespace hypertrie::internal::robin_hood {
 		static size_t tupleHash(Tuple const &tuple, std::index_sequence<ids...> const &) {
 			static constexpr uint64_t m = UINT64_C(0xc6a4a7935bd1e995);
 			static constexpr uint64_t seed = UINT64_C(0xe17a1465);
-			static constexpr size_t len = sum_size<Tuple>();
+			static constexpr size_t len = (sizeof(TupleArgs) + ...);
 
 			std::size_t h = seed ^ (len * m);
 

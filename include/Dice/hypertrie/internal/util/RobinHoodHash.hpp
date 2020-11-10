@@ -156,13 +156,36 @@ namespace hypertrie::internal::robin_hood {
         }
     };
 
-    /*
-    template<class... TupleArgs> struct hash<std::tuple<TupleArgs...>> {
-        size_t operator()(std::tuple<TupleArgs...> const &tpl) const noexcept {
-            return hash_bytes(arr.data(), sizeof(T) * N);
-        }
-    };
-     */
+	template<class... TupleArgs>
+	struct hash<std::tuple<TupleArgs...>> {
+		template<typename... Ts>
+		static constexpr std::size_t sum_size() { return (sizeof(Ts) + ...); }
+
+		template<typename T>
+		static std::size_t hash_func(T const &value) {
+			hash<T> hasher;
+			return hasher(value);
+		}
+
+		template<typename Tuple, std::size_t... ids>
+		static size_t tupleHash(Tuple const &tuple, std::index_sequence<ids...> const &) {
+			static constexpr uint64_t m = UINT64_C(0xc6a4a7935bd1e995);
+			static constexpr uint64_t seed = UINT64_C(0xe17a1465);
+			static constexpr size_t len = sum_size<Tuple>();
+
+			std::size_t h = seed ^ (len * m);
+
+			for (auto const &hash : {hash_func(std::get<ids>(tuple))...}) {
+				h ^= hash;
+				h *= m;
+			}
+			return h;
+		};
+
+		size_t operator()(std::tuple<TupleArgs...> const &tpl) const noexcept {
+			return tupleHash(tpl, std::make_index_sequence<sizeof...(TupleArgs)>());
+		}
+	};
 } // namespace robin_hood
 
 #endif //HYPERTRIE_ROBINHOODHASH_HPP

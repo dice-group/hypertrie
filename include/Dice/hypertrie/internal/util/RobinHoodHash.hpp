@@ -140,21 +140,22 @@ namespace hypertrie::internal::robin_hood {
         }
     };
 
-    template <typename Enum>
-    struct hash<Enum, typename std::enable_if<std::is_enum<Enum>::value>::type> {
-        size_t operator()(Enum e) const noexcept {
-            using Underlying = typename std::underlying_type<Enum>::type;
-            return hash<Underlying>{}(static_cast<Underlying>(e));
-        }
-    };
+	template<typename Enum>
+	struct hash<Enum, typename std::enable_if<std::is_enum<Enum>::value>::type> {
+		size_t operator()(Enum e) const noexcept {
+			using Underlying = typename std::underlying_type<Enum>::type;
+			return hash<Underlying>{}(static_cast<Underlying>(e));
+		}
+	};
 
-    // custom hashes
+	// custom hashes
 
-    template <typename T, std::size_t N> struct hash<std::array<T, N>> {
-        size_t operator()(std::array<T, N> const &arr) const noexcept {
-            return hash_bytes(arr.data(), sizeof(T) * N);
-        }
-    };
+	template<typename T, std::size_t N>
+	struct hash<std::array<T, N>> {
+		size_t operator()(std::array<T, N> const &arr) const noexcept {
+			return hash_bytes(arr.data(), sizeof(T) * N);
+		}
+	};
 
 	template<class... TupleArgs>
 	struct hash<std::tuple<TupleArgs...>> {

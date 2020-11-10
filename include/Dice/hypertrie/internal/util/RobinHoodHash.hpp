@@ -179,6 +179,7 @@ namespace hypertrie::internal::robin_hood {
 	template<class... TupleArgs>
 	struct hash<std::tuple<TupleArgs...>> {
 
+		using TupleType = std::tuple<TupleArgs...>;
 
 		template<typename T>
 		static std::size_t hash_func(T const &value) {
@@ -186,8 +187,8 @@ namespace hypertrie::internal::robin_hood {
 			return hasher(value);
 		}
 
-		template<typename Tuple, std::size_t... ids>
-		static size_t tupleHash(Tuple const &tuple, std::index_sequence<ids...> const &) {
+		template<std::size_t... ids>
+		static size_t tupleHash(TupleType const &tuple, std::index_sequence<ids...> const &) {
 			static constexpr uint64_t m = UINT64_C(0xc6a4a7935bd1e995);
 			static constexpr uint64_t seed = UINT64_C(0xe17a1465);
 			static constexpr size_t len = (sizeof(TupleArgs) + ...);
@@ -201,7 +202,7 @@ namespace hypertrie::internal::robin_hood {
 			return h;
 		};
 
-		size_t operator()(std::tuple<TupleArgs...> const &tpl) const noexcept {
+		size_t operator()(TupleType const &tpl) const noexcept {
 			return tupleHash(tpl, std::make_index_sequence<sizeof...(TupleArgs)>());
 		}
 	};

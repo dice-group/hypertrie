@@ -213,6 +213,27 @@ namespace hypertrie::internal::robin_hood {
 		}
 	};
 
+	template<typename T>
+	struct hash<std::vector<T>> {
+	private:
+		static size_t vecHash(std::vector<T> const &vec) {
+			static constexpr uint64_t m = UINT64_C(0xc6a4a7935bd1e995);
+			std::size_t h{};
+			for (const auto &item : vec)
+				h = (h xor rh_hash(item)) * m;
+			return h;
+		};
+
+	public:
+		size_t operator()(std::vector<T> const &vec) const noexcept {
+			if constexpr (std::is_fundamental_v<T>)
+				return hash_bytes(vec.data(), sizeof(T) * vec.size());
+			else {
+				return vecHash(vec);
+			}
+		}
+	};
+
 	template<class... TupleArgs>
 	struct hash<std::tuple<TupleArgs...>> {
 	private:

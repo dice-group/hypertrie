@@ -5,6 +5,9 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include <tuple>
+#include <type_traits>
+#include <utility>
 
 // all non-argument macros should use this facility. See
 // https://www.fluentcpp.com/2019/05/28/better-macros-better-flags/
@@ -112,6 +115,38 @@ namespace hypertrie::internal::robin_hood {
 		}
 	};
 
+	template<typename T>
+	std::size_t rh_hash(T const &value) {
+		hash<T> hasher;
+		return hasher(value);
+	}
+
+	template<class... Ts>
+	concept all_std_size_t =
+			sizeof...(Ts) == 0 or// empty list
+			// non-empty list ↓
+			(std::is_same_v<std::decay_t<std::tuple_element_t<0, std::tuple<Ts...>>>, std::size_t> and                                // first one must be std::size_t
+					 std::conjunction_v<std::is_same<std::decay_t<std::tuple_element_t<0, std::tuple<Ts...>>>, std::decay_t<Ts>>...>);// all must be equal to first
+
+	template<typename... size_type>
+	requires all_std_size_t<size_type...>
+			std::size_t rh_combine_hashes(size_type &&...hashes) {
+		static constexpr uint64_t m = UINT64_C(0xc6a4a7935bd1e995);
+		std::size_t h{};
+		for (auto const &hash : {hashes...})
+			h = (h xor hash) * m;
+		return h;
+	}
+
+	template<typename... Ts>
+	std::size_t rh_combine(Ts &&...values) {
+		static constexpr uint64_t m = UINT64_C(0xc6a4a7935bd1e995);
+		std::size_t h{};
+		for (auto const &hash : {rh_hash(std::forward<Ts>(values))...})
+			h = (h xor hash) * m;
+		return h;
+	}
+
 	template<typename CharT>
 	struct hash<std::basic_string<CharT>> {
 		size_t operator()(std::basic_string<CharT> const &str) const noexcept {
@@ -162,16 +197,9 @@ namespace hypertrie::internal::robin_hood {
 	private:
 		static size_t arrayHash(std::array<T, N> const &arr) {
 			static constexpr uint64_t m = UINT64_C(0xc6a4a7935bd1e995);
-			static constexpr uint64_t seed = UINT64_C(0xe17a1465);
-			static constexpr size_t len = sizeof(T) * N;
-
-			std::size_t h = seed ^ (len * m);
-
-			static constexpr hash<T> hasher;
-			for (const auto &item : arr) {
-				h ^= hasher(item);
-				h *= m;
-			}
+			std::size_t h{};
+			for (const auto &item : arr)
+				h = (h xor rh_hash(item)) * m;
 			return h;
 		};
 
@@ -190,25 +218,9 @@ namespace hypertrie::internal::robin_hood {
 	private:
 		using TupleType = std::tuple<TupleArgs...>;
 
-		template<typename T>
-		static std::size_t hashFunc(T const &value) {
-			hash<T> hasher;
-			return hasher(value);
-		}
-
 		template<std::size_t... ids>
 		static size_t tupleHash(TupleType const &tuple, std::index_sequence<ids...> const &) {
-			static constexpr uint64_t m = UINT64_C(0xc6a4a7935bd1e995);
-			static constexpr uint64_t seed = UINT64_C(0xe17a1465);
-			static constexpr size_t len = (sizeof(TupleArgs) + ...);
-
-			std::size_t h = seed ^ (len * m);
-
-			for (auto const &hash : {hashFunc(std::get<ids>(tuple))...}) {
-				h ^= hash;
-				h *= m;
-			}
-			return h;
+			return rh_combine(std::get<ids>(tuple)...);
 		};
 
 	public:
@@ -216,6 +228,8 @@ namespace hypertrie::internal::robin_hood {
 			return tupleHash(tpl, std::make_index_sequence<sizeof...(TupleArgs)>());
 		}
 	};
+
+
 }// namespace hypertrie::internal::robin_hood
 
 #endif//HYPERTRIE_ROBINHOODHASH_HPP

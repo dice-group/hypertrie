@@ -2,6 +2,7 @@
 #define HYPERTRIE_CARTESIANOPERATOR_HPP
 
 #include "Dice/einsum/internal/Operator.hpp"
+#include "Dice/einsum/internal/EntryGeneratorOperator.hpp"
 #include <tsl/sparse_map.h>
 
 namespace einsum::internal {
@@ -11,6 +12,7 @@ namespace einsum::internal {
 #include "Dice/einsum/internal/OperatorMemberTypealiases.hpp"
 
 		using CartesianOperator_t = CartesianOperator<value_type, tr>;
+        using EntryGeneratorOperator_t = EntryGeneratorOperator<value_type, tr>;
 
 		using SubResult = tsl::sparse_map<Key < key_part_type>, size_t, absl::Hash<Key < key_part_type> >>;
 
@@ -113,12 +115,43 @@ namespace einsum::internal {
 			// load the non iterated sub_operators
 
 			if constexpr(_debugeinsum_) fmt::print("Cartesian sub start {}\n", this->subscript);
-			for (auto cart_op_pos: iter::range(sub_operators.size())) {
-				auto &cart_op = sub_operators[cart_op_pos];
-				cart_op->load(extractOperands(cart_op_pos, operands), sub_entries[cart_op_pos]);
-				if (cart_op->ended()) {
-					ended_ = true;
-					return;
+			// parent operator is not a left join operator
+			if(!this->context->sub_operator_dependency_map.contains(this->subscript->hash())) {
+				for (auto cart_op_pos : iter::range(sub_operators.size())) {
+					auto &cart_op = sub_operators[cart_op_pos];
+					cart_op->load(extractOperands(cart_op_pos, operands), sub_entries[cart_op_pos]);
+					if (cart_op->ended()) {
+						ended_ = true;
+						return;
+					}
+				}
+			}
+            // parent operator is a left join operator
+			else {
+				// find the operators that need to be pruned
+				// if an operator is removed by a previous operand to not load him -> ended() == true
+				std::set<std::size_t> removed_sub_operators{};
+				for (auto cart_op_pos : iter::range(sub_operators.size())) {
+					if(removed_sub_operators.find(cart_op_pos) != removed_sub_operators.end())
+						continue;
+					auto &cart_op = sub_operators[cart_op_pos];
+					cart_op->load(extractOperands(cart_op_pos, operands), sub_entries[cart_op_pos]);
+					if (cart_op->ended()) {
+						for(auto& dependent_sub_operator : this->context->sub_operator_dependency_map[this->subscript->hash()][cart_op_pos])
+							removed_sub_operators.insert(dependent_sub_operator);
+					}
+				}
+				// make ended operators to produce an empty entry -> entry generation operators
+				std::vector<std::vector<Label>> empty_operands_labels{}; // for entry generation operator
+				auto sub_subscripts = this->subscript->getCartesianSubscript().getSubSubscripts();
+				for(auto cart_op_pos : iter::range(sub_operators.size())) {
+                    auto &cart_op = sub_operators[cart_op_pos];
+                    if (cart_op->ended()) {
+						auto entry_gen_sc = std::make_shared<Subscript>(empty_operands_labels,
+                                                                        sub_subscripts[cart_op_pos]->getRawSubscript().result);
+						cart_op = std::make_unique<EntryGeneratorOperator_t>(entry_gen_sc, this->context);
+						cart_op->load({}, sub_entries[cart_op_pos]);
+					}
 				}
 			}
 			if constexpr(_debugeinsum_) fmt::print("Cartesian sub gen {}\n", this->subscript);

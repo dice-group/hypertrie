@@ -31,6 +31,11 @@ namespace einsum::internal {
 		 */
 		bool timed_out = false;
 
+		/**
+		 * Passes dependency information to subsequent operators
+		 */
+		 std::map<std::size_t, std::map<std::size_t, std::set<std::size_t>>> sub_operator_dependency_map{};
+
 		Context(TimePoint const &timeout = TimePoint::max()) : timeout(timeout) {}
 
 		/**

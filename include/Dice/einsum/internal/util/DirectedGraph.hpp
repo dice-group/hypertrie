@@ -35,6 +35,8 @@ namespace einsum::internal::util {
 
         std::vector<int> strong_components;
 
+        std::vector<std::size_t> weak_components;
+
 		BoostGraph graph{};
 
     public:
@@ -81,6 +83,10 @@ namespace einsum::internal::util {
 			return neighbors;
 		}
 
+		std::vector<std::size_t>& getWeakComponentsOfVertices() {
+			return weak_components;
+		}
+
 		// treats the directed graph as an undirected graph
 		// finds the connected components of the undirected graph
 		// returns the labels of each component
@@ -92,7 +98,9 @@ namespace einsum::internal::util {
             std::vector<ComponentID> component(boost::num_vertices(graph));
             auto num_components = boost::connected_components(graph, &component[0]);
 
+			weak_components = component;
             std::vector<std::set<R>> weakly_connected_components(num_components);
+
 
             for(std::size_t i : iter::range(component.size())) {
                 auto out_edges_iterator = boost::out_edges(i, graph);

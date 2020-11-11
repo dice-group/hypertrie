@@ -20,6 +20,7 @@ namespace hypertrie {
         // members
         std::vector<const_Hypertrie<tr>> hypertries;
         std::vector<poss_type> positions;
+        std::vector<pos_type> non_optional_poss;
 
 
     public:
@@ -32,8 +33,10 @@ namespace hypertrie {
 
         LeftHashJoin(const LeftHashJoin &) = default;
 
-        LeftHashJoin(std::vector<const_Hypertrie<tr>> hypertries, std::vector<poss_type> positions)
-                : hypertries(std::move(hypertries)), positions(std::move(positions)) {}
+        LeftHashJoin(std::vector<const_Hypertrie<tr>> hypertries,
+					 std::vector<poss_type> positions,
+					 std::vector<pos_type> non_optional_poss)
+                : hypertries(std::move(hypertries)), positions(std::move(positions)), non_optional_poss(std::move(non_optional_poss)) {}
 
         iterator begin() const { return iterator(*this); }
 
@@ -48,6 +51,7 @@ namespace hypertrie {
             // members
             poss_type pos_in_out{};
 			poss_type join_ops_in_out{};
+			std::vector<pos_type> non_optional_poss;
             std::vector<pos_type> result_depths{};
             std::vector<HashDiagonal<tr>> ops{};
             bool ended = false;
@@ -63,6 +67,7 @@ namespace hypertrie {
                 pos_in_out.reserve(max_op_count);
                 result_depths.reserve(max_op_count);
                 ops.reserve(max_op_count);
+				non_optional_poss = join.non_optional_poss;
 
                 pos_type out_pos = 0;
                 for (const auto &[pos, join_poss, hypertrie] : iter::zip(iter::range(join.hypertries.size()), join.positions,
@@ -84,36 +89,49 @@ namespace hypertrie {
                         pos_in_out.push_back(out_pos++);
                     }
                 }
+				// TODO: choose optimal operand
                 left_operand = &ops.front();
                 left_operand->begin();
                 next();
             }
 
             inline void next() {
-                if(not *left_operand) {
-                    ended = true;
-                    return;
-                }
-				if(result_depths[0])
-                    std::get<0>(value)[pos_in_out[0]] = const_Hypertrie<tr>(left_operand->currentHypertrie());
-                std::get<1>(value) = left_operand->currentKeyPart();
-                // iterate all right operands
-                for (typename std::vector<tr>::size_type i = 1; i < ops.size(); i++) {
-                    auto &right_operand = ops[i];
-                    // if the join was successful save the key of the right operand
-                    if (right_operand.find(std::get<1>(value))) {
-						if (result_depths[i])
-                            std::get<0>(value)[join_ops_in_out[i]] = const_Hypertrie<tr>(right_operand.currentHypertrie());
+                while(*left_operand) {
+					bool found = false;
+					if (result_depths[0])
+						std::get<0>(value)[pos_in_out[0]] = const_Hypertrie<tr>(left_operand->currentHypertrie());
+					std::get<1>(value) = left_operand->currentKeyPart();
+					// iterate all right operands
+					for (typename std::vector<tr>::size_type i = 1; i < ops.size(); i++) {
+						auto &right_operand = ops[i];
+						// if the join was successful save the key of the right operand
+						if (right_operand.find(std::get<1>(value))) {
+							if (result_depths[i])
+								std::get<0>(value)[join_ops_in_out[i]] = const_Hypertrie<tr>(right_operand.currentHypertrie());
+						}
+						// if the join was not successful do not return the operand
+						else {
+							// if this is a non-optional go to the next value
+							if(std::find(this->non_optional_poss.begin(), this->non_optional_poss.end(), i)
+								!= this->non_optional_poss.end()) {
+								found = true;
+								break;
+							}
+							else if (result_depths[i])
+								std::get<0>(value)[join_ops_in_out[i]] = std::nullopt;
+						}
 					}
-                    // if the join was not successful do not return the operand
-                    else {
-						if (result_depths[i])
-                            std::get<0>(value)[join_ops_in_out[i]] = std::nullopt;
-					}
-                }
-				// store the positions of the input operands in the results
-                std::get<2>(value) = pos_in_out;
-                ++(*left_operand);
+                    if(found) {
+                        ++(*left_operand);
+                        continue;
+                    }
+					// store the positions of the input operands in the results
+					std::get<2>(value) = pos_in_out;
+					++(*left_operand);
+					return;
+				}
+                ended = true;
+                return;
             }
 
             iterator &operator++() {

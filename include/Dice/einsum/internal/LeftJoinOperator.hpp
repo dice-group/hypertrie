@@ -2,6 +2,7 @@
 #define HYPERTRIE_LEFTJOINOPERATOR_HPP
 
 #include "Dice/einsum/internal/Operator.hpp"
+#include "Dice/einsum/internal/EntryGeneratorOperator.hpp"
 #include <Dice/hypertrie/internal/HashJoin.hpp>
 #include <Dice/hypertrie/internal/LeftHashJoin.hpp>
 
@@ -11,6 +12,7 @@ namespace einsum::internal {
 	class LeftJoinOperator : public Operator<value_type, tr_t> {
 #include "Dice/einsum/internal/OperatorMemberTypealiases.hpp"
 		using LeftJoin_t = hypertrie::LeftHashJoin<tr>;
+        using EntryGeneratorOperator_t = EntryGeneratorOperator<value_type, tr>;
 
 		LeftJoin_t left_join;
 		typename LeftJoin_t::iterator left_join_iterator;
@@ -20,6 +22,8 @@ namespace einsum::internal {
         bool is_result_label = false;
         // the position of the active label in each operand
 		LabelPossInOperands label_poss_in_ops;
+		// the non-optional positions
+		std::vector<OperandPos> non_optional_poss;
         // the position of the active label in the result
 		LabelPos label_pos_in_result;
 		// the part of the key that was selected in the join
@@ -27,6 +31,10 @@ namespace einsum::internal {
 
 		std::shared_ptr<Operator_t> sub_operator;
         std::shared_ptr<Subscript> next_subscript;
+
+		// it is used to generate an entry
+		// left join always generates an entry
+		std::unique_ptr<Operator_t> entry_generator; // initialized in load_impl;
 
 		bool ended_ = true;
 
@@ -56,8 +64,26 @@ namespace einsum::internal {
 					return;
 				}
 			}
-			self.sub_operator->next();
-			self.find_next_valid();
+			if(!self.sub_operator->ended())
+			    self.sub_operator->next();
+			if(self.sub_operator->ended()) {
+				++self.left_join_iterator;
+				if(!self.left_join_iterator) {
+					self.ended_ = true;
+				}
+				else {
+                    // generate new entry for the current result
+                    self.entry_generator->load({}, *self.entry);
+                    std::vector<std::optional<const_Hypertrie<tr>>> next_operands;
+                    // the positions of the operands of the original subscript in the next_subscript
+                    // it is used in order to handle dependencies
+                    std::vector<hypertrie::pos_type> pos_in_out;
+                    std::tie(next_operands, self.current_key_part, pos_in_out) = *(self.left_join_iterator);
+                    self.init_load_sub_operator(&next_operands, pos_in_out);
+				}
+			}
+            if (self.is_result_label)
+                self.entry->key[self.label_pos_in_result] = self.current_key_part;
 		}
 
 	private:
@@ -95,16 +121,23 @@ namespace einsum::internal {
 			if (label != last_label) {
 				label_poss_in_ops = this->subscript->getLabelPossInOperands(label);
 				is_result_label = this->subscript->isResultLabel(label);
+				non_optional_poss = this->subscript->getNonOptionalOperands();
 				if (is_result_label)
 					label_pos_in_result = this->subscript->getLabelPosInResult(label);
 			}
+			// initialize entry_generator
+			auto entry_gen_sc = std::make_shared<Subscript>(std::vector<std::vector<Label>>(),
+															this->subscript->getRawSubscript().result);
+            entry_generator = std::make_unique<EntryGeneratorOperator_t>(entry_gen_sc, this->context);
 			// prepare next_subscript by removing the active label from the current subscript
 			next_subscript = this->subscript->removeLabel(label, true);
             // prepare left join
-			left_join = LeftJoin_t{operands, label_poss_in_ops};
+			left_join = LeftJoin_t{operands, label_poss_in_ops, non_optional_poss};
 			left_join_iterator = left_join.begin();
 			// check if left join has entries
 			if (left_join_iterator) {
+				// generate new entry for the current result
+				entry_generator->load({}, *this->entry);
 				std::vector<std::optional<const_Hypertrie<tr>>> right_operands;
                 // the positions of the operands of the original subscript in the next_subscript
                 // it is used in order to handle dependencies
@@ -112,7 +145,8 @@ namespace einsum::internal {
 				std::tie(right_operands, current_key_part, pos_in_out) = *left_join_iterator;
 				// initialize and load sub_operator
 				init_load_sub_operator(&right_operands, pos_in_out);
-				find_next_valid();
+                if (is_result_label)
+                    this->entry->key[label_pos_in_result] = current_key_part;
 			} else {
 				this->ended_ = true;
 			}
@@ -143,49 +177,28 @@ namespace einsum::internal {
 			decltype(original_operands_labels) next_operands_labels{};
 			// the next operands to be passed to the sub_operator
 			std::vector<const_Hypertrie<tr>> next_operands{};
+			// the position of the operands in the sub_operator
+			// used to find dependencies between sub_operators
+            std::vector<hypertrie::pos_type> pos_in_sub_op(pos_in_out.size(),
+														   std::numeric_limits<hypertrie::pos_type>::max());
 
 			// if the left operand appears in the result save the operand and the label
 			if(pos_in_out[0] < std::numeric_limits<hypertrie::pos_type>::max()) {
                 next_operands_labels.push_back(original_operands_labels[0]);
                 next_operands.push_back(join_returned_operands->at(pos_in_out[0]).value());
 			}
-
+			// the positions of the operands, which will be passed to the next operator, in the current operator
+            std::vector<std::size_t> next_operands_poss{};
 			// iterate over the right operands
 			for(auto right_operand : this->subscript->getDependentOperands(0)) {
 				// if a right operand does not yield a result we do not have to consider it nor its dependents operands
 				if(pos_in_out[right_operand] >= std::numeric_limits<hypertrie::pos_type>::max()
                     or !(*join_returned_operands)[pos_in_out[right_operand]].has_value())
 					continue;
-				// check if the current right operand participates in a join
-				// the join operands
-				auto scc_neighbors = this->subscript->getJoinDependentOperands(right_operand);
-				// if the operand participates in a join find out if it returns a result
-				if(scc_neighbors.size()) {
-					bool break_join = false;
-					decltype(original_operands_labels) join_operands_labels{original_operands_labels[pos_in_out[right_operand]]};
-					decltype(next_operands) join_next_operands{join_returned_operands->at(pos_in_out[right_operand]).value()};
-					for(auto neighbor : scc_neighbors) {
-						// one of the join operands does not have value -> do not consider current operand
-						if(!join_returned_operands->at(pos_in_out[neighbor]).has_value()) {
-							break_join = true;
-							break;
-						}
-						join_operands_labels.push_back(original_operands_labels[pos_in_out[neighbor]]);
-                        join_next_operands.push_back(join_returned_operands->at(pos_in_out[neighbor]).value());
-					}
-					if(break_join)
-						continue;
-					auto join_subscript = std::make_shared<Subscript>(join_operands_labels, original_result_labels);
-					auto join_operator = Operator_t::construct(join_subscript, this->context);
-					join_operator->load(std::move(join_next_operands), *this->entry);
-					if(join_operator->ended())
-						continue;
- 				}
-                next_operands.push_back(join_returned_operands->at(pos_in_out[right_operand]).value());
-                next_operands_labels.push_back(original_operands_labels[pos_in_out[right_operand]]);
+                next_operands_poss.push_back(right_operand);
 				// iterate over all (transitively) dependent operands of the current right operand
 				// check if they participate in the result and if the have returned an operand
-				std::set<std::size_t> visited{right_operand};
+				std::set<std::size_t> visited{0, right_operand};
 				std::deque<std::size_t> check{};
 				for(auto right_operand_dependent : this->subscript->getDependentOperands(right_operand))
 					check.push_back(right_operand_dependent);
@@ -196,16 +209,45 @@ namespace einsum::internal {
                         continue;
                     visited.insert(right_operand_dependent);
 					if(pos_in_out[right_operand_dependent] >= std::numeric_limits<hypertrie::pos_type>::max()
-						or !(*join_returned_operands)[pos_in_out[right_operand_dependent]].has_value())
-						continue;
-                    next_operands.push_back(join_returned_operands->at(pos_in_out[right_operand_dependent]).value());
-                    next_operands_labels.push_back(original_operands_labels[pos_in_out[right_operand_dependent]]);
+						or !(*join_returned_operands)[pos_in_out[right_operand_dependent]].has_value()) {
+						// remove join dependent operands that were previously not removed
+						for(auto nested_dependent : this->subscript->getDependentOperands(right_operand_dependent)) {
+							if(auto nested_dep_pos = std::find(next_operands_poss.begin(), next_operands_poss.end(), nested_dependent);
+                                nested_dep_pos != next_operands_poss.end())
+                                next_operands_poss.erase(nested_dep_pos);
+						}
+                        continue;
+					}
+                    next_operands_poss.push_back(right_operand_dependent);
 					// check the operands that depend on the current operand as well
                     for(auto nested_dependent : this->subscript->getDependentOperands(right_operand_dependent))
 						check.push_back(nested_dependent);
 				}
 			}
+			// prepare the operands and their subscript for the sub_operator
+			std::size_t pos = 0;
+			for(auto next_op_pos : next_operands_poss) {
+				next_operands.push_back(join_returned_operands->at(pos_in_out[next_op_pos]).value());
+				next_operands_labels.push_back(original_operands_labels[pos_in_out[next_op_pos]]);
+				pos_in_sub_op[next_op_pos] = pos++;
+			}
             auto sub_op_subscript = std::make_shared<Subscript>(next_operands_labels, original_result_labels);
+			// compute the dependencies between the sub_operators (only for Cartesian)
+			if(sub_op_subscript->type == Subscript::Type::Cartesian) {
+				this->context->sub_operator_dependency_map[sub_op_subscript->hash()];
+				auto ops_sub_operator = sub_op_subscript->getSubOperatorOfOperands();
+				for(auto next_op_pos : next_operands_poss) {
+                    std::vector<std::size_t> dependent_operands_poss{};
+					auto operand_sub_op = ops_sub_operator[pos_in_sub_op[next_op_pos]];
+					for(auto dependent_operand_pos : this->subscript->getDependentOperands(next_op_pos)) {
+                        auto dependent_operand_sub_op = ops_sub_operator[pos_in_sub_op[dependent_operand_pos]];
+						if(operand_sub_op == dependent_operand_sub_op)
+							continue;
+						auto& sub_op_map = this->context->sub_operator_dependency_map[sub_op_subscript->hash()][operand_sub_op];
+						sub_op_map.insert(ops_sub_operator[pos_in_sub_op[dependent_operand_pos]]);
+					}
+				}
+			}
             sub_operator = Operator_t::construct(sub_op_subscript, this->context);
             sub_operator->load(std::move(next_operands), *this->entry);
 		}

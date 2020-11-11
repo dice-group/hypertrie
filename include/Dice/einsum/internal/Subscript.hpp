@@ -170,6 +170,9 @@ namespace einsum::internal {
 		// Left Join
 		Label left_join_label;
 
+		// Left Join
+		std::vector<OperandPos> non_optional_operands{};
+
 		// Join
         tsl::hopscotch_set<Label> join_labels{};
 	public:
@@ -214,6 +217,10 @@ namespace einsum::internal {
 
 		std::vector<std::size_t> getJoinDependentOperands(OperandPos operand_position) {
 			return directed_dependency_graph.getStrongComponentNeighbors(operand_position);
+		}
+
+		std::vector<std::size_t>& getSubOperatorOfOperands() {
+			return directed_dependency_graph.getWeakComponentsOfVertices();
 		}
 
 		/**
@@ -311,14 +318,24 @@ namespace einsum::internal {
                     for (const auto[op_pos, labels] : iter::enumerate(raw_subscript.operands))
                         for (const Label label : labels)
 							poss_of_operands_with_labels[label].push_back(op_pos);
+					// TODO: general case. Left join label will not always be on the first operand
 					// iterate the operands in the order they were provided and find the first join label
 					for(auto outer_it = this->raw_subscript.operands.begin(); outer_it != this->raw_subscript.operands.end(); outer_it++) {
-						for (auto label : *outer_it)
-							for (auto inner_it = outer_it + 1; inner_it != this->raw_subscript.operands.end(); inner_it++)
+						for (auto label : *outer_it) {
+							for (auto inner_it = outer_it + 1; inner_it != this->raw_subscript.operands.end(); inner_it++) {
 								if (std::find((*inner_it).begin(), (*inner_it).end(), label) != (*inner_it).end()) {
 									left_join_label = label;
+									// find the non-optional join operands
+									for (const auto &[pos, original_op_labels] : iter::enumerate(this->raw_subscript.original_operands)) {
+										if (std::find(original_op_labels.begin(), original_op_labels.end(), '[') != original_op_labels.end())
+											break;
+										if (std::find(original_op_labels.begin(), original_op_labels.end(), left_join_label) != original_op_labels.end())
+											non_optional_operands.push_back(pos);
+									}
 									return;
 								}
+							}
+						}
 					}
 					break;
 				}
@@ -419,6 +436,10 @@ namespace einsum::internal {
 			return left_join_label;
 		}
 
+		const std::vector<OperandPos>& getNonOptionalOperands() {
+			return non_optional_operands;
+		}
+
 		const RawSubscript &getRawSubscript() const {
 			return raw_subscript;
 		}
@@ -471,11 +492,20 @@ namespace einsum::internal {
 			auto independent_strong_component = directed_dependency_graph.getIndependentStrongComponent();
 			// if the independent component contains multiple operands do a join
 			// if there are multiple operands in the independent component, component_labels will not be empty
+			auto& comp_labels = independent_strong_component.component_labels;
+			auto& out_labels = independent_strong_component.outgoing_labels;
+			std::set<Label> common_labels{};
 			if(independent_strong_component.component_labels.size() > 0) {
-				// store the labels of the edges inside the independent component -> join labels
-				join_labels.insert(independent_strong_component.component_labels.begin(),
-								   independent_strong_component.component_labels.end());
-				return Type::Join;
+                std::set_intersection(comp_labels.begin(), comp_labels.end(),
+									  out_labels.begin(), out_labels.end(),
+									  std::inserter(common_labels, common_labels.end()));
+				// empty common labels -> there is not a label that participates in join and left join -> join
+				if(common_labels.empty()) {
+                    // store the labels of the edges inside the independent component -> join labels
+					join_labels.insert(independent_strong_component.component_labels.begin(),
+									   independent_strong_component.component_labels.end());
+					return Type::Join;
+				}
 			}
 			// if the independent component contains only one operand do a left join
             // if there are multiple operands in the independent component, component_labels will be empty

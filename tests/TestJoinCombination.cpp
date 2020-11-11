@@ -63,6 +63,27 @@ namespace hypertrie::tests::leftjoin {
                     {5, 7, default_key_part}
             };
         }
+        // a,ab,[ac]->abc
+        SECTION("j_lj_sl", "join before left join, on same labels") {
+            operands.push_back(ht1);
+            operands.push_back(ht2);
+            operands.push_back(ht3);
+            std::vector<char> op1_labels{'a'};
+            std::vector<char> op2_labels{'a', 'b'};
+            std::vector<char> op3_labels{'[', 'a', 'c', ']'};
+            operands_labels.push_back(op1_labels);
+            operands_labels.push_back(op2_labels);
+            operands_labels.push_back(op3_labels);
+            result_labels.push_back('a');
+            result_labels.push_back('b');
+            result_labels.push_back('c');
+            expected_results = {
+                    {1, 3, 8},
+                    {1, 6, 8},
+                    {2, 4, default_key_part},
+                    {5, 7, default_key_part}
+            };
+        }
 		// a,[ab,bc]->abc
         SECTION("lj_j_dl" , "join after left join, on different labels") {
             operands.push_back(ht1);
@@ -222,6 +243,45 @@ namespace hypertrie::tests::leftjoin {
                     {6, default_key_part, default_key_part, default_key_part},
                     {7, default_key_part, default_key_part, default_key_part},
                     {8, default_key_part, default_key_part, default_key_part}
+            };
+        }
+		// a,[ab,bc,[ad]],[ae,ef,[ag]]->abdeg
+        SECTION("lj_jdl_mnljsl", "mjoin after left join on different label, multiple nested left join on same label") {
+            operands.push_back(ht1);
+            operands.push_back(ht3);
+            operands.push_back(ht2);
+            operands.push_back(ht5);
+            operands.push_back(ht2);
+            operands.push_back(ht4);
+            operands.push_back(ht5);
+            std::vector<char> op1_labels{'a'};
+            std::vector<char> op2_labels{'[','a', 'b'};
+            std::vector<char> op3_labels{'b', 'c'};
+            std::vector<char> op4_labels{'[', 'a', 'd', ']', ']'};
+            std::vector<char> op5_labels{'[','a', 'e'};
+            std::vector<char> op6_labels{'e', 'f'};
+            std::vector<char> op7_labels{'[', 'a', 'g', ']', ']'};
+            operands_labels.push_back(op1_labels);
+            operands_labels.push_back(op2_labels);
+            operands_labels.push_back(op3_labels);
+            operands_labels.push_back(op4_labels);
+            operands_labels.push_back(op5_labels);
+            operands_labels.push_back(op6_labels);
+            operands_labels.push_back(op7_labels);
+            result_labels.push_back('a');
+            result_labels.push_back('b');
+            result_labels.push_back('d');
+            result_labels.push_back('e');
+            result_labels.push_back('g');
+            expected_results = {
+                    {1, default_key_part, default_key_part, 6, 35},
+                    {2, default_key_part, default_key_part, 4, default_key_part},
+                    {3, 5, default_key_part, default_key_part, default_key_part},
+                    {4, default_key_part, default_key_part, default_key_part, default_key_part},
+                    {5, default_key_part, default_key_part, default_key_part, default_key_part},
+                    {6, default_key_part, default_key_part, default_key_part, default_key_part},
+                    {7, default_key_part, default_key_part, default_key_part, default_key_part},
+                    {8, default_key_part, default_key_part, default_key_part, default_key_part}
             };
         }
         // a,[ab,bc,ce,[ad]]->abcd

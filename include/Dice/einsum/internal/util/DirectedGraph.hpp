@@ -29,7 +29,7 @@ namespace einsum::internal::util {
 												 boost::directedS,
 												 boost::no_property,
 												 EdgeLabel>;
-        using Vertex = boost::graph_traits<BoostGraph>::vertex_descriptor;
+        using Vertex = typename boost::graph_traits<BoostGraph>::vertex_descriptor;
 
 		static_assert(std::is_same_v<Vertex, std::size_t>);
 

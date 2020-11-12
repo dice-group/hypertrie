@@ -269,6 +269,27 @@ namespace hypertrie::tests::leftjoin {
 				};
             }
 		}
+        // ab,[ac],[bd]->abcd
+        SECTION("mljl", "multiple left join labels") {
+            operands.push_back(ht2);
+            operands.push_back(ht3);
+            operands.push_back(ht4);
+            std::vector<char> op1_labels{'a', 'b'};
+            std::vector<char> op2_labels{'[', 'a', 'c' ,']'};
+            std::vector<char> op3_labels{'[', 'b', 'd', ']'};
+            operands_labels.push_back(op1_labels);
+            operands_labels.push_back(op2_labels);
+            operands_labels.push_back(op3_labels);
+            result_labels.push_back('a');
+            result_labels.push_back('b');
+            result_labels.push_back('c');
+            result_labels.push_back('d');
+            expected_results = {
+                    {1, 3, 8, 25},
+                    {1, 6, 8, default_key_part},
+                    {2, 4, default_key_part, 25}
+			};
+        }
 		// a,[ab],c,[cd]->abcd
         SECTION("lj_cart", "left join and cartesian join") {
             operands.push_back(ht1);

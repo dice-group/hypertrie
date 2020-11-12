@@ -213,7 +213,7 @@ namespace einsum::internal {
         [[nodiscard]] auto removeLabelNested(Label label) const noexcept {
             assert(getOperandsLabelSet().count(label));
             OperandsSc next_operands{};
-			uint8_t depth{0}; // used in order to properly delete right angled brackets
+			uint8_t depth{0}; // used in order to properly delete right squared brackets
             for (const auto &operand: original_operands) {
                 OperandSc new_operand{};
                 for (auto current_label : operand)
@@ -229,7 +229,7 @@ namespace einsum::internal {
 							// remove right angled brackets if:
 							// 1) the label to be removed appears in the operand
 							// 2) to match the previously removed left angled bracket
-							if(std::find(operand.cbegin(), operand.cend(), label) != operand.cend() || !depth)
+							if(std::find(operand.cbegin(), operand.cend(), label) != operand.cend() || depth)
 								continue;
 						}
                         new_operand.push_back(current_label);

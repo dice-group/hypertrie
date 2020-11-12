@@ -117,11 +117,11 @@ namespace einsum::internal {
 			this->entry = &entry;
 			ended_ = false;
 			Label last_label = label;
-			label = this->subscript->getLeftJoinLabel();
+			label = this->subscript->getLeftJoinLabels().front(); // TODO: choose optimal label
 			if (label != last_label) {
 				label_poss_in_ops = this->subscript->getLabelPossInOperands(label);
 				is_result_label = this->subscript->isResultLabel(label);
-				non_optional_poss = this->subscript->getNonOptionalOperands();
+				non_optional_poss = this->subscript->getNonOptionalOperands(label);
 				if (is_result_label)
 					label_pos_in_result = this->subscript->getLabelPosInResult(label);
 			}
@@ -191,13 +191,13 @@ namespace einsum::internal {
             std::vector<std::size_t> next_operands_poss{};
 			// iterate over the right operands
 			for(auto right_operand : this->subscript->getDependentOperands(0)) {
-				// if a right operand does not yield a result we do not have to consider it nor its dependents operands
+				// if a right operand does not yield a result we do not have to consider it nor its dependent operands
 				if(pos_in_out[right_operand] >= std::numeric_limits<hypertrie::pos_type>::max()
                     or !(*join_returned_operands)[pos_in_out[right_operand]].has_value())
 					continue;
                 next_operands_poss.push_back(right_operand);
 				// iterate over all (transitively) dependent operands of the current right operand
-				// check if they participate in the result and if the have returned an operand
+				// check if they participate in the result and if they have returned an operand
 				std::set<std::size_t> visited{0, right_operand};
 				std::deque<std::size_t> check{};
 				for(auto right_operand_dependent : this->subscript->getDependentOperands(right_operand))

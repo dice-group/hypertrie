@@ -168,10 +168,10 @@ namespace einsum::internal {
 		CartesianSubSubscripts cartesian_sub_subscripts;
 
 		// Left Join
-		Label left_join_label;
+		std::vector<Label> left_join_labels;
 
 		// Left Join
-		std::vector<OperandPos> non_optional_operands{};
+		std::map<Label, std::vector<OperandPos>> non_optional_operands_of_label{};
 
 		// Join
         tsl::hopscotch_set<Label> join_labels{};
@@ -211,15 +211,15 @@ namespace einsum::internal {
 				throw std::invalid_argument("label is not used in operands.");
 		}
 
-		std::vector<std::size_t> getDependentOperands(OperandPos operand_position) {
+		auto getDependentOperands(OperandPos operand_position) {
 			return directed_dependency_graph.getTargetVerticesOfVertex(operand_position);
 		}
 
-		std::vector<std::size_t> getJoinDependentOperands(OperandPos operand_position) {
+		auto getJoinDependentOperands(OperandPos operand_position) {
 			return directed_dependency_graph.getStrongComponentNeighbors(operand_position);
 		}
 
-		std::vector<std::size_t>& getSubOperatorOfOperands() {
+		auto getSubOperatorOfOperands() {
 			return directed_dependency_graph.getWeakComponentsOfVertices();
 		}
 
@@ -319,21 +319,15 @@ namespace einsum::internal {
                         for (const Label label : labels)
 							poss_of_operands_with_labels[label].push_back(op_pos);
 					// TODO: general case. Left join label will not always be on the first operand
-					// iterate the operands in the order they were provided and find the first join label
-					for(auto outer_it = this->raw_subscript.operands.begin(); outer_it != this->raw_subscript.operands.end(); outer_it++) {
-						for (auto label : *outer_it) {
-							for (auto inner_it = outer_it + 1; inner_it != this->raw_subscript.operands.end(); inner_it++) {
-								if (std::find((*inner_it).begin(), (*inner_it).end(), label) != (*inner_it).end()) {
-									left_join_label = label;
-									// find the non-optional join operands
-									for (const auto &[pos, original_op_labels] : iter::enumerate(this->raw_subscript.original_operands)) {
-										if (std::find(original_op_labels.begin(), original_op_labels.end(), '[') != original_op_labels.end())
-											break;
-										if (std::find(original_op_labels.begin(), original_op_labels.end(), left_join_label) != original_op_labels.end())
-											non_optional_operands.push_back(pos);
-									}
-									return;
-								}
+                    auto independent_strong_component = directed_dependency_graph.getIndependentStrongComponent();
+					// find the left join labels -> outgoing labels
+					// store the non-optional operands of each label
+					for(const auto& out_label : independent_strong_component.outgoing_labels) {
+						left_join_labels.push_back(out_label);
+						for(const auto& [op, op_out_labels] : independent_strong_component.vertices_out_edges_labels) {
+							if(op_out_labels.find(out_label) != op_out_labels.end()) {
+								auto& non_opt_ops_of_label = non_optional_operands_of_label[out_label];
+								non_opt_ops_of_label.push_back(op);
 							}
 						}
 					}
@@ -432,12 +426,12 @@ namespace einsum::internal {
 			return join_labels;
 		}
 
-		const Label& getLeftJoinLabel() const {
-			return left_join_label;
+		const std::vector<Label>& getLeftJoinLabels() const {
+			return left_join_labels;
 		}
 
-		const std::vector<OperandPos>& getNonOptionalOperands() {
-			return non_optional_operands;
+		const std::vector<OperandPos>& getNonOptionalOperands(Label label) {
+			return non_optional_operands_of_label[label];
 		}
 
 		const RawSubscript &getRawSubscript() const {
@@ -495,7 +489,7 @@ namespace einsum::internal {
 			auto& comp_labels = independent_strong_component.component_labels;
 			auto& out_labels = independent_strong_component.outgoing_labels;
 			std::set<Label> common_labels{};
-			if(independent_strong_component.component_labels.size() > 0) {
+			if(comp_labels.size() > 0) {
                 std::set_intersection(comp_labels.begin(), comp_labels.end(),
 									  out_labels.begin(), out_labels.end(),
 									  std::inserter(common_labels, common_labels.end()));
@@ -505,6 +499,11 @@ namespace einsum::internal {
 					join_labels.insert(independent_strong_component.component_labels.begin(),
 									   independent_strong_component.component_labels.end());
 					return Type::Join;
+				}
+				// common labels not empty && component labels > 0
+				// multiple join labels and at least one label that participates in join and left join
+				if(comp_labels.size() > 1 and !common_labels.empty()) {
+
 				}
 			}
 			// if the independent component contains only one operand do a left join

@@ -17,7 +17,6 @@ namespace einsum::internal::util {
     template<typename R = char>
     class DirectedGraph {
 
-
     private:
 
 		struct EdgeLabel {
@@ -30,24 +29,31 @@ namespace einsum::internal::util {
 												 boost::no_property,
 												 EdgeLabel>;
         using Vertex = typename boost::graph_traits<BoostGraph>::vertex_descriptor;
+		using StrongComponentID = uint16_t ;
+		using WeakComponentID = uint16_t ;
 
 		static_assert(std::is_same_v<Vertex, std::size_t>);
 
-        std::vector<int> strong_components;
+		// stores for each vertex to which strong component it belongs
+        std::vector<StrongComponentID> strong_components;
 
-        std::vector<std::size_t> weak_components;
+        // stores for each vertex to which strong component it belongs
+        std::vector<WeakComponentID> weak_components;
 
 		BoostGraph graph{};
 
     public:
 
-		struct StrongComponent {
+		struct StrongComponentLabels {
+			std::map<Vertex, std::set<R>> vertices_out_edges_labels{};
 			std::set<R> incoming_labels{};
 			std::set<R> component_labels{};
 			std::set<R> outgoing_labels{};
 		};
 
-		using StrongComponent_t = StrongComponent;
+		using StrongComponentLabels_t = StrongComponentLabels;
+
+		using WeakComponentLabels_t = std::set<R>;
 
         DirectedGraph() = default;
 
@@ -83,7 +89,7 @@ namespace einsum::internal::util {
 			return neighbors;
 		}
 
-		std::vector<std::size_t>& getWeakComponentsOfVertices() {
+		std::vector<WeakComponentID>& getWeakComponentsOfVertices() {
 			return weak_components;
 		}
 
@@ -92,15 +98,12 @@ namespace einsum::internal::util {
 		// returns the labels of each component
         [[nodiscard]] std::vector<std::set<R>> getWeaklyConnectedComponents() {
 
-			using ComponentID = std::size_t;
-
 			// stores by position (Vertex) which component it belongs to (entry value)
-            std::vector<ComponentID> component(boost::num_vertices(graph));
+            std::vector<WeakComponentID> component(boost::num_vertices(graph));
             auto num_components = boost::connected_components(graph, &component[0]);
 
 			weak_components = component;
-            std::vector<std::set<R>> weakly_connected_components(num_components);
-
+            std::vector<WeakComponentLabels_t> weakly_connected_components(num_components);
 
             for(std::size_t i : iter::range(component.size())) {
                 auto out_edges_iterator = boost::out_edges(i, graph);
@@ -112,51 +115,14 @@ namespace einsum::internal::util {
             return weakly_connected_components;
         }
 
-        // finds the strongly connected components of the directed graph
-        // returns the labels of each strong component
-		// https://www.boost.org/doc/libs/1_74_0/libs/graph/example/strong_components.cpp
-        [[nodiscard]] std::vector<std::set<R>> getStronglyConnectedComponents() {
+        // https://www.boost.org/doc/libs/1_74_0/libs/graph/example/strong_components.cpp
+        [[nodiscard]] StrongComponentLabels_t getIndependentStrongComponent() {
 
-            std::vector<int> component(num_vertices(graph)),
-                    discover_time(num_vertices(graph));
-            std::vector<boost::default_color_type > color(num_vertices(graph));
-            std::vector<Vertex> root(num_vertices(graph));
-            int num_components = strong_components(graph,
-												   make_iterator_property_map(component.begin(), get(boost::vertex_index, graph)),
-												   root_map(make_iterator_property_map(root.begin(), get(boost::vertex_index, graph)))
-														   .color_map(
-																   make_iterator_property_map(color.begin(), get(boost::vertex_index, graph)))
-														   .discover_time_map(make_iterator_property_map(
-																   discover_time.begin(), get(boost::vertex_index, graph))));
-
-            std::vector<std::set<R>> strongly_connected_components(num_components);
-			strong_components = component;
-
-            for(std::vector<int>::size_type i = 0; i < component.size(); i++) {
-                auto out_edge_iterators = boost::out_edges(i, graph);
-                for(auto out_edge_it = out_edge_iterators.first; out_edge_it != out_edge_iterators.second; out_edge_it++) {
-                    strongly_connected_components[component[i]].insert(graph[*out_edge_it].label);
-                }
-            }
-
-			return strongly_connected_components;
-        }
-
-		/**
-		 * TODO: is this case handled?
-		 * SELECT * WHERE {
-		 *  ?x :a :b.
-		 *  ?y :a :b.
-		 *  }
-		 */
-
-        [[nodiscard]] StrongComponent_t getIndependentStrongComponent() {
-
-			std::vector<int> component(num_vertices(graph)),
+			std::vector<StrongComponentID> component(num_vertices(graph)),
 					discover_time(num_vertices(graph));
 			std::vector<boost::default_color_type> color(num_vertices(graph));
 			std::vector<Vertex> root(num_vertices(graph));
-			int num_components = boost::strong_components(graph,
+			auto num_components = boost::strong_components(graph,
 												   make_iterator_property_map(component.begin(), get(boost::vertex_index, graph)),
 												   root_map(make_iterator_property_map(root.begin(), get(boost::vertex_index, graph)))
 														   .color_map(
@@ -164,17 +130,19 @@ namespace einsum::internal::util {
 														   .discover_time_map(make_iterator_property_map(
 																   discover_time.begin(), get(boost::vertex_index, graph))));
 
-			std::vector<StrongComponent_t> strongly_connected_components(num_components);
+			std::vector<StrongComponentLabels_t> strongly_connected_components(num_components);
 			strong_components = component;
 
             for(std::size_t i : iter::range(component.size())) {
 				auto cur_component_idx = component[i];
 				auto out_edges_iterator = boost::out_edges(i, graph);
+				strongly_connected_components[cur_component_idx].vertices_out_edges_labels[i];
 				for (auto out_edge = out_edges_iterator.first; out_edge != out_edges_iterator.second; out_edge++) {
 					auto out_vertex = boost::target(*out_edge, graph);
 					if(i == out_vertex)
 						continue;
 					auto out_edge_label = graph[*out_edge].label;
+                    strongly_connected_components[cur_component_idx].vertices_out_edges_labels[i].insert(out_edge_label);
 					auto out_vertex_component_idx = component[out_vertex];
 					if (cur_component_idx == out_vertex_component_idx) {
 						strongly_connected_components[cur_component_idx].component_labels.insert(out_edge_label);
@@ -184,7 +152,7 @@ namespace einsum::internal::util {
 					}
 				}
 			}
-			StrongComponent_t independent_sc;
+			StrongComponentLabels_t independent_sc;
 			for (auto scc : strongly_connected_components) {
 				if (!scc.incoming_labels.size()) {
 					independent_sc = scc;

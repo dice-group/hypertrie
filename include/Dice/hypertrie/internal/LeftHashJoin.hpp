@@ -69,7 +69,7 @@ namespace hypertrie {
                 result_depths.reserve(max_op_count);
                 ops.reserve(max_op_count);
 				non_optional_poss = join.non_optional_poss;
-				pos_type last_non_optional_pos = 0;
+				std::vector<pos_type> last_non_optional_poss{};
 
                 pos_type out_pos = 0;
                 for (const auto &[pos, join_poss, hypertrie] : iter::zip(iter::range(join.hypertries.size()), join.positions,
@@ -77,8 +77,8 @@ namespace hypertrie {
                     if (size(join_poss) > 0) {
                         ops.emplace_back(HashDiagonal<tr>{hypertrie, join_poss});
 						// store the positions of the ops vector that can be reordered
-						if(std::find(non_optional_poss.begin(), non_optional_poss.end(), pos) == non_optional_poss.end() && !last_non_optional_pos)
-                            last_non_optional_pos = pos;
+						if(std::find(non_optional_poss.begin(), non_optional_poss.end(), pos) != non_optional_poss.end())
+                            last_non_optional_poss.push_back(pos);
                         auto result_depth = result_depths.emplace_back(hypertrie.depth() - size(join_poss));
                         if (result_depth) {
                             pos_in_out.push_back(out_pos);
@@ -95,7 +95,7 @@ namespace hypertrie {
                     }
                 }
 				// TODO: choose optimal operand
-				shortest_op_pos = findShortestOperand(last_non_optional_pos);
+				shortest_op_pos = findShortestOperand(last_non_optional_poss);
                 left_operand = &ops[shortest_op_pos];
                 left_operand->begin();
                 next();
@@ -159,13 +159,13 @@ namespace hypertrie {
 
         private:
 
-            pos_type findShortestOperand(const pos_type& last_pos) {
-				pos_type shortest_pos = 0;
-				auto shortest_size = ops[0].size();
-                for(auto i : iter::range((pos_type)1, last_pos)) {
-					if(ops[i].size() < shortest_size) {
-						shortest_pos = i;
-						shortest_size = ops[i].size();
+            pos_type findShortestOperand(const std::vector<pos_type>& poss) {
+				pos_type shortest_pos = poss[0];
+				auto shortest_size = ops[poss[0]].size();
+                for(auto it = poss.begin(); it != poss.end(); it++) {
+					if(ops[*it].size() < shortest_size) {
+						shortest_pos = *it;
+						shortest_size = ops[*it].size();
 					}
 				}
 				return shortest_pos;

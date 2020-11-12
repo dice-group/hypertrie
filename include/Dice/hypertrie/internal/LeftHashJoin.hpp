@@ -49,6 +49,7 @@ namespace hypertrie {
             // aliases
             using value_type = std::tuple<std::vector<std::optional<const_Hypertrie<tr>>>, key_part_type, poss_type>;
             // members
+			pos_type shortest_op_pos;
             poss_type pos_in_out{};
 			poss_type join_ops_in_out{};
 			std::vector<pos_type> non_optional_poss;
@@ -68,12 +69,16 @@ namespace hypertrie {
                 result_depths.reserve(max_op_count);
                 ops.reserve(max_op_count);
 				non_optional_poss = join.non_optional_poss;
+				pos_type last_non_optional_pos = 0;
 
                 pos_type out_pos = 0;
                 for (const auto &[pos, join_poss, hypertrie] : iter::zip(iter::range(join.hypertries.size()), join.positions,
                                                                          join.hypertries)) {
                     if (size(join_poss) > 0) {
                         ops.emplace_back(HashDiagonal<tr>{hypertrie, join_poss});
+						// store the positions of the ops vector that can be reordered
+						if(std::find(non_optional_poss.begin(), non_optional_poss.end(), pos) == non_optional_poss.end() && !last_non_optional_pos)
+                            last_non_optional_pos = pos;
                         auto result_depth = result_depths.emplace_back(hypertrie.depth() - size(join_poss));
                         if (result_depth) {
                             pos_in_out.push_back(out_pos);
@@ -90,7 +95,8 @@ namespace hypertrie {
                     }
                 }
 				// TODO: choose optimal operand
-                left_operand = &ops.front();
+				shortest_op_pos = findShortestOperand(last_non_optional_pos);
+                left_operand = &ops[shortest_op_pos];
                 left_operand->begin();
                 next();
             }
@@ -98,11 +104,14 @@ namespace hypertrie {
             inline void next() {
                 while(*left_operand) {
 					bool found = false;
-					if (result_depths[0])
-						std::get<0>(value)[pos_in_out[0]] = const_Hypertrie<tr>(left_operand->currentHypertrie());
+					if (result_depths[shortest_op_pos])
+						std::get<0>(value)[pos_in_out[shortest_op_pos]] = const_Hypertrie<tr>(left_operand->currentHypertrie());
 					std::get<1>(value) = left_operand->currentKeyPart();
 					// iterate all right operands
-					for (typename std::vector<tr>::size_type i = 1; i < ops.size(); i++) {
+					for (typename std::vector<tr>::size_type i = 0; i < ops.size(); i++) {
+						// skip shortest operand
+						if(i == shortest_op_pos)
+							continue;
 						auto &right_operand = ops[i];
 						// if the join was successful save the key of the right operand
 						if (right_operand.find(std::get<1>(value))) {
@@ -147,6 +156,20 @@ namespace hypertrie {
             value_type operator*() const {
                 return value;
             }
+
+        private:
+
+            pos_type findShortestOperand(const pos_type& last_pos) {
+				pos_type shortest_pos = 0;
+				auto shortest_size = ops[0].size();
+                for(auto i : iter::range((pos_type)1, last_pos)) {
+					if(ops[i].size() < shortest_size) {
+						shortest_pos = i;
+						shortest_size = ops[i].size();
+					}
+				}
+				return shortest_pos;
+			}
 
         };
 

@@ -49,7 +49,7 @@ namespace einsum::internal {
 	class Subscript {
 	public:
 		enum class Type {
-			None = 0, Join, LeftJoin, Cartesian, Resolve, Count, EntryGenerator, CarthesianMapping
+			None = 0, Join, LeftJoin, JoinSelection, Cartesian, Resolve, Count, EntryGenerator, CarthesianMapping
 		};
 		using Label = char;
 
@@ -312,6 +312,9 @@ namespace einsum::internal {
                                                                                                weakly_connected_components)),
                   all_result_done(calcAllResultDone(operands_label_set, result_label_set)) {
 			switch (this->type) {
+				case Type::JoinSelection: {
+					[[fallthrough]];
+				}
 				case Type::LeftJoin: {
                     label_poss_in_result = raw_subscript.getLabelPossInResult();
 
@@ -503,7 +506,7 @@ namespace einsum::internal {
 				// common labels not empty && component labels > 0
 				// multiple join labels and at least one label that participates in join and left join
 				if(comp_labels.size() > 1 and !common_labels.empty()) {
-
+					return Type::JoinSelection;
 				}
 			}
 			// if the independent component contains only one operand do a left join

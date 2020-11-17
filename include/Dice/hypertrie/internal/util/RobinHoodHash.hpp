@@ -6,8 +6,12 @@
 #include <string>
 #include <string_view>
 #include <tuple>
+#include <set>
 #include <type_traits>
 #include <utility>
+#include <map>
+#include <unordered_map>
+#include <unordered_set>
 
 // all non-argument macros should use this facility. See
 // https://www.fluentcpp.com/2019/05/28/better-macros-better-flags/
@@ -121,22 +125,36 @@ namespace hypertrie::internal::robin_hood {
 		return hasher(value);
 	}
 
-	template<class... Ts>
-	concept all_std_size_t =
-			sizeof...(Ts) == 0 or// empty list
-			// non-empty list ↓
-			(std::is_same_v<std::decay_t<std::tuple_element_t<0, std::tuple<Ts...>>>, std::size_t> and                                // first one must be std::size_t
-					 std::conjunction_v<std::is_same<std::decay_t<std::tuple_element_t<0, std::tuple<Ts...>>>, std::decay_t<Ts>>...>);// all must be equal to first
+    /* not needed at the moment
+   template<class... Ts>
+   concept all_std_size_t =
+           sizeof...(Ts) == 0 or// empty list
+           // non-empty list ↓
+           (std::is_same_v<std::decay_t<std::tuple_element_t<0, std::tuple<Ts...>>>, std::size_t> and                                // first one must be std::size_t
+                    std::conjunction_v<std::is_same<std::decay_t<std::tuple_element_t<0, std::tuple<Ts...>>>, std::decay_t<Ts>>...>);// all must be equal to first
 
-	template<typename... size_type>
-	requires all_std_size_t<size_type...>
-			std::size_t rh_combine_hashes(size_type &&...hashes) { //perfect forwarding, not move semantics!
-		static constexpr uint64_t m = UINT64_C(0xc6a4a7935bd1e995);
-		std::size_t h{};
-		for (auto const &hash : {hashes...})
-			h = (h xor hash) * m;
-		return h;
-	}
+   template<typename... size_type>
+   requires all_std_size_t<size_type...>
+           std::size_t rh_combine_hashes(size_type &&...hashes) { //perfect forwarding, not move semantics!
+       static constexpr uint64_t m = UINT64_C(0xc6a4a7935bd1e995);
+       std::size_t h{};
+       for (auto const &hash : {hashes...})
+           h = (h xor hash) * m;
+       return h;
+   }
+ */
+
+	template<typename Container>
+	size_t rh_combine_container(Container const& container) {
+        static constexpr uint64_t m = UINT64_C(0xc6a4a7935bd1e995);
+        hash<typename Container::value_type> hasher;
+        std::size_t h{};
+        auto end = container.end();
+        for (auto it = container.begin(); it != end; ++it) {
+            h = (h xor hasher(*it)) * m;
+        }
+        return h;
+    }
 
 	template<typename... Ts>
 	std::size_t rh_combine(Ts &&...values) {
@@ -191,7 +209,8 @@ namespace hypertrie::internal::robin_hood {
 	};
 
 	// custom hashes
-
+	// declarations and definitions might need to be split. If there is a tuple of maps for example, this code might not compile
+    //check if fundamental type needed?
 	template<typename T, std::size_t N>
 	struct hash<std::array<T, N>> {
 	private:
@@ -257,6 +276,44 @@ namespace hypertrie::internal::robin_hood {
 	        return rh_combine(p.first, p.second);
 	    }
 	};
+
+	template <typename T>
+	struct hash<std::set<T>> {
+	    size_t operator()(std::set<T> const &s) const noexcept {
+	        return rh_combine_container(s);
+	    }
+	};
+
+	template <typename Key, typename Value>
+	struct hash<std::map<Key, Value>> {
+	    size_t operator()(std::map<Key, Value> const& m) const noexcept {
+	       return rh_combine_container(m);
+	    }
+	};
+
+	template <typename Key, typename Value>
+	struct hash <std::unordered_map<Key, Value>> {
+	    size_t operator()(std::unordered_map<Key, Value> const& m) const noexcept {
+	        hash<std::pair<Key, Value>> hasher;
+	        size_t h{};
+	        for (auto keyValuePair : m) {
+	           h ^= hasher(keyValuePair);
+	        }
+	        return h;
+	    }
+	};
+
+    template <typename T>
+    struct hash <std::unordered_set<T>> {
+        size_t operator()(std::unordered_set<T> const& s) const noexcept {
+            hash<T> hasher;
+            size_t h{};
+            for (auto value : s) {
+                h ^= hasher(value);
+            }
+            return h;
+        }
+    };
 
 
 }// namespace hypertrie::internal::robin_hood

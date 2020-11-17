@@ -130,7 +130,7 @@ namespace hypertrie::internal::robin_hood {
 
 	template<typename... size_type>
 	requires all_std_size_t<size_type...>
-			std::size_t rh_combine_hashes(size_type &&...hashes) {
+			std::size_t rh_combine_hashes(size_type &&...hashes) { //perfect forwarding, not move semantics!
 		static constexpr uint64_t m = UINT64_C(0xc6a4a7935bd1e995);
 		std::size_t h{};
 		for (auto const &hash : {hashes...})
@@ -248,6 +248,14 @@ namespace hypertrie::internal::robin_hood {
 		size_t operator()(TupleType const &tpl) const noexcept {
 			return tupleHash(tpl, std::make_index_sequence<sizeof...(TupleArgs)>());
 		}
+	};
+
+	//decay?
+	template <typename T, typename V>
+	struct hash<std::pair<T,V>> {
+	    size_t operator()(std::pair<T,V> const &p) const noexcept {
+	        return rh_combine(p.first, p.second);
+	    }
 	};
 
 

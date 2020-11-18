@@ -114,11 +114,29 @@ namespace hypertrie::internal::robin_hood {
         getHash(exampleMap);
     }
 
-    TEST_CASE("unordered set of strings compiles", "[RobinHoodHash]") {
-        std::unordered_set<std::string> exampleSet;
-        exampleSet.insert("cat");
-        exampleSet.insert("dog");
-        exampleSet.insert("horse");
+    TEST_CASE("unordered maps of string ->int are equal, if the entries are equal", "[RobinHoodHash]") {
+        std::vector<std::pair<std::string, int>> entries {{"cat",1}, {"horse", 5},{"dog", 100}};
+        std::unordered_map<std::string, int> exampleMap1 (entries.begin(), entries.end());
+        std::unordered_map<std::string, int> exampleMap2 (entries.rbegin(), entries.rend());
+        REQUIRE(getHash(exampleMap1) == getHash(exampleMap2));
+    }
+
+    TEST_CASE("unordered set of integers compiles", "[RobinHoodHash]") {
+        std::vector<int> entries {1, 2, 42, 512};
+        std::unordered_set<int> exampleSet(entries.begin(), entries.end());
         getHash(exampleSet);
+    }
+
+    TEST_CASE("unordered set of strings compiles", "[RobinHoodHash]") {
+        std::vector<std::string> entries {"cat", "dog", "horse"};
+        std::unordered_set<std::string> exampleSet (entries.begin(), entries.end());
+        getHash(exampleSet);
+    }
+
+    TEST_CASE("unordered sets of strings are equal if entries are equal", "[RobinHoodHash]") {
+        std::vector<std::string> entries {"cat", "dog", "horse"};
+        std::unordered_set<std::string> exampleSet1(entries.begin(), entries.end());
+        std::unordered_set<std::string> exampleSet2(entries.rbegin(), entries.rend());
+        REQUIRE(getHash(exampleSet1) == getHash(exampleSet2));
     }
 }

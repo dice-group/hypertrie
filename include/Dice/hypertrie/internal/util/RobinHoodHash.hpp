@@ -144,14 +144,41 @@ namespace hypertrie::internal::robin_hood {
    }
  */
 
-	template<typename Container>
-	size_t rh_combine_container(Container const& container) {
+    /** Calculates the Hash over an ordered container.
+     * An example would be a vector, a map, an array or a list.
+     * Needs a ForwardIterator in the Container-type, and an member type "value_type".
+     *
+     * @tparam Container The container type (vector, map, list, etc).
+     * @param container The container to calculate the hash value of.
+     * @return The combined hash of all Values inside of the container.
+     */
+    template<typename Container>
+    size_t rh_hash_ordered_container(Container const& container) {
         static constexpr uint64_t m = UINT64_C(0xc6a4a7935bd1e995);
         hash<typename Container::value_type> hasher;
         std::size_t h{};
-        auto end = container.end();
-        for (auto it = container.begin(); it != end; ++it) {
-            h = (h xor hasher(*it)) * m;
+        for (auto const &it : container) {
+            h = (h xor hasher(it)) * m;
+        }
+        return h;
+    }
+
+    /** Calculates the Hash over an unordered container.
+     * An example would be a unordered_map or an unordered_set.
+     * CAUTION: This function is not evaluated yet! It's performance it not tested.
+     * Also it is simply an xor on the data inside, because a specific layout of data cannot be assumed.
+     * Needs a ForwardIterator in the Container-type, and an member type "value_type".
+     *
+     * @tparam Container The container type (unordered_map/set etc).
+     * @param container The container to calculate the hash value of.
+     * @return The combined hash of all Values inside of the container.
+     */
+    template<typename Container>
+    size_t rh_hash_unordered_container(Container const& container) {
+        hash<typename Container::value_type> hasher;
+        std::size_t h{};
+        for (auto const &it : container) {
+            h = h xor hasher(it);
         }
         return h;
     }
@@ -210,45 +237,28 @@ namespace hypertrie::internal::robin_hood {
 
 	// custom hashes
 	// declarations and definitions might need to be split. If there is a tuple of maps for example, this code might not compile
-    //check if fundamental type needed?
 	template<typename T, std::size_t N>
 	struct hash<std::array<T, N>> {
-	private:
-		static size_t arrayHash(std::array<T, N> const &arr) {
-			static constexpr uint64_t m = UINT64_C(0xc6a4a7935bd1e995);
-			std::size_t h{};
-			for (const auto &item : arr)
-				h = (h xor rh_hash(item)) * m;
-			return h;
-		};
-
-	public:
 		size_t operator()(std::array<T, N> const &arr) const noexcept {
-			if constexpr (std::is_fundamental_v<T>)
-				return hash_bytes(arr.data(), sizeof(T) * N);
+			if constexpr (std::is_fundamental_v<T>) {
+                return hash_bytes(arr.data(), sizeof(T) * N);
+            }
 			else {
-				return arrayHash(arr);
+				return rh_hash_ordered_container(arr);
 			}
 		}
 	};
 
 	template<typename T>
 	struct hash<std::vector<T>> {
-	private:
-		static size_t vecHash(std::vector<T> const &vec) {
-			static constexpr uint64_t m = UINT64_C(0xc6a4a7935bd1e995);
-			std::size_t h{};
-			for (const auto &item : vec)
-				h = (h xor rh_hash(item)) * m;
-			return h;
-		};
-
-	public:
 		size_t operator()(std::vector<T> const &vec) const noexcept {
-			if constexpr (std::is_fundamental_v<T>)
-				return hash_bytes(vec.data(), sizeof(T) * vec.size());
+			if constexpr (std::is_fundamental_v<T>) {
+			    static_assert(!std::is_same_v<T, bool>,
+			            "vector of booleans has a special implementation which results into errors!");
+                return hash_bytes(vec.data(), sizeof(T) * vec.size());
+            }
 			else {
-				return vecHash(vec);
+				return rh_hash_ordered_container(vec);
 			}
 		}
 	};
@@ -280,38 +290,28 @@ namespace hypertrie::internal::robin_hood {
 	template <typename T>
 	struct hash<std::set<T>> {
 	    size_t operator()(std::set<T> const &s) const noexcept {
-	        return rh_combine_container(s);
+	        return rh_hash_ordered_container(s);
 	    }
 	};
 
 	template <typename Key, typename Value>
 	struct hash<std::map<Key, Value>> {
 	    size_t operator()(std::map<Key, Value> const& m) const noexcept {
-	       return rh_combine_container(m);
+	       return rh_hash_ordered_container(m);
 	    }
 	};
 
 	template <typename Key, typename Value>
 	struct hash <std::unordered_map<Key, Value>> {
 	    size_t operator()(std::unordered_map<Key, Value> const& m) const noexcept {
-	        hash<std::pair<Key, Value>> hasher;
-	        size_t h{};
-	        for (auto keyValuePair : m) {
-	           h ^= hasher(keyValuePair);
-	        }
-	        return h;
+            return rh_hash_unordered_container(m);
 	    }
 	};
 
     template <typename T>
     struct hash <std::unordered_set<T>> {
         size_t operator()(std::unordered_set<T> const& s) const noexcept {
-            hash<T> hasher;
-            size_t h{};
-            for (auto value : s) {
-                h ^= hasher(value);
-            }
-            return h;
+            return rh_hash_unordered_container(s);
         }
     };
 

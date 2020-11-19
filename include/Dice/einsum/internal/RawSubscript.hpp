@@ -85,7 +85,7 @@ namespace einsum::internal {
 		 */
 		RawSubscript(const OperandsSc &operands, const ResultSc &result) :
 				operands(operands), result(result),
-				hash(boost::hash_value(operands) + boost::hash_value(result)) {}
+				hash(hypertrie::internal::robin_hood::rh_combine(operands, result)) {}
 
 		/**
 		 * Constructs a RawSubscript.

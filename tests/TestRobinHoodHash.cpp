@@ -4,12 +4,13 @@
 #include <array>
 #include <vector>
 #include <tuple>
-#include <Dice/hypertrie/internal/util/RobinHoodHash.hpp>
-namespace hypertrie::internal::robin_hood {
+#include "Dice/hash/DiceHash.hpp"
+
+namespace dice::hash {
 
     template<typename T>
     size_t getHash(T const &parameter) {
-        hash<T> hasher;
+        DiceHash<T> hasher;
         return hasher(parameter);
     }
 
@@ -49,6 +50,10 @@ namespace hypertrie::internal::robin_hood {
         size_t p = getHash(std::pair<std::decay_t<T>, std::decay_t<V>>(first, second));
         size_t t = getHash(std::tuple<std::decay_t<T>, std::decay_t<V>>(first, second));
         return p == t;
+    }
+
+    TEST_CASE("Vectors and arrays of char generate the same hash", "[RobinHoodHash]") {
+        REQUIRE(test_vec_arr('0', '1', '2', '3', '4', '5', '6', '7', '8'));
     }
 
     TEST_CASE("Strings, vectors and arrays of char generate the same hash", "[RobinHoodHash]") {

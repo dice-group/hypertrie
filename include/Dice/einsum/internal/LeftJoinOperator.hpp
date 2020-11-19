@@ -236,22 +236,6 @@ namespace einsum::internal {
 			for (auto label_to_remove : labels_to_remove) {
                 sub_op_subscript = sub_op_subscript->removeLabel(label_to_remove);
             }
-			// compute the dependencies between the sub_operators (only for Cartesian)
-			if(sub_op_subscript->type == Subscript::Type::Cartesian) {
-				this->context->sub_operator_dependency_map[sub_op_subscript->hash()];
-				auto ops_sub_operator = sub_op_subscript->getSubOperatorOfOperands();
-				for(auto next_op_pos : next_operands_poss) {
-                    std::vector<std::size_t> dependent_operands_poss{};
-					auto operand_sub_op = ops_sub_operator[pos_in_sub_op[next_op_pos]];
-					for(auto dependent_operand_pos : this->subscript->getDependentOperands(next_op_pos)) {
-                        auto dependent_operand_sub_op = ops_sub_operator[pos_in_sub_op[dependent_operand_pos]];
-						if(operand_sub_op == dependent_operand_sub_op)
-							continue;
-						auto& sub_op_map = this->context->sub_operator_dependency_map[sub_op_subscript->hash()][operand_sub_op];
-						sub_op_map.insert(ops_sub_operator[pos_in_sub_op[dependent_operand_pos]]);
-					}
-				}
-			}
             sub_operator = Operator_t::construct(sub_op_subscript, this->context);
             sub_operator->load(std::move(next_operands), *this->entry);
 		}

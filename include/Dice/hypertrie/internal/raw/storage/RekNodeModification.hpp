@@ -41,7 +41,7 @@ namespace hypertrie::internal::raw {
 		using Modification_t = NodeModificationPlan<depth, tri>;
 
 		template<size_t depth>
-		using LevelModifications_t = ::robin_hood::unordered_node_set<Modification_t<depth>, absl::Hash<Modification_t<depth>>>;
+		using LevelModifications_t = ::robin_hood::unordered_node_set<Modification_t<depth>>;
 
 		using PlannedModifications = util::IntegralTemplatedTuple<LevelModifications_t, 1, update_depth>;
 

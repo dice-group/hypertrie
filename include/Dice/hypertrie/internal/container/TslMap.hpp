@@ -1,9 +1,10 @@
 #ifndef HYPERTRIE_TSLMAP_HPP
 #define HYPERTRIE_TSLMAP_HPP
 
-#include <absl/hash/hash.h>
 #include <fmt/format.h>
 #include <tsl/sparse_map.h>
+
+#include "Dice/hypertrie/internal/util/RobinHoodHash.hpp"
 
 
 namespace hypertrie::internal::container {
@@ -11,7 +12,7 @@ namespace hypertrie::internal::container {
 	template<typename Key, typename T>
 	using tsl_sparse_map = tsl::sparse_map<Key,
 										   T,
-										   absl::Hash<Key>,
+										   hypertrie::internal::robin_hood::hash<Key>,
 										   std::equal_to<Key>,
 										   std::allocator<std::pair<Key, T>>,
 										   tsl::sh::power_of_two_growth_policy<2>,

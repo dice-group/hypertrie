@@ -19,8 +19,8 @@ namespace hypertrie {
 
 	protected:
 		using collection_type = std::conditional_t<(tr::is_bool_valued),
-												   tsl::sparse_set<Key, absl::Hash<Key>>,
-												   tsl::sparse_map<Key, value_type, absl::Hash<Key>>>;
+												   tsl::sparse_set<Key, hypertrie::internal::robin_hood::hash<Key>>,
+												   tsl::sparse_map<Key, value_type, hypertrie::internal::robin_hood::hash<Key>>>;
 
 		Hypertrie<tr> *hypertrie;
 

@@ -12,7 +12,7 @@ namespace einsum::internal {
 
 		using CartesianOperator_t = CartesianOperator<value_type, tr>;
 
-		using SubResult = tsl::sparse_map<Key < key_part_type>, size_t, absl::Hash<Key < key_part_type> >>;
+		using SubResult = tsl::sparse_map<Key<key_part_type>, size_t, hypertrie::internal::robin_hood::hash<Key<key_part_type>>>;
 
 		class FullCartesianResult;
 

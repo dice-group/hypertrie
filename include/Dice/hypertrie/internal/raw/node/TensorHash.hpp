@@ -4,7 +4,6 @@
 #include <bitset>
 #include <compare>
 
-#include <absl/hash/hash.h>
 #include <fmt/ostream.h>
 
 #include "Dice/hypertrie/internal/util/PosType.hpp"
@@ -25,7 +24,6 @@ namespace hypertrie::internal::raw {
 	 *
 	 * Note: (a xor b xor b) = a (see also https://en.wikipedia.org/wiki/XOR_cipher )
 	 *
-	 * Note 2: This implementation relies on absl::Hash which initializes the hash seed randomly and thus does not provide stable hashes between program executions. To fix the seed, set a fixed seed here https://github.com/abseil/abseil-cpp/blob/4a851046a0102cd986a5714a1af8deef28a544c4/absl/hash/internal/hash.cc#L51 before compiling absl .
 	 */
 	class TensorHash {
 
@@ -270,4 +268,13 @@ namespace std {
 		}
 	};
 }// namespace std
+
+namespace hypertrie::internal::robin_hood {
+	template<>
+	struct hash<::hypertrie::internal::raw::TensorHash> {
+		size_t operator()(const ::hypertrie::internal::raw::TensorHash &hash) const noexcept {
+			return hash.hash();
+		}
+	};
+}// namespace hypertrie::internal::robin_hood
 #endif//HYPERTRIE_TENSORHASH_HPP

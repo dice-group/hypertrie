@@ -1,7 +1,6 @@
 #ifndef HYPERTRIE_TSLSET_HPP
 #define HYPERTRIE_TSLSET_HPP
 
-#include <absl/hash/hash.h>
 #include <fmt/format.h>
 #include <tsl/sparse_set.h>
 #include <vector>
@@ -11,7 +10,7 @@ namespace hypertrie::internal::container {
 	template<typename Key>
 	using tsl_sparse_set = tsl::sparse_set<
 			Key,
-			absl::Hash<Key>,
+			hypertrie::internal::robin_hood::hash<Key>,
 			std::equal_to<Key>,
 			std::allocator<Key>,
 			tsl::sh::power_of_two_growth_policy<2>,

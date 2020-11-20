@@ -23,12 +23,19 @@ namespace einsum::internal::util {
 			R label;
 		};
 
-		using BoostGraph = boost::adjacency_list<boost::vecS,
-												 boost::vecS,
-												 boost::directedS,
-												 boost::no_property,
-												 EdgeLabel>;
-        using Vertex = typename boost::graph_traits<BoostGraph>::vertex_descriptor;
+		using DirectedLabelledGraph = boost::adjacency_list<boost::vecS,
+															boost::vecS,
+															boost::directedS,
+															boost::no_property,
+															EdgeLabel>;
+
+        using DirectedUnLabelledGraph = boost::adjacency_list<boost::vecS,
+															  boost::vecS,
+															  boost::directedS,
+															  boost::no_property,
+															  boost::no_property>;
+
+		using Vertex = typename boost::graph_traits<DirectedLabelledGraph>::vertex_descriptor;
 		using StrongComponentID = uint16_t ;
 		using WeakComponentID = uint16_t ;
 
@@ -40,7 +47,9 @@ namespace einsum::internal::util {
         // stores for each vertex to which strong component it belongs
         std::vector<WeakComponentID> weak_components;
 
-		BoostGraph graph{};
+		DirectedLabelledGraph graph{};
+
+        DirectedUnLabelledGraph unlabelled_graph{};
 
     public:
 
@@ -58,6 +67,7 @@ namespace einsum::internal::util {
         DirectedGraph() = default;
 
 		[[maybe_unused]] Vertex addVertex() {
+			boost::add_vertex(unlabelled_graph);
 			return boost::add_vertex(graph);
 		}
 
@@ -65,7 +75,11 @@ namespace einsum::internal::util {
 			boost::add_edge(source, target, EdgeLabel{label}, graph);
 		}
 
-		std::vector<Vertex> getTargetVerticesOfVertex(Vertex v) {
+		void addEdge(Vertex source, Vertex target) {
+			boost::add_edge(source, target, unlabelled_graph);
+		}
+
+		std::vector<Vertex> getNeighborsLabelled(Vertex v) {
 			std::vector<Vertex> target_vertices{};
             auto out_edges_iterators = boost::out_edges(v, graph);
 			for(auto out_edge_iter = out_edges_iterators.first; out_edge_iter != out_edges_iterators.second; out_edge_iter++) {
@@ -75,6 +89,18 @@ namespace einsum::internal::util {
 				target_vertices.push_back(boost::target(*out_edge_iter, graph));
 			}
 			return target_vertices;
+		}
+
+		std::vector<Vertex> getNeighborsUnlabelled(Vertex v) {
+            std::vector<Vertex> target_vertices{};
+            auto out_edges_iterators = boost::out_edges(v, unlabelled_graph);
+            for(auto out_edge_iter = out_edges_iterators.first; out_edge_iter != out_edges_iterators.second; out_edge_iter++) {
+                auto target = boost::target(*out_edge_iter, unlabelled_graph);
+                if(target == v)
+                    continue;
+                target_vertices.push_back(boost::target(*out_edge_iter, unlabelled_graph));
+            }
+            return target_vertices;
 		}
 
 		std::vector<Vertex> getStrongComponentNeighbors(Vertex v) {

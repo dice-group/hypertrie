@@ -69,7 +69,7 @@ namespace hypertrie {
                 result_depths.reserve(max_op_count);
                 ops.reserve(max_op_count);
 				non_optional_poss = join.non_optional_poss;
-				std::vector<pos_type> last_non_optional_poss{};
+				std::vector<pos_type> ops_non_optional_poss{};
 
                 pos_type out_pos = 0;
                 for (const auto &[pos, join_poss, hypertrie] : iter::zip(iter::range(join.hypertries.size()), join.positions,
@@ -78,7 +78,7 @@ namespace hypertrie {
                         ops.emplace_back(HashDiagonal<tr>{hypertrie, join_poss});
 						// store the positions of the ops vector that can be reordered
 						if(std::find(non_optional_poss.begin(), non_optional_poss.end(), pos) != non_optional_poss.end())
-                            last_non_optional_poss.push_back(pos);
+							ops_non_optional_poss.push_back(ops.size() - 1);
                         auto result_depth = result_depths.emplace_back(hypertrie.depth() - size(join_poss));
                         if (result_depth) {
                             pos_in_out.push_back(out_pos);
@@ -95,7 +95,7 @@ namespace hypertrie {
                     }
                 }
 				// TODO: choose optimal operand
-				shortest_op_pos = findShortestOperand(last_non_optional_poss);
+				shortest_op_pos = findShortestOperand(ops_non_optional_poss);
                 left_operand = &ops[shortest_op_pos];
                 left_operand->begin();
                 next();
@@ -105,7 +105,7 @@ namespace hypertrie {
                 while(*left_operand) {
 					bool found = false;
 					if (result_depths[shortest_op_pos])
-						std::get<0>(value)[pos_in_out[shortest_op_pos]] = const_Hypertrie<tr>(left_operand->currentHypertrie());
+						std::get<0>(value)[join_ops_in_out[shortest_op_pos]] = const_Hypertrie<tr>(left_operand->currentHypertrie());
 					std::get<1>(value) = left_operand->currentKeyPart();
 					// iterate all right operands
 					for (typename std::vector<tr>::size_type i = 0; i < ops.size(); i++) {

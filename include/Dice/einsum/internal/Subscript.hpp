@@ -35,6 +35,8 @@ namespace einsum::internal {
 	using WeaklyConnectedComponent = std::set<Label>;
 	using WeaklyConnectedComponents = std::vector<WeaklyConnectedComponent>;
 
+	using SubOperatorPos = std::uint8_t;
+
 	using CartesianOperandPos = OperandPos;
 	using OriginalOperandPos = OperandPos;
 	using OriginalResultPos = OperandPos;
@@ -160,21 +162,19 @@ namespace einsum::internal {
 		mutable tsl::hopscotch_map<Label, LabelPos> label_poss_in_result{};
 		// Resolve
 		LabelPossInOperand operand2result_mapping_resolveType{};
-
 		// Join
 		tsl::hopscotch_map<Label, std::vector<OperandPos>> poss_of_operands_with_labels{};
-
 		// Cartesian
 		CartesianSubSubscripts cartesian_sub_subscripts;
-
+		// Cartesian
+        std::vector<std::vector<OperandPos>> sub_op_dependencies;
 		// Left Join
 		std::vector<Label> left_join_labels;
-
 		// Left Join
-		std::map<Label, std::vector<OperandPos>> non_optional_operands_of_label{};
-
+        tsl::hopscotch_map<Label, std::vector<OperandPos>> non_optional_operands_of_label{};
 		// Join
         tsl::hopscotch_set<Label> join_labels{};
+
 	public:
 		std::shared_ptr<Subscript> removeLabel(Label label, bool remove_nested = false) const {
 			auto iterator = sub_subscripts.find(label);
@@ -212,15 +212,11 @@ namespace einsum::internal {
 		}
 
 		auto getDependentOperands(OperandPos operand_position) {
-			return directed_dependency_graph.getTargetVerticesOfVertex(operand_position);
+			return directed_dependency_graph.getNeighborsLabelled(operand_position);
 		}
 
-		auto getJoinDependentOperands(OperandPos operand_position) {
-			return directed_dependency_graph.getStrongComponentNeighbors(operand_position);
-		}
-
-		auto getSubOperatorOfOperands() {
-			return directed_dependency_graph.getWeakComponentsOfVertices();
+        std::vector<std::vector<OperandPos>>& getSubOperatorDependencies() {
+			return sub_op_dependencies;
 		}
 
 		/**
@@ -321,7 +317,6 @@ namespace einsum::internal {
                     for (const auto[op_pos, labels] : iter::enumerate(raw_subscript.operands))
                         for (const Label label : labels)
 							poss_of_operands_with_labels[label].push_back(op_pos);
-					// TODO: general case. Left join label will not always be on the first operand
                     auto independent_strong_component = directed_dependency_graph.getIndependentStrongComponent();
 					// find the left join labels -> outgoing labels
 					// store the non-optional operands of each label
@@ -358,6 +353,23 @@ namespace einsum::internal {
 
 				case Type::Cartesian: {
 					cartesian_sub_subscripts = {*this};
+					// find dependencies between sub_operators
+					// store for each operand to which sub_operator it belongs
+					std::map<OperandPos, SubOperatorPos> operand_sub_op_map{};
+					for(auto sub_op_pos : iter::range(cartesian_sub_subscripts.getSubSubscripts().size())) {
+						for(auto orig_op_pos : cartesian_sub_subscripts.getOriginalOperandPoss(sub_op_pos)) {
+							operand_sub_op_map[orig_op_pos] = sub_op_pos;
+						}
+					}
+                    sub_op_dependencies.resize(cartesian_sub_subscripts.getSubSubscripts().size());
+					// use weak dependencies (unlabelled edges) between operands to find dependencies between sub_operators
+					for(auto operand_pos : iter::range(raw_subscript.operands.size())) {
+						auto source_sub_op = operand_sub_op_map[operand_pos];
+                        auto& dependent_sub_ops = sub_op_dependencies[source_sub_op];
+						for(auto weakly_dependent_operand : directed_dependency_graph.getNeighborsUnlabelled(operand_pos)) {
+							dependent_sub_ops.push_back(operand_sub_op_map[weakly_dependent_operand]);
+						}
+					}
 					break;
 				}
 				case Type::Resolve: {
@@ -526,11 +538,15 @@ namespace einsum::internal {
 			// for each label stores a map of nested level (depth) to operand
 			// for each nested level it stores the last seen operand
 			std::map<Label, std::map<uint8_t, std::size_t>> label_to_operand_map{};
+            // for each depth stores the last seen operand
+            std::map<uint8_t, std::size_t> last_operand_of_depth{};
             uint8_t depth{0};
             for(const auto &[operand_pos, operand_labels] : iter::enumerate(raw_subscript.original_operands)) {
 				operand_directed_dependency_graph.addVertex();
 				auto op_dependent_depth = depth;
-				for(auto &label : operand_labels) {
+				decltype(depth) operands_depth;
+                bool strong_dependency = false; // indicates whether the current operand participates in a strong dependency
+				for(const auto& [label_pos, label] : iter::enumerate(operand_labels)) {
 					if(label == '[') {
 						depth++;
 						continue;
@@ -539,6 +555,7 @@ namespace einsum::internal {
 						depth--;
 						continue;
 					}
+					operands_depth = depth; // TODO: find better solution
 					if(label_to_operand_map.contains(label)) {
 						// https://stackoverflow.com/questions/1660195/c-how-to-find-the-biggest-key-in-a-stdmap
                         std::size_t parent_op;
@@ -549,6 +566,7 @@ namespace einsum::internal {
 							parent_op = label_to_operand_map[label].rbegin()->second;
 							parent_op_depth = label_to_operand_map[label].rbegin()->first;
 						}
+						strong_dependency = true;
 						// add directed edge from the previous (parent) operand to the current one
                         operand_directed_dependency_graph.addEdge(label, parent_op, operand_pos);
 						// if the previous (parent) operand is in the same depth or in a deeper level add a reversed edge as well
@@ -556,13 +574,32 @@ namespace einsum::internal {
 						if(parent_op_depth >= depth)
                             operand_directed_dependency_graph.addEdge(label, operand_pos, parent_op);
 					}
-					// if the operand has no incoming edges, add an edge to self
+                    // if the current label has not been seen yet, add an edge to using the current label
 					// needed for cartesian join
 					else
                         operand_directed_dependency_graph.addEdge(label, operand_pos, operand_pos);
                     label_to_operand_map[label][depth] = operand_pos;
-
                 }
+				// find weak dependencies. for cartesian
+                if(!strong_dependency) {
+                    if(last_operand_of_depth.contains(op_dependent_depth)) {
+                        operand_directed_dependency_graph.addEdge(last_operand_of_depth[op_dependent_depth], operand_pos);
+                        if(op_dependent_depth == operands_depth)
+                            operand_directed_dependency_graph.addEdge(operand_pos, last_operand_of_depth[op_dependent_depth]);
+                    }
+                    else if(last_operand_of_depth.size()) {
+                        // get the last shallowest operand
+                        auto shallowest_depth = last_operand_of_depth.begin()->first;
+                        auto shallowest_op = last_operand_of_depth.begin()->second;
+						// don't check for equal depth
+						// equal depth is allowed only if the are in the same optional block
+                        if(shallowest_depth > operands_depth)
+                            operand_directed_dependency_graph.addEdge(operand_pos, shallowest_op);
+                        else if(shallowest_depth < operands_depth)
+                            operand_directed_dependency_graph.addEdge(shallowest_op, operand_pos);
+                    }
+                }
+				last_operand_of_depth[operands_depth] = operand_pos;
 			}
 			return operand_directed_dependency_graph;
 		}

@@ -32,9 +32,10 @@ namespace einsum::internal {
 		bool timed_out = false;
 
 		/**
-		 * Passes dependency information to subsequent operators
+		 * Stores the cartesian operators that are generated from join operators
+		 * Such cartesian operators can't return optional results
 		 */
-		 std::map<std::size_t, std::map<std::size_t, std::set<std::size_t>>> sub_operator_dependency_map{};
+		std::set<std::size_t> non_optional_cartesian{};
 
 		Context(TimePoint const &timeout = TimePoint::max()) : timeout(timeout) {}
 

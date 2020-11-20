@@ -187,6 +187,52 @@ namespace hypertrie::tests::leftjoin {
                     {8, default_key_part, default_key_part}
             };
         }
+        // a,[ab,bc],ad->abcd
+        SECTION("lj_dl_j", "join label after left join") {
+            operands.push_back(ht1);
+            operands.push_back(ht2);
+            operands.push_back(ht3);
+            operands.push_back(ht5);
+            std::vector<char> op1_labels{'a'};
+            std::vector<char> op2_labels{'[','a', 'b'};
+            std::vector<char> op3_labels{'b', 'c', ']'};
+            std::vector<char> op4_labels{'a', 'd'};
+            operands_labels.push_back(op1_labels);
+            operands_labels.push_back(op2_labels);
+            operands_labels.push_back(op3_labels);
+            operands_labels.push_back(op4_labels);
+            result_labels.push_back('a');
+            result_labels.push_back('b');
+            result_labels.push_back('c');
+            result_labels.push_back('d');
+            expected_results = {
+                    {1, 3, 5, 35},
+                    {5, default_key_part, default_key_part, 30},
+                    {8, default_key_part, default_key_part, 30}
+            };
+        }
+        // [ab,bc],a,ad->abcd
+        SECTION("nlo_j", "no left operand, join") {
+            operands.push_back(ht2);
+            operands.push_back(ht3);
+            operands.push_back(ht1);
+            operands.push_back(ht5);
+            std::vector<char> op1_labels{'a'};
+            std::vector<char> op2_labels{'[','a', 'b'};
+            std::vector<char> op3_labels{'b', 'c', ']'};
+            std::vector<char> op4_labels{'a', 'd'};
+            operands_labels.push_back(op2_labels);
+            operands_labels.push_back(op3_labels);
+            operands_labels.push_back(op1_labels);
+            operands_labels.push_back(op4_labels);
+            result_labels.push_back('a');
+            result_labels.push_back('b');
+            result_labels.push_back('c');
+            result_labels.push_back('d');
+            expected_results = {
+                    {1, 3, 5, 35}
+            };
+        }
         // a,[ab,bc],[ad]->abcd
         SECTION("mlj_jdl", "multiple left joins on the same label, join after left join") {
             operands.push_back(ht1);
@@ -332,17 +378,20 @@ namespace hypertrie::tests::leftjoin {
                     {2, 4, 6}
             };
         }
-        // a,[bc,[ad]]->abcd
+        // a,[b,bc,[ad]]->abcd
         SECTION("no_wd", "non well defined") {
+			operands.push_back(ht1);
 			operands.push_back(ht1);
             operands.push_back(ht4);
             operands.push_back(ht3);
             std::vector<char> op1_labels{'a'};
-            std::vector<char> op2_labels{'[', 'b', 'c'};
-            std::vector<char> op3_labels{'[', 'a', 'd', ']', ']'};
+			std::vector<char> op2_labels{'[', 'b'};
+            std::vector<char> op3_labels{'b', 'c'};
+            std::vector<char> op4_labels{'[', 'a', 'd', ']', ']'};
             operands_labels.push_back(op1_labels);
             operands_labels.push_back(op2_labels);
             operands_labels.push_back(op3_labels);
+            operands_labels.push_back(op4_labels);
             result_labels.push_back('a');
             result_labels.push_back('b');
             result_labels.push_back('c');
@@ -365,6 +414,77 @@ namespace hypertrie::tests::leftjoin {
                     {7, 6, 25, default_key_part},
                     {8, 6, 25, default_key_part}
             };
+        }
+        // a,[bc,cd]->abc
+        SECTION("c_opt", "cartesian with optional operand") {
+            operands.push_back(ht1);
+            operands.push_back(ht4);
+            operands.push_back(ht5);
+            std::vector<char> op1_labels{'a'};
+            std::vector<char> op2_labels{'[', 'b', 'c'};
+            std::vector<char> op3_labels{'c', 'd', ']'};
+            operands_labels.push_back(op1_labels);
+            operands_labels.push_back(op2_labels);
+            operands_labels.push_back(op3_labels);
+            result_labels.push_back('a');
+			result_labels.push_back('b');
+			result_labels.push_back('c');
+			result_labels.push_back('d');
+            expected_results = {
+                    {1, default_key_part, default_key_part, default_key_part},
+                    {2, default_key_part, default_key_part, default_key_part},
+                    {3, default_key_part, default_key_part, default_key_part},
+                    {4, default_key_part, default_key_part, default_key_part},
+                    {5, default_key_part, default_key_part, default_key_part},
+                    {6, default_key_part, default_key_part, default_key_part},
+                    {7, default_key_part, default_key_part, default_key_part},
+                    {8, default_key_part, default_key_part, default_key_part}
+            };
+		}
+        // [ab,bh],[cd],[eg,ef]->abcdef
+        SECTION("c_full_opt", "optional cartesian") {
+            operands.push_back(ht2);
+            operands.push_back(ht5);
+            operands.push_back(ht3);
+            operands.push_back(ht4);
+            operands.push_back(ht5);
+            std::vector<char> op1_labels{'[', 'a', 'b'};
+            std::vector<char> op2_labels{'b', 'h', ']'};
+            std::vector<char> op3_labels{'[', 'c', 'd', ']'};
+            std::vector<char> op4_labels{'[', 'e', 'g'};
+            std::vector<char> op5_labels{'e', 'f', ']'};
+            operands_labels.push_back(op1_labels);
+            operands_labels.push_back(op2_labels);
+            operands_labels.push_back(op3_labels);
+            operands_labels.push_back(op4_labels);
+            operands_labels.push_back(op5_labels);
+            result_labels.push_back('a');
+            result_labels.push_back('b');
+            result_labels.push_back('c');
+            result_labels.push_back('d');
+            result_labels.push_back('e');
+            result_labels.push_back('f');
+            decltype(expected_results) expected_results1 = {
+                    {default_key_part, default_key_part}
+            };
+            decltype(expected_results) expected_results2 = {
+                    {1, 8},
+                    {4, 6},
+                    {3, 5}
+            };
+            decltype(expected_results) expected_results3 = {
+                    {default_key_part, default_key_part}
+            };
+            for(auto& res1 : expected_results1) {
+                for(auto& res2 : expected_results2) {
+                    for(auto& res3 : expected_results3) {
+                        auto temp_res = res1;
+                        temp_res.insert(temp_res.end(), res2.begin(), res2.end());
+                        temp_res.insert(temp_res.end(), res3.begin(), res3.end());
+                        expected_results.push_back(temp_res);
+                    }
+                }
+            }
         }
         auto subscript = std::make_shared<Subscript>(operands_labels, result_labels);
         auto einsum = Einsum<size_t>(subscript, operands);

@@ -104,6 +104,9 @@ namespace einsum::internal {
 			// check if sub_operator was not yet initialized or if the next subscript is different
 			if (not sub_operator or sub_operator->hash() != next_subscript->hash()) {
 				sub_operator = Operator_t::construct(next_subscript, this->context);
+				if(next_subscript->type == Subscript::Type::Cartesian) {
+					this->context->non_optional_cartesian.insert(sub_operator->hash());
+				}
 			}
 
 			// initialize the join

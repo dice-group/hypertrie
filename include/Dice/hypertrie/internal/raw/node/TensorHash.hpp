@@ -284,12 +284,7 @@ namespace hypertrie::internal::robin_hood {
 	};
 }// namespace hypertrie::internal::robin_hood
 */
-namespace dice::hash {
-	template<>
-	struct DiceHash<::hypertrie::internal::raw::TensorHash> {
-		size_t operator()(const ::hypertrie::internal::raw::TensorHash &hash) const noexcept {
-			return hash.hash();
-		}
-	};
-}// namespace dice::hash
+template<> std::size_t dice::hash::dice_hash(::hypertrie::internal::raw::TensorHash const &hash) noexcept {
+        return hash.hash();
+}
 #endif//HYPERTRIE_TENSORHASH_HPP

@@ -35,7 +35,8 @@ namespace einsum::internal {
 	template<typename T, typename =std::enable_if_t<(not std::is_same_v<std::decay_t<T>, bool>)>>
 	struct KeyHash {
 		std::size_t operator()(const ::einsum::internal::Key<T> &k) const {
-			return ::hypertrie::internal::robin_hood::rh_hash(k);
+			//return ::hypertrie::internal::robin_hood::rh_hash(k);
+            return dice::hash::dice_hash(k);
 		}
 	};
 

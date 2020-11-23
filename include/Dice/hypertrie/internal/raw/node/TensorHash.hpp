@@ -8,7 +8,11 @@
 
 #include "Dice/hypertrie/internal/util/PosType.hpp"
 #include "Dice/hypertrie/internal/util/RawKey.hpp"
-#include "Dice/hypertrie/internal/util/RobinHoodHash.hpp"
+
+//changed from
+//#include "Dice/hypertrie/internal/util/RobinHoodHash.hpp"
+//to
+#include "Dice/hash/DiceHash.hpp"
 
 namespace hypertrie::internal::raw {
 
@@ -31,7 +35,8 @@ namespace hypertrie::internal::raw {
 		 * Hasher for an entry.
 		 */
 		template<size_t depth, typename key_part_type, typename V>
-		using EntryHash = robin_hood::hash<std::tuple<RawKey<depth, key_part_type>, V>>;
+		//using EntryHash = robin_hood::hash<std::tuple<RawKey<depth, key_part_type>, V>>;
+        using EntryHash = dice::hash::DiceHash<std::tuple<RawKey<depth, key_part_type>, V>>;
 
 		/**
 		 * Bit representation of the hash.
@@ -269,6 +274,7 @@ namespace std {
 	};
 }// namespace std
 
+/* old
 namespace hypertrie::internal::robin_hood {
 	template<>
 	struct hash<::hypertrie::internal::raw::TensorHash> {
@@ -277,4 +283,13 @@ namespace hypertrie::internal::robin_hood {
 		}
 	};
 }// namespace hypertrie::internal::robin_hood
+*/
+namespace dice::hash {
+	template<>
+	struct DiceHash<::hypertrie::internal::raw::TensorHash> {
+		size_t operator()(const ::hypertrie::internal::raw::TensorHash &hash) const noexcept {
+			return hash.hash();
+		}
+	};
+}// namespace dice::hash
 #endif//HYPERTRIE_TENSORHASH_HPP

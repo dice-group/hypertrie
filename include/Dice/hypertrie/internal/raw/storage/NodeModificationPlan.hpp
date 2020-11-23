@@ -4,7 +4,11 @@
 #include "Dice/hypertrie/internal/raw/Hypertrie_internal_traits.hpp"
 #include "Dice/hypertrie/internal/raw/node/TensorHash.hpp"
 #include "Dice/hypertrie/internal/raw/storage/Entry.hpp"
-#include "Dice/hypertrie/internal/util/RobinHoodHash.hpp"
+
+//from
+//#include "Dice/hypertrie/internal/util/RobinHoodHash.hpp"
+//to
+#include "Dice/hash/DiceHash.hpp"
 
 
 namespace hypertrie::internal::raw {
@@ -160,7 +164,7 @@ namespace hypertrie::internal::raw {
 template<size_t depth, hypertrie::internal::raw::HypertrieInternalTrait tri>
 struct std::hash<hypertrie::internal::raw::NodeModificationPlan<depth, tri>> {
 	size_t operator()(const hypertrie::internal::raw::NodeModificationPlan<depth, tri> &update) const noexcept {
-		return hypertrie::internal::robin_hood::rh_combine(update.hashBefore(), update.hashAfter());
+		return dice::hash::dice_hash(std::make_tuple(update.hashBefore(), update.hashAfter()));
 	}
 };
 #endif//HYPERTRIE_NODEMODIFICATIONPLAN_HPP

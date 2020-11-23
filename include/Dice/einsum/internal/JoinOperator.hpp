@@ -93,7 +93,11 @@ namespace einsum::internal {
 			this->entry = &entry;
 			ended_ = false;
 			Label last_label = label;
-			label = CardinalityEstimation_t::getMinCardLabel(operands, this->subscript, this->context);
+            // check if a label for this operator has already been chosen by the JoinSelectionOperator
+            if(this->context->sub_operator_label.contains(hash(this)))
+                label = this->context->sub_operator_label[hash(this)];
+            else
+			    label = CardinalityEstimation_t::getMinCardLabel(operands, this->subscript, this->context);
 			if (label != last_label) {
 				label_poss_in_ops = this->subscript->getLabelPossInOperands(label);
 				is_result_label = this->subscript->isResultLabel(label);

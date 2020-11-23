@@ -169,11 +169,9 @@ namespace einsum::internal {
 		// Cartesian
         std::vector<std::vector<OperandPos>> sub_op_dependencies;
 		// Left Join
-		std::vector<Label> left_join_labels;
+        tsl::hopscotch_set<Label> left_join_labels;
 		// Left Join
         tsl::hopscotch_map<Label, std::vector<OperandPos>> non_optional_operands_of_label{};
-		// Join
-        tsl::hopscotch_set<Label> join_labels{};
 
 	public:
 		std::shared_ptr<Subscript> removeLabel(Label label, bool remove_nested = false) const {
@@ -321,7 +319,7 @@ namespace einsum::internal {
 					// find the left join labels -> outgoing labels
 					// store the non-optional operands of each label
 					for(const auto& out_label : independent_strong_component.outgoing_labels) {
-						left_join_labels.push_back(out_label);
+						left_join_labels.insert(out_label);
 						for(const auto& [op, op_out_labels] : independent_strong_component.vertices_out_edges_labels) {
 							if(op_out_labels.find(out_label) != op_out_labels.end()) {
 								auto& non_opt_ops_of_label = non_optional_operands_of_label[out_label];
@@ -329,7 +327,9 @@ namespace einsum::internal {
 							}
 						}
 					}
-					break;
+					if(this->type != Type::JoinSelection)
+					    break;
+					[[fallthrough]]; // in case of JoinSelection visit Join as well
 				}
 				case Type::Join: {
 					label_poss_in_result = raw_subscript.getLabelPossInResult();
@@ -437,11 +437,7 @@ namespace einsum::internal {
 			return {std::move(operands_sc), std::move(result_sc)};
 		}
 
-        const tsl::hopscotch_set<Label>& getJoinLabelsSet() {
-			return join_labels;
-		}
-
-		const std::vector<Label>& getLeftJoinLabels() const {
+		const tsl::hopscotch_set<Label>& getLeftJoinLabels() const {
 			return left_join_labels;
 		}
 
@@ -510,9 +506,6 @@ namespace einsum::internal {
 									  std::inserter(common_labels, common_labels.end()));
 				// empty common labels -> there is not a label that participates in join and left join -> join
 				if(common_labels.empty()) {
-                    // store the labels of the edges inside the independent component -> join labels
-					join_labels.insert(independent_strong_component.component_labels.begin(),
-									   independent_strong_component.component_labels.end());
 					return Type::Join;
 				}
 				// common labels not empty && component labels > 0

@@ -25,7 +25,9 @@ namespace einsum::internal {
     public:
 
         JoinSelectionOperator(const std::shared_ptr<Subscript> &subscript, const std::shared_ptr<Context> &context)
-                : Operator_t(subscript->type, subscript, context, this) {}
+                : Operator_t(subscript->type, subscript, context, this) {
+			ended_ = true;
+		}
 
         static bool ended(const void *self_raw) {
             auto &self = *static_cast<const JoinSelectionOperator *>(self_raw);
@@ -42,11 +44,11 @@ namespace einsum::internal {
 
         static void next(void *self_raw) {
 			JoinSelectionOperator &self = *static_cast<JoinSelectionOperator *>(self_raw);
+            self.sub_operator->next();
 			if(self.sub_operator->ended()) {
 				self.ended_ = true;
 				return;
 			}
-			self.sub_operator->next();
 		}
 
 	private:
@@ -59,8 +61,14 @@ namespace einsum::internal {
 			// use CardinalityEstimation to select the best label
             label = CardinalityEstimation_t::getMinCardLabel(operands, this->subscript, this->context);
 			// store the label in the context
-			this->context->sub_operator_label[sub_operator->hash()] = label;
+			if(this->subscript->getLeftJoinLabels().find(label) == this->subscript->getLeftJoinLabels().end())
+				next_subscript->type = Subscript::Type::Join;
+			else
+                next_subscript->type = Subscript::Type::LeftJoin;
+			this->sub_operator = Operator_t::construct(next_subscript, this->context);
+            this->context->sub_operator_label[sub_operator->hash()] = label;
 			sub_operator->load(operands, *this->entry);
+			ended_ = sub_operator->ended();
 		}
 
 	};

@@ -343,12 +343,12 @@ namespace hypertrie::tests::leftjoin {
 		// save the keys of the summation in a vector
         std::vector<std::vector<default_bool_Hypertrie_t::key_part_type>> actual_results{};
         for(auto entry : einsum) {
-//			for(auto key_part : entry.key)
-//				fmt::print("{} ", key_part);
-//			std::cout << std::endl;
+			for(auto key_part : entry.key)
+				fmt::print("{} ", key_part);
+			std::cout << std::endl;
 			actual_results.push_back(entry.key);
 		}
-//		std::cout << "---" << std::endl;
+		std::cout << "---" << std::endl;
 		// the subscript will be printed in case of failure
         CAPTURE(subscript->to_string());
 		// check first that the size of the results is equal to the size of the expected results

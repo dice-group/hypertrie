@@ -486,16 +486,118 @@ namespace hypertrie::tests::leftjoin {
                 }
             }
         }
+        // a,ab,bc,[ad]->abcd
+        SECTION("mjdl_lj_jl", "multiple joins on different labels and left join on join label") {
+            operands.push_back(ht1);
+            operands.push_back(ht2);
+            operands.push_back(ht3);
+			operands.push_back(ht5);
+            std::vector<char> op1_labels{'a'};
+            std::vector<char> op2_labels{'a', 'b'};
+            std::vector<char> op3_labels{'b', 'c'};
+            std::vector<char> op4_labels{'[', 'a', 'd', ']'};
+            operands_labels.push_back(op1_labels);
+            operands_labels.push_back(op2_labels);
+            operands_labels.push_back(op3_labels);
+            operands_labels.push_back(op4_labels);
+            result_labels.push_back('a');
+            result_labels.push_back('b');
+            result_labels.push_back('c');
+            result_labels.push_back('d');
+            expected_results = {
+                    {1, 3, 5, 35},
+                    {2, 4, 6, default_key_part}
+            };
+        }
+        // a,ab,bc,[ad],[be]->abcde
+        SECTION("mjdl_mlj_jl", "multiple joins on different labels and left join on join labels") {
+            operands.push_back(ht1);
+            operands.push_back(ht2);
+            operands.push_back(ht3);
+            operands.push_back(ht5);
+			operands.push_back(ht4);
+            std::vector<char> op1_labels{'a'};
+            std::vector<char> op2_labels{'a', 'b'};
+            std::vector<char> op3_labels{'b', 'c'};
+            std::vector<char> op4_labels{'[', 'a', 'd', ']'};
+            std::vector<char> op5_labels{'[', 'b', 'e', ']'};
+            operands_labels.push_back(op1_labels);
+            operands_labels.push_back(op2_labels);
+            operands_labels.push_back(op3_labels);
+            operands_labels.push_back(op4_labels);
+            operands_labels.push_back(op5_labels);
+            result_labels.push_back('a');
+            result_labels.push_back('b');
+            result_labels.push_back('c');
+            result_labels.push_back('d');
+            result_labels.push_back('e');
+            expected_results = {
+                    {1, 3, 5, 35, default_key_part},
+                    {2, 4, 6, default_key_part, 25}
+            };
+        }
+        // a,ab,bc,[ad],be->abcde
+        SECTION("mjdl_mlj_jl2", "multiple joins on different labels and left join on join labels") {
+            operands.push_back(ht1);
+            operands.push_back(ht2);
+            operands.push_back(ht3);
+            operands.push_back(ht5);
+            operands.push_back(ht4);
+            std::vector<char> op1_labels{'a'};
+            std::vector<char> op2_labels{'a', 'b'};
+            std::vector<char> op3_labels{'b', 'c'};
+            std::vector<char> op4_labels{'[', 'a', 'd', ']'};
+            std::vector<char> op5_labels{'b', 'e'};
+            operands_labels.push_back(op1_labels);
+            operands_labels.push_back(op2_labels);
+            operands_labels.push_back(op3_labels);
+            operands_labels.push_back(op4_labels);
+            operands_labels.push_back(op5_labels);
+            result_labels.push_back('a');
+            result_labels.push_back('b');
+            result_labels.push_back('c');
+            result_labels.push_back('d');
+            result_labels.push_back('e');
+            expected_results = {
+                    {2, 4, 6, default_key_part, 25}
+            };
+        }
+        // a,ab,bc,ce,[bd]->abcde
+        SECTION("mjdl_mlj_jl3", "multiple joins on different labels and left join on join labels") {
+            operands.push_back(ht1);
+            operands.push_back(ht2);
+            operands.push_back(ht3);
+            operands.push_back(ht5);
+            operands.push_back(ht4);
+            std::vector<char> op1_labels{'a'};
+            std::vector<char> op2_labels{'a', 'b'};
+            std::vector<char> op3_labels{'b', 'c'};
+            std::vector<char> op4_labels{'c', 'e'};
+            std::vector<char> op5_labels{'[', 'b', 'd', ']'};
+            operands_labels.push_back(op1_labels);
+            operands_labels.push_back(op2_labels);
+            operands_labels.push_back(op3_labels);
+            operands_labels.push_back(op4_labels);
+            operands_labels.push_back(op5_labels);
+            result_labels.push_back('a');
+            result_labels.push_back('b');
+            result_labels.push_back('c');
+            result_labels.push_back('d');
+            result_labels.push_back('e');
+            expected_results = {
+                    {1, 3, 5, default_key_part, 30}
+            };
+        }
         auto subscript = std::make_shared<Subscript>(operands_labels, result_labels);
         auto einsum = Einsum<size_t>(subscript, operands);
         std::vector<std::vector<default_bool_Hypertrie_t::key_part_type>> actual_results{};
         for(auto entry : einsum) {
-//            for(auto key_part : entry.key)
-//                std::cout << key_part << " ";
-//            std::cout << std::endl;
+            for(auto key_part : entry.key)
+                std::cout << key_part << " ";
+            std::cout << std::endl;
             actual_results.push_back(entry.key);
         }
-//        std::cout << "---" << std::endl;
+        std::cout << "---" << std::endl;
         // the subscript will be printed in case of failure
         CAPTURE(subscript->to_string());
         // check first that the size of the results is equal to the size of the expected results

@@ -22,7 +22,7 @@ namespace einsum::internal {
 		                             const std::shared_ptr<Subscript> &sc,
 		                             [[maybe_unused]] std::shared_ptr<Context> context) {
 			// select the best label from the available join labels
-			const tsl::hopscotch_set <Label> &operandsLabelSet = sc->getJoinLabelsSet();
+			const tsl::hopscotch_set <Label> &operandsLabelSet = sc->getOperandsLabelSet();
 			const tsl::hopscotch_set <Label> &lonely_non_result_labels = sc->getLonelyNonResultLabelSet();
 			if (operandsLabelSet.size() == 1) {
 				return *operandsLabelSet.begin();
@@ -55,7 +55,12 @@ namespace einsum::internal {
 		static double calcCard(const std::vector<const_Hypertrie<tr>> &operands, const Label label,
 		                       const std::shared_ptr<Subscript> &sc) {
 			// get operands that have the label
-			const std::vector<LabelPos> &op_poss = sc->getPossOfOperandsWithLabel(label);
+			// check if the label participates in a left-join -> check only non-optional operands
+			std::vector<LabelPos> op_poss;
+			if(sc->getLeftJoinLabels().find(label) == sc->getLeftJoinLabels().end())
+			    op_poss = sc->getPossOfOperandsWithLabel(label);
+			else
+				op_poss = sc->getNonOptionalOperands(label);
 			std::vector<double> op_dim_cardinalities(op_poss.size(), 1.0);
 			auto label_count = 0;
 			auto min_dim_card = std::numeric_limits<size_t>::max();
@@ -73,7 +78,7 @@ namespace einsum::internal {
 					sizes.insert(op_dim_card);
 
 				label_count += op_dim_cards.size();
-				// update minimal dimenension cardinality
+				// update minimal dimension cardinality
 				if (min_op_dim_card < min_dim_card)
 					min_dim_card = min_op_dim_card;
 

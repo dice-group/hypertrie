@@ -7,7 +7,6 @@
 #include <string_view>
 #include <tuple>
 #include <set>
-#include <type_traits>
 #include <utility>
 #include <map>
 #include <unordered_map>
@@ -99,13 +98,6 @@ namespace dice::hash {
         return static_cast<size_t>(h);
     }
 
-    /** Add docu!
-     *
-     * @tparam T
-     * @param value
-     * @return
-     */
-    template<typename T> std::size_t rh_hash(T const &value);
 
     /** Calculates the Hash over an ordered container.
      * An example would be a vector, a map, an array or a list.
@@ -230,14 +222,7 @@ namespace dice::hash {
         return h;
     }
 
-    /** Calculates the Hash over an ordered container.
-     * An example would be a vector, a map, an array or a list.
-     * Needs a ForwardIterator in the Container-type, and an member type "value_type".
-     *
-     * @tparam Container The container type (vector, map, list, etc).
-     * @param container The container to calculate the hash value of.
-     * @return The combined hash of all Values inside of the container.
-     */
+
     template<typename Container>
     size_t rh_hash_ordered_container(Container const& container) {
         static constexpr uint64_t m = UINT64_C(0xc6a4a7935bd1e995);
@@ -248,16 +233,6 @@ namespace dice::hash {
         return h;
     }
 
-    /** Calculates the Hash over an unordered container.
-     * An example would be a unordered_map or an unordered_set.
-     * CAUTION: This function is not evaluated yet! It's performance it not tested.
-     * Also it is simply an xor on the data inside, because a specific layout of data cannot be assumed.
-     * Needs a ForwardIterator in the Container-type, and an member type "value_type".
-     *
-     * @tparam Container The container type (unordered_map/set etc).
-     * @param container The container to calculate the hash value of.
-     * @return The combined hash of all Values inside of the container.
-     */
     template<typename Container>
     size_t rh_hash_unordered_container(Container const& container) {
         std::size_t h{};
@@ -267,6 +242,18 @@ namespace dice::hash {
         return h;
     }
 
+    /** Override für std::hash. Muss besser gemacht werden, ich weiß.
+     *
+     */
+    template <typename T>
+    requires T::activate_stdhash::value
+    struct Test {
+        size_t operator()(T const &t) const noexcept {
+            return dice_hash(t);
+        }
+    };
+
+
     /** Wrapper
      *
      * @tparam T
@@ -275,6 +262,20 @@ namespace dice::hash {
     struct DiceHash {
         std::size_t operator()(T const &t) const noexcept {
             return dice_hash(t);
+        }
+    };
+
+    template <typename T>
+    requires T::activate_stdhash::value
+    struct enableDice {
+    };
+}
+
+namespace std {
+    template <typename T>
+    struct hash<dice::hash::enableDice<T>> {
+        std::size_t operator()(T const &t) const noexcept {
+            return dice::hash::dice_hash(t);
         }
     };
 }

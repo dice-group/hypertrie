@@ -98,6 +98,16 @@ namespace dice::hash {
         return static_cast<size_t>(h);
     }
 
+    /** Combines two hashes to a new hash.
+     * It is used in the (un-)ordered container functions. However this __will__ be replaced in the future.
+     * @param a First hash.
+     * @param b Second hash.
+     * @return Combination of a and b.
+     */
+    inline std::size_t rh_combine_hashes(std::size_t a, std::size_t b) {
+        return a xor b;
+    }
+
 
     /** Calculates the Hash over an ordered container.
      * An example would be a vector, a map, an array or a list.
@@ -218,7 +228,7 @@ namespace dice::hash {
         static constexpr uint64_t m = UINT64_C(0xc6a4a7935bd1e995);
         std::size_t h{};
         for (auto const &hash : {dice_hash(std::forward<Ts>(values))...})
-            h = (h xor hash) * m;
+            h = rh_combine_hashes(h, hash) * m;
         return h;
     }
 
@@ -228,7 +238,7 @@ namespace dice::hash {
         static constexpr uint64_t m = UINT64_C(0xc6a4a7935bd1e995);
         std::size_t h{};
         for (auto const &it : container) {
-            h = (h xor dice_hash(it)) * m;
+            h = rh_combine_hashes(h, dice_hash(it)) * m;
         }
         return h;
     }
@@ -237,7 +247,7 @@ namespace dice::hash {
     size_t rh_hash_unordered_container(Container const& container) {
         std::size_t h{};
         for (auto const &it : container) {
-            h = h xor dice_hash(it);
+            h = rh_combine_hashes(h,dice_hash(it));
         }
         return h;
     }

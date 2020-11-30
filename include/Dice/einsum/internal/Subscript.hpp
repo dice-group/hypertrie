@@ -174,19 +174,14 @@ namespace einsum::internal {
         tsl::hopscotch_map<Label, std::vector<OperandPos>> non_optional_operands_of_label{};
 
 	public:
-		std::shared_ptr<Subscript> removeLabel(Label label, bool remove_nested = false) const {
+		std::shared_ptr<Subscript> removeLabel(Label label) const {
 			auto iterator = sub_subscripts.find(label);
 			if (iterator != sub_subscripts.end())
 				return iterator->second;
 			else
-				if(!remove_nested)
-                    return sub_subscripts.insert(
-                                    {label, std::make_shared<Subscript>(raw_subscript.removeLabel(label), this->type)})
-                            .first->second;
-			    else
-                    return sub_subscripts.insert(
-                                    {label, std::make_shared<Subscript>(raw_subscript.removeLabelNested(label), this->type)})
-                            .first->second;
+                return sub_subscripts.insert(
+                                {label, std::make_shared<Subscript>(raw_subscript.removeLabel(label), this->type)})
+                        .first->second;
 		}
 
 		const tsl::hopscotch_set<Label> &getLonelyNonResultLabelSet() const {
@@ -210,12 +205,16 @@ namespace einsum::internal {
 		}
 
 		auto getDependentOperands(OperandPos operand_position) {
-			return directed_dependency_graph.getNeighborsLabelled(operand_position);
+			return directed_dependency_graph.transitivelyGetNeighborsLabelled(operand_position);
 		}
 
         std::vector<std::vector<OperandPos>>& getSubOperatorDependencies() {
 			return sub_op_dependencies;
 		}
+
+        auto getSubOperatorOfOperands() {
+            return directed_dependency_graph.getWeakComponentsOfVertices();
+        }
 
 		/**
 		 * for Join
@@ -537,7 +536,7 @@ namespace einsum::internal {
             for(const auto &[operand_pos, operand_labels] : iter::enumerate(raw_subscript.original_operands)) {
 				operand_directed_dependency_graph.addVertex();
 				auto op_dependent_depth = depth;
-				decltype(depth) operands_depth;
+				uint8_t operands_depth;
                 bool strong_dependency = false; // indicates whether the current operand participates in a strong dependency
 				for(const auto& [label_pos, label] : iter::enumerate(operand_labels)) {
 					if(label == '[') {

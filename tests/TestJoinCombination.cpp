@@ -217,13 +217,13 @@ namespace hypertrie::tests::leftjoin {
             operands.push_back(ht3);
             operands.push_back(ht1);
             operands.push_back(ht5);
-            std::vector<char> op1_labels{'a'};
-            std::vector<char> op2_labels{'[','a', 'b'};
-            std::vector<char> op3_labels{'b', 'c', ']'};
+            std::vector<char> op1_labels{'[','a', 'b'};
+            std::vector<char> op2_labels{'b', 'c', ']'};
+            std::vector<char> op3_labels{'a'};
             std::vector<char> op4_labels{'a', 'd'};
+            operands_labels.push_back(op1_labels);
             operands_labels.push_back(op2_labels);
             operands_labels.push_back(op3_labels);
-            operands_labels.push_back(op1_labels);
             operands_labels.push_back(op4_labels);
             result_labels.push_back('a');
             result_labels.push_back('b');
@@ -231,6 +231,29 @@ namespace hypertrie::tests::leftjoin {
             result_labels.push_back('d');
             expected_results = {
                     {1, 3, 5, 35}
+            };
+        }
+        // [ab,bc],a,[ad]->abcd
+        SECTION("nlo_lj", "no left operand, left join") {
+            operands.push_back(ht2);
+            operands.push_back(ht3);
+            operands.push_back(ht1);
+            operands.push_back(ht5);
+            std::vector<char> op1_labels{'[','a', 'b'};
+            std::vector<char> op2_labels{'b', 'c', ']'};
+            std::vector<char> op3_labels{'a'};
+            std::vector<char> op4_labels{'[', 'a', 'd', ']'};
+            operands_labels.push_back(op1_labels);
+            operands_labels.push_back(op2_labels);
+            operands_labels.push_back(op3_labels);
+            operands_labels.push_back(op4_labels);
+            result_labels.push_back('a');
+            result_labels.push_back('b');
+            result_labels.push_back('c');
+            result_labels.push_back('d');
+            expected_results = {
+                    {1, 3, 5, 35},
+                    {2, 4, 6, default_key_part}
             };
         }
         // a,[ab,bc],[ad]->abcd

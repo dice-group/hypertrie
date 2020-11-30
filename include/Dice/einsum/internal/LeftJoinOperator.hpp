@@ -156,40 +156,54 @@ namespace einsum::internal {
 			std::vector<const_Hypertrie<tr>> next_operands{};
             // the positions of the operands, which will be passed to the next operator, in the current operator
             std::vector<std::size_t> next_operands_poss{};
+            // used to find dependencies between sub_operators
+            std::vector<hypertrie::pos_type> pos_in_sub_op(pos_in_out.size(), std::numeric_limits<hypertrie::pos_type>::max());
 			// stores the positions of the operands that will be removed
-            std::set<std::size_t> to_be_removed{};
-            // stores the positions of the operands that have already been visited
-			std::set<std::size_t> visited{};
-			std::deque<std::size_t> to_check{};
-			for(auto op_pos : iter::range(pos_in_out.size()))
-				to_check.push_back(op_pos);
+            std::set<std::size_t> operands_to_remove{};
 			// iterate over all operands
-			for(auto op_pos : to_check) {
+            for(auto op_pos : iter::range(pos_in_out.size())) {
 				// if an operand does not yield a result it should be removed along with its dependent operands
-				if(visited.find(op_pos) != visited.end()
-                    or (joined[op_pos] and to_be_removed.find(op_pos) == to_be_removed.end()))
+				if(joined[op_pos])
                     continue;
-				visited.insert(op_pos);
-                to_be_removed.insert(op_pos);
+                operands_to_remove.insert(op_pos);
                 labels_to_remove.insert(original_operands_labels[pos_in_out[op_pos]].begin(),
                                         original_operands_labels[pos_in_out[op_pos]].end());
 				for(auto op_dependent_pos : this->subscript->getDependentOperands(op_pos)) {
-                    to_be_removed.insert(op_dependent_pos);
-					to_check.push_back(op_dependent_pos);
+                    operands_to_remove.insert(op_dependent_pos);
                     labels_to_remove.insert(original_operands_labels[pos_in_out[op_dependent_pos]].begin(),
                                             original_operands_labels[pos_in_out[op_dependent_pos]].end());
 				}
 			}
 			// populate next_operands
+			uint8_t pos = 0;
 			for(auto op_pos : iter::range(pos_in_out.size())) {
-				if(to_be_removed.find(op_pos) == to_be_removed.end()
+				if(operands_to_remove.find(op_pos) == operands_to_remove.end()
 					and pos_in_out[op_pos] < std::numeric_limits<hypertrie::pos_type>::max()) {
 						next_operands.push_back((*join_returned_operands)[pos_in_out[op_pos]].value());
+						pos_in_sub_op[op_pos] = pos++;
 			    }
 			}
             auto sub_op_subscript = next_subscript;
 			for (auto label_to_remove : labels_to_remove) {
                 sub_op_subscript = sub_op_subscript->removeLabel(label_to_remove);
+            }
+            // compute the dependencies between the sub_operators (only for Cartesian)
+            if(sub_op_subscript->type == Subscript::Type::Cartesian) {
+                this->context->sub_operator_dependency_map[sub_op_subscript->hash()];
+                auto ops_sub_operator = sub_op_subscript->getSubOperatorOfOperands();
+                for(auto next_op_pos : iter::range(pos_in_sub_op.size())) {
+					if(pos_in_sub_op[next_op_pos] >= std::numeric_limits<hypertrie::pos_type>::max())
+						continue;
+                    std::vector<std::size_t> dependent_operands_poss{};
+                    auto operand_sub_op = ops_sub_operator[pos_in_sub_op[next_op_pos]];
+                    for(auto dependent_operand_pos : this->subscript->getDependentOperands(next_op_pos)) {
+                        auto dependent_operand_sub_op = ops_sub_operator[pos_in_sub_op[dependent_operand_pos]];
+                        if(operand_sub_op == dependent_operand_sub_op)
+                            continue;
+                        auto& sub_op_map = this->context->sub_operator_dependency_map[sub_op_subscript->hash()][operand_sub_op];
+                        sub_op_map.insert(ops_sub_operator[pos_in_sub_op[dependent_operand_pos]]);
+                    }
+                }
             }
             sub_operator = Operator_t::construct(sub_op_subscript, this->context);
             sub_operator->load(std::move(next_operands), *this->entry);

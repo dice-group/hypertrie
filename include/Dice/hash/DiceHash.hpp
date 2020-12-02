@@ -165,7 +165,13 @@ namespace dice::hash {
 
 	template<typename Container>
 	std::size_t dice_hash_ordered_container(Container const &container) {
-		return xxh::xxhash3<detail::size_t_bits>(container.begin(), container.end(), seed);
+		xxh::hash3_state_t<detail::size_t_bits> hash_state(seed);
+		std::size_t item_hash;
+		for (const auto &item : container) {
+			item_hash = dice_hash(item);
+			hash_state.update(&item_hash, sizeof(std::size_t));
+		}
+		return hash_state.digest();
 	}
 
 	template<typename Container>

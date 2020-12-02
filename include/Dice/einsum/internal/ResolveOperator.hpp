@@ -61,6 +61,7 @@ namespace einsum::internal {
 
 	private:
 		inline void load_impl(std::vector<const_Hypertrie<tr>> operands, Entry_t &entry) {
+			// TODO: do I need to preserve the operand here?
 			if constexpr(_debugeinsum_) fmt::print("Resolve {}\n", this->subscript);
 			this->entry = &entry;
 			assert(operands.size() == 1); // only one operand must be left to be resolved

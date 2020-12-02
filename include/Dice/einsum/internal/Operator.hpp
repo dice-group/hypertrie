@@ -125,6 +125,7 @@ namespace einsum::internal {
 
 		bool operator!=(const Operator &other) const { return hash() != other.hash(); };
 
+		const std::shared_ptr<Subscript> &getSubscript() { return this->subscript; }
 	};
 
 

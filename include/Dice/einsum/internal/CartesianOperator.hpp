@@ -113,26 +113,32 @@ namespace einsum::internal {
 			if constexpr(_debugeinsum_) fmt::print("Cartesian {}\n", this->subscript);
 			this->entry = &entry;
 			ended_ = false;
-			iterated_pos = 0; // todo: we can do better here
-			iterated_sub_operator_result_mapping = {
-					this->subscript->getCartesianSubscript().getOriginalResultPoss()[iterated_pos]};
 
-			std::vector<SubResult> sub_results{};
-			// load the non iterated sub_operators
+			double max_estimated_size = 0;
+			iterated_pos = 0;
 
-			if constexpr(_debugeinsum_) fmt::print("Cartesian sub start {}\n", this->subscript);
-			for (auto cart_op_pos: iter::range(sub_operators.size())) {
+			// initialize operands of the Cartesian product
+			if constexpr (_debugeinsum_) fmt::print("Cartesian sub start {}\n", this->subscript);
+			for (auto cart_op_pos : iter::range(sub_operators.size())) {
 				auto &cart_op = sub_operators[cart_op_pos];
-				cart_op->load(extractOperands(cart_op_pos, operands), sub_entries[cart_op_pos]);
+				auto sub_operands = extractOperands(cart_op_pos, operands);
+				const double estimated_size = CardinalityEstimation<tr>::estimate(sub_operands, cart_op->getSubscript(), this->context);
+				if (estimated_size > max_estimated_size) {
+					max_estimated_size = estimated_size;
+					iterated_pos = cart_op_pos;
+				}
+				cart_op->load(std::move(sub_operands), sub_entries[cart_op_pos]);
 				if (cart_op->ended()) {
 					ended_ = true;
 					return;
 				}
 			}
-			if constexpr(_debugeinsum_) fmt::print("Cartesian sub gen {}\n", this->subscript);
+
+			if constexpr (_debugeinsum_) fmt::print("Cartesian sub gen {}\n", this->subscript);
 			// calculate results of non-iterated sub_operators
+			std::vector<SubResult> sub_results{};
 			// TODO: parallelize
-			for (auto cart_op_pos: iter::range(sub_operators.size())) {
+			for (auto cart_op_pos : iter::range(sub_operators.size())) {
 				if (cart_op_pos == iterated_pos)
 					continue;
 				SubResult sub_result{};
@@ -167,8 +173,9 @@ namespace einsum::internal {
 				sub_results.emplace_back(std::move(sub_result));
 			}
 			calculated_operands = FullCartesianResult(std::move(sub_results), this->subscript->getCartesianSubscript(),
-													  *this->entry);
-			if constexpr(_debugeinsum_) fmt::print("Cartesian main start {}\n", this->subscript);
+													  *this->entry,
+													  iterated_pos);
+			if constexpr (_debugeinsum_) fmt::print("Cartesian main start {}\n", this->subscript);
 
 			// init iterator for the subscript part that is iterated as results are written out.
 			auto &iterated_sub_operator = sub_operators[iterated_pos];
@@ -176,6 +183,10 @@ namespace einsum::internal {
 				ended_ = true;
 				return;
 			}
+
+			// initialize iterated sub_operator
+			iterated_sub_operator_result_mapping = {
+					this->subscript->getCartesianSubscript().getOriginalResultPoss()[iterated_pos]};
 			updateEntryKey(iterated_sub_operator_result_mapping, *this->entry, sub_entries[iterated_pos].key);
 			this->entry->value *= sub_entries[iterated_pos].value;
 		}
@@ -196,6 +207,7 @@ namespace einsum::internal {
 			Entry_t *entry;
 			value_type value;
 			std::vector<OriginalResultPoss> result_mapping;
+			size_t excluded_pos = 0;
 			bool ended_ = false;
 
 		public:
@@ -203,14 +215,16 @@ namespace einsum::internal {
 
 			FullCartesianResult(std::vector<SubResult> sub_results,
 								const CartesianSubSubscripts &cartSubSubscript,
-								Entry_t &entry)
-					:
-					sub_results{std::move(sub_results)}, iters(this->sub_results.size()),
-					ends(this->sub_results.size()),
-					entry{&entry} {
+								Entry_t &entry,
+								const size_t excluded_pos)
+				: sub_results{std::move(sub_results)}, iters(this->sub_results.size()),
+				  ends(this->sub_results.size()),
+				  entry{&entry},
+				  excluded_pos{excluded_pos} {
 				const auto &original_result_poss = cartSubSubscript.getOriginalResultPoss();
-				result_mapping = {original_result_poss.begin() + 1, // TODO: we need to change that when we do better
-								  original_result_poss.end()};
+				for (const auto &[i, result_poss] : iter::enumerate(original_result_poss))
+					if (i != excluded_pos)
+						result_mapping.push_back(result_poss);
 				value = value_type(1);
 				for (auto i: iter::range(this->sub_results.size())) {
 					const auto &sub_result = this->sub_results[i];

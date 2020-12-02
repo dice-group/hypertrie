@@ -27,7 +27,7 @@
 namespace einsum::internal {
 
 	using DependencyGraph = util::UndirectedGraph<Label>;
-	using ConnectedComponent = std::set<Label>;
+	using ConnectedComponent = typename DependencyGraph::NodeSet;
 	using ConnectedComponents = std::vector<ConnectedComponent>;
 
 	using CartesianOperandPos = OperandPos;
@@ -335,7 +335,7 @@ namespace einsum::internal {
 		static Subscript from_string(const std::string &subscript_str) {
 			auto iter = subscript_str.cbegin();
 			auto end = subscript_str.end();
-			std::map<char, Label> char_mapping{};
+			boost::container::flat_map<char, Label> char_mapping{};
 			OperandsSc operands_sc{};
 			ResultSc result_sc{};
 			Label next_label = 'a';

@@ -62,12 +62,12 @@ namespace einsum::internal {
 			double card = 1;
 			bool order = operand_sizes.size() < label_factors.size();
 			auto &shorter_vec = order ? operand_sizes : label_factors;
-			auto &longer_vec = order ? operand_sizes : label_factors;
+			auto &longer_vec = order ? label_factors : operand_sizes;
 
 			for (const auto &[shorter_val, longer_val] : iter::zip(shorter_vec, longer_vec))
 				card *= (shorter_val * longer_val);
 
-			for (const auto &longer_val : iter::slice(longer_vec, shorter_vec.size()))
+			for (const auto &longer_val : iter::slice(longer_vec, shorter_vec.size(), longer_vec.size()))
 				card *= longer_val;
 
 			return card;

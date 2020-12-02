@@ -59,7 +59,7 @@ namespace einsum::internal {
 			: subscript(std::move(subscript)), context{std::make_shared<Context>(timeout)},
 			  operands(operands),
 			  op{Operator_t::construct(this->subscript, context)},
-			  entry{0, Key_t(this->subscript->resultLabelCount(), std::numeric_limits<key_part_type>::max())} {}
+			  entry(this->subscript->resultLabelCount(), Operator_t::default_key_part) {}
 
 		[[nodiscard]] const std::shared_ptr<Subscript> &getSubscript() const {
 			return subscript;
@@ -114,6 +114,7 @@ namespace einsum::internal {
 		}
 
 		void clear() {
+			op->clear();
 		}
 	};
 
@@ -139,7 +140,7 @@ namespace einsum::internal {
 			: subscript(std::move(subscript)), context{std::make_shared<Context>(timeout)},
 			  operands(operands),
 			  op{Operator_t::construct(this->subscript, context)},
-			  entry{false, Key_t(this->subscript->resultLabelCount(), std::numeric_limits<key_part_type>::max())} {}
+			  entry(this->subscript->resultLabelCount(), Operator_t::default_key_part) {}
 
 		[[nodiscard]] const std::shared_ptr<Subscript> &getSubscript() const {
 			return subscript;
@@ -156,7 +157,7 @@ namespace einsum::internal {
 		struct iterator {
 		private:
 			std::shared_ptr<Operator_t> op;
-			tsl::hopscotch_set<Key_t, ::einsum::internal::KeyHash<key_part_type>> found_entries{};
+			tsl::sparse_set<Key_t, ::einsum::internal::KeyHash<key_part_type>> found_entries{};
 			Entry_t *current_entry;
 			bool ended_ = false;
 		public:
@@ -206,7 +207,7 @@ namespace einsum::internal {
 		}
 
 		void clear() {
-			throw std::logic_error("not yet implemented.");
+			op->clear();
 		}
 	};
 }

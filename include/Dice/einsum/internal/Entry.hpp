@@ -49,6 +49,20 @@ namespace einsum::internal {
 
 		value_type value;
 		Key key;
+
+		Entry(const size_t key_size, const key_part_type default_key_part) noexcept {
+			init(key_size, default_key_part);
+		}
+
+		void init(const size_t key_size, const key_part_type default_key_part) noexcept {
+			value = value_type_t(0);
+			key = Key(key_size, default_key_part);
+		}
+
+		void clear(const key_part_type default_key_part) noexcept {
+			value = value_type_t(0);
+			std::fill(key.begin(), key.end(), default_key_part);
+		}
 	};
 
 }

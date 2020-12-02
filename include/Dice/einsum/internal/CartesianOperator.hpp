@@ -34,8 +34,7 @@ namespace einsum::internal {
 			sub_entries.reserve(sub_subscripts.size());
 			for (const auto &sub_subscript : sub_subscripts) {
 				sub_operators.push_back(Operator_t::construct(sub_subscript, context));
-				sub_entries.push_back(
-						{value_type(0), typename Entry_t::Key(sub_subscript->resultLabelCount(), default_key_part)});
+				sub_entries.push_back(Entry_t(sub_subscript->resultLabelCount(), default_key_part));
 			}
 
 		}
@@ -78,13 +77,13 @@ namespace einsum::internal {
 			return self.ended_ or self.context->hasTimedOut();
 		}
 
-		static std::size_t hash(const void *self_raw) {
-			return static_cast<const CartesianOperator *>(self_raw)->subscript->hash();
-		}
-
 		static void
 		load(void *self_raw, std::vector<const_Hypertrie<tr>> operands, Entry_t &entry) {
 			static_cast<CartesianOperator *>(self_raw)->load_impl(std::move(operands), entry);
+		}
+
+		static void clear(void *self_raw) {
+			return static_cast<CartesianOperator *>(self_raw)->clear_impl();
 		}
 
 
@@ -100,6 +99,14 @@ namespace einsum::internal {
 				sub_operands.emplace_back(operands[original_op_pos]);
 
 			return sub_operands;
+		}
+
+		inline void clear_impl(){
+			for (auto &sub_operator : sub_operators)
+				sub_operator->clear();
+			for (auto &sub_entry : sub_entries)
+				sub_entry.clear(default_key_part);
+			calculated_operands = {};
 		}
 
 		inline void load_impl(std::vector<const_Hypertrie<tr>> operands, Entry_t &entry) {

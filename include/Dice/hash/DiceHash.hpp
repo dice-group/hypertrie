@@ -15,7 +15,7 @@
 
 namespace dice::hash {
 
-	inline static constexpr uint64_t seed = UINT64_C(0xA24BAED4963EE407);
+	inline static constexpr std::size_t seed = std::size_t(0xA24BAED4963EE407UL);
 
 	namespace detail {
 		inline static constexpr std::size_t size_t_bits = 8 * sizeof(std::size_t);
@@ -24,7 +24,7 @@ namespace dice::hash {
 			return xxh::xxhash3<size_t_bits>(ptr, len, seed);
 		}
 
-		inline std::size_t hash_int(uint64_t x) noexcept {
+		inline std::size_t hash_int(std::size_t x) noexcept {
 			return xxh::xxhash3<size_t_bits>(&x, sizeof(std::size_t), seed);
 		}
 	}// namespace detail
@@ -159,13 +159,19 @@ namespace dice::hash {
 	// Helperfunctions
 	template<typename... Ts>
 	std::size_t dice_hash_combine(Ts &&...values) {
-		return xxh::xxhash3<detail::size_t_bits>(std::initializer_list<uint64_t>{dice_hash(std::forward<Ts>(values))...});
+		return xxh::xxhash3<detail::size_t_bits>(std::initializer_list<std::size_t>{dice_hash(std::forward<Ts>(values))...}, seed);
 	}
 
 
 	template<typename Container>
 	std::size_t dice_hash_ordered_container(Container const &container) {
-		return xxh::xxhash3<detail::size_t_bits>(container.begin(), container.end(), seed);
+		xxh::hash3_state_t<detail::size_t_bits> hash_state(seed);
+		std::size_t item_hash;
+		for (const auto &item : container) {
+			item_hash = dice_hash(item);
+			hash_state.update(&item_hash, sizeof(std::size_t));
+		}
+		return hash_state.digest();
 	}
 
 	template<typename Container>

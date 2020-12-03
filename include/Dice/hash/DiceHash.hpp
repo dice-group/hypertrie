@@ -201,7 +201,7 @@ namespace Dice::hash {
 		}
 	};
 
-}// namespace dice::hash
+}// namespace Dice::hash
 
 
 #endif//HYPERTRIE_DICEHASH_HPP

@@ -29,7 +29,7 @@ namespace einsum::internal::util {
 		/**
 		 * Set of all directed edges. (a,a)-edged are allowed.
 		 */
-		tsl::sparse_map<T, NodeSet, dice::hash::DiceHash<T>> edges{};
+		tsl::sparse_map<T, NodeSet, Dice::hash::DiceHash<T>> edges{};
 
 	public:
 		/**

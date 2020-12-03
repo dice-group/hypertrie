@@ -102,21 +102,23 @@ namespace einsum::internal {
 				OperandsSc operands_labels{};
 				OriginalOperandPoss original_op_poss{};
 				OriginalResultPoss original_result_poss{};
+				auto& poss_in_op = subscripts.getRawSubscript().poss_in_operands;
+				std::vector<char> opt_begin{'['};
+                std::vector<char> opt_end{']'};
 				for (const auto &[parent_op_pos, parent_op_labels] :
 						iter::enumerate(subscripts.raw_subscript.original_operands)) {
+					if(parent_op_labels == opt_begin || parent_op_labels == opt_end) {
+						operands_labels.push_back(parent_op_labels);
+						continue;
+					}
 					OperandSc op_labels{};
 					for (const Label label : parent_op_labels)
-						if (label_subset.count(label) || label == '[' || label == ']') // TODO: better solution
+						if (label_subset.count(label))
 							op_labels.emplace_back(label);
 
 					if (not op_labels.empty()) {
-						for(auto& op_label : op_labels) {
-							if(op_label != '[' && op_label != ']') { // TODO: better solution
-                                operands_labels.push_back(op_labels);
-                                original_op_poss.push_back(parent_op_pos);
-								break;
-							}
-						}
+                        operands_labels.push_back(op_labels);
+                        original_op_poss.push_back(poss_in_op[parent_op_pos]);
 					}
 				}
 				ResultSc result_labels{};
@@ -527,71 +529,85 @@ namespace einsum::internal {
 
 		static DirectedDependencyGraph calcDirectedDependencyGraph(const RawSubscript &raw_subscript) {
             DirectedDependencyGraph operand_directed_dependency_graph{};
-			// for each label stores a map of nested level (depth) to operand
+			// for each label stores a map of optional group_id nested level (depth) to operand
 			// for each nested level it stores the last seen operand
-			std::map<Label, std::map<uint8_t, std::size_t>> label_to_operand_map{};
+			std::map<Label, std::map<uint8_t, std::map<uint8_t, std::size_t>>> label_to_operand_map{};
             // for each depth stores the last seen operand
             std::map<uint8_t, std::size_t> last_operand_of_depth{};
+			std::vector<char> opt_begin{'['};
+			std::vector<char> opt_end{']'};
             uint8_t depth{0};
-            for(const auto &[operand_pos, operand_labels] : iter::enumerate(raw_subscript.original_operands)) {
+			uint8_t group_id{1};
+            for(const auto& [orig_op_pos, operand_labels] : iter::enumerate(raw_subscript.original_operands)) {
+                if(operand_labels == opt_begin) {
+                    depth++;
+                    continue;
+                }
+                else if(operand_labels == opt_end) {
+                    depth--;
+                    if(depth == 0)
+                        group_id++;
+                    continue;
+                }
 				operand_directed_dependency_graph.addVertex();
-				auto op_dependent_depth = depth;
 				uint8_t operands_depth;
+				auto operand_pos = raw_subscript.poss_in_operands[orig_op_pos];
                 bool strong_dependency = false; // indicates whether the current operand participates in a strong dependency
 				for(const auto& [label_pos, label] : iter::enumerate(operand_labels)) {
-					if(label == '[') {
-						depth++;
-						continue;
-					}
-                    else if(label == ']') {
-						depth--;
-						continue;
-					}
 					operands_depth = depth; // TODO: find better solution
+                    // check if the operand is non-optional
+                    uint8_t op_group_id = (depth == 0) ? 0 : group_id;
+					std::size_t dominant_op_pos;
+					bool bidirectional = false;
 					if(label_to_operand_map.contains(label)) {
-						// https://stackoverflow.com/questions/1660195/c-how-to-find-the-biggest-key-in-a-stdmap
-                        std::size_t parent_op;
-						uint8_t parent_op_depth = op_dependent_depth;
-						if(label_to_operand_map[label].contains(op_dependent_depth))
-							parent_op = label_to_operand_map[label][op_dependent_depth];
-						else {
-							parent_op = label_to_operand_map[label].rbegin()->second;
-							parent_op_depth = label_to_operand_map[label].rbegin()->first;
+						if(label_to_operand_map[label].contains(op_group_id)) {
+							dominant_op_pos = label_to_operand_map[label][op_group_id].rbegin()->second;
+							auto dominant_op_depth = label_to_operand_map[label][op_group_id].rbegin()->first;
+							if(dominant_op_depth >= depth)
+								bidirectional = true;
 						}
+						else {
+							// check if the current operand depends on a non-optional operand
+							if(label_to_operand_map[label].contains(0))
+								dominant_op_pos = label_to_operand_map[label][0][0];
+							// find the last group id that has the current label
+							else {
+								dominant_op_pos = label_to_operand_map[label].rbegin()->second.begin()->second;
+                                if(op_group_id == 0) // do a join only if the current operand is not in an optional group
+									bidirectional = true;
+							}
+						}
+                        operand_directed_dependency_graph.addEdge(label, dominant_op_pos, operand_pos);
+						if(bidirectional)
+                            operand_directed_dependency_graph.addEdge(label, operand_pos, dominant_op_pos);
 						strong_dependency = true;
-						// add directed edge from the previous (parent) operand to the current one
-                        operand_directed_dependency_graph.addEdge(label, parent_op, operand_pos);
-						// if the previous (parent) operand is in the same depth or in a deeper level add a reversed edge as well
-						// join case
-						if(parent_op_depth >= depth)
-                            operand_directed_dependency_graph.addEdge(label, operand_pos, parent_op);
 					}
                     // if the current label has not been seen yet, add an edge to using the current label
 					// needed for cartesian join
 					else
                         operand_directed_dependency_graph.addEdge(label, operand_pos, operand_pos);
-                    label_to_operand_map[label][depth] = operand_pos;
+					label_to_operand_map[label][op_group_id][depth] = operand_pos;
                 }
 				// find weak dependencies. for cartesian
-                if(!strong_dependency) {
-                    if(last_operand_of_depth.contains(op_dependent_depth)) {
-                        operand_directed_dependency_graph.addEdge(last_operand_of_depth[op_dependent_depth], operand_pos);
-                        if(op_dependent_depth == operands_depth)
-                            operand_directed_dependency_graph.addEdge(operand_pos, last_operand_of_depth[op_dependent_depth]);
-                    }
-                    else if(last_operand_of_depth.size()) {
-                        // get the last shallowest operand
-                        auto shallowest_depth = last_operand_of_depth.begin()->first;
-                        auto shallowest_op = last_operand_of_depth.begin()->second;
-						// don't check for equal depth
-						// equal depth is allowed only if the are in the same optional block
-                        if(shallowest_depth > operands_depth)
-                            operand_directed_dependency_graph.addEdge(operand_pos, shallowest_op);
-                        else if(shallowest_depth < operands_depth)
-                            operand_directed_dependency_graph.addEdge(shallowest_op, operand_pos);
-                    }
-                }
-				last_operand_of_depth[operands_depth] = operand_pos;
+//                if(!strong_dependency) {
+//                    if(last_operand_of_depth.contains(op_dependent_depth)) {
+//                        operand_directed_dependency_graph.addEdge(last_operand_of_depth[op_dependent_depth], operand_pos);
+//                        if(op_dependent_depth == operands_depth)
+//                            operand_directed_dependency_graph.addEdge(operand_pos, last_operand_of_depth[op_dependent_depth]);
+//                    }
+//                    else if(last_operand_of_depth.size()) {
+//                        // get the last shallowest operand
+//                        auto shallowest_depth = last_operand_of_depth.begin()->first;
+//                        auto shallowest_op = last_operand_of_depth.begin()->second;
+//						// don't check for equal depth
+//						// equal depth is allowed only if the are in the same optional block
+//                        if(shallowest_depth > operands_depth)
+//                            operand_directed_dependency_graph.addEdge(operand_pos, shallowest_op);
+//                        else if(shallowest_depth < operands_depth)
+//                            operand_directed_dependency_graph.addEdge(shallowest_op, operand_pos);
+//                    }
+//                }
+//				last_operand_of_depth[operands_depth] = operand_pos;
 			}
 			return operand_directed_dependency_graph;
 		}

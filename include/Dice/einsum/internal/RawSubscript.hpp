@@ -58,6 +58,10 @@ namespace einsum::internal {
 		 */
 		mutable OperandsSc operands{};
 		/**
+		 * The positions of the original operands in the operands vector
+		 */
+		mutable std::map<OperandPos, OperandPos> poss_in_operands{};
+		/**
 		 * The labels for the result.
 		 */
 		mutable ResultSc result{};
@@ -87,16 +91,26 @@ namespace einsum::internal {
 		 * @param operands the labels of the operands
 		 * @param result the labels of the result
 		 */
-		RawSubscript(OperandsSc &operands, const ResultSc &result) :
-				original_operands(operands), result(result),
-                hash(boost::hash_value(original_operands) + boost::hash_value(result)) {
-			for(auto& operand : operands) {
-                for(auto op_iter = std::find(operand.begin(), operand.end(), '['); op_iter != operand.end() and *op_iter == '[';)
-					operand.erase(op_iter);
-				for(auto op_iter = std::find(operand.begin(), operand.end(), ']'); op_iter != operand.end();)
-					operand.erase(op_iter);
-				this->operands.push_back(operand);
+		RawSubscript(OperandsSc &operands, const ResultSc &result) : result(result) {
+			std::vector<char> opt_begin{'['};
+            std::vector<char> opt_end{']'};
+			OperandPos op_pos = 0;
+			for(const auto& operand : operands) {
+                if(operand == opt_end && *(original_operands.rbegin()) == opt_begin) {
+					if(*(original_operands.rbegin()) == opt_begin) {
+						original_operands.erase(original_operands.end() - 1);
+						op_pos--;
+						continue;
+					}
+				}
+				original_operands.push_back(operand);
+				if(operand != opt_end and operand != opt_begin) {
+					this->operands.push_back(operand);
+					this->poss_in_operands[op_pos] = this->operands.size() - 1;
+				}
+                op_pos++;
 			}
+			this->hash = boost::hash_value(original_operands) + boost::hash_value(result);
 		}
 
 		/**
@@ -205,45 +219,6 @@ namespace einsum::internal {
 					next_operands.push_back(std::move(new_operand));
 				}
 			}
-            // rearrange brackets
-			std::vector empty_brackets{'[', ']'}; // used to find empty brackets in std::search
-            bool done = false;
-            while(!done) {
-                done = true;
-                std::set<OperandPos> pos_to_remove{};
-                for (auto i : iter::range(next_operands.size())) {
-                    auto cur_op = next_operands[i];
-					// find empty brackets
-                    auto iter = std::search(cur_op.begin(), cur_op.end(), empty_brackets.begin(), empty_brackets.end());
-                    while(iter != cur_op.end()) {
-                        cur_op.erase(iter);
-                        cur_op.erase(iter);
-                        iter = std::search(cur_op.begin(), cur_op.end(), empty_brackets.begin(), empty_brackets.end());
-                    }
-                    if(cur_op.size() == 0)
-                        pos_to_remove.insert(i);
-					// find left dangling brackets
-                    else if((std::size_t)std::count(cur_op.begin(), cur_op.end(), '[') == cur_op.size()) {
-						if(next_operands.size() > 1) {
-							auto &next_op = next_operands[i + 1];
-							next_op.insert(next_op.begin(), cur_op.begin(), cur_op.end());
-                            done = false;
-                        }
-                        pos_to_remove.insert(i);
-                    }
-					// find right dangling brackets
-                    else if((std::size_t)std::count(cur_op.begin(), cur_op.end(), ']') == cur_op.size()) {
-						if(next_operands.size() > 1) {
-							auto &prev_op = next_operands[i - 1];
-							prev_op.insert(prev_op.end(), cur_op.begin(), cur_op.end());
-                            done = false;
-						}
-                        pos_to_remove.insert(i);
-                    }
-                }
-                for(auto op_pos : pos_to_remove)
-                    next_operands.erase(next_operands.begin()+op_pos);
-            }
 			return RawSubscript(next_operands, result);
 		}
 

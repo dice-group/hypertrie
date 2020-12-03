@@ -243,6 +243,36 @@ namespace hypertrie::tests::einsum {
 		}
 	}
 
+	TEMPLATE_TEST_CASE("Cartesian test cases", "[einsum]", lsbunused_bool_Hypertrie_t, default_bool_Hypertrie_t) {
+		using tr = TestType;
+		std::vector<std::string> subscript_strs{
+				"a,b->ab",
+				"a,b->ba",
+				"a,b->a",
+				"a,b->b",
+				"a,b,c->abc",
+				"a,b,c->ab",
+				"a,b,c->bc",
+				"a,b,c->ca",
+				"a,b,c->a",
+				"a,b,c->b",
+				"a,b,c->c",
+				"ab,bc,d,e->abc",
+				"d,ab,bc,e->abc",
+				"d,e,ab,bc->abc",
+				"ab,bc,bc,de,ee,ef,gh,hg->adg"};
+		for (bool empty : {false, true}) {
+			SECTION("empty = {}"_format(empty))
+			for (auto excl_max : {4, 7, 10, 15, 30}) {
+				SECTION("excl_max = {}"_format(excl_max))
+				for (auto subscript_str : subscript_strs) {
+					runSubscript<tr, std::size_t>(subscript_str, excl_max, empty);
+					runSubscript<tr, bool>(subscript_str, excl_max, empty);
+				}
+			}
+		}
+	}
+
 	TEMPLATE_TEST_CASE("complex test cases", "[einsum]", lsbunused_bool_Hypertrie_t, default_bool_Hypertrie_t) {
 		using tr = TestType;
 		std::vector<std::string> subscript_strs{

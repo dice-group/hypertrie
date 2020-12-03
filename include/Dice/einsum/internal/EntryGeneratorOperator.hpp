@@ -27,25 +27,23 @@ namespace einsum::internal {
 			return static_cast<const EntryGeneratorOperator *>(self_raw)->_ended;
 		}
 
-		static void load(void *self_raw, std::vector<const_Hypertrie<tr>> operands, Entry_t &entry) {
-			static_cast<EntryGeneratorOperator *>(self_raw)->load_impl(std::move(operands), entry);
+		static void clear([[maybe_unused]]void *self_raw) {
+			//
 		}
 
-		static std::size_t hash(const void *self_raw) {
-			return static_cast<const EntryGeneratorOperator *>(self_raw)->subscript->hash();
+		static void load(void *self_raw, std::vector<const_Hypertrie<tr>> operands, Entry_t &entry) {
+			static_cast<EntryGeneratorOperator *>(self_raw)->load_impl(std::move(operands), entry);
 		}
 
 	private:
 		inline void load_impl([[maybe_unused]]std::vector<const_Hypertrie<tr>> operands,
 							  Entry_t &entry) {
+			assert(operands.size() == 0); // no operand must be left
 			if constexpr(_debugeinsum_) fmt::print("EntryGen {}\n", this->subscript);
 			this->entry = &entry;
-			this->entry->value = value_type(1);
-			assert(operands.size() == 0); // no operand must be left
 			_ended = false;
-			if (not _ended)
-				for (auto &key_part : entry.key)
-					key_part = default_key_part;
+			this->entry->clear(default_key_part);
+			this->entry->value = value_type(1);
 		}
 	};
 }

@@ -17,7 +17,6 @@ namespace einsum::internal {
 	class Operator {
 	public:
 		using tr = tr_t;
-	protected:
 		// TODO: check if we still need all of that
 		constexpr static const bool bool_value_type = std::is_same_v<value_type, bool>;
 		typedef Operator<value_type, tr> Operator_t;
@@ -27,7 +26,6 @@ namespace einsum::internal {
 			if constexpr (std::is_pointer_v<key_part_type>) return nullptr;
 			else return std::numeric_limits<key_part_type>::max();
 		}();
-	public:
 		mutable Subscript::Type type = Subscript::Type::None;
 	protected:
 		std::shared_ptr<Subscript> subscript;
@@ -56,7 +54,7 @@ namespace einsum::internal {
 		void (*load_fp)(void *self, std::vector<const_Hypertrie<tr>> operands,
 						Entry<value_type, tr> &entry);
 
-		std::size_t (*hash_fp)(const void *self);
+		void (*clear_fp)(void *self);
 
 	protected:
 		template<typename T>
@@ -70,7 +68,7 @@ namespace einsum::internal {
 				  next_fp(&T::next),
 				  ended_fp(&T::ended),
 				  load_fp(&T::load),
-				  hash_fp(&T::hash) {}
+				  clear_fp(&T::clear){}
 
 	public:
 
@@ -121,10 +119,13 @@ namespace einsum::internal {
 			load_fp(this, std::move(operands), entry);
 		}
 
-		std::size_t hash() const { return hash_fp(this); }
+		std::size_t hash() const { return subscript->hash(); }
+
+		void clear() { clear_fp(this); }
 
 		bool operator!=(const Operator &other) const { return hash() != other.hash(); };
 
+		const std::shared_ptr<Subscript> &getSubscript() { return this->subscript; }
 	};
 
 

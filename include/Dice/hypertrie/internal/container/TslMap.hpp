@@ -4,9 +4,6 @@
 #include <fmt/format.h>
 #include <tsl/sparse_map.h>
 
-//changed from
-//#include "Dice/hypertrie/internal/util/RobinHoodHash.hpp"
-//to
 #include "Dice/hash/DiceHash.hpp"
 
 

@@ -85,7 +85,6 @@ namespace einsum::internal {
 		 */
 		RawSubscript(const OperandsSc &operands, const ResultSc &result) :
 				operands(operands), result(result),
-				//hash(hypertrie::internal::robin_hood::rh_combine(operands, result)) {}
                 hash(Dice::hash::dice_hash(std::make_tuple(operands, result))) {}
 
 		/**

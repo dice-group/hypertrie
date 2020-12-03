@@ -30,7 +30,7 @@ namespace Dice::hash {
 		}
 
 		template<typename T>
-		requires std::is_fundamental_v<std::decay_t<T>>
+		requires std::is_fundamental_v<std::decay_t<T>> or std::is_pointer_v<std::decay_t<T>>
 		inline std::size_t hash_primitive(T x) noexcept {
 			return xxh::xxhash3<size_t_bits>(&x, sizeof(T), seed);
 		}
@@ -77,16 +77,13 @@ namespace Dice::hash {
 	template<typename Container>
 	std::size_t dice_hash_unordered_container(Container const &container);
 
-	template<typename... Ts>
-	std::size_t hash_and_combine(Ts &&...values);
-
 	template<typename T>
 	std::size_t dice_hash(T const &) noexcept {
 		throw std::logic_error("Hash must be declared explicitly.");
 	}
 
 	template<typename T>
-	requires std::is_fundamental_v<T>
+	requires std::is_fundamental_v<T> or std::is_pointer_v<T>
 	std::size_t dice_hash(T const &fundamental) noexcept {
 		return detail::hash_primitive(fundamental);
 	}

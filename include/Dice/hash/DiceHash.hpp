@@ -17,6 +17,9 @@ namespace dice::hash {
 
 	inline static constexpr std::size_t seed = std::size_t(0xA24BAED4963EE407UL);
 
+	template<typename... Ts>
+	std::size_t hash_and_combine(Ts &&...values);
+
 	namespace detail {
 		inline static constexpr std::size_t size_t_bits = 8 * sizeof(std::size_t);
 
@@ -24,8 +27,15 @@ namespace dice::hash {
 			return xxh::xxhash3<size_t_bits>(ptr, len, seed);
 		}
 
-		inline std::size_t hash_int(std::size_t x) noexcept {
-			return xxh::xxhash3<size_t_bits>(&x, sizeof(std::size_t), seed);
+		template<typename T>
+		requires std::is_fundamental_v<std::decay_t<T>>
+		inline std::size_t hash_primitive(T x) noexcept {
+			return xxh::xxhash3<size_t_bits>(&x, sizeof(T), seed);
+		}
+
+		template<typename... TupleArgs, std::size_t... ids>
+		std::size_t hash_tuple(std::tuple<TupleArgs...> const &tuple, std::index_sequence<ids...> const &) {
+			return ::dice::hash::hash_and_combine(std::get<ids>(tuple)...);
 		}
 	}// namespace detail
 
@@ -66,13 +76,17 @@ namespace dice::hash {
 	std::size_t dice_hash_unordered_container(Container const &container);
 
 	template<typename... Ts>
-	std::size_t dice_hash_combine(Ts &&...values);
+	std::size_t hash_and_combine(Ts &&...values);
 
 	template<typename T>
-	std::size_t dice_hash(T const &obj) noexcept {
-		std::hash<T> hasher;
-		auto result = hasher(obj);
-		return detail::hash_int(static_cast<std::size_t>(result));
+	std::size_t dice_hash(T const &) noexcept {
+		throw std::logic_error("Hash must be declared explicitly.");
+	}
+
+	template<typename T>
+	requires std::is_fundamental_v<T>
+	std::size_t dice_hash(T const &fundamental) noexcept {
+		return detail::hash_primitive(fundamental);
 	}
 
 	template<typename CharT>
@@ -86,18 +100,13 @@ namespace dice::hash {
 	}
 
 	template<typename T>
-	std::size_t dice_hash(T *ptr) noexcept {
-		return detail::hash_int(reinterpret_cast<std::size_t>(ptr));
-	}
-
-	template<typename T>
 	std::size_t dice_hash(std::unique_ptr<T> const &ptr) noexcept {
-		return detail::hash_int(reinterpret_cast<std::size_t>(ptr.get()));
+		return dice_hash(ptr.get());
 	}
 
 	template<typename T>
 	std::size_t dice_hash(std::shared_ptr<T> const &ptr) noexcept {
-		return detail::hash_int(reinterpret_cast<std::size_t>(ptr.get()));
+		return dice_hash(ptr.get());
 	}
 
 	template<typename T, std::size_t N>
@@ -120,19 +129,14 @@ namespace dice::hash {
 		}
 	}
 
-	template<typename... TupleArgs, std::size_t... ids>
-	std::size_t tupleHash(std::tuple<TupleArgs...> const &tuple, std::index_sequence<ids...> const &) {
-		return dice_hash_combine(std::get<ids>(tuple)...);
-	}
-
 	template<typename... TupleArgs>
 	std::size_t dice_hash(std::tuple<TupleArgs...> const &tpl) noexcept {
-		return tupleHash(tpl, std::make_index_sequence<sizeof...(TupleArgs)>());
+		return detail::hash_tuple(tpl, std::make_index_sequence<sizeof...(TupleArgs)>());
 	}
 
 	template<typename T, typename V>
 	std::size_t dice_hash(std::pair<T, V> const &p) noexcept {
-		return dice_hash_combine(p.first, p.second);
+		return hash_and_combine(p.first, p.second);
 	}
 
 	template<typename Key, typename Value>
@@ -158,7 +162,7 @@ namespace dice::hash {
 
 	// Helperfunctions
 	template<typename... Ts>
-	std::size_t dice_hash_combine(Ts &&...values) {
+	std::size_t hash_and_combine(Ts &&...values) {
 		return xxh::xxhash3<detail::size_t_bits>(std::initializer_list<std::size_t>{dice_hash(std::forward<Ts>(values))...}, seed);
 	}
 

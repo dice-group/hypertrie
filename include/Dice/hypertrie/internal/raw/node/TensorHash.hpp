@@ -33,7 +33,7 @@ namespace hypertrie::internal::raw {
 		 */
 		template<size_t depth, typename key_part_type, typename V>
 		//using EntryHash = robin_hood::hash<std::tuple<RawKey<depth, key_part_type>, V>>;
-        using EntryHash = Dice::hash::DiceHash<std::tuple<RawKey < depth, key_part_type>, V>>;
+		using EntryHash = Dice::hash::DiceHash<std::tuple<RawKey<depth, key_part_type>, V>>;
 
 		/**
 		 * Bit representation of the hash.

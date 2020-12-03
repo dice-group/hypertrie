@@ -6,7 +6,7 @@
 #include <tuple>
 #include "Dice/hash/DiceHash.hpp"
 
-namespace dice::hash {
+namespace Dice::hash {
     template<typename T>
     size_t getHash(T const &parameter) {
         DiceHash<T> hasher;
@@ -142,23 +142,5 @@ namespace dice::hash {
         std::unordered_set<std::string> exampleSet1(entries.begin(), entries.end());
         std::unordered_set<std::string> exampleSet2(entries.rbegin(), entries.rend());
         REQUIRE(getHash(exampleSet1) == getHash(exampleSet2));
-    }
-
-    struct SomeFalseTest {
-        using activate_stdhash = std::false_type;
-    };
-    struct SomeTrueTest {
-        using activate_stdhash = std::true_type;
-    };
-
-    template <> std::size_t dice_hash(SomeTrueTest const&) noexcept {
-        return 42;
-    }
-
-    TEST_CASE("HashWrapper is implicitly called for std::hash", "[RobinHoodHash]") {
-        std::hash<enableDice<SomeTrueTest>> test1;
-        //std::hash<enableDice<SomeFalseTest>> test2;
-        //std::hash<enableDice<int>> test3;
-        REQUIRE(test1(SomeTrueTest()) == 42);
     }
 }

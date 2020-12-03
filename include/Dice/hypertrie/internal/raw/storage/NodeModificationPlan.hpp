@@ -164,7 +164,7 @@ namespace hypertrie::internal::raw {
 template<size_t depth, hypertrie::internal::raw::HypertrieInternalTrait tri>
 struct std::hash<hypertrie::internal::raw::NodeModificationPlan<depth, tri>> {
 	size_t operator()(const hypertrie::internal::raw::NodeModificationPlan<depth, tri> &update) const noexcept {
-		return dice::hash::dice_hash(std::make_tuple(update.hashBefore(), update.hashAfter()));
+		return Dice::hash::dice_hash(std::make_tuple(update.hashBefore(), update.hashAfter()));
 	}
 };
 #endif//HYPERTRIE_NODEMODIFICATIONPLAN_HPP

@@ -4,9 +4,6 @@
 #include <fmt/format.h>
 #include <tsl/sparse_map.h>
 
-//changed from
-//#include "Dice/hypertrie/internal/util/RobinHoodHash.hpp"
-//to
 #include "Dice/hash/DiceHash.hpp"
 
 
@@ -16,7 +13,7 @@ namespace hypertrie::internal::container {
 	using tsl_sparse_map = tsl::sparse_map<Key,
 										   T,
 										   //hypertrie::internal::robin_hood::hash<Key>,
-										   dice::hash::DiceHash<Key>,
+										   Dice::hash::DiceHash<Key>,
 										   std::equal_to<Key>,
 										   std::allocator<std::pair<Key, T>>,
 										   tsl::sh::power_of_two_growth_policy<2>,

@@ -5,6 +5,11 @@
 #include "Dice/hypertrie/internal/raw/node/TensorHash.hpp"
 #include "Dice/hypertrie/internal/raw/storage/Entry.hpp"
 
+//from
+//#include "Dice/hypertrie/internal/util/RobinHoodHash.hpp"
+//to
+#include "Dice/hash/DiceHash.hpp"
+
 
 namespace hypertrie::internal::raw {
 
@@ -48,7 +53,6 @@ namespace hypertrie::internal::raw {
 		TensorHash &hashBefore()  noexcept { return this->hash_before_;}
 
 		const TensorHash &hashBefore() const noexcept {
-			if (hash_after_.empty()) calcHashAfter();
 			return this->hash_before_;
 		}
 
@@ -57,7 +61,10 @@ namespace hypertrie::internal::raw {
 			return this->hash_after_;
 		}
 
-		const TensorHash &hashAfter() const noexcept { return this->hash_after_;}
+		const TensorHash &hashAfter() const noexcept {
+			if (hash_after_.empty()) calcHashAfter();
+			return this->hash_after_;
+		}
 
 		std::vector<Entry> &entries() noexcept { return this->entries_;}
 
@@ -149,10 +156,15 @@ namespace hypertrie::internal::raw {
 				   std::make_tuple(other.mod_op_, other.hash_before_, other.hashAfter());
 		};
 
-		template<typename H>
-		friend H AbslHashValue(H h, const NodeModificationPlan &update) {
-			return H::combine(std::move(h), update.hash_before_, update.hashAfter());
-		}
+		friend struct std::hash<NodeModificationPlan>;
 	};
+
 }
+
+template<size_t depth, hypertrie::internal::raw::HypertrieInternalTrait tri>
+struct std::hash<hypertrie::internal::raw::NodeModificationPlan<depth, tri>> {
+	size_t operator()(const hypertrie::internal::raw::NodeModificationPlan<depth, tri> &update) const noexcept {
+		return Dice::hash::dice_hash(std::make_tuple(update.hashBefore(), update.hashAfter()));
+	}
+};
 #endif//HYPERTRIE_NODEMODIFICATIONPLAN_HPP

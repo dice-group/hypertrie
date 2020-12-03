@@ -121,7 +121,7 @@ namespace dice::hash {
 	template<typename T>
 	std::size_t dice_hash(std::vector<T> const &vec) noexcept {
 		if constexpr (std::is_fundamental_v<T>) {
-			static_assert(!std::is_same_v<T, bool>,
+			static_assert(!std::is_same_v<std::decay_t<T>, bool>,
 						  "vector of booleans has a special implementation which results into errors!");
 			return detail::hash_bytes(vec.data(), sizeof(T) * vec.size());
 		} else {

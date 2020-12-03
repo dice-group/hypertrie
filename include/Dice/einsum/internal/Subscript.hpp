@@ -10,6 +10,8 @@
 #include <memory>
 #include <ostream>
 
+#include <boost/container/flat_map.hpp>
+
 #include <fmt/core.h>
 #include <fmt/format.h>
 #include <fmt/ostream.h>

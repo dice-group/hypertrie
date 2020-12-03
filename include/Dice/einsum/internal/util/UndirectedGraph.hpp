@@ -1,10 +1,12 @@
 #ifndef SPARSETENSOR_EINSUM_UTIL_UNDIRECTEDGRAPH_HPP
 #define SPARSETENSOR_EINSUM_UTIL_UNDIRECTEDGRAPH_HPP
 
-#include <boost/container/flat_map.hpp>
-#include <tsl/sparse_map.h>
 #include <vector>
+#include <tsl/sparse_map.h>
 
+#include <boost/container/flat_set.hpp>
+
+#include "Dice/hash/DiceHash.hpp"
 
 namespace einsum::internal::util {
 

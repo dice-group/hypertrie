@@ -6,7 +6,7 @@
 #include <tuple>
 #include "Dice/hash/DiceHash.hpp"
 
-namespace dice::hash {
+namespace Dice::hash {
     template<typename T>
     size_t getHash(T const &parameter) {
         DiceHash<T> hasher;

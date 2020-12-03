@@ -36,7 +36,7 @@ namespace hypertrie::internal::raw {
 		 */
 		template<size_t depth, typename key_part_type, typename V>
 		//using EntryHash = robin_hood::hash<std::tuple<RawKey<depth, key_part_type>, V>>;
-        using EntryHash = dice::hash::DiceHash<std::tuple<RawKey<depth, key_part_type>, V>>;
+        using EntryHash = Dice::hash::DiceHash<std::tuple<RawKey < depth, key_part_type>, V>>;
 
 		/**
 		 * Bit representation of the hash.
@@ -284,7 +284,7 @@ namespace hypertrie::internal::robin_hood {
 	};
 }// namespace hypertrie::internal::robin_hood
 */
-template<> std::size_t dice::hash::dice_hash(::hypertrie::internal::raw::TensorHash const &hash) noexcept {
+template<> std::size_t Dice::hash::dice_hash(::hypertrie::internal::raw::TensorHash const &hash) noexcept {
         return hash.hash();
 }
 #endif//HYPERTRIE_TENSORHASH_HPP

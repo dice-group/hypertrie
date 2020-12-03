@@ -1,6 +1,6 @@
 #ifndef HYPERTRIE_DICEHASH_HPP
 #define HYPERTRIE_DICEHASH_HPP
-#include "xxhash.hpp"
+
 #include <cstring>
 #include <functional>
 #include <map>
@@ -13,7 +13,9 @@
 #include <unordered_set>
 #include <utility>
 
-namespace dice::hash {
+#include "Dice/hash/xxhash.hpp"
+
+namespace Dice::hash {
 
 	inline static constexpr std::size_t seed = std::size_t(0xA24BAED4963EE407UL);
 
@@ -35,7 +37,7 @@ namespace dice::hash {
 
 		template<typename... TupleArgs, std::size_t... ids>
 		std::size_t hash_tuple(std::tuple<TupleArgs...> const &tuple, std::index_sequence<ids...> const &) {
-			return ::dice::hash::hash_and_combine(std::get<ids>(tuple)...);
+			return ::Dice::hash::hash_and_combine(std::get<ids>(tuple)...);
 		}
 	}// namespace detail
 

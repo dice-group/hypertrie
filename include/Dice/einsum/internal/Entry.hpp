@@ -36,7 +36,7 @@ namespace einsum::internal {
 	struct KeyHash {
 		std::size_t operator()(const ::einsum::internal::Key<T> &k) const {
 			//return ::hypertrie::internal::robin_hood::rh_hash(k);
-            return dice::hash::dice_hash(k);
+            return Dice::hash::dice_hash(k);
 		}
 	};
 

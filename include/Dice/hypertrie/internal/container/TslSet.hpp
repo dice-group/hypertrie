@@ -11,7 +11,7 @@ namespace hypertrie::internal::container {
 	using tsl_sparse_set = tsl::sparse_set<
 			Key,
 			//hypertrie::internal::robin_hood::hash<Key>,
-			dice::hash::DiceHash<Key>,
+			Dice::hash::DiceHash<Key>,
 			std::equal_to<Key>,
 			std::allocator<Key>,
 			tsl::sh::power_of_two_growth_policy<2>,

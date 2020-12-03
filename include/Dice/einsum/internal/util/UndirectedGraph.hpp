@@ -2,9 +2,9 @@
 #define SPARSETENSOR_EINSUM_UTIL_UNDIRECTEDGRAPH_HPP
 
 #include <vector>
-#include <tsl/sparse_map.h>
 
 #include <boost/container/flat_set.hpp>
+#include <robin_hood.h>
 
 #include "Dice/hash/DiceHash.hpp"
 
@@ -31,7 +31,7 @@ namespace einsum::internal::util {
 		/**
 		 * Set of all directed edges. (a,a)-edged are allowed.
 		 */
-		tsl::sparse_map<T, NodeSet, Dice::hash::DiceHash<T>> edges{};
+		robin_hood::unordered_node_map<T, NodeSet, Dice::hash::DiceHash<T>> edges{};
 
 	public:
 		/**

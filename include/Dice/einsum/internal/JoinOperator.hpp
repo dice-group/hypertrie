@@ -88,7 +88,8 @@ namespace einsum::internal {
 
 	private:
 		inline void clear_impl(){
-			this->sub_operator->clear();
+			if (this->sub_operator)
+				this->sub_operator->clear();
 			this->join = {};
 			this->join_iter = {};
 		}

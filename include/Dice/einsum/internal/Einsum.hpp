@@ -157,7 +157,7 @@ namespace einsum::internal {
 		struct iterator {
 		private:
 			std::shared_ptr<Operator_t> op;
-			tsl::sparse_set<Key_t, ::einsum::internal::KeyHash<key_part_type>> found_entries{};
+			tsl::sparse_set<size_t, std::identity> found_entries{};
 			Entry_t *current_entry;
 			bool ended_ = false;
 		public:
@@ -165,7 +165,8 @@ namespace einsum::internal {
 
 			explicit iterator(Einsum &einsum, Entry_t &entry) : op(einsum.op), current_entry{&entry} {
 				if (not op->ended()) {
-					found_entries.insert(current_entry->key);
+					const size_t hash = Dice::hash::dice_hash(current_entry->key);
+					found_entries.insert(hash);
 				}
 			}
 
@@ -173,8 +174,9 @@ namespace einsum::internal {
 				op->next();
 				while (not op->ended()) {
 					assert(current_entry->value == true);
-					if (found_entries.find(current_entry->key) == found_entries.end()) {
-						found_entries.insert(current_entry->key);
+					const size_t hash = Dice::hash::dice_hash(current_entry->key);
+					if (not found_entries.contains(hash)) {
+						found_entries.insert(hash);
 						return *this;
 					}
 					op->next();

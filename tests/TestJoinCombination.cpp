@@ -41,7 +41,8 @@ namespace hypertrie::tests::leftjoin {
 		std::vector<std::vector<char>> operands_labels{};
 		std::vector<std::vector<default_bool_Hypertrie_t::key_part_type>> expected_results;
 		std::vector<char> result_labels{};
-
+        std::vector<char> opt_begin{'['};
+        std::vector<char> opt_end{']'};
         // a,ab,[bc]->abc
         SECTION("j_lj_dl", "join before left join, on different labels") {
             operands.push_back(ht1);
@@ -49,10 +50,12 @@ namespace hypertrie::tests::leftjoin {
             operands.push_back(ht3);
             std::vector<char> op1_labels{'a'};
             std::vector<char> op2_labels{'a', 'b'};
-            std::vector<char> op3_labels{'[', 'b', 'c', ']'};
+            std::vector<char> op3_labels{'b', 'c'};
             operands_labels.push_back(op1_labels);
             operands_labels.push_back(op2_labels);
+            operands_labels.push_back(opt_begin);
             operands_labels.push_back(op3_labels);
+            operands_labels.push_back(opt_begin);
             result_labels.push_back('a');
             result_labels.push_back('b');
             result_labels.push_back('c');
@@ -70,10 +73,12 @@ namespace hypertrie::tests::leftjoin {
             operands.push_back(ht3);
             std::vector<char> op1_labels{'a'};
             std::vector<char> op2_labels{'a', 'b'};
-            std::vector<char> op3_labels{'[', 'a', 'c', ']'};
+            std::vector<char> op3_labels{'a', 'c'};
             operands_labels.push_back(op1_labels);
             operands_labels.push_back(op2_labels);
+            operands_labels.push_back(opt_begin);
             operands_labels.push_back(op3_labels);
+            operands_labels.push_back(opt_end);
             result_labels.push_back('a');
             result_labels.push_back('b');
             result_labels.push_back('c');
@@ -90,11 +95,13 @@ namespace hypertrie::tests::leftjoin {
             operands.push_back(ht2);
             operands.push_back(ht3);
             std::vector<char> op1_labels{'a'};
-            std::vector<char> op2_labels{'[', 'a', 'b'};
-            std::vector<char> op3_labels{'b', 'c', ']'};
+            std::vector<char> op2_labels{'a', 'b'};
+            std::vector<char> op3_labels{'b', 'c'};
             operands_labels.push_back(op1_labels);
+            operands_labels.push_back(opt_begin);
             operands_labels.push_back(op2_labels);
             operands_labels.push_back(op3_labels);
+            operands_labels.push_back(opt_end);
             result_labels.push_back('a');
             result_labels.push_back('b');
             result_labels.push_back('c');
@@ -118,11 +125,13 @@ namespace hypertrie::tests::leftjoin {
             std::vector<char> op1_labels{'a'};
             std::vector<char> op2_labels{'a', 'b'};
             std::vector<char> op3_labels{'b', 'c'};
-            std::vector<char> op4_labels{'[', 'c', 'd', ']'};
+            std::vector<char> op4_labels{'c', 'd'};
             operands_labels.push_back(op1_labels);
             operands_labels.push_back(op2_labels);
             operands_labels.push_back(op3_labels);
+            operands_labels.push_back(opt_begin);
 			operands_labels.push_back(op4_labels);
+            operands_labels.push_back(opt_end);
             result_labels.push_back('a');
             result_labels.push_back('b');
             result_labels.push_back('c');
@@ -139,13 +148,17 @@ namespace hypertrie::tests::leftjoin {
             operands.push_back(ht3);
             operands.push_back(ht5);
             std::vector<char> op1_labels{'a'};
-            std::vector<char> op2_labels{'[','a', 'b'};
+            std::vector<char> op2_labels{'a', 'b'};
             std::vector<char> op3_labels{'b', 'c'};
-            std::vector<char> op4_labels{'[', 'c', 'd', ']', ']'};
+            std::vector<char> op4_labels{'c', 'd'};
             operands_labels.push_back(op1_labels);
+            operands_labels.push_back(opt_begin);
             operands_labels.push_back(op2_labels);
             operands_labels.push_back(op3_labels);
+            operands_labels.push_back(opt_begin);
             operands_labels.push_back(op4_labels);
+            operands_labels.push_back(opt_end);
+            operands_labels.push_back(opt_end);
             result_labels.push_back('a');
             result_labels.push_back('b');
             result_labels.push_back('c');
@@ -167,11 +180,13 @@ namespace hypertrie::tests::leftjoin {
             operands.push_back(ht2);
             operands.push_back(ht5);
             std::vector<char> op1_labels{'a'};
-            std::vector<char> op2_labels{'[','a', 'b'};
-            std::vector<char> op3_labels{'a', 'c', ']'};
+            std::vector<char> op2_labels{'a', 'b'};
+            std::vector<char> op3_labels{'a', 'c'};
             operands_labels.push_back(op1_labels);
+            operands_labels.push_back(opt_begin);
             operands_labels.push_back(op2_labels);
             operands_labels.push_back(op3_labels);
+            operands_labels.push_back(opt_end);
             result_labels.push_back('a');
             result_labels.push_back('b');
             result_labels.push_back('c');
@@ -194,12 +209,14 @@ namespace hypertrie::tests::leftjoin {
             operands.push_back(ht3);
             operands.push_back(ht5);
             std::vector<char> op1_labels{'a'};
-            std::vector<char> op2_labels{'[','a', 'b'};
-            std::vector<char> op3_labels{'b', 'c', ']'};
+            std::vector<char> op2_labels{'a', 'b'};
+            std::vector<char> op3_labels{'b', 'c'};
             std::vector<char> op4_labels{'a', 'd'};
             operands_labels.push_back(op1_labels);
+            operands_labels.push_back(opt_begin);
             operands_labels.push_back(op2_labels);
             operands_labels.push_back(op3_labels);
+            operands_labels.push_back(opt_end);
             operands_labels.push_back(op4_labels);
             result_labels.push_back('a');
             result_labels.push_back('b');
@@ -217,12 +234,14 @@ namespace hypertrie::tests::leftjoin {
             operands.push_back(ht3);
             operands.push_back(ht1);
             operands.push_back(ht5);
-            std::vector<char> op1_labels{'[','a', 'b'};
-            std::vector<char> op2_labels{'b', 'c', ']'};
+            std::vector<char> op1_labels{'a', 'b'};
+            std::vector<char> op2_labels{'b', 'c'};
             std::vector<char> op3_labels{'a'};
             std::vector<char> op4_labels{'a', 'd'};
+            operands_labels.push_back(opt_begin);
             operands_labels.push_back(op1_labels);
             operands_labels.push_back(op2_labels);
+            operands_labels.push_back(opt_end);
             operands_labels.push_back(op3_labels);
             operands_labels.push_back(op4_labels);
             result_labels.push_back('a');
@@ -239,14 +258,18 @@ namespace hypertrie::tests::leftjoin {
             operands.push_back(ht3);
             operands.push_back(ht1);
             operands.push_back(ht5);
-            std::vector<char> op1_labels{'[','a', 'b'};
-            std::vector<char> op2_labels{'b', 'c', ']'};
+            std::vector<char> op1_labels{'a', 'b'};
+            std::vector<char> op2_labels{'b', 'c'};
             std::vector<char> op3_labels{'a'};
-            std::vector<char> op4_labels{'[', 'a', 'd', ']'};
+            std::vector<char> op4_labels{'a', 'd'};
+            operands_labels.push_back(opt_begin);
             operands_labels.push_back(op1_labels);
             operands_labels.push_back(op2_labels);
+            operands_labels.push_back(opt_end);
             operands_labels.push_back(op3_labels);
+            operands_labels.push_back(opt_begin);
             operands_labels.push_back(op4_labels);
+            operands_labels.push_back(opt_end);
             result_labels.push_back('a');
             result_labels.push_back('b');
             result_labels.push_back('c');
@@ -263,13 +286,17 @@ namespace hypertrie::tests::leftjoin {
             operands.push_back(ht3);
             operands.push_back(ht5);
             std::vector<char> op1_labels{'a'};
-            std::vector<char> op2_labels{'[','a', 'b'};
-            std::vector<char> op3_labels{'b', 'c', ']'};
-            std::vector<char> op4_labels{'[', 'a', 'd', ']'};
+            std::vector<char> op2_labels{'a', 'b'};
+            std::vector<char> op3_labels{'b', 'c'};
+            std::vector<char> op4_labels{'a', 'd'};
             operands_labels.push_back(op1_labels);
+            operands_labels.push_back(opt_begin);
             operands_labels.push_back(op2_labels);
             operands_labels.push_back(op3_labels);
+            operands_labels.push_back(opt_end);
+            operands_labels.push_back(opt_begin);
             operands_labels.push_back(op4_labels);
+            operands_labels.push_back(opt_end);
             result_labels.push_back('a');
             result_labels.push_back('b');
             result_labels.push_back('c');
@@ -292,13 +319,17 @@ namespace hypertrie::tests::leftjoin {
             operands.push_back(ht3);
             operands.push_back(ht5);
             std::vector<char> op1_labels{'a'};
-            std::vector<char> op2_labels{'[','a', 'b'};
+            std::vector<char> op2_labels{'a', 'b'};
             std::vector<char> op3_labels{'b', 'c'};
-            std::vector<char> op4_labels{'[', 'a', 'd', ']', ']'};
+            std::vector<char> op4_labels{'a', 'd'};
             operands_labels.push_back(op1_labels);
+            operands_labels.push_back(opt_begin);
             operands_labels.push_back(op2_labels);
             operands_labels.push_back(op3_labels);
+            operands_labels.push_back(opt_begin);
             operands_labels.push_back(op4_labels);
+            operands_labels.push_back(opt_end);
+            operands_labels.push_back(opt_end);
             result_labels.push_back('a');
             result_labels.push_back('b');
             result_labels.push_back('c');
@@ -324,19 +355,27 @@ namespace hypertrie::tests::leftjoin {
             operands.push_back(ht4);
             operands.push_back(ht5);
             std::vector<char> op1_labels{'a'};
-            std::vector<char> op2_labels{'[','a', 'b'};
+            std::vector<char> op2_labels{'a', 'b'};
             std::vector<char> op3_labels{'b', 'c'};
-            std::vector<char> op4_labels{'[', 'a', 'd', ']', ']'};
-            std::vector<char> op5_labels{'[','a', 'e'};
+            std::vector<char> op4_labels{'a', 'd'};
+            std::vector<char> op5_labels{'a', 'e'};
             std::vector<char> op6_labels{'e', 'f'};
-            std::vector<char> op7_labels{'[', 'a', 'g', ']', ']'};
+            std::vector<char> op7_labels{'a', 'g'};
             operands_labels.push_back(op1_labels);
+            operands_labels.push_back(opt_begin);
             operands_labels.push_back(op2_labels);
             operands_labels.push_back(op3_labels);
+            operands_labels.push_back(opt_begin);
             operands_labels.push_back(op4_labels);
+            operands_labels.push_back(opt_end);
+            operands_labels.push_back(opt_end);
+            operands_labels.push_back(opt_begin);
             operands_labels.push_back(op5_labels);
             operands_labels.push_back(op6_labels);
+            operands_labels.push_back(opt_begin);
             operands_labels.push_back(op7_labels);
+            operands_labels.push_back(opt_end);
+            operands_labels.push_back(opt_end);
             result_labels.push_back('a');
             result_labels.push_back('b');
             result_labels.push_back('d');
@@ -361,15 +400,19 @@ namespace hypertrie::tests::leftjoin {
 			operands.push_back(ht4);
             operands.push_back(ht5);
             std::vector<char> op1_labels{'a'};
-            std::vector<char> op2_labels{'[','a', 'b'};
+            std::vector<char> op2_labels{'a', 'b'};
             std::vector<char> op3_labels{'b', 'c'};
             std::vector<char> op4_labels{'c', 'e'};
-            std::vector<char> op5_labels{'[', 'a', 'd', ']', ']'};
+            std::vector<char> op5_labels{'a', 'd'};
             operands_labels.push_back(op1_labels);
+            operands_labels.push_back(opt_begin);
             operands_labels.push_back(op2_labels);
             operands_labels.push_back(op3_labels);
             operands_labels.push_back(op4_labels);
+            operands_labels.push_back(opt_begin);
             operands_labels.push_back(op5_labels);
+            operands_labels.push_back(opt_end);
+            operands_labels.push_back(opt_end);
             result_labels.push_back('a');
             result_labels.push_back('b');
             result_labels.push_back('c');
@@ -385,13 +428,15 @@ namespace hypertrie::tests::leftjoin {
                     {8, default_key_part, default_key_part, default_key_part}
             };
         }
-		// [ab],ac->abc
+		// [ab],bc->abc
         SECTION("no_left_op", "left join without left operand") {
             operands.push_back(ht2);
             operands.push_back(ht3);
-            std::vector<char> op2_labels{'[', 'a', 'b', ']'};
+            std::vector<char> op2_labels{'a', 'b'};
             std::vector<char> op3_labels{'b', 'c'};
+            operands_labels.push_back(opt_begin);
             operands_labels.push_back(op2_labels);
+            operands_labels.push_back(opt_end);
             operands_labels.push_back(op3_labels);
             result_labels.push_back('a');
             result_labels.push_back('b');
@@ -401,20 +446,46 @@ namespace hypertrie::tests::leftjoin {
                     {2, 4, 6}
             };
         }
+        // [ab],[ac]->abc
+        SECTION("two_left_op", "left join without left operand followed by left join") {
+            operands.push_back(ht2);
+            operands.push_back(ht3);
+            std::vector<char> op2_labels{'a', 'b'};
+            std::vector<char> op3_labels{'b', 'c'};
+            operands_labels.push_back(opt_begin);
+            operands_labels.push_back(op2_labels);
+            operands_labels.push_back(opt_end);
+            operands_labels.push_back(opt_begin);
+            operands_labels.push_back(op3_labels);
+            operands_labels.push_back(opt_end);
+            result_labels.push_back('a');
+            result_labels.push_back('b');
+            result_labels.push_back('c');
+            expected_results = {
+                    {1, 3, 5},
+                    {1, 6, default_key_part},
+                    {2, 4, 6},
+                    {5, 7, default_key_part}
+            };
+        }
         // a,[b,bc,[ad]]->abcd
-        SECTION("no_wd", "non well defined") {
+        SECTION("no_wd", "not well defined") {
 			operands.push_back(ht1);
 			operands.push_back(ht1);
             operands.push_back(ht4);
             operands.push_back(ht3);
             std::vector<char> op1_labels{'a'};
-			std::vector<char> op2_labels{'[', 'b'};
+			std::vector<char> op2_labels{'b'};
             std::vector<char> op3_labels{'b', 'c'};
-            std::vector<char> op4_labels{'[', 'a', 'd', ']', ']'};
+            std::vector<char> op4_labels{'a', 'd'};
             operands_labels.push_back(op1_labels);
+            operands_labels.push_back(opt_begin);
             operands_labels.push_back(op2_labels);
             operands_labels.push_back(op3_labels);
+            operands_labels.push_back(opt_begin);
             operands_labels.push_back(op4_labels);
+            operands_labels.push_back(opt_end);
+            operands_labels.push_back(opt_end);
             result_labels.push_back('a');
             result_labels.push_back('b');
             result_labels.push_back('c');
@@ -438,17 +509,81 @@ namespace hypertrie::tests::leftjoin {
                     {8, 6, 25, default_key_part}
             };
         }
+        // a,[be,bc,[ad]]->abcd
+        SECTION("no_wd2", "not well defined, no results") {
+            operands.push_back(ht1);
+            operands.push_back(ht5);
+            operands.push_back(ht4);
+            operands.push_back(ht3);
+            std::vector<char> op1_labels{'a'};
+            std::vector<char> op2_labels{'b', 'e'};
+            std::vector<char> op3_labels{'b', 'c'};
+            std::vector<char> op4_labels{'a', 'd'};
+            operands_labels.push_back(op1_labels);
+            operands_labels.push_back(opt_begin);
+            operands_labels.push_back(op2_labels);
+            operands_labels.push_back(op3_labels);
+            operands_labels.push_back(opt_begin);
+            operands_labels.push_back(op4_labels);
+            operands_labels.push_back(opt_end);
+            operands_labels.push_back(opt_end);
+            result_labels.push_back('a');
+            result_labels.push_back('b');
+            result_labels.push_back('c');
+            result_labels.push_back('d');
+            expected_results = {
+                    {1, default_key_part, default_key_part, default_key_part},
+                    {2, default_key_part, default_key_part, default_key_part},
+                    {3, default_key_part, default_key_part, default_key_part},
+                    {4, default_key_part, default_key_part, default_key_part},
+                    {5, default_key_part, default_key_part, default_key_part},
+                    {6, default_key_part, default_key_part, default_key_part},
+                    {7, default_key_part, default_key_part, default_key_part},
+                    {8, default_key_part, default_key_part, default_key_part}
+            };
+        }
+		// a,[ab],[ab]->ab
+        SECTION("wwd", "weakly well defined") {
+            operands.push_back(ht1);
+            operands.push_back(ht2);
+            operands.push_back(ht3);
+            std::vector<char> op1_labels{'a'};
+            std::vector<char> op2_labels{'a', 'b'};
+            std::vector<char> op3_labels{'a', 'b'};
+            operands_labels.push_back(op1_labels);
+			operands_labels.push_back(opt_begin);
+            operands_labels.push_back(op2_labels);
+            operands_labels.push_back(opt_end);
+            operands_labels.push_back(opt_begin);
+            operands_labels.push_back(op3_labels);
+            operands_labels.push_back(opt_end);
+            result_labels.push_back('a');
+            result_labels.push_back('b');
+            expected_results = {
+                    {1, 3},
+                    {1, 6},
+                    {2, 4},
+                    {3, 5},
+                    {4, 6},
+                    {5, 7},
+                    {6, default_key_part},
+                    {7, default_key_part},
+                    {8, default_key_part}
+            };
+        }
         // a,[bc,cd]->abc
         SECTION("c_opt", "cartesian with optional operand") {
             operands.push_back(ht1);
             operands.push_back(ht4);
             operands.push_back(ht5);
             std::vector<char> op1_labels{'a'};
-            std::vector<char> op2_labels{'[', 'b', 'c'};
-            std::vector<char> op3_labels{'c', 'd', ']'};
+            std::vector<char> op2_labels{'b', 'c'};
+            std::vector<char> op3_labels{'c', 'd'};
             operands_labels.push_back(op1_labels);
+            operands_labels.push_back(opt_begin);
             operands_labels.push_back(op2_labels);
             operands_labels.push_back(op3_labels);
+            operands_labels.push_back(opt_end);
             result_labels.push_back('a');
 			result_labels.push_back('b');
 			result_labels.push_back('c');
@@ -471,16 +606,22 @@ namespace hypertrie::tests::leftjoin {
             operands.push_back(ht3);
             operands.push_back(ht4);
             operands.push_back(ht5);
-            std::vector<char> op1_labels{'[', 'a', 'b'};
-            std::vector<char> op2_labels{'b', 'h', ']'};
-            std::vector<char> op3_labels{'[', 'c', 'd', ']'};
-            std::vector<char> op4_labels{'[', 'e', 'g'};
-            std::vector<char> op5_labels{'e', 'f', ']'};
+            std::vector<char> op1_labels{'a', 'b'};
+            std::vector<char> op2_labels{'b', 'h'};
+            std::vector<char> op3_labels{'c', 'd'};
+            std::vector<char> op4_labels{'e', 'g'};
+            std::vector<char> op5_labels{'e', 'f'};
+            operands_labels.push_back(opt_begin);
             operands_labels.push_back(op1_labels);
             operands_labels.push_back(op2_labels);
+            operands_labels.push_back(opt_end);
+            operands_labels.push_back(opt_begin);
             operands_labels.push_back(op3_labels);
+            operands_labels.push_back(opt_end);
+            operands_labels.push_back(opt_begin);
             operands_labels.push_back(op4_labels);
             operands_labels.push_back(op5_labels);
+            operands_labels.push_back(opt_end);
             result_labels.push_back('a');
             result_labels.push_back('b');
             result_labels.push_back('c');
@@ -509,6 +650,35 @@ namespace hypertrie::tests::leftjoin {
                 }
             }
         }
+        // ab,bh,[cd],[eg,ef]->abcdef
+        SECTION("c_full_opt", "optional cartesian") {
+            operands.push_back(ht2);
+            operands.push_back(ht5);
+            operands.push_back(ht3);
+            operands.push_back(ht4);
+            operands.push_back(ht5);
+            std::vector<char> op1_labels{'a', 'b'};
+            std::vector<char> op2_labels{'b', 'h'};
+            std::vector<char> op3_labels{'c', 'd'};
+            std::vector<char> op4_labels{'e', 'g'};
+            std::vector<char> op5_labels{'e', 'f'};
+            operands_labels.push_back(op1_labels);
+            operands_labels.push_back(op2_labels);
+            operands_labels.push_back(opt_begin);
+            operands_labels.push_back(op3_labels);
+            operands_labels.push_back(opt_end);
+            operands_labels.push_back(opt_begin);
+            operands_labels.push_back(op4_labels);
+            operands_labels.push_back(op5_labels);
+            operands_labels.push_back(opt_end);
+            result_labels.push_back('a');
+            result_labels.push_back('b');
+            result_labels.push_back('c');
+            result_labels.push_back('d');
+            result_labels.push_back('e');
+            result_labels.push_back('f');
+            expected_results = {};
+        }
         // a,ab,bc,[ad]->abcd
         SECTION("mjdl_lj_jl", "multiple joins on different labels and left join on join label") {
             operands.push_back(ht1);
@@ -518,11 +688,13 @@ namespace hypertrie::tests::leftjoin {
             std::vector<char> op1_labels{'a'};
             std::vector<char> op2_labels{'a', 'b'};
             std::vector<char> op3_labels{'b', 'c'};
-            std::vector<char> op4_labels{'[', 'a', 'd', ']'};
+            std::vector<char> op4_labels{'a', 'd'};
             operands_labels.push_back(op1_labels);
             operands_labels.push_back(op2_labels);
             operands_labels.push_back(op3_labels);
+            operands_labels.push_back(opt_begin);
             operands_labels.push_back(op4_labels);
+            operands_labels.push_back(opt_end);
             result_labels.push_back('a');
             result_labels.push_back('b');
             result_labels.push_back('c');
@@ -542,13 +714,17 @@ namespace hypertrie::tests::leftjoin {
             std::vector<char> op1_labels{'a'};
             std::vector<char> op2_labels{'a', 'b'};
             std::vector<char> op3_labels{'b', 'c'};
-            std::vector<char> op4_labels{'[', 'a', 'd', ']'};
-            std::vector<char> op5_labels{'[', 'b', 'e', ']'};
+            std::vector<char> op4_labels{'a', 'd'};
+            std::vector<char> op5_labels{'b', 'e'};
             operands_labels.push_back(op1_labels);
             operands_labels.push_back(op2_labels);
             operands_labels.push_back(op3_labels);
+            operands_labels.push_back(opt_begin);
             operands_labels.push_back(op4_labels);
+            operands_labels.push_back(opt_end);
+            operands_labels.push_back(opt_begin);
             operands_labels.push_back(op5_labels);
+            operands_labels.push_back(opt_end);
             result_labels.push_back('a');
             result_labels.push_back('b');
             result_labels.push_back('c');
@@ -569,12 +745,14 @@ namespace hypertrie::tests::leftjoin {
             std::vector<char> op1_labels{'a'};
             std::vector<char> op2_labels{'a', 'b'};
             std::vector<char> op3_labels{'b', 'c'};
-            std::vector<char> op4_labels{'[', 'a', 'd', ']'};
+            std::vector<char> op4_labels{'a', 'd'};
             std::vector<char> op5_labels{'b', 'e'};
             operands_labels.push_back(op1_labels);
             operands_labels.push_back(op2_labels);
             operands_labels.push_back(op3_labels);
+            operands_labels.push_back(opt_begin);
             operands_labels.push_back(op4_labels);
+            operands_labels.push_back(opt_end);
             operands_labels.push_back(op5_labels);
             result_labels.push_back('a');
             result_labels.push_back('b');
@@ -596,12 +774,14 @@ namespace hypertrie::tests::leftjoin {
             std::vector<char> op2_labels{'a', 'b'};
             std::vector<char> op3_labels{'b', 'c'};
             std::vector<char> op4_labels{'c', 'e'};
-            std::vector<char> op5_labels{'[', 'b', 'd', ']'};
+            std::vector<char> op5_labels{'b', 'd'};
             operands_labels.push_back(op1_labels);
             operands_labels.push_back(op2_labels);
             operands_labels.push_back(op3_labels);
             operands_labels.push_back(op4_labels);
+            operands_labels.push_back(opt_begin);
             operands_labels.push_back(op5_labels);
+            operands_labels.push_back(opt_end);
             result_labels.push_back('a');
             result_labels.push_back('b');
             result_labels.push_back('c');

@@ -69,7 +69,10 @@ namespace einsum::internal {
 		 * A hash of the Subscript.
 		 */
 		mutable std::size_t hash{};
-
+		/**
+		 * Operands denoting the start and end of an optional part
+		 */
+		std::pair<std::vector<Label>, std::vector<Label>> optional_brackets{{'['}, {']'}};
 	public:
 		/**
 		 * Generates a empty subscript. This subscript '<>-><>' has no operands and evaluates to the scalar 0.
@@ -92,22 +95,18 @@ namespace einsum::internal {
 		 * @param result the labels of the result
 		 */
 		RawSubscript(OperandsSc &operands, const ResultSc &result) : result(result) {
-			std::vector<char> opt_begin{'['};
-            std::vector<char> opt_end{']'};
 			OperandPos op_pos = 0;
 			for(const auto& operand : operands) {
-                if(operand == opt_end && *(original_operands.rbegin()) == opt_begin) {
-					if(*(original_operands.rbegin()) == opt_begin) {
-						original_operands.erase(original_operands.end() - 1);
-						op_pos--;
-						continue;
-					}
-				}
-				original_operands.push_back(operand);
-				if(operand != opt_end and operand != opt_begin) {
+				if(operand != optional_brackets.second and operand != optional_brackets.first) {
 					this->operands.push_back(operand);
 					this->poss_in_operands[op_pos] = this->operands.size() - 1;
 				}
+				else if(operand == optional_brackets.second and *(original_operands.rbegin()) == optional_brackets.first){
+                    original_operands.erase(original_operands.end() - 1);
+                    op_pos--;
+                    continue;
+				}
+                original_operands.push_back(operand);
                 op_pos++;
 			}
 			this->hash = boost::hash_value(original_operands) + boost::hash_value(result);
@@ -221,38 +220,6 @@ namespace einsum::internal {
 			}
 			return RawSubscript(next_operands, result);
 		}
-
-		// removes angled brackets that denote nested levels
-        [[nodiscard]] auto removeLabelNested(Label label) const noexcept {
-            assert(getOperandsLabelSet().count(label));
-            OperandsSc next_operands{};
-			uint8_t depth{0}; // used in order to properly delete right squared brackets
-            for (const auto &operand: original_operands) {
-                OperandSc new_operand{};
-                for (auto current_label : operand)
-                    if (current_label != label) {
-						// remove left angled brackets only if the label to be removed appears in the operand
-						if (current_label == '[') {
-							depth++;
-							if (std::find(operand.cbegin(), operand.cend(), label) != operand.cend())
-								continue;
-						}
-						if(current_label == ']') {
-							depth--;
-							// remove right angled brackets if:
-							// 1) the label to be removed appears in the operand
-							// 2) to match the previously removed left angled bracket
-							if(std::find(operand.cbegin(), operand.cend(), label) != operand.cend() || depth)
-								continue;
-						}
-                        new_operand.push_back(current_label);
-					}
-                if (not new_operand.empty()) {
-                    next_operands.push_back(std::move(new_operand));
-                }
-            }
-            return RawSubscript(next_operands, result);
-        }
 
 		/**
 		 * Check if another Subscript is different. It is also different if the labels are ordered alike but other

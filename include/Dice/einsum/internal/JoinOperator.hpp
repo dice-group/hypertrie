@@ -77,16 +77,23 @@ namespace einsum::internal {
 			return self.ended_ or self.context->hasTimedOut();
 		}
 
+		static void clear(void *self_raw) {
+			return static_cast<JoinOperator_t *>(self_raw)->clear_impl();
+		}
+
 		static void
 		load(void *self_raw, std::vector<const_Hypertrie<tr>> operands, Entry_t &entry) {
 			static_cast<JoinOperator *>(self_raw)->load_impl(std::move(operands), entry);
 		}
 
-		static std::size_t hash(const void *self_raw) {
-			return static_cast<const JoinOperator *>(self_raw)->subscript->hash();
+	private:
+		inline void clear_impl(){
+			if (this->sub_operator)
+				this->sub_operator->clear();
+			this->join = {};
+			this->join_iter = {};
 		}
 
-	private:
 		inline void load_impl(std::vector<const_Hypertrie<tr>> operands, Entry_t &entry) {
 			if constexpr (_debugeinsum_) fmt::print("Join {}\n", this->subscript);
 
@@ -127,7 +134,6 @@ namespace einsum::internal {
 				this->ended_ = true;
 			}
 		}
-
 	};
 }
 #endif //HYPERTRIE_JOINOPERATOR_HPP

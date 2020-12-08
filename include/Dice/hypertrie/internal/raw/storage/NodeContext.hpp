@@ -352,8 +352,11 @@ namespace hypertrie::internal::raw {
 									// we need to revisit all positions. Thus, we need to use a new local_offset.
 									// As we do not prune the available key-positions anymore like done by the recursion
 									// the local_offset must not grow beyond the recursion's offset
-									else if (local_offset < offset)
-										local_offset++;
+									else {
+										if constexpr( offset != 0)
+											if (local_offset < offset)
+												local_offset++;
+									}
 									++read_pos;
 								}
 								if constexpr (not tri::is_bool_valued)

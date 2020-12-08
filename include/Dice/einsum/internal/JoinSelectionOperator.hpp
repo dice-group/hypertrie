@@ -12,8 +12,7 @@ namespace einsum::internal {
 	private:
 #include "Dice/einsum/internal/OperatorMemberTypealiases.hpp"
 
-        using LeftJoinOperator_t = LeftJoinOperator<value_type, tr>;
-		using JoinOperator_t = JoinOperator<value_type, tr>;
+		using JoinSelectionOperator_t = JoinSelectionOperator<value_type, tr>;
         // the label to pass to the next operator
         Label label = std::numeric_limits<Label>::max();
 		// the sub_operator will be either a LeftJoinOperator or a JoinOperator
@@ -25,13 +24,17 @@ namespace einsum::internal {
     public:
 
         JoinSelectionOperator(const std::shared_ptr<Subscript> &subscript, const std::shared_ptr<Context> &context)
-                : Operator_t(subscript->type, subscript, context, this) {
+                : Operator_t(Subscript::Type::Join, subscript, context, this) {
 			ended_ = true;
 		}
 
         static bool ended(const void *self_raw) {
             auto &self = *static_cast<const JoinSelectionOperator *>(self_raw);
             return self.ended_ or self.context->hasTimedOut();
+        }
+
+        static void clear(void *self_raw) {
+            return static_cast<JoinSelectionOperator_t *>(self_raw)->clear_impl();
         }
 
         static void load(void *self_raw, std::vector<const_Hypertrie<tr>> operands, Entry_t &entry) {
@@ -53,7 +56,13 @@ namespace einsum::internal {
 
 	private:
 
-		// decides whether to load the JoinOperator or the LeftJoinOperator
+        inline void clear_impl(){
+            if (this->sub_operator)
+                this->sub_operator->clear();
+        }
+
+
+        // decides whether to load the JoinOperator or the LeftJoinOperator
         inline void load_impl(std::vector<const_Hypertrie<tr>> operands, Entry_t &entry) {
             this->entry = &entry;
 			// the subscript does not change
@@ -66,7 +75,7 @@ namespace einsum::internal {
 			else
                 next_subscript->type = Subscript::Type::LeftJoin;
 			this->sub_operator = Operator_t::construct(next_subscript, this->context);
-            this->context->sub_operator_label[sub_operator->hash()] = label;
+            this->context->sub_operator_label[next_subscript->hash()] = label;
 			sub_operator->load(operands, *this->entry);
 			ended_ = sub_operator->ended();
 		}

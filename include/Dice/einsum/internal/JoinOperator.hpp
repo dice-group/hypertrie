@@ -101,8 +101,8 @@ namespace einsum::internal {
 			ended_ = false;
 			Label last_label = label;
             // check if a label for this operator has already been chosen by the JoinSelectionOperator
-            if(this->context->sub_operator_label.contains(hash(this)))
-                label = this->context->sub_operator_label[hash(this)];
+            if(this->context->sub_operator_label.contains(this->subscript->hash()))
+                label = this->context->sub_operator_label[this->subscript->hash()];
             else
 			    label = CardinalityEstimation_t::getMinCardLabel(operands, this->subscript, this->context);
 			if (label != last_label) {
@@ -116,7 +116,7 @@ namespace einsum::internal {
 			if (not sub_operator or sub_operator->hash() != next_subscript->hash()) {
 				sub_operator = Operator_t::construct(next_subscript, this->context);
 				if(next_subscript->type == Subscript::Type::Cartesian) {
-					this->context->non_optional_cartesian.insert(sub_operator->hash());
+					this->context->non_optional_cartesian.insert(next_subscript->hash());
 				}
 			}
 

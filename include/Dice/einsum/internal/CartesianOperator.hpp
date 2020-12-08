@@ -126,21 +126,22 @@ namespace einsum::internal {
 				if(std::find(skip_list.begin(), skip_list.end(), cart_op_pos) != skip_list.end())
 					continue;
                 auto &cart_op = sub_operators[cart_op_pos];
+                auto sub_operands = extractOperands(cart_op_pos, operands);
                 const double estimated_size = CardinalityEstimation<tr>::estimate(sub_operands, cart_op->getSubscript(), this->context);
                 if (estimated_size > max_estimated_size) {
                     max_estimated_size = estimated_size;
                     iterated_pos = cart_op_pos;
                 }
-                cart_op->load(extractOperands(cart_op_pos, operands), sub_entries[cart_op_pos]);
+                cart_op->load(std::move(sub_operands), sub_entries[cart_op_pos]);
                 if(cart_op->ended()) {
 					// if the previous operator was a join, do not continue
-                    if(this->context->non_optional_cartesian.find(hash(this)) != this->context->non_optional_cartesian.end()) {
+                    if(this->context->non_optional_cartesian.find(this->subscript->hash()) != this->context->non_optional_cartesian.end()) {
                         ended_ = true;
                         return;
                     }
 					else {
-						if(this->context->sub_operator_dependency_map.contains(hash(this)))
-							for(auto dependent_sub_op_pos : this->context->sub_operator_dependency_map[hash(this)][cart_op_pos])
+						if(this->context->sub_operator_dependency_map.contains(this->subscript->hash()))
+							for(auto dependent_sub_op_pos : this->context->sub_operator_dependency_map[this->subscript->hash()][cart_op_pos])
 								skip_list.push_back(dependent_sub_op_pos);
                         for(auto dependent_sub_op_pos : sub_op_dependencies[cart_op_pos])
                             skip_list.push_back(dependent_sub_op_pos);

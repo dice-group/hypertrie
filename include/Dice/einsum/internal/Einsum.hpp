@@ -65,7 +65,7 @@ namespace einsum::internal {
 			: subscript(std::move(subscript)), context{std::make_shared<Context>(timeout)},
 			  operands(operands),
 			  op{Operator_t::construct(this->subscript, context)},
-			  entry{0, Key_t(this->subscript->resultLabelCount(), std::numeric_limits<key_part_type>::max())} {}
+			  entry(this->subscript->resultLabelCount(), Operator_t::default_key_part) {}
 
 		[[nodiscard]] const std::shared_ptr<Subscript> &getSubscript() const {
 			return subscript;
@@ -120,6 +120,7 @@ namespace einsum::internal {
 		}
 
 		void clear() {
+			op->clear();
 		}
 	};
 
@@ -145,7 +146,7 @@ namespace einsum::internal {
 			: subscript(std::move(subscript)), context{std::make_shared<Context>(timeout)},
 			  operands(operands),
 			  op{Operator_t::construct(this->subscript, context)},
-			  entry{false, Key_t(this->subscript->resultLabelCount(), std::numeric_limits<key_part_type>::max())} {}
+			  entry(this->subscript->resultLabelCount(), Operator_t::default_key_part) {}
 
 		[[nodiscard]] const std::shared_ptr<Subscript> &getSubscript() const {
 			return subscript;
@@ -162,7 +163,7 @@ namespace einsum::internal {
 		struct iterator {
 		private:
 			std::shared_ptr<Operator_t> op;
-			tsl::hopscotch_set<Key_t, ::einsum::internal::KeyHash<key_part_type>> found_entries{};
+			tsl::sparse_set<size_t, std::identity> found_entries{};
 			Entry_t *current_entry;
 			bool ended_ = false;
 		public:
@@ -170,7 +171,8 @@ namespace einsum::internal {
 
 			explicit iterator(Einsum &einsum, Entry_t &entry) : op(einsum.op), current_entry{&entry} {
 				if (not op->ended()) {
-					found_entries.insert(current_entry->key);
+					const size_t hash = Dice::hash::dice_hash(current_entry->key);
+					found_entries.insert(hash);
 				}
 			}
 
@@ -178,8 +180,9 @@ namespace einsum::internal {
 				op->next();
 				while (not op->ended()) {
 					assert(current_entry->value == true);
-					if (found_entries.find(current_entry->key) == found_entries.end()) {
-						found_entries.insert(current_entry->key);
+					const size_t hash = Dice::hash::dice_hash(current_entry->key);
+					if (not found_entries.contains(hash)) {
+						found_entries.insert(hash);
 						return *this;
 					}
 					op->next();
@@ -212,7 +215,7 @@ namespace einsum::internal {
 		}
 
 		void clear() {
-			throw std::logic_error("not yet implemented.");
+			op->clear();
 		}
 	};
 }

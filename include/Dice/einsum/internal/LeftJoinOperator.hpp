@@ -13,6 +13,7 @@ namespace einsum::internal {
 #include "Dice/einsum/internal/OperatorMemberTypealiases.hpp"
 		using LeftJoin_t = hypertrie::LeftHashJoin<tr>;
         using EntryGeneratorOperator_t = EntryGeneratorOperator<value_type, tr>;
+        using LeftJoinOperator_t = LeftJoinOperator<value_type, tr>;
 
 		LeftJoin_t left_join;
 		typename LeftJoin_t::iterator left_join_iterator;
@@ -47,7 +48,7 @@ namespace einsum::internal {
 
 	public:
 		LeftJoinOperator(const std::shared_ptr<Subscript> &subscript, const std::shared_ptr<Context> &context)
-			: Operator_t(subscript->type, subscript, context, this) {
+			: Operator_t(Subscript::Type::LeftJoin, subscript, context, this) {
             auto entry_gen_sc = std::make_shared<Subscript>(std::vector<std::vector<Label>>(),
                                                             subscript->getRawSubscript().result);
             entry_generator = std::make_unique<EntryGeneratorOperator_t>(entry_gen_sc, this->context);
@@ -62,9 +63,9 @@ namespace einsum::internal {
 			static_cast<LeftJoinOperator *>(self_raw)->load_impl(std::move(operands), entry);
 		}
 
-		static std::size_t hash(const void *self_raw) {
-			return static_cast<const LeftJoinOperator *>(self_raw)->subscript->hash();
-		}
+        static void clear(void *self_raw) {
+            return static_cast<LeftJoinOperator_t *>(self_raw)->clear_impl();
+        }
 
 		static void next(void *self_raw) {
 			LeftJoinOperator &self = *static_cast<LeftJoinOperator *>(self_raw);
@@ -83,7 +84,14 @@ namespace einsum::internal {
 
 	private:
 
-		void find_next_valid() {
+        inline void clear_impl(){
+            if (this->sub_operator)
+                this->sub_operator->clear();
+            this->left_join = {};
+            this->left_join_iterator = {};
+        }
+
+        void find_next_valid() {
 			assert(left_join_iterator);
 			while(sub_operator->ended() && !generate_optional_value) {
                 ++left_join_iterator;
@@ -117,8 +125,8 @@ namespace einsum::internal {
 			ended_ = false;
 			Label last_label = label;
 			// check if a label for this operator has already been chosen by the JoinSelectionOperator
-			if(this->context->sub_operator_label.contains(hash(this)))
-				label = this->context->sub_operator_label[hash(this)];
+			if(this->context->sub_operator_label.contains(this->subscript->hash()))
+				label = this->context->sub_operator_label[this->subscript->hash()];
 			else
 			    label = *(this->subscript->getLeftJoinLabels().begin()); // TODO: choose optimal label
 			if (label != last_label) {

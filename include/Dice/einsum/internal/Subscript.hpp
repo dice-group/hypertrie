@@ -10,6 +10,8 @@
 #include <memory>
 #include <ostream>
 
+#include <boost/container/flat_map.hpp>
+
 #include <fmt/core.h>
 #include <fmt/format.h>
 #include <fmt/ostream.h>
@@ -29,7 +31,7 @@ namespace einsum::internal {
 
 	using DependencyGraph = util::UndirectedGraph<Label>;
 	using DirectedDependencyGraph = util::DirectedGraph<Label>;
-	using ConnectedComponent = std::set<Label>;
+	using ConnectedComponent = typename DependencyGraph::NodeSet;
 	using ConnectedComponents = std::vector<ConnectedComponent>;
 
 	using WeaklyConnectedComponent = std::set<Label>;
@@ -306,6 +308,22 @@ namespace einsum::internal {
                                                                                                result_label_set,
                                                                                                weakly_connected_components)),
                   all_result_done(calcAllResultDone(operands_label_set, result_label_set)) {
+
+			for (const auto [op_pos, labels] : iter::enumerate(raw_subscript.operands))
+				for (const Label label : labels)
+					poss_of_operands_with_labels[label].push_back(op_pos);
+
+			for (auto label : operands_label_set) {
+				if (not result_label_set.count(label)) {
+					const auto &op_poss = poss_of_operands_with_labels[label];
+					if (op_poss.size() == 1) {
+						const auto &op = raw_subscript.operands[op_poss[0]];
+						if (std::count(op.begin(), op.end(), label) == 1)
+							lonely_non_result_labels.insert(label);
+					}
+				}
+			}
+
 			switch (this->type) {
 				case Type::JoinSelection: {
 					[[fallthrough]];
@@ -334,21 +352,6 @@ namespace einsum::internal {
 				}
 				case Type::Join: {
 					label_poss_in_result = raw_subscript.getLabelPossInResult();
-
-					for (const auto[op_pos, labels] : iter::enumerate(raw_subscript.operands))
-						for (const Label label : labels)
-							poss_of_operands_with_labels[label].push_back(op_pos);
-
-					for (auto label : operands_label_set) {
-						if (not result_label_set.count(label)) {
-							const auto &op_poss = poss_of_operands_with_labels[label];
-							if (op_poss.size() == 1) {
-								const auto &op = raw_subscript.operands[op_poss[0]];
-								if (std::count(op.begin(), op.end(), label) == 1)
-									lonely_non_result_labels.insert(label);
-							}
-						}
-					}
 					break;
 				}
 
@@ -409,7 +412,7 @@ namespace einsum::internal {
 		static Subscript from_string(const std::string &subscript_str) {
 			auto iter = subscript_str.cbegin();
 			auto end = subscript_str.end();
-			std::map<char, Label> char_mapping{};
+			boost::container::flat_map<char, Label> char_mapping{};
 			OperandsSc operands_sc{};
 			ResultSc result_sc{};
 			Label next_label = 'a';

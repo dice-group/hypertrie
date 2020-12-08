@@ -1,19 +1,23 @@
 #ifndef SPARSETENSOR_EINSUM_UTIL_UNDIRECTEDGRAPH_HPP
 #define SPARSETENSOR_EINSUM_UTIL_UNDIRECTEDGRAPH_HPP
 
-#include <set>
-#include <map>
+#include <vector>
 
+#include <boost/container/flat_set.hpp>
+#include <robin_hood.h>
+
+#include "Dice/hash/DiceHash.hpp"
 
 namespace einsum::internal::util {
 
-/**
- * Simple undirected Graph implementation.
- * @tparam T type of the nodes.
- */
+	/**
+	 * Simple undirected Graph implementation.
+	 * @tparam T type of the nodes.
+	 */
 	template<typename T>
 	class UndirectedGraph {
 	public:
+		using NodeSet = boost::container::flat_set<T>;
 		/**
 		 * New empty UndirectedGraph.
 		 */
@@ -23,11 +27,11 @@ namespace einsum::internal::util {
 		/**
 		 * Set of all nodes.
 		 */
-		std::set<T> nodes{};
+		NodeSet nodes{};
 		/**
 		 * Set of all directed edges. (a,a)-edged are allowed.
 		 */
-		std::map<T, std::set<T >> edges{};
+		robin_hood::unordered_node_map<T, NodeSet, Dice::hash::DiceHash<T>> edges{};
 
 	public:
 		/**
@@ -35,10 +39,10 @@ namespace einsum::internal::util {
 		 * @param nodes nodes to span the complete graph.
 		 */
 		template<typename C>
-		void addCompleteGraph(const C &new_nodes) {
+		void addCompleteGraph(const C &new_nodes) noexcept {
 			// add all combinations
 
-			std::set<T> new_nodes_set{new_nodes.begin(), new_nodes.end()};
+			NodeSet new_nodes_set{new_nodes.begin(), new_nodes.end()};
 
 			for (const T &node_a : new_nodes_set)
 				for (const T &node_b : new_nodes_set)
@@ -50,15 +54,15 @@ namespace einsum::internal::util {
 		 * @param node_a first node
 		 * @param node_b second node
 		 */
-		void addEdge(T node_a, T node_b) {
+		void addEdge(T node_a, T node_b) noexcept {
 			// insert edge from a to b
 			nodes.insert(node_a);
-			std::set<T> &adjacent_nodes_x = edges[node_a];
+			NodeSet &adjacent_nodes_x = edges[node_a];
 			adjacent_nodes_x.insert(node_b);
 
 			// insert edge from b to a
 			nodes.insert(node_b);
-			std::set<T> &adjacent_nodes_y = edges[node_b];
+			NodeSet &adjacent_nodes_y = edges[node_b];
 			adjacent_nodes_y.insert(node_a);
 		}
 
@@ -66,16 +70,16 @@ namespace einsum::internal::util {
 		 * Get all connected components e.g. all sets of nodes that are reachable form each other.
 		 * @return set of connected components.
 		 */
-		[[nodiscard]] std::vector<std::set<T>> getConnectedComponents() const {
+		[[nodiscard]] std::vector<NodeSet> getConnectedComponents() const noexcept {
 			// this is basically a breadth first search
-			std::set<T> unfinished_nodes{this->nodes};
+			NodeSet unfinished_nodes{this->nodes};
 
-			std::set<T> open_nodes{};
+			NodeSet open_nodes{};
 
-			std::vector<std::set<T>> connected_components{};
+			std::vector<NodeSet> connected_components{};
 
 			while (not unfinished_nodes.empty()) {
-				std::set<T> connected_component{};
+				NodeSet connected_component{};
 
 				T first_node = *unfinished_nodes.begin();
 				open_nodes.insert(first_node);
@@ -85,7 +89,7 @@ namespace einsum::internal::util {
 				while (not open_nodes.empty()) {
 					T node = *open_nodes.begin();
 					open_nodes.erase(node);
-					const std::set<T> &adjacent_nodes = edges.at(node);
+					const NodeSet &adjacent_nodes = edges.at(node);
 					for (T adj_node : adjacent_nodes) {
 						if (unfinished_nodes.count(adj_node)) {
 							connected_component.insert(adj_node);
@@ -106,7 +110,7 @@ namespace einsum::internal::util {
 		 * @param node the node.
 		 * @return the neigbors.
 		 */
-		std::set<T> neighbors(const T node) const {
+		NodeSet neighbors(const T node) const noexcept {
 			return edges.at(node);
 		}
 
@@ -114,7 +118,7 @@ namespace einsum::internal::util {
 		 * Get all nodes.
 		 * @return all nodes.
 		 */
-		std::set<T> getNodes() const {
+		NodeSet getNodes() const noexcept {
 			return nodes;
 		}
 
@@ -131,7 +135,7 @@ namespace einsum::internal::util {
 		 * Iterator of the nodes.
 		 * @return Node iterator
 		 */
-		typename std::set<T>::const_iterator cbegin() const {
+		typename NodeSet::const_iterator cbegin() const noexcept {
 			return nodes.cbegin();
 		};
 
@@ -139,7 +143,7 @@ namespace einsum::internal::util {
 		 * End of nodes Iterator.
 		 * @return iterator end
 		 */
-		typename std::set<T>::const_iterator cend() const {
+		typename NodeSet::const_iterator cend() const noexcept {
 			return nodes.cend();
 		};
 	};

@@ -77,16 +77,23 @@ namespace einsum::internal {
 			return self.ended_ or self.context->hasTimedOut();
 		}
 
+		static void clear(void *self_raw) {
+			return static_cast<JoinOperator_t *>(self_raw)->clear_impl();
+		}
+
 		static void
 		load(void *self_raw, std::vector<const_Hypertrie<tr>> operands, Entry_t &entry) {
 			static_cast<JoinOperator *>(self_raw)->load_impl(std::move(operands), entry);
 		}
 
-		static std::size_t hash(const void *self_raw) {
-			return static_cast<const JoinOperator *>(self_raw)->subscript->hash();
+	private:
+		inline void clear_impl(){
+			if (this->sub_operator)
+				this->sub_operator->clear();
+			this->join = {};
+			this->join_iter = {};
 		}
 
-	private:
 		inline void load_impl(std::vector<const_Hypertrie<tr>> operands, Entry_t &entry) {
 			if constexpr (_debugeinsum_) fmt::print("Join {}\n", this->subscript);
 
@@ -94,8 +101,8 @@ namespace einsum::internal {
 			ended_ = false;
 			Label last_label = label;
             // check if a label for this operator has already been chosen by the JoinSelectionOperator
-            if(this->context->sub_operator_label.contains(hash(this)))
-                label = this->context->sub_operator_label[hash(this)];
+            if(this->context->sub_operator_label.contains(this->subscript->hash()))
+                label = this->context->sub_operator_label[this->subscript->hash()];
             else
 			    label = CardinalityEstimation_t::getMinCardLabel(operands, this->subscript, this->context);
 			if (label != last_label) {
@@ -109,7 +116,7 @@ namespace einsum::internal {
 			if (not sub_operator or sub_operator->hash() != next_subscript->hash()) {
 				sub_operator = Operator_t::construct(next_subscript, this->context);
 				if(next_subscript->type == Subscript::Type::Cartesian) {
-					this->context->non_optional_cartesian.insert(sub_operator->hash());
+					this->context->non_optional_cartesian.insert(next_subscript->hash());
 				}
 			}
 
@@ -127,7 +134,6 @@ namespace einsum::internal {
 				this->ended_ = true;
 			}
 		}
-
 	};
 }
 #endif //HYPERTRIE_JOINOPERATOR_HPP

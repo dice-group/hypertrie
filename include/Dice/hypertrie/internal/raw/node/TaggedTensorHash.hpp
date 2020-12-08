@@ -4,7 +4,6 @@
 #include <bitset>
 #include <compare>
 
-#include <absl/hash/hash.h>
 #include <fmt/ostream.h>
 
 #include "Dice/hypertrie/internal/raw/Hypertrie_internal_traits.hpp"

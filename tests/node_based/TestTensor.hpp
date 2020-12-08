@@ -5,6 +5,7 @@
 #include <fmt/format.h>
 #include <tsl/sparse_map.h>
 #include <itertools.hpp>
+#include <absl/hash/hash.h>
 
 namespace hypertrie::tests::raw::node_context {
 

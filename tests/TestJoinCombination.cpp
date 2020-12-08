@@ -428,6 +428,76 @@ namespace hypertrie::tests::leftjoin {
                     {8, default_key_part, default_key_part, default_key_part}
             };
         }
+        // a,[ab,[bc],cd]->abcd
+        SECTION("lj_nlj_j", "nested left join followed by join") {
+            operands.push_back(ht1);
+            operands.push_back(ht2);
+            operands.push_back(ht3);
+            operands.push_back(ht4);
+            std::vector<char> op1_labels{'a'};
+            std::vector<char> op2_labels{'a', 'b'};
+            std::vector<char> op3_labels{'b', 'c'};
+            std::vector<char> op4_labels{'c', 'd'};
+            operands_labels.push_back(op1_labels);
+            operands_labels.push_back(opt_begin);
+            operands_labels.push_back(op2_labels);
+            operands_labels.push_back(opt_begin);
+            operands_labels.push_back(op3_labels);
+            operands_labels.push_back(opt_end);
+            operands_labels.push_back(op4_labels);
+            operands_labels.push_back(opt_end);
+            result_labels.push_back('a');
+            result_labels.push_back('b');
+            result_labels.push_back('c');
+            result_labels.push_back('d');
+            expected_results = {
+                    {1, default_key_part, default_key_part, default_key_part},
+                    {1, default_key_part, default_key_part, default_key_part},
+                    {2, 4, 6, 25},
+                    {3, default_key_part, default_key_part, default_key_part},
+                    {4, default_key_part, default_key_part, default_key_part},
+                    {5, default_key_part, default_key_part, default_key_part},
+                    {6, default_key_part, default_key_part, default_key_part},
+                    {7, default_key_part, default_key_part, default_key_part},
+                    {8, default_key_part, default_key_part, default_key_part}
+            };
+        }
+        // a,[ab,[bc],[cd]]->abcd
+        SECTION("lj_nlj_lj", "nested left join followed by left join") {
+            operands.push_back(ht1);
+            operands.push_back(ht2);
+            operands.push_back(ht3);
+            operands.push_back(ht4);
+            std::vector<char> op1_labels{'a'};
+            std::vector<char> op2_labels{'a', 'b'};
+            std::vector<char> op3_labels{'b', 'c'};
+            std::vector<char> op4_labels{'c', 'd'};
+            operands_labels.push_back(op1_labels);
+            operands_labels.push_back(opt_begin);
+            operands_labels.push_back(op2_labels);
+            operands_labels.push_back(opt_begin);
+            operands_labels.push_back(op3_labels);
+            operands_labels.push_back(opt_end);
+            operands_labels.push_back(opt_begin);
+            operands_labels.push_back(op4_labels);
+            operands_labels.push_back(opt_end);
+            operands_labels.push_back(opt_end);
+            result_labels.push_back('a');
+            result_labels.push_back('b');
+            result_labels.push_back('c');
+            result_labels.push_back('d');
+            expected_results = {
+                    {1, 3, 5, default_key_part},
+                    {1, 6, default_key_part, default_key_part},
+                    {2, 4, 6, 25},
+                    {3, default_key_part, default_key_part, default_key_part},
+                    {4, default_key_part, default_key_part, default_key_part},
+                    {5, 7, default_key_part, default_key_part},
+                    {6, default_key_part, default_key_part, default_key_part},
+                    {7, default_key_part, default_key_part, default_key_part},
+                    {8, default_key_part, default_key_part, default_key_part}
+            };
+        }
 		// [ab],bc->abc
         SECTION("no_left_op", "left join without left operand") {
             operands.push_back(ht2);

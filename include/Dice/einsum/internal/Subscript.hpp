@@ -167,12 +167,14 @@ namespace einsum::internal {
 		LabelPossInOperand operand2result_mapping_resolveType{};
 		// Join
 		tsl::hopscotch_map<Label, std::vector<OperandPos>> poss_of_operands_with_labels{};
+		// Join
+        tsl::hopscotch_set<Label> join_labels{};
 		// Cartesian
 		CartesianSubSubscripts cartesian_sub_subscripts;
 		// Cartesian
         std::vector<std::vector<OperandPos>> sub_op_dependencies;
 		// Left Join
-        tsl::hopscotch_set<Label> left_join_labels;
+        tsl::hopscotch_set<Label> left_join_labels{};
 		// Left Join
         tsl::hopscotch_map<Label, std::vector<OperandPos>> non_optional_operands_of_label{};
 
@@ -351,6 +353,7 @@ namespace einsum::internal {
 				}
 				case Type::Join: {
 					label_poss_in_result = raw_subscript.getLabelPossInResult();
+
 					break;
 				}
 
@@ -444,6 +447,10 @@ namespace einsum::internal {
 			return left_join_labels;
 		}
 
+        const tsl::hopscotch_set<Label>& getJoinLabels() const {
+            return join_labels;
+        }
+
 		const std::vector<OperandPos>& getNonOptionalOperands(Label label) {
 			return non_optional_operands_of_label[label];
 		}
@@ -497,15 +504,15 @@ namespace einsum::internal {
 			}
 			// use the strongly connected components of the dependency graph in order to choose the proper join operation
 			// the strong components of a graph create a directed acyclic graph (independent strong component)
-			auto independent_strong_component = directed_dependency_graph.getIndependentStrongComponent();
+			auto ind_strong_comp = directed_dependency_graph.getIndependentStrongComponent();
 			// if the independent component contains multiple operands do a join
 			// if there are multiple operands in the independent component, component_labels will not be empty
-			auto& comp_labels = independent_strong_component.component_labels;
-			auto& out_labels = independent_strong_component.outgoing_labels;
-			std::set<Label> common_labels{};
-			if(comp_labels.size() > 0) {
-                std::set_intersection(comp_labels.begin(), comp_labels.end(),
-									  out_labels.begin(), out_labels.end(),
+			join_labels.insert(ind_strong_comp.component_labels.begin(), ind_strong_comp.component_labels.end());
+			left_join_labels.insert(ind_strong_comp.outgoing_labels.begin(), ind_strong_comp.outgoing_labels.end());
+			tsl::hopscotch_set<Label> common_labels{};
+			if(join_labels.size() > 0) {
+                std::set_intersection(join_labels.begin(), join_labels.end(),
+                                      left_join_labels.begin(), left_join_labels.end(),
 									  std::inserter(common_labels, common_labels.end()));
 				// empty common labels -> there is not a label that participates in join and left join -> join
 				if(common_labels.empty()) {
@@ -513,7 +520,7 @@ namespace einsum::internal {
 				}
 				// common labels not empty && component labels > 0
 				// multiple join labels and at least one label that participates in join and left join
-				if(comp_labels.size() > 1 and !common_labels.empty()) {
+				if(join_labels.size() > 1 and !common_labels.empty()) {
 					return Type::JoinSelection;
 				}
 			}
@@ -562,7 +569,7 @@ namespace einsum::internal {
                 bool strong_dependency = false; // indicates whether the current operand participates in a strong dependency
 				for(auto label : operand_labels) {
 					// check if the active label has been observed
-					if(label_depth_operand.contains(label)) {
+					if(label_depth_operand.contains(label) and !label_depth_operand[label].empty()) {
 						// check if there is an operand with the same label in the current group (join)
 						if (label_depth_operand[label].contains(depth)) {
 							auto dominant_op_orig_pos = label_depth_operand[label][depth];
@@ -584,6 +591,7 @@ namespace einsum::internal {
                         auto dominant_op_orig_pos = last_operand_of_label[label];
                         auto dominant_op_pos = raw_subscript.poss_in_operands[dominant_op_orig_pos];
                         // wwd edge
+                        operand_directed_dependency_graph.addEdge(label, dominant_op_pos, operand_pos, true);
                         strong_dependency = true;
 					}
                     // if the current label has not been seen yet, add a self-edge using the current label

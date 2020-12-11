@@ -19,15 +19,16 @@ namespace einsum::internal::util {
 
     private:
 
-		struct EdgeLabel {
+		struct LabelledEdge {
 			R label;
+			bool wwd;
 		};
 
 		using DirectedLabelledGraph = boost::adjacency_list<boost::vecS,
 															boost::vecS,
 															boost::directedS,
 															boost::no_property,
-															EdgeLabel>;
+															LabelledEdge>;
 
         using DirectedUnLabelledGraph = boost::adjacency_list<boost::vecS,
 															  boost::vecS,
@@ -38,7 +39,6 @@ namespace einsum::internal::util {
 		using Vertex = typename boost::graph_traits<DirectedLabelledGraph>::vertex_descriptor;
 		using StrongComponentID = uint16_t ;
 		using WeakComponentID = uint16_t ;
-
 		static_assert(std::is_same_v<Vertex, std::size_t>);
 
 		// stores for each vertex to which strong component it belongs
@@ -47,8 +47,10 @@ namespace einsum::internal::util {
         // stores for each vertex to which strong component it belongs
         std::vector<WeakComponentID> weak_components;
 
+		// it used to capture dependencies between operands in joins and left-joins
 		DirectedLabelledGraph graph{};
 
+		// it used to capture dependencies between sub_operators in cartesian joins
         DirectedUnLabelledGraph unlabelled_graph{};
 
     public:
@@ -71,8 +73,8 @@ namespace einsum::internal::util {
 			return boost::add_vertex(graph);
 		}
 
-		void addEdge(R label, Vertex source, Vertex target) {
-			boost::add_edge(source, target, EdgeLabel{label}, graph);
+		void addEdge(R label, Vertex source, Vertex target, bool wwd = false) {
+			boost::add_edge(source, target, LabelledEdge{label, wwd}, graph);
 		}
 
 		void addEdge(Vertex source, Vertex target) {
@@ -95,6 +97,7 @@ namespace einsum::internal::util {
             std::set<Vertex> target_vertices{};
 			std::deque<Vertex> to_check{vertex};
 			std::set<Vertex> visited{};
+			bool flag = true;
 			while(!to_check.empty()) {
 				auto v = to_check.front();
 				to_check.pop_front();
@@ -103,12 +106,16 @@ namespace einsum::internal::util {
 			    visited.insert(v);
                 auto out_edges_iterators = boost::out_edges(v, graph);
                 for(auto out_edge_iter = out_edges_iterators.first; out_edge_iter != out_edges_iterators.second; out_edge_iter++) {
+					// skip the edge if it is used to capture wwd dependencies and is an immediate neighbor
+					if(graph[*out_edge_iter].wwd and flag)
+						continue;
                     auto target = boost::target(*out_edge_iter, graph);
                     if(target == v)
                         continue;
                     target_vertices.insert(boost::target(*out_edge_iter, graph));
                     to_check.push_back(boost::target(*out_edge_iter, graph));
                 }
+				flag = false;
             }
             return target_vertices;
         }

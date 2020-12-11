@@ -22,7 +22,7 @@ namespace einsum::internal {
 		                             const std::shared_ptr<Subscript> &sc,
 		                             [[maybe_unused]] std::shared_ptr<Context> context) {
 			// select the best label from the available join labels
-			const tsl::hopscotch_set <Label> &operandsLabelSet = sc->getOperandsLabelSet();
+			const tsl::hopscotch_set <Label> &operandsLabelSet = sc->getJoinLabels();
 			const tsl::hopscotch_set <Label> &lonely_non_result_labels = sc->getLonelyNonResultLabelSet();
 			if (operandsLabelSet.size() == 1) {
 				return *operandsLabelSet.begin();

@@ -12,7 +12,6 @@ namespace einsum::internal {
 	class LeftJoinOperator : public Operator<value_type, tr_t> {
 #include "Dice/einsum/internal/OperatorMemberTypealiases.hpp"
 		using LeftJoin_t = hypertrie::LeftHashJoin<tr>;
-        using EntryGeneratorOperator_t = EntryGeneratorOperator<value_type, tr>;
         using LeftJoinOperator_t = LeftJoinOperator<value_type, tr>;
 
 		LeftJoin_t left_join;
@@ -41,17 +40,11 @@ namespace einsum::internal {
 		std::shared_ptr<Operator_t> sub_operator;
         std::shared_ptr<Subscript> next_subscript;
 
-		// it is used to generate an entry with unbound values
-		std::unique_ptr<Operator_t> entry_generator;
-
 		bool ended_ = true;
 
 	public:
 		LeftJoinOperator(const std::shared_ptr<Subscript> &subscript, const std::shared_ptr<Context> &context)
 			: Operator_t(Subscript::Type::LeftJoin, subscript, context, this) {
-            auto entry_gen_sc = std::make_shared<Subscript>(std::vector<std::vector<Label>>(),
-                                                            subscript->getRawSubscript().result);
-            entry_generator = std::make_unique<EntryGeneratorOperator_t>(entry_gen_sc, this->context);
 		}
 
 		static bool ended(const void *self_raw) {
@@ -92,13 +85,11 @@ namespace einsum::internal {
         }
 
         void find_next_valid() {
-			assert(left_join_iterator);
-			while(sub_operator->ended() && !generate_optional_value) {
+			while(sub_operator->ended() and !generate_optional_value and left_join_iterator) {
                 ++left_join_iterator;
                 if (left_join_iterator and not this->context->hasTimedOut()) {
 					// clear entry: since in each iteration we initiate a new sub_operator, some keys of the entry will stay the same
-					// use EntryGeneratorOperator to clear the entry
-					entry_generator->load({}, *this->entry);
+					this->entry->clear(default_key_part);
                     std::vector<std::optional<const_Hypertrie<tr>>> next_operands;
                     std::tie(next_operands, current_key_part, pos_in_out, joined) = *left_join_iterator;
                     // check if we can generate an optional entry for this operand

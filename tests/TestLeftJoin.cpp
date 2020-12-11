@@ -51,67 +51,349 @@ namespace hypertrie::tests::leftjoin {
 		std::vector<char> opt_end{']'};
         std::vector<char> result_labels{};
 
-		SECTION("lj", "one left join") {
-            operands.push_back(ht1);
-			operands.push_back(ht2);
-			std::vector<char> op1_labels{'a'};
-            std::vector<char> op2_labels{'a', 'b'};
-            operands_labels.push_back(op1_labels);
-			operands_labels.push_back(opt_begin);
-            operands_labels.push_back(op2_labels);
-            operands_labels.push_back(opt_end);
-			SECTION("res_size_1") {
+		SECTION("wd", "well-designed queries") {
+            // a,[ab]->a / a,[ab]->ab
+            SECTION("lj", "simple left join, project only non-optional variable") {
+                operands.push_back(ht1);
+                operands.push_back(ht2);
+                std::vector<char> op1_labels{'a'};
+                std::vector<char> op2_labels{'a', 'b'};
+                operands_labels.push_back(op1_labels);
+                operands_labels.push_back(opt_begin);
+                operands_labels.push_back(op2_labels);
+                operands_labels.push_back(opt_end);
+                SECTION("res_size_1") {
+                    result_labels.push_back('a');
+                    expected_results = {
+                            {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}
+                    };
+                }
+                SECTION("lj2", "simple left join, project both variables") {
+                    result_labels.push_back('a');
+                    result_labels.push_back('b');
+                    expected_results = {
+                            {1, 3},
+                            {1, 6},
+                            {2, 4},
+                            {3, default_key_part},
+                            {4, default_key_part},
+                            {5, default_key_part},
+                            {6, default_key_part},
+                            {7, default_key_part},
+                            {8, default_key_part}
+                    };
+                }
+            }
+            // ab,[bc]->abc
+            SECTION("lj3", "simple left join, join variable not at first position") {
+                operands.push_back(ht2);
+                operands.push_back(ht3);
+                std::vector<char> op1_labels{'a', 'b'};
+                std::vector<char> op2_labels{'b', 'c'};
+                operands_labels.push_back(op1_labels);
+                operands_labels.push_back(opt_begin);
+                operands_labels.push_back(op2_labels);
+                operands_labels.push_back(opt_end);
                 result_labels.push_back('a');
+                result_labels.push_back('b');
+                result_labels.push_back('c');
                 expected_results = {
-                        {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}
+                        {1, 3, 5},
+                        {1, 6, default_key_part},
+                        {2, 4, 6}
                 };
-			}
-			SECTION("res_size_2") {
-				result_labels.push_back('a');
-				result_labels.push_back('b');
+            }
+            SECTION("mlj_sl", "multiple not nested left joins on the same label") {
+                //a,[ab],[ac]->abc
+                SECTION("mlj_sl2", "two optional operands") {
+                    operands.push_back(ht1);
+                    operands.push_back(ht2);
+                    operands.push_back(ht3);
+                    std::vector<char> op1_labels{'a'};
+                    std::vector<char> op2_labels{'a', 'b'};
+                    std::vector<char> op3_labels{'a', 'c'};
+                    operands_labels.push_back(op1_labels);
+                    operands_labels.push_back(opt_begin);
+                    operands_labels.push_back(op2_labels);
+                    operands_labels.push_back(opt_end);
+                    operands_labels.push_back(opt_begin);
+                    operands_labels.push_back(op3_labels);
+                    operands_labels.push_back(opt_end);
+                    result_labels.push_back('a');
+                    result_labels.push_back('b');
+                    result_labels.push_back('c');
+                    expected_results = {
+                            {1, 3, 8},
+                            {1, 6, 8},
+                            {2, 4, default_key_part},
+                            {3, default_key_part, 5},
+                            {4, default_key_part, 6},
+                            {5, default_key_part, default_key_part},
+                            {6, default_key_part, default_key_part},
+                            {7, default_key_part, default_key_part},
+                            {8, default_key_part, default_key_part}
+                    };
+                }
+                //a,[ab],[ac],[ad]->abcd
+                SECTION("mlj_sl3", "three optional operands") {
+                    operands.push_back(ht1);
+                    operands.push_back(ht2);
+                    operands.push_back(ht3);
+                    operands.push_back(ht5);
+                    std::vector<char> op1_labels{'a'};
+                    std::vector<char> op2_labels{'a', 'b'};
+                    std::vector<char> op3_labels{'a', 'c'};
+                    std::vector<char> op4_labels{'a', 'd'};
+                    operands_labels.push_back(op1_labels);
+                    operands_labels.push_back(opt_begin);
+                    operands_labels.push_back(op2_labels);
+                    operands_labels.push_back(opt_end);
+                    operands_labels.push_back(opt_begin);
+                    operands_labels.push_back(op3_labels);
+                    operands_labels.push_back(opt_end);
+                    operands_labels.push_back(opt_begin);
+                    operands_labels.push_back(op4_labels);
+                    operands_labels.push_back(opt_end);
+                    result_labels.push_back('a');
+                    result_labels.push_back('b');
+                    result_labels.push_back('c');
+                    result_labels.push_back('d');
+                    expected_results = {
+                            {1, 3, 8, 35},
+                            {1, 6, 8, 35},
+                            {2, 4, default_key_part, default_key_part},
+                            {3, default_key_part, 5, default_key_part},
+                            {4, default_key_part, 6, default_key_part},
+                            {5, default_key_part, default_key_part, 30},
+                            {6, default_key_part, default_key_part, default_key_part},
+                            {7, default_key_part, default_key_part, default_key_part},
+                            {8, default_key_part, default_key_part, 30}
+                    };
+                }
+            }
+            SECTION("nlj_dl", "nested left joins on different labels") {
+                //a,[ab,[bc]]->abc
+                SECTION("nlj_dl1", "one nested level") {
+                    operands.push_back(ht1);
+                    operands.push_back(ht2);
+                    operands.push_back(ht3);
+                    std::vector<char> op1_labels{'a'};
+                    std::vector<char> op2_labels{'a', 'b'};
+                    std::vector<char> op3_labels{'b', 'c'};
+                    operands_labels.push_back(op1_labels);
+                    operands_labels.push_back(opt_begin);
+                    operands_labels.push_back(op2_labels);
+                    operands_labels.push_back(opt_begin);
+                    operands_labels.push_back(op3_labels);
+                    operands_labels.push_back(opt_end);
+                    operands_labels.push_back(opt_end);
+                    result_labels.push_back('a');
+                    result_labels.push_back('b');
+                    result_labels.push_back('c');
+                    expected_results = {
+                            {1, 3, 5},
+                            {1, 6, default_key_part},
+                            {2, 4, 6},
+                            {3, default_key_part, default_key_part},
+                            {4, default_key_part, default_key_part},
+                            {5, default_key_part, default_key_part},
+                            {6, default_key_part, default_key_part},
+                            {7, default_key_part, default_key_part},
+                            {8, default_key_part, default_key_part}
+                    };
+                }
+                // a,[ab,[bc,[cd]]]->abcd
+                SECTION("nlj_dl2", "two nested levels") {
+                    operands.push_back(ht1);
+                    operands.push_back(ht2);
+                    operands.push_back(ht3);
+                    operands.push_back(ht5);
+                    std::vector<char> op1_labels{'a'};
+                    std::vector<char> op2_labels{'a', 'b'};
+                    std::vector<char> op3_labels{'b', 'c'};
+                    std::vector<char> op4_labels{'c', 'd'};
+                    operands_labels.push_back(op1_labels);
+                    operands_labels.push_back(opt_begin);
+                    operands_labels.push_back(op2_labels);
+                    operands_labels.push_back(opt_begin);
+                    operands_labels.push_back(op3_labels);
+                    operands_labels.push_back(opt_begin);
+                    operands_labels.push_back(op4_labels);
+                    operands_labels.push_back(opt_end);
+                    operands_labels.push_back(opt_end);
+                    operands_labels.push_back(opt_end);
+                    result_labels.push_back('a');
+                    result_labels.push_back('b');
+                    result_labels.push_back('c');
+                    result_labels.push_back('d');
+                    expected_results = {
+                            {1, 3, 5, 30},
+                            {1, 6, default_key_part, default_key_part},
+                            {2, 4, 6, default_key_part},
+                            {3, default_key_part, default_key_part, default_key_part},
+                            {4, default_key_part, default_key_part, default_key_part},
+                            {5, default_key_part, default_key_part, default_key_part},
+                            {6, default_key_part, default_key_part, default_key_part},
+                            {7, default_key_part, default_key_part, default_key_part},
+                            {8, default_key_part, default_key_part, default_key_part}
+                    };
+                }
+            }
+            SECTION("nlj_sl", "nested left joins on the same label") {
+                //a,[ab,[ac]]->abc
+                SECTION("nlj_sl1", "one nested level") {
+                    operands.push_back(ht1);
+                    operands.push_back(ht2);
+                    operands.push_back(ht3);
+                    std::vector<char> op1_labels{'a'};
+                    std::vector<char> op2_labels{'a', 'b'};
+                    std::vector<char> op3_labels{'a', 'c'};
+                    operands_labels.push_back(op1_labels);
+                    operands_labels.push_back(opt_begin);
+                    operands_labels.push_back(op2_labels);
+                    operands_labels.push_back(opt_begin);
+                    operands_labels.push_back(op3_labels);
+                    operands_labels.push_back(opt_end);
+                    operands_labels.push_back(opt_end);
+                    result_labels.push_back('a');
+                    result_labels.push_back('b');
+                    result_labels.push_back('c');
+                    expected_results = {
+                            {1, 3, 8},
+                            {1, 6, 8},
+                            {2, 4, default_key_part},
+                            {3, default_key_part, default_key_part},
+                            {4, default_key_part, default_key_part},
+                            {5, default_key_part, default_key_part},
+                            {6, default_key_part, default_key_part},
+                            {7, default_key_part, default_key_part},
+                            {8, default_key_part, default_key_part}};
+                }
+                //a,[ab,[ac,[ad]]]->abcd
+                SECTION("nlj_sl2", "two nested levels") {
+                    operands.push_back(ht1);
+                    operands.push_back(ht2);
+                    operands.push_back(ht6);
+                    operands.push_back(ht7);
+                    std::vector<char> op1_labels{'a'};
+                    std::vector<char> op2_labels{'a', 'b'};
+                    std::vector<char> op3_labels{'a', 'c'};
+                    std::vector<char> op4_labels{'a', 'd'};
+                    operands_labels.push_back(op1_labels);
+                    operands_labels.push_back(opt_begin);
+                    operands_labels.push_back(op2_labels);
+                    operands_labels.push_back(opt_begin);
+                    operands_labels.push_back(op3_labels);
+                    operands_labels.push_back(opt_begin);
+                    operands_labels.push_back(op4_labels);
+                    operands_labels.push_back(opt_end);
+                    operands_labels.push_back(opt_end);
+                    operands_labels.push_back(opt_end);
+                    result_labels.push_back('a');
+                    result_labels.push_back('b');
+                    result_labels.push_back('c');
+                    result_labels.push_back('d');
+                    expected_results = {
+                            {1, 3, 40, default_key_part},
+                            {1, 6, 40, default_key_part},
+                            {2, 4, default_key_part, default_key_part},
+                            {3, default_key_part, default_key_part, default_key_part},
+                            {4, default_key_part, default_key_part, default_key_part},
+                            {5, default_key_part, default_key_part, default_key_part},
+                            {6, default_key_part, default_key_part, default_key_part},
+                            {7, default_key_part, default_key_part, default_key_part},
+                            {8, default_key_part, default_key_part, default_key_part}
+                    };
+                }
+            }
+            // ab,[ac],[bd]->abcd
+            SECTION("lj_ml", "left join on multiple labels") {
+                operands.push_back(ht2);
+                operands.push_back(ht3);
+                operands.push_back(ht4);
+                std::vector<char> op1_labels{'a', 'b'};
+                std::vector<char> op2_labels{'a', 'c'};
+                std::vector<char> op3_labels{'b', 'd'};
+                operands_labels.push_back(op1_labels);
+                operands_labels.push_back(opt_begin);
+                operands_labels.push_back(op2_labels);
+                operands_labels.push_back(opt_end);
+                operands_labels.push_back(opt_begin);
+                operands_labels.push_back(op3_labels);
+                operands_labels.push_back(opt_end);
+                result_labels.push_back('a');
+                result_labels.push_back('b');
+                result_labels.push_back('c');
+                result_labels.push_back('d');
                 expected_results = {
-                    {1, 3},
-                    {1, 6},
-                    {2, 4},
-                    {3, default_key_part},
-                    {4, default_key_part},
-                    {5, default_key_part},
-                    {6, default_key_part},
-                    {7, default_key_part},
-                    {8, default_key_part}
+                        {1, 3, 8, 25},
+                        {1, 6, 8, default_key_part},
+                        {2, 4, default_key_part, 25}
                 };
-			}
+            }
 		}
-        // ab,[bc]->abc
-        SECTION("lj_alt", "one left join - label not at the beginning of the operand") {
-            operands.push_back(ht2);
-            operands.push_back(ht3);
-            std::vector<char> op1_labels{'a', 'b'};
-            std::vector<char> op2_labels{'b', 'c'};
-            operands_labels.push_back(op1_labels);
-            operands_labels.push_back(opt_begin);
-            operands_labels.push_back(op2_labels);
-            operands_labels.push_back(opt_end);
-            result_labels.push_back('a');
-            result_labels.push_back('b');
-            result_labels.push_back('c');
-            expected_results = {
-                    {1, 3, 5},
-                    {1, 6, default_key_part},
-                    {2, 4, 6}
-            };
-        }
-
-		SECTION("mlj_sl", "multiple left joins on the same label") {
-			//a,[ab],[ac]->abc
-			SECTION("op_3") {
+        SECTION("wwd", "weakly well-defined queries") {
+			// a,[ab],[ab]->ab
+			SECTION("non_opt_root", "wwd with non-optional root") {
                 operands.push_back(ht1);
                 operands.push_back(ht2);
                 operands.push_back(ht3);
                 std::vector<char> op1_labels{'a'};
                 std::vector<char> op2_labels{'a', 'b'};
-                std::vector<char> op3_labels{'a', 'c'};
+                std::vector<char> op3_labels{'a', 'b'};
                 operands_labels.push_back(op1_labels);
+                operands_labels.push_back(opt_begin);
+                operands_labels.push_back(op2_labels);
+                operands_labels.push_back(opt_end);
+                operands_labels.push_back(opt_begin);
+                operands_labels.push_back(op3_labels);
+                operands_labels.push_back(opt_end);
+                result_labels.push_back('a');
+                result_labels.push_back('b');
+                expected_results = {
+                        {1, 3},
+                        {1, 6},
+                        {2, 4},
+                        {3, 5},
+                        {4, 6},
+                        {5, default_key_part},
+                        {6, default_key_part},
+                        {7, default_key_part},
+                        {8, default_key_part}
+                };
+		    }
+            // ab,[bc],[cd]->abcd if [bc] does not yield a result -> cartesian
+            SECTION("all_opt", "wwd all optional") {
+                operands.push_back(ht2);
+                operands.push_back(ht3);
+                operands.push_back(ht4);
+                std::vector<char> op1_labels{'a', 'b'};
+                std::vector<char> op2_labels{'b', 'c'};
+                std::vector<char> op3_labels{'c', 'd'};
+                operands_labels.push_back(op1_labels);
+                operands_labels.push_back(opt_begin);
+                operands_labels.push_back(op2_labels);
+                operands_labels.push_back(opt_end);
+                operands_labels.push_back(opt_begin);
+                operands_labels.push_back(op3_labels);
+                operands_labels.push_back(opt_end);
+                result_labels.push_back('a');
+                result_labels.push_back('b');
+                result_labels.push_back('c');
+                result_labels.push_back('d');
+                expected_results = {
+                        {1, 3, 5, default_key_part},
+                        {1, 6, 3, 25},
+                        {1, 6, 4, 25},
+                        {2, 4, 6, default_key_part}
+                };
+            }
+            // [ab],[ac]->abc
+            SECTION("lj_lj", "left join without left operand followed by left join") {
+                operands.push_back(ht2);
+                operands.push_back(ht3);
+                std::vector<char> op2_labels{'a', 'b'};
+                std::vector<char> op3_labels{'a', 'c'};
                 operands_labels.push_back(opt_begin);
                 operands_labels.push_back(op2_labels);
                 operands_labels.push_back(opt_end);
@@ -125,29 +407,18 @@ namespace hypertrie::tests::leftjoin {
                         {1, 3, 8},
                         {1, 6, 8},
                         {2, 4, default_key_part},
-                        {3, default_key_part, 5},
-                        {4, default_key_part, 6},
-                        {5, default_key_part, default_key_part},
-                        {6, default_key_part, default_key_part},
-                        {7, default_key_part, default_key_part},
-                        {8, default_key_part, default_key_part}
                 };
-			}
-			//a,[ab],[ac],[ad]->abcd
-            SECTION("op_4") {
-                operands.push_back(ht1);
+            }
+            // [ab,bd],[bc]->abc
+            SECTION("lj_lj_elim", "left join without left operand followed by left join, the first left join does not yield results") {
                 operands.push_back(ht2);
-                operands.push_back(ht3);
 				operands.push_back(ht5);
-                std::vector<char> op1_labels{'a'};
+                operands.push_back(ht3);
                 std::vector<char> op2_labels{'a', 'b'};
-                std::vector<char> op3_labels{'a', 'c'};
-                std::vector<char> op4_labels{'a', 'd'};
-                operands_labels.push_back(op1_labels);
+                std::vector<char> op3_labels{'b', 'd'};
+                std::vector<char> op4_labels{'b', 'c'};
                 operands_labels.push_back(opt_begin);
                 operands_labels.push_back(op2_labels);
-                operands_labels.push_back(opt_end);
-                operands_labels.push_back(opt_begin);
                 operands_labels.push_back(op3_labels);
                 operands_labels.push_back(opt_end);
                 operands_labels.push_back(opt_begin);
@@ -156,57 +427,18 @@ namespace hypertrie::tests::leftjoin {
                 result_labels.push_back('a');
                 result_labels.push_back('b');
                 result_labels.push_back('c');
-                result_labels.push_back('d');
                 expected_results = {
-                        {1, 3, 8, 35},
-                        {1, 6, 8, 35},
-                        {2, 4, default_key_part, default_key_part},
-                        {3, default_key_part, 5, default_key_part},
-                        {4, default_key_part, 6, default_key_part},
-                        {5, default_key_part, default_key_part, 30},
-                        {6, default_key_part, default_key_part, default_key_part},
-                        {7, default_key_part, default_key_part, default_key_part},
-                        {8, default_key_part, default_key_part, 30}
+                        {default_key_part, 1, 8},
+                        {default_key_part, 1, 6},
+                        {default_key_part, 3, 5}
                 };
             }
-		}
-		SECTION("nlj_dl", "nested left joins on different labels") {
-            //a,[ab,[bc]]->abc
-            SECTION("one_nlj") {
-				operands.push_back(ht1);
-				operands.push_back(ht2);
-				operands.push_back(ht3);
-				std::vector<char> op1_labels{'a'};
-				std::vector<char> op2_labels{'a', 'b'};
-				std::vector<char> op3_labels{'b', 'c'};
-				operands_labels.push_back(op1_labels);
-                operands_labels.push_back(opt_begin);
-				operands_labels.push_back(op2_labels);
-                operands_labels.push_back(opt_begin);
-				operands_labels.push_back(op3_labels);
-                operands_labels.push_back(opt_end);
-                operands_labels.push_back(opt_end);
-				result_labels.push_back('a');
-				result_labels.push_back('b');
-				result_labels.push_back('c');
-				expected_results = {
-						{1, 3, 5},
-						{1, 6, default_key_part},
-						{2, 4, 6},
-						{3, default_key_part, default_key_part},
-						{4, default_key_part, default_key_part},
-						{5, default_key_part, default_key_part},
-						{6, default_key_part, default_key_part},
-						{7, default_key_part, default_key_part},
-						{8, default_key_part, default_key_part}
-				};
-			}
-			// a,[ab,[bc,[cd]]]->abcd
-            SECTION("two_nlj") {
+            // a,[ab,[bc],[cd]]->abcd
+            SECTION("lj_nlj_lj", "nested left join followed by left join") {
                 operands.push_back(ht1);
                 operands.push_back(ht2);
                 operands.push_back(ht3);
-                operands.push_back(ht5);
+                operands.push_back(ht4);
                 std::vector<char> op1_labels{'a'};
                 std::vector<char> op2_labels{'a', 'b'};
                 std::vector<char> op3_labels{'b', 'c'};
@@ -216,9 +448,9 @@ namespace hypertrie::tests::leftjoin {
                 operands_labels.push_back(op2_labels);
                 operands_labels.push_back(opt_begin);
                 operands_labels.push_back(op3_labels);
+                operands_labels.push_back(opt_end);
                 operands_labels.push_back(opt_begin);
                 operands_labels.push_back(op4_labels);
-                operands_labels.push_back(opt_end);
                 operands_labels.push_back(opt_end);
                 operands_labels.push_back(opt_end);
                 result_labels.push_back('a');
@@ -226,8 +458,9 @@ namespace hypertrie::tests::leftjoin {
                 result_labels.push_back('c');
                 result_labels.push_back('d');
                 expected_results = {
-                        {1, 3, 5, 30},
-                        {1, 6, default_key_part, default_key_part},
+                        {1, 3, 5, default_key_part},
+                        {1, 6, 4, 25},
+                        {1, 6, 3, 25},
                         {2, 4, 6, default_key_part},
                         {3, default_key_part, default_key_part, default_key_part},
                         {4, default_key_part, default_key_part, default_key_part},
@@ -237,149 +470,26 @@ namespace hypertrie::tests::leftjoin {
                         {8, default_key_part, default_key_part, default_key_part}
                 };
             }
-		}
-        SECTION("nlj_sl", "nested left joins, same label") {
-			//a,[ab,[ac]]->abc
-			SECTION("depth_2") {
-				operands.push_back(ht1);
-				operands.push_back(ht2);
-				operands.push_back(ht3);
-				std::vector<char> op1_labels{'a'};
-				std::vector<char> op2_labels{'a', 'b'};
-				std::vector<char> op3_labels{'a', 'c'};
-				operands_labels.push_back(op1_labels);
-                operands_labels.push_back(opt_begin);
-                operands_labels.push_back(op2_labels);
-                operands_labels.push_back(opt_begin);
-				operands_labels.push_back(op3_labels);
-                operands_labels.push_back(opt_end);
-                operands_labels.push_back(opt_end);
-				result_labels.push_back('a');
-				result_labels.push_back('b');
-				result_labels.push_back('c');
-				expected_results = {
-						{1, 3, 8},
-						{1, 6, 8},
-						{2, 4, default_key_part},
-						{3, default_key_part, default_key_part},
-						{4, default_key_part, default_key_part},
-						{5, default_key_part, default_key_part},
-						{6, default_key_part, default_key_part},
-						{7, default_key_part, default_key_part},
-						{8, default_key_part, default_key_part}};
-			}
-            //a,[ab,[ac,[ad]]]->abcd
-            SECTION("depth_3") {
-                operands.push_back(ht1);
+        }
+		SECTION("no-wwd", "not weakly well-defined") {
+			// [ab],bc->abc
+            SECTION("no_left_op", "left join without left operand") {
                 operands.push_back(ht2);
-                operands.push_back(ht6);
-                operands.push_back(ht7);
-                std::vector<char> op1_labels{'a'};
+                operands.push_back(ht3);
                 std::vector<char> op2_labels{'a', 'b'};
-                std::vector<char> op3_labels{'a', 'c'};
-                std::vector<char> op4_labels{'a', 'd'};
-                operands_labels.push_back(op1_labels);
+                std::vector<char> op3_labels{'b', 'c'};
                 operands_labels.push_back(opt_begin);
                 operands_labels.push_back(op2_labels);
-                operands_labels.push_back(opt_begin);
+                operands_labels.push_back(opt_end);
                 operands_labels.push_back(op3_labels);
-                operands_labels.push_back(opt_begin);
-                operands_labels.push_back(op4_labels);
-                operands_labels.push_back(opt_end);
-                operands_labels.push_back(opt_end);
-                operands_labels.push_back(opt_end);
                 result_labels.push_back('a');
                 result_labels.push_back('b');
                 result_labels.push_back('c');
-                result_labels.push_back('d');
                 expected_results = {
-                        {1, 3, 40, default_key_part},
-                        {1, 6, 40, default_key_part},
-                        {2, 4, default_key_part, default_key_part},
-                        {3, default_key_part, default_key_part, default_key_part},
-                        {4, default_key_part, default_key_part, default_key_part},
-                        {5, default_key_part, default_key_part, default_key_part},
-                        {6, default_key_part, default_key_part, default_key_part},
-                        {7, default_key_part, default_key_part, default_key_part},
-                        {8, default_key_part, default_key_part, default_key_part}
-				};
+                        {1, 3, 5},
+                        {2, 4, 6}
+                };
             }
-		}
-        // ab,[ac],[bd]->abcd
-        SECTION("mljl", "multiple left join labels") {
-            operands.push_back(ht2);
-            operands.push_back(ht3);
-            operands.push_back(ht4);
-            std::vector<char> op1_labels{'a', 'b'};
-            std::vector<char> op2_labels{'a', 'c'};
-            std::vector<char> op3_labels{'b', 'd'};
-            operands_labels.push_back(op1_labels);
-            operands_labels.push_back(opt_begin);
-            operands_labels.push_back(op2_labels);
-            operands_labels.push_back(opt_end);
-            operands_labels.push_back(opt_begin);
-            operands_labels.push_back(op3_labels);
-            operands_labels.push_back(opt_end);
-            result_labels.push_back('a');
-            result_labels.push_back('b');
-            result_labels.push_back('c');
-            result_labels.push_back('d');
-            expected_results = {
-                    {1, 3, 8, 25},
-                    {1, 6, 8, default_key_part},
-                    {2, 4, default_key_part, 25}
-			};
-        }
-		// a,[ab],c,[cd]->abcd
-        SECTION("lj_cart", "left join and cartesian join") {
-            operands.push_back(ht1);
-            operands.push_back(ht2);
-            operands.push_back(ht1);
-            operands.push_back(ht3);
-            std::vector<char> op1_labels{'a'};
-            std::vector<char> op2_labels{'a', 'b'};
-            std::vector<char> op3_labels{'c'};
-            std::vector<char> op4_labels{'c', 'd'};
-            operands_labels.push_back(op1_labels);
-            operands_labels.push_back(opt_begin);
-            operands_labels.push_back(op2_labels);
-            operands_labels.push_back(opt_end);
-            operands_labels.push_back(op3_labels);
-            operands_labels.push_back(opt_begin);
-            operands_labels.push_back(op4_labels);
-            operands_labels.push_back(opt_end);
-            result_labels.push_back('a');
-            result_labels.push_back('b');
-            result_labels.push_back('c');
-            result_labels.push_back('d');
-			decltype(expected_results) expected_results_left{
-                {1, 3},
-                {1, 6},
-                {2, 4},
-                {3, default_key_part},
-                {4, default_key_part},
-                {5, default_key_part},
-                {6, default_key_part},
-                {7, default_key_part},
-                {8, default_key_part}
-			};
-            decltype(expected_results) expected_results_right{
-                    {1, 8},
-                    {2, default_key_part},
-                    {3, 5},
-                    {4, 6},
-                    {5, default_key_part},
-                    {6, default_key_part},
-                    {7, default_key_part},
-                    {8, default_key_part}
-            };
-			for(auto left_res : expected_results_left) {
-				for(auto right_res : expected_results_right) {
-                    auto temp_res = left_res;
-					temp_res.insert(temp_res.end(), right_res.begin(), right_res.end());
-					expected_results.push_back(temp_res);
-				}
-			}
 		}
 		// prepare the einstein summation
         auto subscript = std::make_shared<Subscript>(operands_labels, result_labels);

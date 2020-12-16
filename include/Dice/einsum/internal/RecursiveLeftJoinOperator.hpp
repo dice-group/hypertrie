@@ -60,6 +60,7 @@ namespace einsum::internal {
 			if(!self.sub_operator->ended())
 				self.sub_operator->next();
 			if(self.sub_operator->ended()) {
+				self.entry->clear(default_key_part);
                 self.node_operator->next();
 				if (self.node_operator->ended()) {
 					self.ended_ = true;

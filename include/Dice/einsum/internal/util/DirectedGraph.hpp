@@ -132,6 +132,30 @@ namespace einsum::internal::util {
             return target_vertices;
 		}
 
+        std::set<Vertex> transitivelyGetNeighborsUnlabelled(Vertex vertex) {
+            std::set<Vertex> target_vertices{};
+            std::deque<Vertex> to_check{vertex};
+            std::set<Vertex> visited{};
+            bool flag = true;
+            while(!to_check.empty()) {
+                auto v = to_check.front();
+                to_check.pop_front();
+                if(visited.find(v) != visited.end())
+                    continue;
+                visited.insert(v);
+                auto out_edges_iterators = boost::out_edges(v, unlabelled_graph);
+                for(auto out_edge_iter = out_edges_iterators.first; out_edge_iter != out_edges_iterators.second; out_edge_iter++) {
+                    auto target = boost::target(*out_edge_iter, unlabelled_graph);
+                    if(target == v)
+                        continue;
+                    target_vertices.insert(boost::target(*out_edge_iter, unlabelled_graph));
+                    to_check.push_back(boost::target(*out_edge_iter, unlabelled_graph));
+                }
+                flag = false;
+            }
+            return target_vertices;
+        }
+
 		std::vector<Vertex> getStrongComponentNeighbors(Vertex v) {
 			std::vector<Vertex> neighbors{};
 			auto component = strong_components[v];

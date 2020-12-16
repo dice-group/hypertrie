@@ -570,7 +570,7 @@ namespace hypertrie::tests::leftjoin {
                 }
             }
             // ab,bh,[cd],[eg,ef]->abcdef
-            SECTION("c_full_opt", "optional cartesian") {
+            SECTION("c_nopt_opt", "optional cartesian") {
                 operands.push_back(ht2);
                 operands.push_back(ht5);
                 operands.push_back(ht3);

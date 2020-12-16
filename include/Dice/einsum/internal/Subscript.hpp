@@ -383,7 +383,7 @@ namespace einsum::internal {
 					for(auto operand_pos : iter::range(raw_subscript.operands.size())) {
 						auto source_sub_op = operand_sub_op_map[operand_pos];
                         auto& dependent_sub_ops = sub_op_dependencies[source_sub_op];
-						for(auto weakly_dependent_operand : directed_dependency_graph.getNeighborsUnlabelled(operand_pos)) {
+						for(auto weakly_dependent_operand : directed_dependency_graph.transitivelyGetNeighborsUnlabelled(operand_pos)) {
 							dependent_sub_ops.push_back(operand_sub_op_map[weakly_dependent_operand]);
 						}
 					}
@@ -622,20 +622,35 @@ namespace einsum::internal {
 					last_operand_of_label[label] = orig_op_pos;
                 }
 				// find weak dependencies. for cartesian
-                if(!strong_dependency and prev_operand_pos < std::numeric_limits<OperandPos>::max()) {
-					if(raw_subscript.original_operands[prev_operand_pos] == raw_subscript.original_operands[orig_op_pos-1]) {
-                        operand_directed_dependency_graph.addEdge(operand_pos, raw_subscript.poss_in_operands[prev_operand_pos]);
-                        operand_directed_dependency_graph.addEdge(raw_subscript.poss_in_operands[prev_operand_pos], operand_pos);
+				for(int8_t d = depth; d >= 0; d--) {
+					std::set<OperandPos> operands_at_depth{};
+					for(const auto &label_entry : label_depth_operand) {
+						if(label_entry.second.contains(d))
+							if(raw_subscript.poss_in_operands[label_entry.second.at(d)] != operand_pos)
+							    operands_at_depth.insert(label_entry.second.at(d));
 					}
-					else if(prev_operand_depth < depth) {
-						operand_directed_dependency_graph.addEdge(raw_subscript.poss_in_operands[prev_operand_pos], operand_pos);
-					}
-					if(last_non_opt_op_pos < std::numeric_limits<OperandPos>::max() and last_non_opt_op_pos != prev_operand_pos) {
-						operand_directed_dependency_graph.addEdge(last_non_opt_op_pos, operand_pos);
-						if(depth == 0)
-                            operand_directed_dependency_graph.addEdge(operand_pos, last_non_opt_op_pos);
-					}
-                }
+					if(operands_at_depth.empty())
+						continue;
+					auto last_pos_of_depth = raw_subscript.poss_in_operands[*operands_at_depth.rbegin()]; // set is ordered take its last value
+                    operand_directed_dependency_graph.addEdge(last_pos_of_depth, operand_pos);
+					if(d == depth)
+                        operand_directed_dependency_graph.addEdge(operand_pos, last_pos_of_depth);
+					break;
+				}
+//                if(!strong_dependency and prev_operand_pos < std::numeric_limits<OperandPos>::max()) {
+//					if(raw_subscript.original_operands[prev_operand_pos] == raw_subscript.original_operands[orig_op_pos-1]) {
+//                        operand_directed_dependency_graph.addEdge(operand_pos, raw_subscript.poss_in_operands[prev_operand_pos]);
+//                        operand_directed_dependency_graph.addEdge(raw_subscript.poss_in_operands[prev_operand_pos], operand_pos);
+//					}
+//					else if(prev_operand_depth < depth) {
+//						operand_directed_dependency_graph.addEdge(raw_subscript.poss_in_operands[prev_operand_pos], operand_pos);
+//					}
+//					if(last_non_opt_op_pos < std::numeric_limits<OperandPos>::max() and last_non_opt_op_pos != prev_operand_pos) {
+//						operand_directed_dependency_graph.addEdge(last_non_opt_op_pos, operand_pos);
+//						if(depth == 0)
+//                            operand_directed_dependency_graph.addEdge(operand_pos, last_non_opt_op_pos);
+//					}
+//                }
                 if(depth == 0)
                     last_non_opt_op_pos = operand_pos;
 				prev_operand_pos = orig_op_pos;

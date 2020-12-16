@@ -114,7 +114,6 @@ namespace einsum::internal {
 			if constexpr(_debugeinsum_) fmt::print("Cartesian {}\n", this->subscript);
 			this->entry = &entry;
 			ended_ = false;
-
 			double max_estimated_size = 0;
 			iterated_pos = 0;
 
@@ -161,18 +160,6 @@ namespace einsum::internal {
 				ended_ = true;
 				return;
 			}
-            // make ended operators to produce an empty entry -> entry generation operators
-            std::vector<std::vector<Label>> empty_operands_labels{}; // for entry generation operator
-            auto sub_subscripts = this->subscript->getCartesianSubscript().getSubSubscripts();
-            for(auto cart_op_pos : iter::range(sub_operators.size())) {
-                auto &cart_op = sub_operators[cart_op_pos];
-                if (cart_op->ended()) {
-                    auto entry_gen_sc = std::make_shared<Subscript>(empty_operands_labels,
-                                                                    sub_subscripts[cart_op_pos]->getRawSubscript().result);
-                    cart_op = std::make_unique<EntryGeneratorOperator_t>(entry_gen_sc, this->context);
-                    cart_op->load({}, sub_entries[cart_op_pos]);
-                }
-            }
 			if constexpr(_debugeinsum_) fmt::print("Cartesian sub gen {}\n", this->subscript);
 			// calculate results of non-iterated sub_operators
 			std::vector<SubResult> sub_results{};
@@ -206,8 +193,9 @@ namespace einsum::internal {
 					}
 				}
 				if (sub_result.empty()) {
-					ended_ = true;
-					return;
+//					ended_ = true;
+//					return;
+                    sub_result[sub_entry.key] = value_type(1);
 				}
 				sub_results.emplace_back(std::move(sub_result));
 			}

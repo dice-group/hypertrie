@@ -221,6 +221,47 @@ namespace einsum::internal {
 			return RawSubscript(next_operands, result);
 		}
 
+        /**
+         * Create a new RawSubscript without the given operands.
+         * @param operands_poss the operands to remove
+         * @return a new RawSubscript equal to this but without the given operands.
+         */
+        [[nodiscard]] auto removeOperands(const std::vector<OperandPos>& operands_poss) const noexcept {
+			OperandsSc next_operands{};
+			for(const auto& [orig_operand_pos, orig_operand] : iter::enumerate(original_operands)) {
+				if(orig_operand == optional_brackets.first or orig_operand == optional_brackets.second)
+					next_operands.push_back(orig_operand);
+				else if(std::find(operands_poss.begin(), operands_poss.end(), poss_in_operands[orig_operand_pos]) == operands_poss.end())
+					next_operands.push_back(orig_operand);
+			}
+			return RawSubscript(next_operands, result);
+		}
+
+        /**
+         * Create a new RawSubscript without the given labels. removes labels from the result as well
+         * @param labels the labels to remove
+         * @return a new RawSubscript equal to this but without the given operands.
+         */
+        [[nodiscard]] auto removeLabels(const std::set<Label>& labels) const noexcept {
+            OperandsSc next_operands{};
+            for (const auto &operand: original_operands) {
+                OperandSc new_operand{};
+                for (auto current_label: operand)
+                    if (labels.find(current_label) == labels.end())
+                        new_operand.push_back(current_label);
+                if (not new_operand.empty()) {
+                    next_operands.push_back(std::move(new_operand));
+                }
+            }
+			ResultSc next_result{};
+			for(const auto &res_label : result) {
+                if (labels.find(res_label) == labels.end())
+                    next_result.push_back(res_label);
+			}
+            return RawSubscript(next_operands, next_result);
+        }
+
+
 		/**
 		 * Check if another Subscript is different. It is also different if the labels are ordered alike but other
 		 * labels are used.

@@ -14,6 +14,7 @@
 #include <utility>
 
 #include "Dice/hash/xxhash.hpp"
+#include "Dice/hash/Container_trait.h"
 
 namespace Dice::hash {
 
@@ -138,33 +139,21 @@ namespace Dice::hash {
 		return hash_and_combine(p.first, p.second);
 	}
 
-	template<typename Key, typename Value>
-	std::size_t dice_hash(std::map<Key, Value> const &m) noexcept {
-		return dice_hash_ordered_container(m);
-	}
+    template <typename T> requires is_ordered_container_v<T>
+    std::size_t dice_hash(T const &container) {
+        return dice_hash_ordered_container(container);
+    }
 
-	template<typename Key, typename Value>
-	std::size_t dice_hash(std::unordered_map<Key, Value> const &m) noexcept {
-		return dice_hash_unordered_container(m);
-	}
-
-	template<typename T>
-	std::size_t dice_hash(std::set<T> const &s) noexcept {
-		return dice_hash_ordered_container(s);
-	}
-
-	template<typename T>
-	std::size_t dice_hash(std::unordered_set<T> const &s) noexcept {
-		return dice_hash_unordered_container(s);
-	}
-
+    template <typename T> requires is_unordered_container_v<T>
+    std::size_t dice_hash(T const &container) {
+        return dice_hash_unordered_container(container);
+    }
 
 	// Helperfunctions
 	template<typename... Ts>
 	std::size_t hash_and_combine(Ts &&...values) {
 		return xxh::xxhash3<detail::size_t_bits>(std::initializer_list<std::size_t>{dice_hash(std::forward<Ts>(values))...}, seed);
 	}
-
 
 	template<typename Container>
 	std::size_t dice_hash_ordered_container(Container const &container) {

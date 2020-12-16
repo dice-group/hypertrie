@@ -17,24 +17,31 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 endif ()
 
 find_package(Catch2 REQUIRED CONFIG)
-add_executable(raw_hypertrie_tests node_based/NodeBasedTests.cpp)
-set_target_properties(raw_hypertrie_tests PROPERTIES LINKER_LANGUAGE CXX)
-add_executable(hypertrie_lib_tests Tests.cpp)
-target_link_libraries(raw_hypertrie_tests PRIVATE
+add_executable(tests_hypertrie_internal node_based/NodeBasedTests.cpp)
+set_target_properties(tests_hypertrie_internal PROPERTIES LINKER_LANGUAGE CXX)
+add_executable(tests_einsum TestEinsum.cpp)
+target_link_libraries(tests_hypertrie_internal PRIVATE
         Catch2::Catch2
         hypertrie::hypertrie
         )
-target_link_libraries(hypertrie_lib_tests PRIVATE
+target_link_libraries(tests_einsum PRIVATE
         Catch2::Catch2
         hypertrie::hypertrie
         )
+
+add_executable(tests_dice_hash TestDiceHash.cpp)
+target_link_libraries(tests_dice_hash PRIVATE
+        Catch2::Catch2
+        hypertrie::hypertrie
+        )
+
 set(hypertrie_LIBTORCH_PATH "" CACHE PATH "The installation directory of pytorch.")
 if (hypertrie_LIBTORCH_PATH)
     # add path
     list(APPEND CMAKE_PREFIX_PATH ${hypertrie_LIBTORCH_PATH})
     find_package(Torch REQUIRED)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
-    target_link_libraries(hypertrie_lib_tests PRIVATE
+    target_link_libraries(tests_einsum PRIVATE
             ${TORCH_LIBRARIES}
             )
     # define C++ preprocess flag to include the tests depending on pytorch
@@ -45,8 +52,9 @@ endif ()
 
 include(CTest)
 include(Catch)
-catch_discover_tests(raw_hypertrie_tests)
-catch_discover_tests(hypertrie_lib_tests)
+catch_discover_tests(tests_hypertrie_internal)
+catch_discover_tests(tests_einsum)
+catch_discover_tests(tests_dice_hash)
 
 # copy files for testing to the binary folder
 file(COPY data DESTINATION ${CMAKE_CURRENT_BINARY_DIR})

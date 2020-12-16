@@ -1,9 +1,13 @@
-#include <catch2/catch.hpp>
+#define CATCH_CONFIG_MAIN  // This tells Catch to provide a main() - only do this in one cpp file
+
 #include <utility>
 #include <string>
 #include <array>
 #include <vector>
 #include <tuple>
+
+#include <catch2/catch.hpp>
+
 #include "Dice/hash/DiceHash.hpp"
 
 namespace Dice::hash {

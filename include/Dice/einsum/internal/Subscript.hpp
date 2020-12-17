@@ -492,7 +492,7 @@ namespace einsum::internal {
 						else if (none_in_result)
 							return Type::Count;
 					}
-					break;
+					return Type::Join;
 				default: {
 					// multiple operands
                     // more than one WEAKLY connected component means that there is a Cartesian product

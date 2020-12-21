@@ -179,6 +179,8 @@ namespace einsum::internal {
         tsl::hopscotch_map<Label, std::vector<OperandPos>> non_optional_operands_of_label{};
 		// Recursive Left Join
 		std::vector<OperandPos> non_optional_operands{};
+		// Recursive Left Join
+		std::set<Label> wwd_labels{};
 
 	public:
 		std::shared_ptr<Subscript> removeLabel(Label label) const {
@@ -230,6 +232,10 @@ namespace einsum::internal {
         auto getSubOperatorOfOperands() {
             return directed_dependency_graph.getWeakComponentsOfVertices();
         }
+
+		const std::set<Label>& getWWDLabels() {
+			return wwd_labels;
+		}
 
 		/**
 		 * for Join
@@ -357,6 +363,7 @@ namespace einsum::internal {
 							}
 						}
 					}
+					wwd_labels = independent_strong_component.wwd_labels;
 					if(this->type != Type::JoinSelection)
 					    break;
 					[[fallthrough]]; // in case of JoinSelection visit Join as well
@@ -565,12 +572,6 @@ namespace einsum::internal {
             Depth depth{0};
 			// original operand labels
 			const auto& orig_operands = raw_subscript.original_operands;
-			// the position of the previous operand
-			OperandPos prev_operand_pos = std::numeric_limits<OperandPos>::max();
-			// the depth of the previous operand
-			Depth prev_operand_depth;
-			// the position of the last non-optional operand
-			OperandPos last_non_opt_op_pos = std::numeric_limits<OperandPos>::max();
             for(const auto& [orig_op_pos, operand_labels] : iter::enumerate(orig_operands)) {
                 if(operand_labels == opt_begin) {
                     depth++;
@@ -637,24 +638,6 @@ namespace einsum::internal {
                         operand_directed_dependency_graph.addEdge(operand_pos, last_pos_of_depth);
 					break;
 				}
-//                if(!strong_dependency and prev_operand_pos < std::numeric_limits<OperandPos>::max()) {
-//					if(raw_subscript.original_operands[prev_operand_pos] == raw_subscript.original_operands[orig_op_pos-1]) {
-//                        operand_directed_dependency_graph.addEdge(operand_pos, raw_subscript.poss_in_operands[prev_operand_pos]);
-//                        operand_directed_dependency_graph.addEdge(raw_subscript.poss_in_operands[prev_operand_pos], operand_pos);
-//					}
-//					else if(prev_operand_depth < depth) {
-//						operand_directed_dependency_graph.addEdge(raw_subscript.poss_in_operands[prev_operand_pos], operand_pos);
-//					}
-//					if(last_non_opt_op_pos < std::numeric_limits<OperandPos>::max() and last_non_opt_op_pos != prev_operand_pos) {
-//						operand_directed_dependency_graph.addEdge(last_non_opt_op_pos, operand_pos);
-//						if(depth == 0)
-//                            operand_directed_dependency_graph.addEdge(operand_pos, last_non_opt_op_pos);
-//					}
-//                }
-                if(depth == 0)
-                    last_non_opt_op_pos = operand_pos;
-				prev_operand_pos = orig_op_pos;
-				prev_operand_depth = depth;
 			}
 			return operand_directed_dependency_graph;
 		}

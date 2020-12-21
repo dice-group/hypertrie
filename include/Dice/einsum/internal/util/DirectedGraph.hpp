@@ -60,6 +60,7 @@ namespace einsum::internal::util {
 			std::set<R> incoming_labels{};
 			std::set<R> component_labels{};
 			std::set<R> outgoing_labels{};
+			std::set<R> wwd_labels{};
 		};
 
 		using StrongComponentLabels_t = StrongComponentLabels;
@@ -228,6 +229,8 @@ namespace einsum::internal::util {
 					} else {
 						strongly_connected_components[cur_component_idx].outgoing_labels.insert(out_edge_label);
 						strongly_connected_components[out_vertex_component_idx].incoming_labels.insert(out_edge_label);
+						if(graph[*out_edge].wwd)
+                            strongly_connected_components[cur_component_idx].wwd_labels.insert(out_edge_label);
 					}
 				}
 			}

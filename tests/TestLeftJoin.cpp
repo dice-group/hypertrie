@@ -62,7 +62,7 @@ namespace hypertrie::tests::leftjoin {
                 operands_labels.push_back(opt_begin);
                 operands_labels.push_back(op2_labels);
                 operands_labels.push_back(opt_end);
-                SECTION("res_size_1") {
+                SECTION("lj1") {
                     result_labels.push_back('a');
                     expected_results = {
                             {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}

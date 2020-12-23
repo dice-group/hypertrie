@@ -37,6 +37,8 @@ namespace einsum::internal {
 
 		bool generate_optional_value;
 
+		std::map<std::string, std::shared_ptr<Operator_t>> sub_operator_cache{};
+
 		std::shared_ptr<Operator_t> sub_operator;
         std::shared_ptr<Subscript> next_subscript;
 
@@ -88,7 +90,7 @@ namespace einsum::internal {
 			while(sub_operator->ended() and !generate_optional_value and left_join_iterator) {
                 ++left_join_iterator;
                 if (left_join_iterator and not this->context->hasTimedOut()) {
-					// clear entry: since in each iteration we initiate a new sub_operator, some keys of the entry will stay the same
+					// clear entry: since in each iteration we use different sub_operators, some keys of the entry will stay the same
 					this->entry->clear(default_key_part);
                     std::vector<std::optional<const_Hypertrie<tr>>> next_operands;
                     std::tie(next_operands, current_key_part, pos_in_out, joined) = *left_join_iterator;
@@ -113,7 +115,6 @@ namespace einsum::internal {
 			if constexpr (_debugeinsum_) fmt::print("LeftJoin {}\n", this->subscript);
 
 			this->entry = &entry;
-			ended_ = false;
 			Label last_label = label;
 			// check if a label for this operator has already been chosen by the JoinSelectionOperator
 			if(this->context->sub_operator_label.contains(this->subscript->hash()))
@@ -126,9 +127,13 @@ namespace einsum::internal {
 				non_optional_poss = this->subscript->getNonOptionalOperands(label);
 				if (is_result_label)
 					label_pos_in_result = this->subscript->getLabelPosInResult(label);
+                // prepare next_subscript by removing the active label from the current subscript
+                next_subscript = this->subscript->removeLabel(label);
+                for(auto &non_opt_pos : non_optional_poss)
+                    if(!operands[non_opt_pos].size())
+                        return;
 			}
-			// prepare next_subscript by removing the active label from the current subscript
-			next_subscript = this->subscript->removeLabel(label);
+            ended_ = false;
             // prepare left join
 			left_join = LeftJoin_t{operands, label_poss_in_ops, non_optional_poss};
 			left_join_iterator = left_join.begin();
@@ -155,59 +160,66 @@ namespace einsum::internal {
 			std::vector<const_Hypertrie<tr>> next_operands{};
 			// the labels of the next_operands
 			std::vector<std::vector<Label>> next_operands_labels{};
-			// stores the positions of the operands that will be removed
-            std::set<std::size_t> operands_to_remove{};
+			// bitstring for operands, 0: to be removed, 1: will be passed to sub_operator
+			std::string bitstring(join_returned_operands->size(), '1');
 			// iterate over all operands that participated in the join
             for(auto op_pos : iter::range(pos_in_out.size())) {
-				if(joined[op_pos])
+				if(joined[op_pos] || bitstring[pos_in_out[op_pos]] == '0')
                     continue;
 				// operands that do not yield a result need to be removed along with their dependent operands
 				// store the position of the operands to be removed in the next_subscript
 				if(pos_in_out[op_pos] < std::numeric_limits<hypertrie::pos_type>::max())
-                    operands_to_remove.insert(pos_in_out[op_pos]);
+					bitstring[pos_in_out[op_pos]] = '0';
 				for(auto op_dependent_pos : this->subscript->getDependentOperands(op_pos)) {
                     if(pos_in_out[op_dependent_pos] < std::numeric_limits<hypertrie::pos_type>::max())
-                        operands_to_remove.insert(pos_in_out[op_dependent_pos]);
+						bitstring[pos_in_out[op_dependent_pos]] = '0';
 				}
 			}
-			// populate next operands and next operands labels
-			for(const auto& [orig_op_pos, op_labels] : iter::enumerate(original_operands_labels)) {
-                if(op_labels == opt_begin || op_labels == opt_end) {
-                    next_operands_labels.push_back(op_labels);
-					continue;
-				}
-                // get the position of the operand in the operands vector
-                auto op_pos = poss_in_ops.at(orig_op_pos);
-				// save successful operands and their labels
-				if(operands_to_remove.find(op_pos) == operands_to_remove.end()) {
-						next_operands.push_back((*join_returned_operands)[op_pos].value());
+			// populate next operands
+			for(const auto &[op_pos, op] : iter::enumerate(*join_returned_operands))
+				if(bitstring[op_pos] == '1')
+                    next_operands.push_back(op.value());
+			// check if the subscript has already been created; otherwise construct a new sub_operator
+			if(sub_operator_cache.contains(bitstring))
+				sub_operator = sub_operator_cache[bitstring];
+			else {
+				// populate next operands labels
+				for (const auto &[orig_op_pos, op_labels] : iter::enumerate(original_operands_labels)) {
+					if (op_labels == opt_begin || op_labels == opt_end) {
 						next_operands_labels.push_back(op_labels);
-			    }
-			}
-			// build the subscript of the sub_operator
-			auto sub_op_subscript = std::make_shared<Subscript>(next_operands_labels,
-																next_subscript->getRawSubscript().result);
-            // compute the dependencies between the sub_operators (only for Cartesian)
-            if(sub_op_subscript->type == Subscript::Type::Cartesian) {
-                this->context->sub_operator_dependency_map[sub_op_subscript->hash()];
-				// store for each operand to which sub_operator it belongs
-                auto operands_sub_operators = sub_op_subscript->getSubOperatorOfOperands();
-                for(const auto& [op_pos, sub_op] : iter::enumerate(operands_sub_operators)) {
-                    std::vector<std::size_t> dependent_operands_poss{};
-					auto op_pos_in_subscript = std::distance(pos_in_out.begin(),
-															 std::find(pos_in_out.begin(), pos_in_out.end(), op_pos));
-					// find dependencies between sub operators using the current subscript
-                    for(auto dep_op_pos_in_subscript : this->subscript->getDependentOperands(op_pos_in_subscript)) {
-						auto dep_op_pos = pos_in_out[dep_op_pos_in_subscript];
-                        auto dependent_sub_op = operands_sub_operators[dep_op_pos];
-                        if(sub_op == dependent_sub_op)
-                            continue;
-                        auto& sub_op_map = this->context->sub_operator_dependency_map[sub_op_subscript->hash()][sub_op];
-                        sub_op_map.insert(dependent_sub_op);
+						continue;
+					}
+					// get the position of the operand in the operands vector
+					auto op_pos = poss_in_ops.at(orig_op_pos);
+					// save successful operands and their labels
+					if (bitstring[op_pos] == '1')
+						next_operands_labels.push_back(op_labels);
+				}
+                auto sub_op_subscript = std::make_shared<Subscript>(next_operands_labels,
+																	next_subscript->getRawSubscript().result);
+                sub_operator = Operator_t::construct(sub_op_subscript, this->context);
+				sub_operator_cache[bitstring] = sub_operator;
+                // compute the dependencies between the sub_operators (only for Cartesian)
+                if(sub_op_subscript->type == Subscript::Type::Cartesian) {
+                    this->context->sub_operator_dependency_map[sub_op_subscript->hash()];
+                    // store for each operand to which sub_operator it belongs
+                    auto operands_sub_operators = sub_op_subscript->getSubOperatorOfOperands();
+                    for(const auto& [op_pos, sub_op] : iter::enumerate(operands_sub_operators)) {
+                        std::vector<std::size_t> dependent_operands_poss{};
+                        auto op_pos_in_subscript = std::distance(pos_in_out.begin(),
+                                                                 std::find(pos_in_out.begin(), pos_in_out.end(), op_pos));
+                        // find dependencies between sub operators using the current subscript
+                        for(auto dep_op_pos_in_subscript : this->subscript->getDependentOperands(op_pos_in_subscript)) {
+                            auto dep_op_pos = pos_in_out[dep_op_pos_in_subscript];
+                            auto dependent_sub_op = operands_sub_operators[dep_op_pos];
+                            if(sub_op == dependent_sub_op)
+                                continue;
+                            auto& sub_op_map = this->context->sub_operator_dependency_map[sub_op_subscript->hash()][sub_op];
+                            sub_op_map.insert(dependent_sub_op);
+                        }
                     }
                 }
-            }
-            sub_operator = Operator_t::construct(sub_op_subscript, this->context);
+			}
             sub_operator->load(std::move(next_operands), *this->entry);
 		}
 

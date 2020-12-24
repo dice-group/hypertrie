@@ -147,4 +147,20 @@ namespace Dice::hash {
         std::unordered_set<std::string> exampleSet2(entries.rbegin(), entries.rend());
         REQUIRE(getHash(exampleSet1) == getHash(exampleSet2));
     }
+
+    TEST_CASE("Hash of pointer of non-fundamental type", "[RobinHoodHash]") {
+        std::set<std::string> exampleSet;
+        exampleSet.insert("cat");
+        exampleSet.insert("dog");
+        exampleSet.insert("horse");
+        REQUIRE(getHash(exampleSet) == getHash(exampleSet));
+    }
+
+    TEST_CASE("Hash of unique pointer of non-fundamental type", "[RobinHoodHash]") {
+        std::set<std::string> exampleSet;
+        exampleSet.insert("cat");
+        exampleSet.insert("dog");
+        exampleSet.insert("horse");
+        REQUIRE(getHash(exampleSet) == getHash(exampleSet));
+    }
 }

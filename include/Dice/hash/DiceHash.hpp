@@ -28,9 +28,9 @@ namespace Dice::hash {
 		template<typename T>
 		requires std::is_fundamental_v<std::decay_t<T>> or std::is_pointer_v<std::decay_t<T>>
 		inline std::size_t hash_primitive(T x) noexcept {
-			if (sizeof(std::decay_t<T>) == sizeof(size_t)) {
+			if constexpr (sizeof(std::decay_t<T>) == sizeof(size_t)) {
 				return Dice::hash::martinus::hash_int(*reinterpret_cast<size_t const *>(&x));
-			} else if (sizeof(std::decay_t<T>) > sizeof(size_t)) {
+			} else if constexpr (sizeof(std::decay_t<T>) > sizeof(size_t)) {
 				return hash_bytes(&x, sizeof(x));
 			} else {
 				if constexpr (std::is_floating_point_v<std::decay_t<T>>) {

@@ -148,19 +148,28 @@ namespace Dice::hash {
         REQUIRE(getHash(exampleSet1) == getHash(exampleSet2));
     }
 
-    TEST_CASE("Hash of pointer of non-fundamental type", "[RobinHoodHash]") {
+    TEST_CASE("Hash of pointer is equal to hash of value itself", "[RobinHoodHash]") {
         std::set<std::string> exampleSet;
         exampleSet.insert("cat");
         exampleSet.insert("dog");
         exampleSet.insert("horse");
-        REQUIRE(getHash(exampleSet) == getHash(exampleSet));
+        REQUIRE(getHash(&exampleSet) == getHash(exampleSet));
     }
 
-    TEST_CASE("Hash of unique pointer of non-fundamental type", "[RobinHoodHash]") {
+    TEST_CASE("Hash of unique pointer is equal to hash of value itself", "[RobinHoodHash]") {
         std::set<std::string> exampleSet;
         exampleSet.insert("cat");
         exampleSet.insert("dog");
         exampleSet.insert("horse");
-        REQUIRE(getHash(exampleSet) == getHash(exampleSet));
+        REQUIRE(getHash(std::make_unique<std::set<std::string>>(exampleSet)) == getHash(exampleSet));
     }
+
+    TEST_CASE("Hash of shared pointer is equal to hash of value itself", "[RobinHoodHash]") {
+        std::map<std::string, int> exampleMap;
+        exampleMap["cat"] = 1;
+        exampleMap["horse"] = 5;
+        exampleMap["dog"] = 100;
+        REQUIRE(getHash(std::make_shared<std::map<std::string,int>>(exampleMap)) == getHash(exampleMap));
+    }
+
 }

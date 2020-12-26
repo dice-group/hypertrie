@@ -32,13 +32,15 @@ namespace Dice::hash {
 			if constexpr (sizeof(std::decay_t<T>) == sizeof(size_t)) {
 				return Dice::hash::martinus::hash_int(*reinterpret_cast<size_t const *>(&x));
 			}
-			if constexpr (sizeof(std::decay_t<T>) > sizeof(size_t)) {
+			else if constexpr (sizeof(std::decay_t<T>) > sizeof(size_t)) {
 				return hash_bytes(&x, sizeof(x));
 			}
-            if constexpr (std::is_floating_point_v<std::decay_t<T>>) {
+            else if constexpr (std::is_floating_point_v<std::decay_t<T>>) {
                 return hash_bytes(&x, sizeof(x));
             }
-            return Dice::hash::martinus::hash_int(static_cast<size_t>(x));
+            else {
+                return Dice::hash::martinus::hash_int(static_cast<size_t>(x));
+            }
 		}
 
 	}// namespace detail

@@ -19,29 +19,28 @@
 namespace Dice::hash {
 
 	namespace detail {
-		inline static constexpr std::size_t size_t_bits = 8 * sizeof(std::size_t);
+	    //not used
+		//inline static constexpr std::size_t size_t_bits = 8 * sizeof(std::size_t);
+        using Dice::hash::martinus::HashState;
+		using Dice::hash::martinus::hash_bytes;
+		using Dice::hash::martinus::hash_combine;
 
-		inline auto hash_bytes = &Dice::hash::martinus::hash_bytes;
-
-		inline auto hash_combine = &Dice::hash::martinus::hash_combine;
-
+		//Changed the first implementation for readability, now the if statements are a lot less nested
 		template<typename T>
 		requires std::is_fundamental_v<std::decay_t<T>> or std::is_pointer_v<std::decay_t<T>>
 		inline std::size_t hash_primitive(T x) noexcept {
 			if constexpr (sizeof(std::decay_t<T>) == sizeof(size_t)) {
 				return Dice::hash::martinus::hash_int(*reinterpret_cast<size_t const *>(&x));
-			} else if constexpr (sizeof(std::decay_t<T>) > sizeof(size_t)) {
-				return hash_bytes(&x, sizeof(x));
-			} else {
-				if constexpr (std::is_floating_point_v<std::decay_t<T>>) {
-					return hash_bytes(&x, sizeof(x));
-				} else {
-					return Dice::hash::martinus::hash_int(static_cast<size_t>(x));
-				}
 			}
+			if constexpr (sizeof(std::decay_t<T>) > sizeof(size_t)) {
+				return hash_bytes(&x, sizeof(x));
+			}
+            if constexpr (std::is_floating_point_v<std::decay_t<T>>) {
+                return hash_bytes(&x, sizeof(x));
+            }
+            return Dice::hash::martinus::hash_int(static_cast<size_t>(x));
 		}
 
-		using HashState = Dice::hash::martinus::HashState;
 	}// namespace detail
 
 

@@ -31,9 +31,31 @@ std::size_t dice_hash(std::basic_string<CharT> const &str) noexcept;
 template<typename CharT>
 std::size_t dice_hash(std::basic_string_view<CharT> const &sv) noexcept;
 
+/**
+ * CAUTION: hashes the POINTER, not the OBJECT POINTED TO!
+ * @tparam T
+ * @param ptr
+ * @return
+ */
+template<typename T>
+requires std::is_pointer_v<T>
+std::size_t dice_hash(T const ptr) noexcept;
+
+/**
+ * CAUTION: hashes the POINTER, not the OBJECT POINTED TO!
+ * @tparam T
+ * @param ptr
+ * @return
+ */
 template<typename T>
 std::size_t dice_hash(std::unique_ptr<T> const &ptr) noexcept;
 
+/**
+ * CAUTION: hashes the POINTER, not the OBJECT POINTED TO!
+ * @tparam T
+ * @param ptr
+ * @return
+ */
 template<typename T>
 std::size_t dice_hash(std::shared_ptr<T> const &ptr) noexcept;
 
@@ -56,11 +78,6 @@ std::size_t dice_hash(T const &container) noexcept;
 template<typename T>
 requires is_unordered_container_v<T>
 std::size_t dice_hash(T const &container) noexcept;
-
-template<typename T>
-requires std::is_pointer_v<T>
-std::size_t dice_hash(T const ptr) noexcept;
-
 
 /** Wrapper
  *

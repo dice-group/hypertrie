@@ -85,6 +85,12 @@ namespace Dice::hash {
     }
 
     template<typename T>
+    requires std::is_pointer_v<T>
+    std::size_t dice_hash(T const ptr) noexcept {
+        return detail::hash_primitive(ptr);
+    }
+
+    template<typename T>
     std::size_t dice_hash(std::unique_ptr<T> const &ptr) noexcept {
         return dice_hash(ptr.get());
     }
@@ -163,11 +169,6 @@ namespace Dice::hash {
         return h;
     }
 
-    template<typename T>
-    requires std::is_pointer_v<T>
-    std::size_t dice_hash(T const ptr) noexcept {
-        return dice_hash(*ptr);
-    }
 }// namespace Dice::hash
 
 #endif//HYPERTRIE_DICEHASH_HPP

@@ -19,8 +19,6 @@
 namespace Dice::hash {
 
 	namespace detail {
-	    //not used
-		//inline static constexpr std::size_t size_t_bits = 8 * sizeof(std::size_t);
         using Dice::hash::martinus::HashState;
 		using Dice::hash::martinus::hash_bytes;
 		using Dice::hash::martinus::hash_combine;

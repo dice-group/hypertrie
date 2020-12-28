@@ -29,43 +29,65 @@ namespace Dice::hash {
             }
 		}
 
+        /** Combines two hashes to a new hash.
+         * It is used in the (un-)ordered container functions. However this __will__ be replaced in the future.
+         * @param a First hash.
+         * @param b Second hash.
+         * @return Combination of a and b.
+         */
+        inline std::size_t dice_hash_invertible_combine(std::size_t a, std::size_t b) {
+            return a xor b;
+        }
+
+        /** Calculates the Hash over an ordered container.
+         * An example would be a vector, a map, an array or a list.
+         * Needs a ForwardIterator in the Container-type, and an member type "value_type".
+         *
+         * @tparam Container The container type (vector, map, list, etc).
+         * @param container The container to calculate the hash value of.
+         * @return The combined hash of all Values inside of the container.
+         */
+        template<typename Container>
+        std::size_t dice_hash_ordered_container(Container const &container) noexcept {
+            detail::HashState hash_state(container.size());
+            std::size_t item_hash;
+            for (const auto &item : container) {
+                item_hash = dice_hash(item);
+                hash_state.add(item_hash);
+            }
+            return hash_state.digest();
+        }
+
+        /** Calculates the Hash over an unordered container.
+         * An example would be a unordered_map or an unordered_set.
+         * CAUTION: This function is not evaluated yet! It's performance it not tested.
+         * Also it is simply an xor on the data inside, because a specific layout of data cannot be assumed.
+         * Needs a ForwardIterator in the Container-type, and an member type "value_type".
+         *
+         * @tparam Container The container type (unordered_map/set etc).
+         * @param container The container to calculate the hash value of.
+         * @return The combined hash of all Values inside of the container.
+         */
+        template<typename Container>
+        std::size_t dice_hash_unordered_container(Container const &container) noexcept {
+            std::size_t h{};
+            for (auto const &it : container) {
+                h = dice_hash_invertible_combine(h, dice_hash(it));
+            }
+            return h;
+        }
+
+        template<typename... Ts>
+        std::size_t hash_and_combine(Ts &&...values) {
+            return detail::hash_combine(std::initializer_list<std::size_t>{dice_hash(std::forward<Ts>(values))...});
+        }
+
+        template<typename... TupleArgs, std::size_t... ids>
+        std::size_t hash_tuple(std::tuple<TupleArgs...> const &tuple, std::index_sequence<ids...> const &) {
+            return hash_and_combine(std::get<ids>(tuple)...);
+        }
+
 	}// namespace detail
-
-
-    /** Combines two hashes to a new hash.
-     * It is used in the (un-)ordered container functions. However this __will__ be replaced in the future.
-     * @param a First hash.
-     * @param b Second hash.
-     * @return Combination of a and b.
-     */
-    inline std::size_t dice_hash_invertible_combine(std::size_t a, std::size_t b) {
-        return a xor b;
-    }
-
-
-    /** Calculates the Hash over an ordered container.
-     * An example would be a vector, a map, an array or a list.
-     * Needs a ForwardIterator in the Container-type, and an member type "value_type".
-     *
-     * @tparam Container The container type (vector, map, list, etc).
-     * @param container The container to calculate the hash value of.
-     * @return The combined hash of all Values inside of the container.
-     */
-    template<typename Container>
-    std::size_t dice_hash_ordered_container(Container const &container) noexcept;
-
-    /** Calculates the Hash over an unordered container.
-     * An example would be a unordered_map or an unordered_set.
-     * CAUTION: This function is not evaluated yet! It's performance it not tested.
-     * Also it is simply an xor on the data inside, because a specific layout of data cannot be assumed.
-     * Needs a ForwardIterator in the Container-type, and an member type "value_type".
-     *
-     * @tparam Container The container type (unordered_map/set etc).
-     * @param container The container to calculate the hash value of.
-     * @return The combined hash of all Values inside of the container.
-     */
-    template<typename Container>
-    std::size_t dice_hash_unordered_container(Container const &container) noexcept;
 
     template<typename T>
     requires std::is_fundamental_v<std::decay_t<T>>
@@ -105,7 +127,7 @@ namespace Dice::hash {
         if constexpr (std::is_fundamental_v<T>) {
             return detail::hash_bytes(arr.data(), sizeof(T) * N);
         } else {
-            return dice_hash_ordered_container(arr);
+            return detail::dice_hash_ordered_container(arr);
         }
     }
 
@@ -116,21 +138,9 @@ namespace Dice::hash {
                           "vector of booleans has a special implementation which results into errors!");
             return detail::hash_bytes(vec.data(), sizeof(T) * vec.size());
         } else {
-            return dice_hash_ordered_container(vec);
+            return detail::dice_hash_ordered_container(vec);
         }
     }
-
-	template<typename... Ts>
-	std::size_t hash_and_combine(Ts &&...values) {
-		return detail::hash_combine(std::initializer_list<std::size_t>{dice_hash(std::forward<Ts>(values))...});
-	}
-
-	namespace detail {
-		template<typename... TupleArgs, std::size_t... ids>
-		std::size_t hash_tuple(std::tuple<TupleArgs...> const &tuple, std::index_sequence<ids...> const &) {
-			return hash_and_combine(std::get<ids>(tuple)...);
-		}
-	}
 
 	template<typename... TupleArgs>
 	std::size_t dice_hash(std::tuple<TupleArgs...> const &tpl) noexcept {
@@ -139,40 +149,22 @@ namespace Dice::hash {
 
     template<typename T, typename V>
     std::size_t dice_hash(std::pair<T, V> const &p) noexcept {
-        return hash_and_combine(p.first, p.second);
+        return detail::hash_and_combine(p.first, p.second);
     }
 
     template<typename T>
     requires is_ordered_container_v<T>
     std::size_t dice_hash(T const &container) noexcept {
-        return dice_hash_ordered_container(container);
+        return detail::dice_hash_ordered_container(container);
     }
 
     template<typename T>
     requires is_unordered_container_v<T>
     std::size_t dice_hash(T const &container) noexcept {
-        return dice_hash_unordered_container(container);
+        return detail::dice_hash_unordered_container(container);
     }
 
-	template<typename Container>
-	std::size_t dice_hash_ordered_container(Container const &container) {
-		detail::HashState hash_state(container.size());
-		std::size_t item_hash;
-		for (const auto &item : container) {
-			item_hash = dice_hash(item);
-			hash_state.add(item_hash);
-		}
-		return hash_state.digest();
-	}
 
-    template<typename Container>
-    std::size_t dice_hash_unordered_container(Container const &container) noexcept {
-        std::size_t h{};
-        for (auto const &it : container) {
-            h = dice_hash_invertible_combine(h, dice_hash(it));
-        }
-        return h;
-    }
 
 }// namespace Dice::hash
 

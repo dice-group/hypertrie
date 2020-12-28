@@ -16,13 +16,17 @@
 #include "Dice/hash/Container_trait.h"
 
 namespace Dice::hash {
+template <typename T>
+struct AlwaysFalse : std::false_type {};
+
 template<typename T>
 std::size_t dice_hash(T const &) noexcept {
-    throw std::logic_error("Hash must be declared explicitly.");
+    static_assert(AlwaysFalse<T>::value,
+            "The hash function is not defined for this type. You need to add an implementation yourself");
 }
 
 template<typename T>
-requires std::is_fundamental_v<T> or std::is_fundamental_v<std::decay_t<T>>
+requires std::is_fundamental_v<std::decay_t<T>>
 std::size_t dice_hash(T const &fundamental) noexcept;
 
 template<typename CharT>
@@ -38,7 +42,7 @@ std::size_t dice_hash(std::basic_string_view<CharT> const &sv) noexcept;
  * @return
  */
 template<typename T>
-requires std::is_pointer_v<T>
+requires std::is_pointer_v<std::decay_t<T>>
 std::size_t dice_hash(T const ptr) noexcept;
 
 /**

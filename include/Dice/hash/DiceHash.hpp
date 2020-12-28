@@ -13,33 +13,34 @@
 #include <unordered_set>
 #include <utility>
 
-#include "Dice/hash/xxhash.hpp"
+#include "Dice/hash/martinus_robinhood_hash.hpp"
 #include "Dice/hash/Container_trait.h"
 
 namespace Dice::hash {
 
-	inline static constexpr std::size_t seed = std::size_t(0xA24BAED4963EE407UL);
-
-	template<typename... Ts>
-	std::size_t hash_and_combine(Ts &&...values);
-
 	namespace detail {
-		inline static constexpr std::size_t size_t_bits = 8 * sizeof(std::size_t);
+        using Dice::hash::martinus::HashState;
+		using Dice::hash::martinus::hash_bytes;
+		using Dice::hash::martinus::hash_combine;
 
-		inline std::size_t hash_bytes(void const *ptr, std::size_t len) noexcept {
-			return xxh::xxhash3<size_t_bits>(ptr, len, seed);
-		}
-
+		//Changed the first implementation for readability, now the if statements are a lot less nested
 		template<typename T>
 		requires std::is_fundamental_v<std::decay_t<T>> or std::is_pointer_v<std::decay_t<T>>
 		inline std::size_t hash_primitive(T x) noexcept {
-			return xxh::xxhash3<size_t_bits>(&x, sizeof(T), seed);
+			if constexpr (sizeof(std::decay_t<T>) == sizeof(size_t)) {
+				return Dice::hash::martinus::hash_int(*reinterpret_cast<size_t const *>(&x));
+			}
+			else if constexpr (sizeof(std::decay_t<T>) > sizeof(size_t)) {
+				return hash_bytes(&x, sizeof(x));
+			}
+            else if constexpr (std::is_floating_point_v<std::decay_t<T>>) {
+                return hash_bytes(&x, sizeof(x));
+            }
+            else {
+                return Dice::hash::martinus::hash_int(static_cast<size_t>(x));
+            }
 		}
 
-		template<typename... TupleArgs, std::size_t... ids>
-		std::size_t hash_tuple(std::tuple<TupleArgs...> const &tuple, std::index_sequence<ids...> const &) {
-			return ::Dice::hash::hash_and_combine(std::get<ids>(tuple)...);
-		}
 	}// namespace detail
 
 
@@ -129,6 +130,18 @@ namespace Dice::hash {
 		}
 	}
 
+	template<typename... Ts>
+	std::size_t hash_and_combine(Ts &&...values) {
+		return detail::hash_combine(std::initializer_list<std::size_t>{dice_hash(std::forward<Ts>(values))...});
+	}
+
+	namespace detail {
+		template<typename... TupleArgs, std::size_t... ids>
+		std::size_t hash_tuple(std::tuple<TupleArgs...> const &tuple, std::index_sequence<ids...> const &) {
+			return hash_and_combine(std::get<ids>(tuple)...);
+		}
+	}
+
 	template<typename... TupleArgs>
 	std::size_t dice_hash(std::tuple<TupleArgs...> const &tpl) noexcept {
 		return detail::hash_tuple(tpl, std::make_index_sequence<sizeof...(TupleArgs)>());
@@ -149,19 +162,13 @@ namespace Dice::hash {
         return dice_hash_unordered_container(container);
     }
 
-	// Helperfunctions
-	template<typename... Ts>
-	std::size_t hash_and_combine(Ts &&...values) {
-		return xxh::xxhash3<detail::size_t_bits>(std::initializer_list<std::size_t>{dice_hash(std::forward<Ts>(values))...}, seed);
-	}
-
 	template<typename Container>
 	std::size_t dice_hash_ordered_container(Container const &container) {
-		xxh::hash3_state_t<detail::size_t_bits> hash_state(seed);
+		detail::HashState hash_state(container.size());
 		std::size_t item_hash;
 		for (const auto &item : container) {
 			item_hash = dice_hash(item);
-			hash_state.update(&item_hash, sizeof(std::size_t));
+			hash_state.add(item_hash);
 		}
 		return hash_state.digest();
 	}

@@ -174,4 +174,17 @@ namespace Dice::hash {
        getHash(std::make_tuple(first, second));
     }
 
+    TEST_CASE("Fundamental types can be hashed", "[DiceHash]") {
+       int i = 42;
+       REQUIRE(getHash(i) == getHash(42));
+    }
+
+    /*
+    TEST_CASE("If the hash is not defined for a specific type, it will not compile", "[DiceHash]") {
+        struct NotImplementedHashType {};
+        NotImplementedHashType test;
+        getHash(test);
+    }
+     */
+
 }

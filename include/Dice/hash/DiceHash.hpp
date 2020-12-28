@@ -1,10 +1,17 @@
 #ifndef HYPERTRIE_DICEHASH_HPP
 #define HYPERTRIE_DICEHASH_HPP
 
+/** @file Home of the DiceHash implementation.
+ * To speed up tests of the Hypertrie and Tentris we needed to be able to serialize a Hypertrie and save it.
+ * However the last hash function was not "stable", i.e. it chose two different random seeds, so the results differed.
+ * Because of that (and to not worry about versioning problems) this hash function was created.
+ */
 
 #include "Dice/hash/DiceHashDefinitions.hpp"
 #include "Dice/hash/martinus_robinhood_hash.hpp"
 
+/** Home of the DiceHash and its helper functions.
+ */
 namespace Dice::hash {
 
 	namespace detail {
@@ -12,6 +19,12 @@ namespace Dice::hash {
 		using Dice::hash::martinus::hash_bytes;
 		using Dice::hash::martinus::hash_combine;
 
+		/** Wrapper for fundamental types.
+		 * Calls hash_bytes for every fundamental type (including pointers to fundamentals).
+		 * @tparam T Fundamental type or pointer to a fundamental (using constrains).
+		 * @param x The value to hash.
+		 * @return Hash value.
+		 */
 		template<typename T>
 		requires std::is_fundamental_v<std::decay_t<T>> or std::is_pointer_v<std::decay_t<T>>
 		inline std::size_t hash_primitive(T x) noexcept {
@@ -142,6 +155,12 @@ namespace Dice::hash {
         }
     }
 
+	/** Implementation for tuples.
+	 * Will hash every entry and then combine the hashes.
+	 * @tparam TupleArgs The types of the tuple values.
+	 * @param tpl The tuple itself.
+	 * @return Hash value.
+	 */
 	template<typename... TupleArgs>
 	std::size_t dice_hash(std::tuple<TupleArgs...> const &tpl) noexcept {
 		return detail::hash_tuple(tpl, std::make_index_sequence<sizeof...(TupleArgs)>());

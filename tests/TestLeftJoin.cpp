@@ -334,7 +334,7 @@ namespace hypertrie::tests::leftjoin {
 		}
         SECTION("wwd", "weakly well-defined queries") {
 			// a,[ab],[ab]->ab
-			SECTION("non_opt_root", "wwd with non-optional root") {
+			SECTION("lj_lj", "if the 2nd operand does not yield result -> left_join") {
                 operands.push_back(ht1);
                 operands.push_back(ht2);
                 operands.push_back(ht3);
@@ -362,8 +362,8 @@ namespace hypertrie::tests::leftjoin {
                         {8, default_key_part}
                 };
 		    }
-            // ab,[bc],[cd]->abcd if [bc] does not yield a result -> cartesian
-            SECTION("all_opt", "wwd all optional") {
+            // ab,[bc],[cd]->abcd
+            SECTION("lj_cart", "if the second operand does not yield result -> cartesian") {
                 operands.push_back(ht2);
                 operands.push_back(ht3);
                 operands.push_back(ht4);

@@ -590,7 +590,7 @@ namespace einsum::internal {
                 bool strong_dependency = false; // indicates whether the current operand participates in a strong dependency
 				for(auto label : operand_labels) {
 					// check if the active label has been observed
-					if(label_depth_operand.contains(label) and !label_depth_operand[label].empty()) {
+					if(!label_depth_operand[label].empty()) {
 						// check if there is an operand with the same label in the current group (join)
 						if (label_depth_operand[label].contains(depth)) {
 							auto dominant_op_orig_pos = label_depth_operand[label][depth];
@@ -623,20 +623,22 @@ namespace einsum::internal {
 					last_operand_of_label[label] = orig_op_pos;
                 }
 				// find weak dependencies. for cartesian
-				for(int8_t d = depth; d >= 0; d--) {
-					std::set<OperandPos> operands_at_depth{};
-					for(const auto &label_entry : label_depth_operand) {
-						if(label_entry.second.contains(d))
-							if(raw_subscript.poss_in_operands[label_entry.second.at(d)] != operand_pos)
-							    operands_at_depth.insert(label_entry.second.at(d));
+				if(!strong_dependency) {
+					for (int8_t d = depth; d >= 0; d--) {
+						std::set<OperandPos> operands_at_depth{};
+						for (const auto &label_entry : label_depth_operand) {
+							if (label_entry.second.contains(d))
+								if (raw_subscript.poss_in_operands[label_entry.second.at(d)] != operand_pos)
+									operands_at_depth.insert(label_entry.second.at(d));
+						}
+						if (operands_at_depth.empty())
+							continue;
+						auto last_pos_of_depth = raw_subscript.poss_in_operands[*operands_at_depth.rbegin()];// set is ordered take its last value
+						operand_directed_dependency_graph.addEdge(last_pos_of_depth, operand_pos);
+						if (d == depth)
+							operand_directed_dependency_graph.addEdge(operand_pos, last_pos_of_depth);
+						break;
 					}
-					if(operands_at_depth.empty())
-						continue;
-					auto last_pos_of_depth = raw_subscript.poss_in_operands[*operands_at_depth.rbegin()]; // set is ordered take its last value
-                    operand_directed_dependency_graph.addEdge(last_pos_of_depth, operand_pos);
-					if(d == depth)
-                        operand_directed_dependency_graph.addEdge(operand_pos, last_pos_of_depth);
-					break;
 				}
 			}
 			return operand_directed_dependency_graph;

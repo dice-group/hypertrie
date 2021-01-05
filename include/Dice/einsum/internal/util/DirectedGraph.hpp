@@ -137,7 +137,6 @@ namespace einsum::internal::util {
             std::set<Vertex> target_vertices{};
             std::deque<Vertex> to_check{vertex};
             std::set<Vertex> visited{};
-            bool flag = true;
             while(!to_check.empty()) {
                 auto v = to_check.front();
                 to_check.pop_front();
@@ -152,7 +151,6 @@ namespace einsum::internal::util {
                     target_vertices.insert(boost::target(*out_edge_iter, unlabelled_graph));
                     to_check.push_back(boost::target(*out_edge_iter, unlabelled_graph));
                 }
-                flag = false;
             }
             return target_vertices;
         }

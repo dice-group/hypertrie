@@ -207,7 +207,7 @@ namespace einsum::internal {
 				// wwd_subscript contains the labels of wwd edges
                 wwd_subscript = opt_subscript->removeLabels(to_remove);
 				// opt_subscript does not contain the labels of wwd edges
-                opt_subscript = opt_subscript->removeLabels(subscript->getWWDLabels());
+                opt_subscript = wwd_subscript->removeLabels(subscript->getWWDLabels());
 			}
 		}
 

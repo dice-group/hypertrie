@@ -389,7 +389,7 @@ namespace hypertrie::tests::leftjoin {
                 };
             }
             // [ab],[ac]->abc
-            SECTION("lj_lj", "left join without left operand followed by left join") {
+            SECTION("lj_all_opt", "left join with only optional operands") {
                 operands.push_back(ht2);
                 operands.push_back(ht3);
                 std::vector<char> op2_labels{'a', 'b'};
@@ -410,7 +410,7 @@ namespace hypertrie::tests::leftjoin {
                 };
             }
             // [ab,bd],[bc]->abc
-            SECTION("lj_lj_elim", "left join without left operand followed by left join, the first left join does not yield results") {
+            SECTION("lj_all_opt_elim", "left join without left operand followed by left join, the first left join does not yield results") {
                 operands.push_back(ht2);
 				operands.push_back(ht5);
                 operands.push_back(ht3);
@@ -429,7 +429,7 @@ namespace hypertrie::tests::leftjoin {
                 result_labels.push_back('c');
                 expected_results = {
                         {default_key_part, 1, 8},
-                        {default_key_part, 1, 6},
+                        {default_key_part, 4, 6},
                         {default_key_part, 3, 5}
                 };
             }

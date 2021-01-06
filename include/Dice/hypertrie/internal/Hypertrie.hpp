@@ -7,6 +7,7 @@
 #include "Dice/hypertrie/internal/HypertrieContext.hpp"
 #include "Dice/hypertrie/internal/Hypertrie_traits.hpp"
 #include "Dice/hypertrie/internal/Iterator.hpp"
+#include "Dice/hypertrie/internal/old_hypertrie/BoolHypertrie.hpp"
 
 #include "Dice/hypertrie/internal/util/CONSTANTS.hpp"
 #include <optional>
@@ -22,6 +23,7 @@ namespace hypertrie {
 		using tri = internal::raw::Hypertrie_internal_t<tr>;
 
 	private:
+
 		template<size_t depth>
 		using RawKey = typename tri::template RawKey<depth>;
 
@@ -31,88 +33,57 @@ namespace hypertrie {
 		typedef typename internal::raw::RawNodeContainer NodeContainer;
 
 	protected:
-		NodeContainer node_container_;
+		template<pos_type depth>
+		using RawBoolHypertrie = typename hypertrie::internal::interface::rawboolhypertrie<typename tri::key_part_type, tri::template map_type, tri::template set_type>::template RawBoolHypertrie<depth>;
+		template<pos_type depth, pos_type diag_depth>
+		using RawHashDiagonal = typename hypertrie::internal::interface::rawboolhypertrie<typename tri::key_part_type, tri::template map_type, tri::template set_type>::template RawHashDiagonal<diag_depth, depth>;
 
-		HypertrieContext<tr> *context_ = nullptr;
+
+		std::shared_ptr<void> hypertrie_;
 
 		size_t depth_ = 0;
 
-		const_Hypertrie(size_t depth, HypertrieContext<tr> *context, NodeContainer node_container = {}) : node_container_(std::move(node_container)), context_(context), depth_(depth) {}
+		const_Hypertrie(size_t depth, const std::shared_ptr<void> & hypertrie = {}) : hypertrie_(hypertrie),depth_(depth) {}
 
 		constexpr bool contextless() const noexcept {
-			return context_ == nullptr;
+			return false;
 		}
 
 		friend class HashDiagonal<tr>;
 
 
 		void destruct_contextless_node() noexcept {
-			if (contextless() and node_container_.hash_sized != 0) {
-				if (tr::is_bool_valued and tr::lsb_unused and depth_ == 1 and size() == 1)
-					return;
-				using namespace internal;
-				assert(node_container_.pointer_sized != nullptr);
-				compiled_switch<hypertrie_depth_limit, 1>::switch_void(
-						this->depth_,
-						[&](auto depth_arg) {
-						  using CND = typename internal::raw::template CompressedNodeContainer<depth_arg, tri>;
-						  if constexpr (not(depth_arg == 1 and tri::is_bool_valued and tri::is_lsb_unused))
-							  delete reinterpret_cast<CND *>(&this->node_container_)->compressed_node();
-						},
-						[]() { assert(false); });
-			}
+			// there are no contextless nodes
 		}
 
 		void copy_contextless_node() noexcept {
-			if (contextless() and not empty()) {
-				if (not (tr::is_bool_valued and tr::lsb_unused and depth_ == 1 and size() == 1))
-				internal::compiled_switch<hypertrie_depth_limit, 1>::switch_void(
-						this->depth_,
-						[&](auto depth_arg) {
-						  using CNodec = typename internal::raw::template NodeContainer<depth_arg, tri>;
-						  if constexpr (not(depth_arg == 1 and tri::is_bool_valued and tri::is_lsb_unused)) {
-							  // create a copy of the contextless compressed node
-							  CNodec &cnodec = *reinterpret_cast<CNodec *>(&this->node_container_);
-							  cnodec.compressed_node() = new internal::raw::CompressedNode<depth_arg, tri>{*cnodec.compressed_node()};;
-						  }
-						},
-						[]() { assert(false); });
-			}
+			// there are no contextless nodes
 		}
 	public:
 		~const_Hypertrie() {
-			destruct_contextless_node();
 		}
 
 		const_Hypertrie(const_Hypertrie &&const_hypertrie)
-				: node_container_(const_hypertrie.node_container_), context_(const_hypertrie.context_), depth_(const_hypertrie.depth_) {
-			const_hypertrie.node_container_ = {};
-			const_hypertrie.context_ = nullptr;
+				: hypertrie_(std::move(const_hypertrie.hypertrie_)), depth_(const_hypertrie.depth_) {
+			const_hypertrie.hypertrie_.reset();
 		}
 
 		const_Hypertrie &operator=(const const_Hypertrie &const_hypertrie) noexcept {
-			destruct_contextless_node();
-			this->node_container_ = const_hypertrie.node_container_;
-			this->context_ = const_hypertrie.context_;
+			this->hypertrie_ = const_hypertrie.hypertrie_;
 			this->depth_ = const_hypertrie.depth_;
-			copy_contextless_node();
-
 			return *this;
 		}
 
 
 		const_Hypertrie &operator=(const_Hypertrie &&const_hypertrie) noexcept {
-			this->node_container_ = const_hypertrie.node_container_;
-			this->context_ = const_hypertrie.context_;
+			this->hypertrie_ = std::move(const_hypertrie.hypertrie_);
+			const_hypertrie.hypertrie_.reset();
 			this->depth_ = const_hypertrie.depth_;
-			const_hypertrie.context_ = nullptr;
-			const_hypertrie.node_container_.hash_sized = 0;
-			const_hypertrie.node_container_.pointer_sized = nullptr;
 			return *this;
 		}
 
 		const_Hypertrie(const const_Hypertrie &const_hypertrie)
-			: node_container_(const_hypertrie.node_container_), context_(const_hypertrie.context_), depth_(const_hypertrie.depth_) {
+			: hypertrie_(const_hypertrie.hypertrie_), depth_(const_hypertrie.depth_) {
 			copy_contextless_node();
 		}
 
@@ -121,24 +92,12 @@ namespace hypertrie {
 		explicit const_Hypertrie(size_t depth) : depth_(depth) {}
 
 		void *rawNode() const {
-			return node_container_.pointer_sized;
+			return this->hypertrie_.get();
 		}
 
-		const NodeContainer *rawNodeContainer() const {
-			return &node_container_;
-		}
-
-		HypertrieContext<tr> *context() const {
-			return context_;
-		}
 		size_t depth() const {
 			return depth_;
 		}
-
-		size_t hash() const {
-			return node_container_.hash_sized.hash();
-		}
-
 
 		using traits = tr;
 
@@ -147,38 +106,46 @@ namespace hypertrie {
 		using value_type = typename tr::value_type;
 
 		[[nodiscard]] size_t size() const{
-			if (empty())
+			if (not this->hypertrie_)
 				return 0;
 			else
 				return internal::compiled_switch<hypertrie_depth_limit, 1>::switch_(
 						this->depth_,
 						[&](auto depth_arg) -> size_t {
-							const auto &node_container = *reinterpret_cast<const internal::raw::NodeContainer<depth_arg, tri> *>(&this->node_container_);
-							if (node_container.isCompressed())
-								return node_container.compressed_node()->size();
-							else
-								return node_container.uncompressed_node()->size();
+						  	return std::static_pointer_cast<RawBoolHypertrie<depth_arg>>(this->hypertrie_)->size();
 						},
 						[]() -> size_t { assert(false); return 0; });
 		}
 
 		[[nodiscard]] constexpr bool empty() const noexcept {
-			return this->node_container_.hash_sized.empty();
+			return this->size() == 0UL;
 		}
 
 		[[nodiscard]] value_type operator[](const Key &key) const {
+			if (empty()){
+				return value_type(0);
+			} else {
 			return internal::compiled_switch<hypertrie_depth_limit, 1>::switch_(
 					this->depth_,
 					[&](auto depth_arg) mutable -> bool {
 						RawKey<depth_arg> raw_key;
 						std::copy_n(key.begin(), depth_arg, raw_key.begin());
-						const auto &node_container = *reinterpret_cast<const internal::raw::NodeContainer<depth_arg, tri> *>(&this->node_container_);
-						return this->context()->rawContext().template get<depth_arg>(
-								node_container,
-								raw_key);
+					  return std::static_pointer_cast<RawBoolHypertrie<depth_arg>>(this->hypertrie_)->operator[](raw_key);
 					},
 					[]() -> bool { assert(false); return {}; });
+			}
 		}
+
+	protected:
+		template<pos_type depth>
+		inline static std::tuple<typename RawBoolHypertrie<depth>::SliceKey, pos_type>
+		extractRawSliceKey(const SliceKey &slice_key) {
+			typename RawBoolHypertrie<depth>::SliceKey raw_slice_key;
+			std::copy_n(slice_key.begin(), depth, raw_slice_key.begin());
+			return {raw_slice_key, std::count(slice_key.begin(), slice_key.end(), std::nullopt)};
+		}
+
+	public:
 
 
 		[[nodiscard]] std::variant<const_Hypertrie, value_type> operator[](const SliceKey &slice_key) const {
@@ -192,24 +159,20 @@ namespace hypertrie {
 				return this->operator[](key);
 			} else if (fixed_depth == 0) {
 				return const_Hypertrie(*this);
+			} else if (this->size() == 0UL) {
+				return const_Hypertrie(this->depth() - fixed_depth);
 			} else {
-				const_Hypertrie<tr> result{depth_ - fixed_depth};
+				const_Hypertrie<tr> result;
+
 				internal::compiled_switch<hypertrie_depth_limit, 1>::switch_void(
 						this->depth_,
 						[&](auto depth_arg) {
-						  internal::compiled_switch<depth_arg, 1>::switch_void(
+							internal::compiled_switch<depth_arg, 1>::switch_void(
 									fixed_depth,
 									[&](auto slice_key_depth_arg) {
-										RawSliceKey<slice_key_depth_arg> raw_slice_key(slice_key);
-
-										const auto &node_container = *reinterpret_cast<const internal::raw::NodeContainer<depth_arg, tri> *>(&this->node_container_);
-
-										auto [node_cont, is_managed] = this->context()->rawContext().template slice<depth_arg, slice_key_depth_arg>(node_container, raw_slice_key);
-										if (not node_cont.empty())
-											result = const_Hypertrie<tr>(
-													depth_arg - slice_key_depth_arg,
-													(is_managed) ? this->context() : nullptr,
-													{node_cont.hash().hash(), node_cont.node()});
+										typename RawBoolHypertrie<depth>::SliceKey raw_slice_key;
+										std::copy_n(slice_key.begin(), depth_arg, raw_slice_key.begin());
+										result = executeRawSlice<depth_arg, depth_arg - slice_key_depth_arg>(this->hypertrie_, std::move(raw_slice_key));
 									});
 						});
 				return result;
@@ -231,11 +194,12 @@ namespace hypertrie {
 				return internal::compiled_switch<hypertrie_depth_limit, 2>::switch_(
 						this->depth_,
 						[&](auto depth_arg) -> std::vector<size_t> {
-							const auto &node_container = *reinterpret_cast<const internal::raw::UncompressedNodeContainer<depth_arg, tri> *>(&this->node_container_);
-							return node_container.uncompressed_node()->getCards(positions);
+							auto raw_hypertrie = std::static_pointer_cast<RawBoolHypertrie<depth_arg>>(this->hypertrie_);
+							return raw_hypertrie->getCards(positions);
 						},
-						[&]() ->std::vector<size_t> {
-							assert(false); return {};
+						[&]() -> std::vector<size_t> {
+							assert(false);
+							return {};
 						});
 			}
 		}
@@ -257,12 +221,12 @@ namespace hypertrie {
 
 		[[nodiscard]]
 		bool operator==(const const_Hypertrie<tr> &other) const noexcept {
-			return this->hash() == other.hash() and this->depth() == other.depth();
+			return this->hypertrie_ == other.hypertrie_ and this->depth() == other.depth();
 		}
 
 		[[nodiscard]]
 		bool operator==(const Hypertrie<tr> &other) const noexcept {
-			return this->hash() == other.hash() and this->depth() == other.depth();
+			return this->hypertrie_ == other.hypertrie_ and this->depth() == other.depth();
 		}
 
 		operator std::string() const {

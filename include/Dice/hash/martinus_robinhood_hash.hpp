@@ -38,8 +38,8 @@ namespace Dice::hash::martinus {
 	inline constexpr unsigned int r = 47;
 
 
-	template <typename T>
-	inline T unaligned_load(void const* ptr) noexcept {
+	template<typename T>
+	inline T unaligned_load(void const *ptr) noexcept {
 		// using memcpy so we don't get into unaligned load problems.
 		// compiler should optimize this very well anyways.
 		T t;
@@ -58,7 +58,7 @@ namespace Dice::hash::martinus {
 		static constexpr unsigned int r = 47;
 
 		auto const *const data64 = static_cast<uint64_t const *>(ptr);
-		uint64_t h = seed ^(len * m);
+		uint64_t h = seed ^ (len * m);
 
 		size_t const n_blocks = len / 8;
 		for (size_t i = 0; i < n_blocks; ++i) {
@@ -106,10 +106,10 @@ namespace Dice::hash::martinus {
 		return static_cast<size_t>(h);
 	}
 
-	inline size_t hash_combine(std::initializer_list<size_t> hashes){
+	inline size_t hash_combine(std::initializer_list<size_t> hashes) {
 
 
-		uint64_t h = seed ^(hashes.size() * m);
+		uint64_t h = seed ^ (hashes.size() * m);
 
 		for (auto k : hashes) {
 			k *= m;
@@ -164,6 +164,6 @@ namespace Dice::hash::martinus {
 		auto h = rotr(h1 + h2, 32U);
 		return static_cast<size_t>(h);
 	}
-}
+}// namespace Dice::hash::martinus
 
-#endif //HYPERTRIE_MARTINUS_ROBINHOOD_HASH_HPP
+#endif//HYPERTRIE_MARTINUS_ROBINHOOD_HASH_HPP

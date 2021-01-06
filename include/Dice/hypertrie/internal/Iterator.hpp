@@ -73,7 +73,7 @@ namespace hypertrie {
 
 	protected:
 		RawMethods const * raw_methods = nullptr;
-		RawBaseIterator raw_iterator;
+		void *raw_iterator = nullptr;
 
 	public:
 		using self_type = Iterator;
@@ -85,17 +85,46 @@ namespace hypertrie {
 				raw_methods(&getRawMethods(hypertrie.depth())),
 				raw_iterator(raw_methods->begin(hypertrie)) {}
 
-		Iterator(const_Hypertrie<tr> &hypertrie) : Iterator(&hypertrie) {}
+		Iterator(const Iterator &) = delete;
 
-		self_type &operator++() {
-			raw_methods->inc(&raw_iterator);
+		Iterator(Iterator &&other) noexcept {
+			if (this->raw_methods != nullptr)
+				this->raw_methods->destruct(this->raw_iterator);
+			this->raw_methods = other.raw_methods;
+			this->raw_iterator = other.raw_iterator;
+			other.raw_iterator = nullptr;
+			other.raw_methods = nullptr;
+		}
+
+		Iterator &operator=(Iterator &&other) noexcept {
+			if (this->raw_methods != nullptr)
+				this->raw_methods->destruct(this->raw_iterator);
+			this->raw_methods = other.raw_methods;
+			this->raw_iterator = other.raw_iterator;
+			other.raw_iterator = nullptr;
+			other.raw_methods = nullptr;
 			return *this;
 		}
 
-		value_type operator*() const { return value_type(1); }
+		Iterator &operator=(const Iterator &) = delete;
 
-		operator bool() const { return not raw_methods->ended(&raw_iterator); }
+		Iterator &operator=(Iterator &) = delete;
 
+		~Iterator() {
+			if (raw_methods != nullptr)
+				raw_methods->destruct(raw_iterator);
+			raw_methods = nullptr;
+			raw_iterator = nullptr;
+		}
+
+		self_type &operator++() {
+			raw_methods->inc(raw_iterator);
+			return *this;
+		}
+
+		value_type operator*() const { return raw_methods->value(raw_iterator); }
+
+		operator bool() const { return not raw_methods->ended(raw_iterator); }
 	};
 
 }

@@ -3,6 +3,7 @@
 
 #include "Dice/hypertrie/internal/raw/iterator/Diagonal.hpp"
 #include "Dice/hypertrie/internal/HypertrieContext.hpp"
+#include "Dice/hypertrie/internal/old_hypertrie/BoolHypertrie.hpp"
 #include "Dice/hypertrie/internal/Hypertrie_predeclare.hpp"
 
 namespace hypertrie {
@@ -18,8 +19,10 @@ namespace hypertrie {
 		using key_part_type = typename tr::key_part_type;
 		using value_type = typename tr::value_type;
 		typedef typename internal::raw::NodeCompression NodeCompression;
-		template <size_t diag_depth, size_t depth, NodeCompression compression>
-		using RawHashDiagonal = typename internal::raw::template HashDiagonal<diag_depth, depth, compression, tri>;
+		template<pos_type depth, pos_type diag_depth>
+		using RawHashDiagonal =  typename hypertrie::internal::interface::rawboolhypertrie<typename tri::key_part_type, tri::template map_type, tri::template set_type>::template RawHashDiagonal<diag_depth, depth>;
+		template<pos_type depth>
+		using RawBoolHypertrie = typename hypertrie::internal::interface::rawboolhypertrie<typename tri::key_part_type, tri::template map_type, tri::template set_type>::template RawBoolHypertrie<depth>;
 	protected:
 		using Key = typename tr::Key;
 
@@ -32,7 +35,7 @@ namespace hypertrie {
 
 			key_part_type (*currentKeyPart)(void const *);
 
-			const_Hypertrie<tr> (*currentHypertrie)(void const *, HypertrieContext<tr> *);
+			const_Hypertrie<tr> (*currentHypertrie)(void const *);
 
 			value_type (*currentScalar)(void const *);
 
@@ -43,89 +46,56 @@ namespace hypertrie {
 			bool (*ended)(void const *);
 
 			size_t (*size)(void const *);
-			RawMethods(void *(*construct)(const const_Hypertrie<tr> &, const KeyPositions &), void (*destruct)(void *), void (*begin)(void *), key_part_type (*currentKeyPart)(const void *), const_Hypertrie<tr> (*currentHypertrie)(const void *, HypertrieContext<tr> *), value_type (*currentScalar)(const void *), bool (*find)(void *, key_part_type), void (*inc)(void *), bool (*ended)(const void *), size_t (*size)(const void *)) : construct(construct), destruct(destruct), begin(begin), currentKeyPart(currentKeyPart), currentHypertrie(currentHypertrie), currentScalar(currentScalar), find(find), inc(inc), ended(ended), size(size) {}
+			RawMethods(void *(*construct)(const const_Hypertrie<tr> &, const KeyPositions &), void (*destruct)(void *), void (*begin)(void *), key_part_type (*currentKeyPart)(const void *), const_Hypertrie<tr> (*currentHypertrie)(const void *), value_type (*currentScalar)(const void *), bool (*find)(void *, key_part_type), void (*inc)(void *), bool (*ended)(const void *), size_t (*size)(const void *)) : construct(construct), destruct(destruct), begin(begin), currentKeyPart(currentKeyPart), currentHypertrie(currentHypertrie), currentScalar(currentScalar), find(find), inc(inc), ended(ended), size(size) {}
 		};
 
 		template <size_t diag_depth, size_t depth, NodeCompression compression>
 		inline static RawMethods generateRawMethods() {
 			[[maybe_unused]] constexpr static const size_t result_depth = depth - diag_depth;
-			using RawDiagonalHash_t = RawHashDiagonal<diag_depth, depth, compression>;
+			using RawDiagonalHash_t = RawHashDiagonal<diag_depth, depth>;
 			return RawMethods(
 					// construct
 					[](const const_Hypertrie<tr> &hypertrie, const KeyPositions &diagonal_poss) -> void * {
-						using NodecType = typename internal::raw::template SpecificNodeContainer<depth, compression, tri>;
-
-						RawKeyPositions<depth> raw_diag_poss;
-						for (auto pos : diagonal_poss)
-							raw_diag_poss[pos] = true;
-						auto &nodec = *const_cast<NodecType *>(reinterpret_cast<const NodecType *>(hypertrie.rawNodeContainer()));
-						if constexpr (bool(compression))
-							return new RawHashDiagonal<diag_depth, depth, NodeCompression::compressed>(
-									nodec,
-									raw_diag_poss);
-						else
-							return new RawHashDiagonal<diag_depth, depth, NodeCompression::uncompressed>(
-									nodec,
-									raw_diag_poss,
-									hypertrie.context()->rawContext());
+						const auto &raw_boolhypertrie = *(static_cast<RawBoolHypertrie<depth> const *>(hypertrie.rawNode()));
+						if constexpr (depth == diag_depth) {
+							return new RawDiagonalHash_t(raw_boolhypertrie);
+						} else {
+							return new RawDiagonalHash_t(raw_boolhypertrie, diagonal_poss);
+						}
 					},
 					// destruct
 					[](void *raw_diagonal_ptr) {
 						delete reinterpret_cast<RawDiagonalHash_t *>(raw_diagonal_ptr);
 					},
 					// begin
-					[](void *raw_diagonal_ptr) {
-						auto &raw_diagonal = *reinterpret_cast<RawDiagonalHash_t *>(raw_diagonal_ptr);
-						raw_diagonal.begin();
-					},
+					&RawDiagonalHash_t::init,
 					// currentKeyPart
-					[](void const *raw_diagonal_ptr) -> key_part_type {
-						const auto &raw_diagonal = *reinterpret_cast<const RawDiagonalHash_t *>(raw_diagonal_ptr);
-						return raw_diagonal.currentKeyPart();
-					},
+					&RawDiagonalHash_t::currentKeyPart,
 					// currentHypertrie
-					[](void const *raw_diagonal_ptr, HypertrieContext<tr> *context) -> const_Hypertrie<tr> {
+					[](void const *raw_diagonal_ptr) -> const_Hypertrie<tr> {
 						if constexpr (diag_depth < depth) {
 							const auto &raw_diagonal = *reinterpret_cast<const RawDiagonalHash_t *>(raw_diagonal_ptr);
-							const auto &value = raw_diagonal.currentValue();
-							if (value.is_managed) {
-								return const_Hypertrie<tr>(result_depth, context, {value.nodec.hash().hash(), value.nodec.node()});
-							} else {
-								return const_Hypertrie<tr>(result_depth, nullptr, {value.nodec.hash().hash(), new internal::raw::CompressedNode<result_depth, tri>(*value.nodec.compressed_node())});
-							}
+
+							std::shared_ptr<RawBoolHypertrie<depth - diag_depth>> &value = *RawDiagonalHash_t::currentValue(raw_diagonal_ptr);
+
+							return const_Hypertrie<tr>{result_depth, value};
 						} else {
 							assert(false);
 						}
 					},
 					// currentScalar
-					[](void const *raw_diagonal_ptr) -> value_type {
-						const auto &raw_diagonal = *reinterpret_cast<const RawDiagonalHash_t *>(raw_diagonal_ptr);
-						if constexpr (diag_depth == depth) {
-							return raw_diagonal.currentValue();
-						} else {
-							assert(false);
-						}
+					[]([[maybe_unused]] void const *raw_diagonal_ptr) -> value_type {
+						return value_type(1);
 					},
 					// find
-					[](void *raw_diagonal_ptr, key_part_type key_part) -> bool {
-						auto &raw_diagonal = *reinterpret_cast<RawDiagonalHash_t *>(raw_diagonal_ptr);
-						return raw_diagonal.find(key_part);
-					},
+					&RawDiagonalHash_t::contains,
 					// inc
-					[](void *raw_diagonal_ptr) {
-						auto &raw_diagonal = *reinterpret_cast<RawDiagonalHash_t *>(raw_diagonal_ptr);
-						++raw_diagonal;
-					},
+					&RawDiagonalHash_t::inc,
 					// ended
-					[](const void *raw_diagonal_ptr) -> bool {
-						const auto &raw_diagonal = *reinterpret_cast<const RawDiagonalHash_t *>(raw_diagonal_ptr);
-						return raw_diagonal.ended();
-					},
+					&RawDiagonalHash_t::empty,
 					// size
-					[](const void *raw_diagonal_ptr) -> size_t {
-						const auto &raw_diagonal = *reinterpret_cast<const RawDiagonalHash_t *>(raw_diagonal_ptr);
-						return raw_diagonal.size();
-					});
+					&RawDiagonalHash_t::size
+					);
 		}
 
 		inline static const std::vector<std::vector<std::vector<RawMethods>>> raw_method_cache = []() {
@@ -159,19 +129,16 @@ namespace hypertrie {
 	protected:
 		RawMethods const * raw_methods = nullptr;
 		void* raw_hash_diagonal;
-		HypertrieContext<tr> *context_;
 
 	public:
 		HashDiagonal(const const_Hypertrie<tr> &hypertrie, const KeyPositions &diag_poss)
 			: raw_methods(&getRawMethods(hypertrie.depth(), diag_poss.size(), hypertrie.size() == 1)),
-			  raw_hash_diagonal(raw_methods->construct(hypertrie, diag_poss)), context_(hypertrie.context()) {}
+			  raw_hash_diagonal(raw_methods->construct(hypertrie, diag_poss)) {}
 
 		HashDiagonal(HashDiagonal &&other)
 			: raw_methods(other.raw_methods),
-			  raw_hash_diagonal(other.raw_hash_diagonal),
-			  context_(other.context_) {
+			  raw_hash_diagonal(other.raw_hash_diagonal) {
 			other.raw_hash_diagonal = nullptr;
-			other.context_ = nullptr;
 		}
 
 
@@ -182,9 +149,7 @@ namespace hypertrie {
 			}
 			this->raw_methods = other.raw_methods;
 			this->raw_hash_diagonal = other.raw_hash_diagonal;
-			this->context_ = other.context_;
 			other.raw_hash_diagonal = nullptr;
-			other.context_ = nullptr;
 			return *this;
 		}
 
@@ -211,7 +176,7 @@ namespace hypertrie {
 		}
 
 		const_Hypertrie<tr> currentHypertrie() const{
-			return raw_methods->currentHypertrie(raw_hash_diagonal,context_);
+			return raw_methods->currentHypertrie(raw_hash_diagonal);
 		}
 
 

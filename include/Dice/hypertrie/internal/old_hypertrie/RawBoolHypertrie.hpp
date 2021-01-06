@@ -4,7 +4,6 @@
 #include "Dice/hypertrie/internal/util/CONSTANTS.hpp"
 #include "Dice/hypertrie/internal/old_hypertrie/RawBoolHypertrie_impl.hpp"
 #include "Dice/hypertrie/internal/old_hypertrie/RawBoolHypertrie_Hash_Diagonal_impl.hpp"
-#include "Dice/hypertrie/internal/old_hypertrie/RawBoolHypertrie_Ordered_Diagonal_impl.hpp"
 
 namespace hypertrie::internal::interface {
 	template<typename key_part_type, template<typename, typename> typename map_type,
@@ -14,8 +13,6 @@ namespace hypertrie::internal::interface {
 		using RawBoolHypertrie = hypertrie::internal::RawBoolHypertrie<depth, key_part_type, map_type, set_type>;
 		 template<pos_type depth, pos_type diag_depth>
 		using RawHashDiagonal = hypertrie::internal::RawHashDiagonal<diag_depth, depth, key_part_type, map_type, set_type, void>;
-		template<pos_type depth, pos_type diag_depth>
-		using RawOrderedDiagonal = hypertrie::internal::RawHashDiagonal<diag_depth, depth, key_part_type, map_type, set_type, void>;
 	};
 }
 

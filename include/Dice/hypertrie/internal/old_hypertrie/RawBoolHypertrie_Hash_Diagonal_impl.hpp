@@ -3,7 +3,7 @@
 
 #include "Dice/hypertrie/internal/util/CONSTANTS.hpp"
 
-#include "Dice/hypertrie/internal/RawBoolHypertrie_impl.hpp"
+#include "Dice/hypertrie/internal/old_hypertrie/RawBoolHypertrie_impl.hpp"
 #include "Dice/hypertrie/internal/container/AllContainer.hpp"
 #include <numeric>
 

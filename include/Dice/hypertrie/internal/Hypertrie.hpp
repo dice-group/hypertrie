@@ -43,7 +43,7 @@ namespace hypertrie {
 
 		size_t depth_ = 0;
 
-		const_Hypertrie(size_t depth, const std::shared_ptr<void> & hypertrie = {}) : hypertrie_(hypertrie),depth_(depth) {}
+		explicit const_Hypertrie(size_t depth, const std::shared_ptr<void> & hypertrie = {}) : hypertrie_(hypertrie),depth_(depth) {}
 
 		constexpr bool contextless() const noexcept {
 			return false;
@@ -88,8 +88,6 @@ namespace hypertrie {
 		}
 
 		const_Hypertrie() = default;
-
-		explicit const_Hypertrie(size_t depth) : depth_(depth) {}
 
 		void *rawNode() const {
 			return this->hypertrie_.get();
@@ -251,6 +249,11 @@ namespace hypertrie {
 		using value_type = typename tr::value_type;
 
 	private:
+		template<pos_type depth>
+		using RawBoolHypertrie = typename hypertrie::internal::interface::rawboolhypertrie<typename tri::key_part_type, tri::template map_type, tri::template set_type>::template RawBoolHypertrie<depth>;
+		template<pos_type depth, pos_type diag_depth>
+		using RawHashDiagonal = typename hypertrie::internal::interface::rawboolhypertrie<typename tri::key_part_type, tri::template map_type, tri::template set_type>::template RawHashDiagonal<diag_depth, depth>;
+
 		template<size_t depth>
 		using RawKey = typename tri::template RawKey<depth>;
 
@@ -262,56 +265,33 @@ namespace hypertrie {
 			return internal::compiled_switch<hypertrie_depth_limit, 1>::switch_(
 					this->depth_,
 					[&](auto depth_arg) -> value_type {
+					  	auto raw_hypertrie = std::static_pointer_cast<RawBoolHypertrie<depth_arg>>(this->hypertrie_);
 						RawKey<depth_arg> raw_key;
 						std::copy_n(key.begin(), depth_arg, raw_key.begin());
-						auto &node_container = *reinterpret_cast<internal::raw::NodeContainer<depth_arg, tri> *>(&this->node_container_);
-						return this->context_->rawContext().template set<depth_arg>(node_container, raw_key, value);
+						if constexpr (depth_arg == 1)
+					  		raw_hypertrie->set(raw_key[0], value);
+						else
+							raw_hypertrie->set(raw_key, value);
+						return false; // return dummy value
 					},
 					[]() -> value_type { assert(false); return {}; });
 		}
 
-		Hypertrie(const Hypertrie<tr> &hypertrie) : const_Hypertrie<tr>(hypertrie) {
-			if (not this->empty())
-				internal::compiled_switch<hypertrie_depth_limit, 1>::switch_void(
-						this->depth_,
-						[&](auto depth_arg){
-						  auto &typed_nodec = *reinterpret_cast<internal::raw::NodeContainer<depth_arg, tri> *>(&this->node_container_);
-						  this->context_->rawContext().template incRefCount<depth_arg>(typed_nodec);
-						}
-				);
+		Hypertrie(const Hypertrie<tr> &hypertrie) : const_Hypertrie<tr>(hypertrie) {}
+
+		Hypertrie(const const_Hypertrie<tr> &hypertrie) : const_Hypertrie<tr>(hypertrie) {}
+
+		Hypertrie(Hypertrie<tr> &&other) : const_Hypertrie<tr>(std::move(other)) {}
+
+		Hypertrie(size_t depth = 1)
+			: const_Hypertrie<tr>(depth) {
+			this->hypertrie_ = internal::compiled_switch<hypertrie_depth_limit, 1>::switch_(
+					this->depth_,
+					[&](auto depth_arg) -> std::shared_ptr<void> {
+						return std::make_shared<RawBoolHypertrie<depth_arg>>();
+					},
+					[]() -> std::shared_ptr<void> { assert(false); return {}; });
 		}
-
-		Hypertrie(const const_Hypertrie<tr> &hypertrie) : const_Hypertrie<tr>(hypertrie) {
-			if (hypertrie.contextless()) // TODO: add copying contextless hypertries
-				throw std::logic_error{"Copying contextless const_Hypertries is not yet supported."};
-			else
-				internal::compiled_switch<hypertrie_depth_limit, 1>::switch_void(
-						this->depth_,
-						[&](auto depth_arg){
-							auto &typed_nodec = *reinterpret_cast<internal::raw::NodeContainer<depth_arg, tri> *>(&this->node_container_);
-							this->context_->rawContext().template incRefCount<depth_arg>(typed_nodec);}
-						);
-		}
-
-		Hypertrie(Hypertrie<tr> &&other) : const_Hypertrie<tr>(other) {
-			other.node_container_ = {};
-		}
-
-
-
-		~Hypertrie() {
-			if (not this->empty())
-				internal::compiled_switch<hypertrie_depth_limit, 1>::switch_void(
-						this->depth_,
-						[&](auto depth_arg){
-							auto &typed_nodec = *reinterpret_cast<internal::raw::NodeContainer<depth_arg, tri> *>(&this->node_container_);
-							this->context_->rawContext().template decrRefCount<depth_arg>(typed_nodec);
-						}
-				);
-		}
-
-		Hypertrie(size_t depth = 1, HypertrieContext<tr> &context = DefaultHypertrieContext<tr>::instance())
-			: const_Hypertrie<tr>(depth, &context) {}
 	};
 
 }

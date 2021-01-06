@@ -41,21 +41,18 @@ namespace hypertrie::internal {
 			size_t (*size)(void const *);
 		};
 
-		template<pos_type diag_depth_, pos_type depth>
-		static auto call_currentValue([[maybe_unused]]void const *diag_ptr) -> void * {
-			if constexpr (depth > diag_depth_) {
-				return RawHashDiagonal<diag_depth_, depth>::currentValue(diag_ptr);
-			} else {
-				throw std::invalid_argument{"currentValue is only implemented for depth > diag_depth"};
-			}
-		}
-
 		template<pos_type depth, pos_type diag_depth_>
 		inline static RawDiagFunctions getRawDiagFunctions() {
 			return RawDiagFunctions{
 					&RawHashDiagonal<diag_depth_, depth>::init,
 					&RawHashDiagonal<diag_depth_, depth>::currentKeyPart,
-					&call_currentValue<diag_depth_, depth>,
+					[]([[maybe_unused]]void const *diag_ptr) -> void * {
+					  if constexpr (depth > diag_depth_) {
+						  return RawHashDiagonal<diag_depth_, depth>::currentValue(diag_ptr);
+					  } else {
+						  throw std::invalid_argument{"currentValue is only implemented for depth > diag_depth"};
+					  }
+					},
 					&RawHashDiagonal<diag_depth_, depth>::contains,
 					&RawHashDiagonal<diag_depth_, depth>::inc,
 					&RawHashDiagonal<diag_depth_, depth>::empty,

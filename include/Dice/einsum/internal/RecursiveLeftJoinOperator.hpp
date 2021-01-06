@@ -56,23 +56,6 @@ namespace einsum::internal {
                     return;
                 }
             }
-//			if(!self.sub_operator->ended())
-//				self.sub_operator->next();
-//			if(self.sub_operator->ended()) {
-//				if(self.node_operator->ended()) {
-//                    self.ended_ = true;
-//                    return;
-//                }
-//                self.node_operator->next();
-//				if (self.node_operator->ended()) {
-//					self.ended_ = true;
-//					return;
-//				}
-//				else {
-//                    self.sub_entry->clear(default_key_part);
-//					self.find_next_valid();
-//				}
-//			}
 			if(!self.sub_operator->ended())
 			    self.sub_operator->next();
             self.find_next_valid();
@@ -187,8 +170,8 @@ namespace einsum::internal {
 				non_opt_labels.insert(node_operands_labels.rbegin()->begin(), node_operands_labels.rbegin()->end());
             }
 			node_subscript = std::make_shared<Subscript>(node_operands_labels, subscript->getRawSubscript().result);
-            // prepare sub_subscript
-			opt_subscript = subscript->removeOperands(non_opt_ops_poss);
+            // prepare the subscripts of the sub_operator
+			opt_subscript = subscript->removeOperands(non_opt_ops_poss); // TODO: workaround, unnecessary creation of subscript
 			// store the slicing positions
             for(auto &non_opt_label : non_opt_labels)
 				if(opt_subscript->getOperandsLabelSet().find(non_opt_label) != opt_subscript->getOperandsLabelSet().end())

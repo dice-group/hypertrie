@@ -10,7 +10,7 @@
 namespace hypertrie::internal {
 	template<typename key_part_type, template<typename, typename> class map_type,
 			template<typename> class set_type>
-	class HashDiagonal;
+	class OldHashDiagonal;
 
 	template<typename key_part_type, template<typename, typename> class map_type,
 			template<typename> class set_type>
@@ -328,7 +328,7 @@ namespace hypertrie::internal {
 		template<typename, template<typename, typename> class,
 				template<typename> class>
 		friend
-		class HashDiagonal;
+		class OldHashDiagonal;
 
 		template<typename, template<typename, typename> class,
 				template<typename> class>

@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.13)
 
+set(CMAKE_CXX_STANDARD 20)
+
 # code coverage
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     if ("${CMAKE_C_COMPILER_ID}" MATCHES "(Apple)?[Cc]lang" OR "${CMAKE_CXX_COMPILER_ID}" MATCHES "(Apple)?[Cc]lang")
@@ -17,7 +19,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 endif ()
 
 find_package(Catch2 REQUIRED CONFIG)
-add_executable(tests_hypertrie_internal node_based/NodeBasedTests.cpp)
+add_executable(tests_hypertrie_internal basline_hypertrie/BaslineHypertrieTests.cpp)
 set_target_properties(tests_hypertrie_internal PROPERTIES LINKER_LANGUAGE CXX)
 add_executable(tests_einsum TestEinsum.cpp)
 target_link_libraries(tests_hypertrie_internal PRIVATE

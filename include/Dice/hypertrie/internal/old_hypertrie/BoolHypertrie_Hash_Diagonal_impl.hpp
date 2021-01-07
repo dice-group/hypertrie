@@ -15,7 +15,7 @@ namespace hypertrie::internal {
 
 	template<typename key_part_type, template<typename, typename> class map_type,
 			template<typename> class set_type>
-	class HashDiagonal {
+	class OldHashDiagonal {
 
 		using const_BoolHypertrie_t = const_BoolHypertrie<key_part_type, map_type, set_type>;
 		template<pos_type depth>
@@ -190,26 +190,24 @@ namespace hypertrie::internal {
 		}
 
 	public:
+		OldHashDiagonal() = default;
 
-		HashDiagonal() = default;
+		OldHashDiagonal(OldHashDiagonal &) = default;
 
-		HashDiagonal(HashDiagonal &) = default;
+		OldHashDiagonal(const OldHashDiagonal &) = default;
 
-		HashDiagonal(const HashDiagonal &) = default;
+		OldHashDiagonal(OldHashDiagonal &&) noexcept = default;
 
-		HashDiagonal(HashDiagonal &&) noexcept = default;
+		OldHashDiagonal &operator=(OldHashDiagonal &&) noexcept = default;
 
-		HashDiagonal &operator=(HashDiagonal &&) noexcept = default;
-
-		HashDiagonal &operator=(const HashDiagonal &) = default;
+		OldHashDiagonal &operator=(const OldHashDiagonal &) = default;
 
 
-		HashDiagonal(const_BoolHypertrie_t const *const boolhypertrie, const poss_type &positions) :
+		OldHashDiagonal(const_BoolHypertrie_t const *const boolhypertrie, const poss_type &positions) :
 				raw_diag(getRawDiagonal(*boolhypertrie, positions)),
 				raw_diag_funcs(&functions[boolhypertrie->depth() - 1][positions.size() - 1]) {}
 
-		HashDiagonal(const const_BoolHypertrie_t &boolhypertrie, const poss_type &positions) :
-				HashDiagonal(&boolhypertrie, positions) {}
+		OldHashDiagonal(const const_BoolHypertrie_t &boolhypertrie, const poss_type &positions) : OldHashDiagonal(&boolhypertrie, positions) {}
 
 
 		/*
@@ -272,7 +270,7 @@ namespace hypertrie::internal {
 			return raw_diag_funcs->size(raw_diag.get());
 		}
 
-		bool operator<(const HashDiagonal &other) const {
+		bool operator<(const OldHashDiagonal &other) const {
 			return this->size() < other.size();
 		}
 	};

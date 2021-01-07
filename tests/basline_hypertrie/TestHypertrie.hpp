@@ -10,7 +10,6 @@
 #include "../utils/AssetGenerator.hpp"
 #include "../utils/NameOfType.hpp"
 #include "../utils/GenerateTriples.hpp"
-#include "TestTensor.hpp"
 
 
 namespace hypertrie::tests::node_context {
@@ -28,8 +27,7 @@ namespace hypertrie::tests::node_context {
 			utils::EntryGenerator<key_part_type, value_type, tr::lsb_unused> gen{};
 			auto keys = gen.keys(500, depth);
 			for (const auto &key : keys) {
-				HypertrieContext<tr> context;
-				Hypertrie<tr> t{depth, context};
+				Hypertrie<tr> t{depth};
 				WARN(fmt::format("[ {} ]", fmt::join(key, ", ")));
 				t.set(key, true);
 				REQUIRE(t[key]);
@@ -57,8 +55,7 @@ namespace hypertrie::tests::node_context {
 
 		//		std::cout << keys << std::endl;
 
-		HypertrieContext<tr> context;
-		Hypertrie<tr> t{depth, context};
+		Hypertrie<tr> t{depth};
 		for (const auto &key : keys) {
 			//			WARN(fmt::format("[ {} ]",fmt::join(key, ", ")));
 			t.set(key, true);
@@ -89,8 +86,7 @@ namespace hypertrie::tests::node_context {
 
 		//		std::cout << keys << std::endl;
 		{
-			HypertrieContext<tr> context;
-			Hypertrie<tr> t{depth, context};
+			Hypertrie<tr> t{depth};
 			t.set({2, 4, 6, 8}, true);
 			HashDiagonal d{t, {2}};
 			d.begin();
@@ -101,8 +97,7 @@ namespace hypertrie::tests::node_context {
 		}
 
 		{
-			HypertrieContext<tr> context;
-			Hypertrie<tr> t{depth, context};
+			Hypertrie<tr> t{depth};
 			t.set({2, 10, 6, 8}, true);
 			t.set({2, 4, 6, 8}, true);
 			HashDiagonal d{t, {1}};
@@ -117,8 +112,7 @@ namespace hypertrie::tests::node_context {
 		}
 
 		{
-			HypertrieContext<tr> context;
-			Hypertrie<tr> t{depth, context};
+			Hypertrie<tr> t{depth};
 			t.set({2, 10, 6, 8}, true);
 			t.set({2, 4, 6, 8}, true);
 			HashDiagonal d{t, {3}};
@@ -134,8 +128,7 @@ namespace hypertrie::tests::node_context {
 		using tr = lsbunused_bool_Hypertrie_t;
 		constexpr const size_t depth = 4;
 
-		HypertrieContext<tr> context;
-		Hypertrie<tr> t{depth, context};
+		Hypertrie<tr> t{depth};
 		//			WARN(fmt::format("[ {} ]",fmt::join(key, ", ")));
 		t.set({2, 4, 6, 8}, true);
 		t.set({2, 10, 12, 14}, true);

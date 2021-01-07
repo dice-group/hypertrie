@@ -143,6 +143,19 @@ namespace hypertrie {
 			return {raw_slice_key, std::count(slice_key.begin(), slice_key.end(), std::nullopt)};
 		}
 
+		template<pos_type depth, pos_type result_depth>
+		inline static auto
+		executeRawSlice(const std::shared_ptr<void> &hypertrie,
+						typename RawBoolHypertrie<depth>::SliceKey raw_slice_key)
+		-> std::conditional_t<(result_depth > 0), std::shared_ptr<const_Hypertrie>, bool> {
+			auto raw_hypertrie = std::static_pointer_cast<RawBoolHypertrie<depth>>(hypertrie);
+			auto result = raw_hypertrie->template operator[]<result_depth>(raw_slice_key);
+			if (result)
+				return instance(raw_hypertrie->template operator[]<result_depth>(raw_slice_key));
+			else
+				return std::nullopt;
+		}
+
 	public:
 
 
@@ -160,17 +173,21 @@ namespace hypertrie {
 			} else if (this->size() == 0UL) {
 				return const_Hypertrie(this->depth() - fixed_depth);
 			} else {
-				const_Hypertrie<tr> result;
-
+				std::variant<const_Hypertrie, value_type> result;
 				internal::compiled_switch<hypertrie_depth_limit, 1>::switch_void(
 						this->depth_,
 						[&](auto depth_arg) {
-							internal::compiled_switch<depth_arg, 1>::switch_void(
+							return internal::compiled_switch<depth_arg, 1>::switch_void(
 									fixed_depth,
 									[&](auto slice_key_depth_arg) {
-										typename RawBoolHypertrie<depth>::SliceKey raw_slice_key;
+										typename RawBoolHypertrie<depth_arg>::SliceKey raw_slice_key;
 										std::copy_n(slice_key.begin(), depth_arg, raw_slice_key.begin());
-										result = executeRawSlice<depth_arg, depth_arg - slice_key_depth_arg>(this->hypertrie_, std::move(raw_slice_key));
+										auto *raw_hypertrie = static_cast<RawBoolHypertrie<depth_arg> *>(this->hypertrie_.get());
+
+										if constexpr (slice_key_depth_arg != depth_arg and depth_arg != 1) {
+											result = const_Hypertrie{depth_arg - slice_key_depth_arg,
+																	 std::move(raw_hypertrie->template operator[]<depth_arg - slice_key_depth_arg>(raw_slice_key))};
+										}
 									});
 						});
 				return result;

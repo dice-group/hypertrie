@@ -74,8 +74,6 @@ namespace hypertrie {
 					// currentHypertrie
 					[](void const *raw_diagonal_ptr) -> const_Hypertrie<tr> {
 						if constexpr (diag_depth < depth) {
-							const auto &raw_diagonal = *reinterpret_cast<const RawDiagonalHash_t *>(raw_diagonal_ptr);
-
 							std::shared_ptr<RawBoolHypertrie<depth - diag_depth>> &value = *RawDiagonalHash_t::currentValue(raw_diagonal_ptr);
 
 							return const_Hypertrie<tr>{result_depth, value};

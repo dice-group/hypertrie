@@ -177,6 +177,8 @@ namespace einsum::internal {
         tsl::hopscotch_set<Label> left_join_labels{};
 		// Left Join
         tsl::hopscotch_map<Label, std::vector<OperandPos>> non_optional_operands_of_label{};
+		// Left Join TODO: change size_t
+        tsl::hopscotch_map<OperandPos, std::set<std::size_t>> dependent_operands;
 
 	public:
 		std::shared_ptr<Subscript> removeLabel(Label label) const {
@@ -209,8 +211,18 @@ namespace einsum::internal {
 				throw std::invalid_argument("label is not used in operands.");
 		}
 
-		auto getDependentOperands(OperandPos operand_position) {
-			return directed_dependency_graph.transitivelyGetNeighborsLabelled(operand_position);
+        std::set<std::size_t> getDependentOperands(OperandPos op_pos) {
+            auto iterator = dependent_operands.find(op_pos);
+            if (iterator != dependent_operands.end())
+                return iterator->second;
+            else {
+                return dependent_operands.insert(
+                                {op_pos, directed_dependency_graph.transitivelyGetNeighborsLabelled(op_pos)})
+                        .first->second;
+//				auto dep_ops = directed_dependency_graph.transitivelyGetNeighborsLabelled(op_pos);
+//				dependent_operands[op_pos] = dep_ops;
+//				return dependent_operands[op_pos];
+			}
 		}
 
         std::vector<std::vector<OperandPos>>& getSubOperatorDependencies() {

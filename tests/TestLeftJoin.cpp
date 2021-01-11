@@ -470,6 +470,44 @@ namespace hypertrie::tests::leftjoin {
                         {8, default_key_part, default_key_part, default_key_part}
                 };
             }
+                // a,[ab,ac],[bd,ce] -> abcde
+            SECTION("wwd_2", "two wwd edges") {
+                operands.push_back(ht1);
+                operands.push_back(ht2);
+                operands.push_back(ht3);
+                operands.push_back(ht4);
+//                operands.push_back(ht5);
+                std::vector<char> op1_labels{'a'};
+                std::vector<char> op2_labels{'a', 'b'};
+                std::vector<char> op3_labels{'a', 'c'};
+                std::vector<char> op4_labels{'b', 'd'};
+                std::vector<char> op5_labels{'c', 'e'};
+                operands_labels.push_back(op1_labels);
+                operands_labels.push_back(opt_begin);
+                operands_labels.push_back(op2_labels);
+                operands_labels.push_back(op3_labels);
+                operands_labels.push_back(opt_end);
+                operands_labels.push_back(opt_begin);
+                operands_labels.push_back(op4_labels);
+//                operands_labels.push_back(op5_labels);
+                operands_labels.push_back(opt_end);
+                result_labels.push_back('a');
+                result_labels.push_back('b');
+                result_labels.push_back('c');
+                result_labels.push_back('d');
+//                result_labels.push_back('e');
+                expected_results = {
+                        {1, 3, 8, 25, 30},
+                        {1, 6, 8, default_key_part, default_key_part},
+                        {2, default_key_part, default_key_part, default_key_part, default_key_part},
+                        {3, default_key_part, default_key_part, default_key_part, default_key_part},
+                        {4, default_key_part, default_key_part, default_key_part, default_key_part},
+                        {5, default_key_part, default_key_part, default_key_part, default_key_part},
+                        {6, default_key_part, default_key_part, default_key_part, default_key_part},
+                        {7, default_key_part, default_key_part, default_key_part, default_key_part},
+                        {8, default_key_part, default_key_part, default_key_part, default_key_part},
+                };
+            }
         }
 		SECTION("no-wwd", "not weakly well-defined") {
 			// [ab],bc->abc

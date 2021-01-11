@@ -25,7 +25,9 @@ namespace einsum::internal {
 			case Subscript::Type::Join:
 				return std::make_shared<JoinOperator<value_type, tr>>(subscript, context);
 			case Subscript::Type::LeftJoin:
-				return std::make_shared<RecursiveLeftJoinOperator<value_type, tr>>(subscript, context);
+				return std::make_shared<LeftJoinOperator<value_type, tr>>(subscript, context);
+            case Subscript::Type::RecursiveLeftJoin:
+                return std::make_shared<RecursiveLeftJoinOperator<value_type, tr>>(subscript, context);
 			case Subscript::Type::JoinSelection:
 				return std::make_shared<JoinSelectionOperator<value_type, tr>>(subscript, context);
 			case Subscript::Type::Resolve:

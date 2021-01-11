@@ -198,26 +198,6 @@ namespace einsum::internal {
 																	next_subscript->getRawSubscript().result);
                 sub_operator = Operator_t::construct(sub_op_subscript, this->context);
 				sub_operator_cache[bitstring] = sub_operator;
-                // compute the dependencies between the sub_operators (only for Cartesian)
-                if(sub_op_subscript->type == Subscript::Type::Cartesian) {
-                    this->context->sub_operator_dependency_map[sub_op_subscript->hash()];
-                    // store for each operand to which sub_operator it belongs
-                    auto operands_sub_operators = sub_op_subscript->getSubOperatorOfOperands();
-                    for(const auto& [op_pos, sub_op] : iter::enumerate(operands_sub_operators)) {
-                        std::vector<std::size_t> dependent_operands_poss{};
-                        auto op_pos_in_subscript = std::distance(pos_in_out.begin(),
-                                                                 std::find(pos_in_out.begin(), pos_in_out.end(), op_pos));
-                        // find dependencies between sub operators using the current subscript
-                        for(auto dep_op_pos_in_subscript : this->subscript->getDependentOperands(op_pos_in_subscript)) {
-                            auto dep_op_pos = pos_in_out[dep_op_pos_in_subscript];
-                            auto dependent_sub_op = operands_sub_operators[dep_op_pos];
-                            if(sub_op == dependent_sub_op)
-                                continue;
-                            auto& sub_op_map = this->context->sub_operator_dependency_map[sub_op_subscript->hash()][sub_op];
-                            sub_op_map.insert(dependent_sub_op);
-                        }
-                    }
-                }
 			}
             sub_operator->load(std::move(next_operands), *this->entry);
 		}

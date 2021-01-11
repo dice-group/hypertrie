@@ -14,13 +14,13 @@
 
 namespace einsum::internal::util {
 
-    template<typename R = char>
+    template<typename VertexType = uint32_t, typename EdgeLabel = char>
     class DirectedGraph {
 
     private:
 
 		struct LabelledEdge {
-			R label;
+			EdgeLabel label;
 			bool wwd;
 		};
 
@@ -36,10 +36,10 @@ namespace einsum::internal::util {
 															  boost::no_property,
 															  boost::no_property>;
 
-		using Vertex = typename boost::graph_traits<DirectedLabelledGraph>::vertex_descriptor;
-		using StrongComponentID = uint16_t ;
-		using WeakComponentID = uint16_t ;
-		static_assert(std::is_same_v<Vertex, std::size_t>);
+		using VertexDesc = typename boost::graph_traits<DirectedLabelledGraph>::vertex_descriptor;
+		using StrongComponentID = VertexType ;
+		using WeakComponentID = VertexType ;
+		static_assert(std::is_same_v<VertexDesc, std::size_t>);
 
 		// stores for each vertex to which strong component it belongs
         std::vector<StrongComponentID> strong_components;
@@ -56,34 +56,34 @@ namespace einsum::internal::util {
     public:
 
 		struct StrongComponentLabels {
-			std::map<Vertex, std::set<R>> vertices_out_edges_labels{};
-			std::set<R> incoming_labels{};
-			std::set<R> component_labels{};
-			std::set<R> outgoing_labels{};
-			std::set<R> wwd_labels{};
+			std::map<VertexDesc, std::set<EdgeLabel>> vertices_out_edges_labels{};
+			std::set<EdgeLabel> incoming_labels{};
+			std::set<EdgeLabel> component_labels{};
+			std::set<EdgeLabel> outgoing_labels{};
+			std::set<EdgeLabel> wwd_labels{};
 		};
 
 		using StrongComponentLabels_t = StrongComponentLabels;
 
-		using WeakComponentLabels_t = std::set<R>;
+		using WeakComponentLabels_t = std::set<EdgeLabel>;
 
         DirectedGraph() = default;
 
-		[[maybe_unused]] Vertex addVertex() {
+		[[maybe_unused]] VertexDesc addVertex() {
 			boost::add_vertex(unlabelled_graph);
 			return boost::add_vertex(graph);
 		}
 
-		void addEdge(R label, Vertex source, Vertex target, bool wwd = false) {
+		void addEdge(EdgeLabel label, VertexDesc source, VertexDesc target, bool wwd = false) {
 			boost::add_edge(source, target, LabelledEdge{label, wwd}, graph);
 		}
 
-		void addEdge(Vertex source, Vertex target) {
+		void addEdge(VertexDesc source, VertexDesc target) {
 			boost::add_edge(source, target, unlabelled_graph);
 		}
 
-		std::vector<Vertex> getNeighborsLabelled(Vertex v) {
-			std::vector<Vertex> target_vertices{};
+		std::vector<VertexType> getNeighborsLabelled(VertexDesc v) {
+			std::vector<VertexType> target_vertices{};
             auto out_edges_iterators = boost::out_edges(v, graph);
 			for(auto out_edge_iter = out_edges_iterators.first; out_edge_iter != out_edges_iterators.second; out_edge_iter++) {
 				auto target = boost::target(*out_edge_iter, graph);
@@ -94,10 +94,10 @@ namespace einsum::internal::util {
 			return target_vertices;
 		}
 
-        std::set<Vertex> transitivelyGetNeighborsLabelled(Vertex vertex) {
-            std::set<Vertex> target_vertices{};
-			std::deque<Vertex> to_check{vertex};
-			std::set<Vertex> visited{};
+        std::set<VertexType> transitivelyGetNeighborsLabelled(VertexDesc vertex) {
+            std::set<VertexType> target_vertices{};
+			std::deque<VertexDesc> to_check{vertex};
+			std::set<VertexDesc> visited{};
 			bool flag = true;
 			while(!to_check.empty()) {
 				auto v = to_check.front();
@@ -121,8 +121,8 @@ namespace einsum::internal::util {
             return target_vertices;
         }
 
-		std::vector<Vertex> getNeighborsUnlabelled(Vertex v) {
-            std::vector<Vertex> target_vertices{};
+		std::vector<VertexType> getNeighborsUnlabelled(VertexDesc v) {
+            std::vector<VertexType> target_vertices{};
             auto out_edges_iterators = boost::out_edges(v, unlabelled_graph);
             for(auto out_edge_iter = out_edges_iterators.first; out_edge_iter != out_edges_iterators.second; out_edge_iter++) {
                 auto target = boost::target(*out_edge_iter, unlabelled_graph);
@@ -133,10 +133,10 @@ namespace einsum::internal::util {
             return target_vertices;
 		}
 
-        std::set<Vertex> transitivelyGetNeighborsUnlabelled(Vertex vertex) {
-            std::set<Vertex> target_vertices{};
-            std::deque<Vertex> to_check{vertex};
-            std::set<Vertex> visited{};
+        std::set<VertexType> transitivelyGetNeighborsUnlabelled(VertexDesc vertex) {
+            std::set<VertexType> target_vertices{};
+            std::deque<VertexDesc> to_check{vertex};
+            std::set<VertexDesc> visited{};
             while(!to_check.empty()) {
                 auto v = to_check.front();
                 to_check.pop_front();
@@ -155,8 +155,8 @@ namespace einsum::internal::util {
             return target_vertices;
         }
 
-		std::vector<Vertex> getStrongComponentNeighbors(Vertex v) {
-			std::vector<Vertex> neighbors{};
+		std::vector<VertexType> getStrongComponentNeighbors(VertexDesc v) {
+			std::vector<VertexType> neighbors{};
 			auto component = strong_components[v];
 			for(auto n : iter::range(strong_components.size())) {
 				if(n == v)
@@ -167,14 +167,14 @@ namespace einsum::internal::util {
 			return neighbors;
 		}
 
-		std::vector<WeakComponentID>& getWeakComponentsOfVertices() {
+		const std::vector<WeakComponentID> getWeakComponentsOfVertices() {
 			return weak_components;
 		}
 
 		// treats the directed graph as an undirected graph
 		// finds the connected components of the undirected graph
 		// returns the labels of each component
-        [[nodiscard]] std::vector<std::set<R>> getWeaklyConnectedComponents() {
+        [[nodiscard]] std::vector<std::set<EdgeLabel>> getWeaklyConnectedComponents() {
 
 			// stores by position (Vertex) which component it belongs to (entry value)
             std::vector<WeakComponentID> component(boost::num_vertices(graph));
@@ -199,7 +199,7 @@ namespace einsum::internal::util {
 			std::vector<StrongComponentID> component(num_vertices(graph)),
 					discover_time(num_vertices(graph));
 			std::vector<boost::default_color_type> color(num_vertices(graph));
-			std::vector<Vertex> root(num_vertices(graph));
+			std::vector<VertexDesc> root(num_vertices(graph));
 			auto num_components = boost::strong_components(graph,
 												   make_iterator_property_map(component.begin(), get(boost::vertex_index, graph)),
 												   root_map(make_iterator_property_map(root.begin(), get(boost::vertex_index, graph)))

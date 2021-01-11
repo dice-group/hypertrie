@@ -37,11 +37,6 @@ namespace einsum::internal {
 		 */
 		std::set<std::size_t> non_optional_cartesian{};
 
-		/**
-		 * Passes dependency information to subsequent operators
-		 */
-        std::map<std::size_t, std::map<std::size_t, std::set<std::size_t>>> sub_operator_dependency_map{};
-
         /**
         * Passes the labels to be used in the LeftJoinOperator/JoinOperator
         * Populated by JoinSelectionOperator

@@ -30,7 +30,7 @@
 namespace einsum::internal {
 
 	using DependencyGraph = util::UndirectedGraph<Label>;
-	using DirectedDependencyGraph = util::DirectedGraph<Label>;
+	using DirectedDependencyGraph = util::DirectedGraph<OperandPos, Label>;
 	using ConnectedComponent = typename DependencyGraph::NodeSet;
 	using ConnectedComponents = std::vector<ConnectedComponent>;
 
@@ -53,7 +53,7 @@ namespace einsum::internal {
 	class Subscript {
 	public:
 		enum class Type {
-			None = 0, Join, LeftJoin, JoinSelection, Cartesian, Resolve, Count, EntryGenerator, CarthesianMapping
+			None = 0, Join, LeftJoin, RecursiveLeftJoin, JoinSelection, Cartesian, Resolve, Count, EntryGenerator, CarthesianMapping
 		};
 		using Label = char;
 
@@ -177,8 +177,8 @@ namespace einsum::internal {
         tsl::hopscotch_set<Label> left_join_labels{};
 		// Left Join
         tsl::hopscotch_map<Label, std::vector<OperandPos>> non_optional_operands_of_label{};
-		// Left Join TODO: change size_t
-        tsl::hopscotch_map<OperandPos, std::set<std::size_t>> dependent_operands;
+		// Left Join
+        tsl::hopscotch_map<OperandPos, std::set<OperandPos>> dependent_operands;
 		// Recursive Left Join
 		std::vector<OperandPos> non_optional_operands{};
 		// Recursive Left Join
@@ -223,7 +223,7 @@ namespace einsum::internal {
 				throw std::invalid_argument("label is not used in operands.");
 		}
 
-        std::set<std::size_t> getDependentOperands(OperandPos op_pos) {
+        const std::set<OperandPos> getDependentOperands(OperandPos op_pos) {
             auto iterator = dependent_operands.find(op_pos);
             if (iterator != dependent_operands.end())
                 return iterator->second;
@@ -231,17 +231,14 @@ namespace einsum::internal {
                 return dependent_operands.insert(
                                 {op_pos, directed_dependency_graph.transitivelyGetNeighborsLabelled(op_pos)})
                         .first->second;
-//				auto dep_ops = directed_dependency_graph.transitivelyGetNeighborsLabelled(op_pos);
-//				dependent_operands[op_pos] = dep_ops;
-//				return dependent_operands[op_pos];
 			}
 		}
 
-        std::vector<std::vector<OperandPos>>& getSubOperatorDependencies() {
+        std::vector<std::vector<OperandPos>> getSubOperatorDependencies() {
 			return sub_op_dependencies;
 		}
 
-        auto getSubOperatorOfOperands() {
+        const std::vector<OperandPos> getSubOperatorOfOperands() {
             return directed_dependency_graph.getWeakComponentsOfVertices();
         }
 

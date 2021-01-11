@@ -163,7 +163,7 @@ namespace einsum::internal {
             const auto& operands_labels = subscript->getRawSubscript().operands;
             // prepare the subscript of the node operator
             std::vector<std::vector<Label>> node_operands_labels{};
-			std::set<Label> non_opt_labels{};
+            tsl::hopscotch_set<Label> non_opt_labels{};
 			// the labels of the node_subscript are found in non_optional_positions of the current subscript
             for(auto& non_opt_pos : subscript->getNonOptionalOperands()) {
                 node_operands_labels.emplace_back(std::move(operands_labels[non_opt_pos]));
@@ -182,7 +182,7 @@ namespace einsum::internal {
 			}
 			// if there are wwd edges create opt_subscript and wwd_subscript
 			else {
-				std::set<Label> to_remove{};
+                tsl::hopscotch_set<Label> to_remove{};
 				for(auto label : non_opt_labels) {
 					if(subscript->getWWDLabels().find(label) == subscript->getWWDLabels().end())
                         to_remove.insert(label);

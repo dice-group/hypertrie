@@ -55,17 +55,19 @@ namespace einsum::internal::util {
 
     public:
 
+		bool wwd = false;
+
 		struct StrongComponentLabels {
-			std::map<VertexDesc, std::set<EdgeLabel>> vertices_out_edges_labels{};
-			std::set<EdgeLabel> incoming_labels{};
-			std::set<EdgeLabel> component_labels{};
-			std::set<EdgeLabel> outgoing_labels{};
-			std::set<EdgeLabel> wwd_labels{};
+			std::map<VertexDesc, tsl::hopscotch_set<EdgeLabel>> vertices_out_edges_labels{};
+			tsl::hopscotch_set<EdgeLabel> incoming_labels{};
+			tsl::hopscotch_set<EdgeLabel> component_labels{};
+			tsl::hopscotch_set<EdgeLabel> outgoing_labels{};
+			tsl::hopscotch_set<EdgeLabel> wwd_labels{};
 		};
 
 		using StrongComponentLabels_t = StrongComponentLabels;
 
-		using WeakComponentLabels_t = std::set<EdgeLabel>;
+		using WeakComponentLabels_t = tsl::hopscotch_set<EdgeLabel>;
 
         DirectedGraph() = default;
 
@@ -75,6 +77,8 @@ namespace einsum::internal::util {
 		}
 
 		void addEdge(EdgeLabel label, VertexDesc source, VertexDesc target, bool wwd = false) {
+			if(!this->wwd and wwd)
+			    this->wwd = wwd;
 			boost::add_edge(source, target, LabelledEdge{label, wwd}, graph);
 		}
 
@@ -94,10 +98,10 @@ namespace einsum::internal::util {
 			return target_vertices;
 		}
 
-        std::set<VertexType> transitivelyGetNeighborsLabelled(VertexDesc vertex) {
-            std::set<VertexType> target_vertices{};
+        tsl::hopscotch_set<VertexType> transitivelyGetNeighborsLabelled(VertexDesc vertex) {
+            tsl::hopscotch_set<VertexType> target_vertices{};
 			std::deque<VertexDesc> to_check{vertex};
-			std::set<VertexDesc> visited{};
+			tsl::hopscotch_set<VertexDesc> visited{};
 			bool flag = true;
 			while(!to_check.empty()) {
 				auto v = to_check.front();
@@ -133,10 +137,10 @@ namespace einsum::internal::util {
             return target_vertices;
 		}
 
-        std::set<VertexType> transitivelyGetNeighborsUnlabelled(VertexDesc vertex) {
-            std::set<VertexType> target_vertices{};
+        tsl::hopscotch_set<VertexType> transitivelyGetNeighborsUnlabelled(VertexDesc vertex) {
+            tsl::hopscotch_set<VertexType> target_vertices{};
             std::deque<VertexDesc> to_check{vertex};
-            std::set<VertexDesc> visited{};
+            tsl::hopscotch_set<VertexDesc> visited{};
             while(!to_check.empty()) {
                 auto v = to_check.front();
                 to_check.pop_front();
@@ -167,14 +171,14 @@ namespace einsum::internal::util {
 			return neighbors;
 		}
 
-		const std::vector<WeakComponentID> getWeakComponentsOfVertices() {
+		const std::vector<WeakComponentID>& getWeakComponentsOfVertices() {
 			return weak_components;
 		}
 
 		// treats the directed graph as an undirected graph
 		// finds the connected components of the undirected graph
 		// returns the labels of each component
-        [[nodiscard]] std::vector<std::set<EdgeLabel>> getWeaklyConnectedComponents() {
+        [[nodiscard]] std::vector<tsl::hopscotch_set<EdgeLabel>> getWeaklyConnectedComponents() {
 
 			// stores by position (Vertex) which component it belongs to (entry value)
             std::vector<WeakComponentID> component(boost::num_vertices(graph));

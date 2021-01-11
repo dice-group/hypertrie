@@ -34,7 +34,7 @@ namespace einsum::internal {
 	using ConnectedComponent = typename DependencyGraph::NodeSet;
 	using ConnectedComponents = std::vector<ConnectedComponent>;
 
-	using WeaklyConnectedComponent = std::set<Label>;
+	using WeaklyConnectedComponent = tsl::hopscotch_set<Label>;
 	using WeaklyConnectedComponents = std::vector<WeaklyConnectedComponent>;
 
 	using SubOperatorPos = std::uint8_t;
@@ -167,8 +167,6 @@ namespace einsum::internal {
 		LabelPossInOperand operand2result_mapping_resolveType{};
 		// Join
 		tsl::hopscotch_map<Label, std::vector<OperandPos>> poss_of_operands_with_labels{};
-		// Join
-        tsl::hopscotch_set<Label> join_labels{};
 		// Cartesian
 		CartesianSubSubscripts cartesian_sub_subscripts;
 		// Cartesian
@@ -178,11 +176,11 @@ namespace einsum::internal {
 		// Left Join
         tsl::hopscotch_map<Label, std::vector<OperandPos>> non_optional_operands_of_label{};
 		// Left Join
-        tsl::hopscotch_map<OperandPos, std::set<OperandPos>> dependent_operands;
+        tsl::hopscotch_map<OperandPos, tsl::hopscotch_set<OperandPos>> dependent_operands;
 		// Recursive Left Join
 		std::vector<OperandPos> non_optional_operands{};
 		// Recursive Left Join
-		std::set<Label> wwd_labels{};
+		tsl::hopscotch_set<Label> wwd_labels{};
 
 	public:
 		std::shared_ptr<Subscript> removeLabel(Label label) const {
@@ -199,7 +197,7 @@ namespace einsum::internal {
 			return std::make_shared<Subscript>(raw_subscript.removeOperands(operands_poss), this->type);
 		}
 
-        std::shared_ptr<Subscript> removeLabels(const std::set<Label>& labels) {
+        std::shared_ptr<Subscript> removeLabels(const tsl::hopscotch_set<Label>& labels) {
             return std::make_shared<Subscript>(raw_subscript.removeLabels(labels), this->type);
         }
 
@@ -223,7 +221,7 @@ namespace einsum::internal {
 				throw std::invalid_argument("label is not used in operands.");
 		}
 
-        const std::set<OperandPos> getDependentOperands(OperandPos op_pos) {
+        const tsl::hopscotch_set<OperandPos>& getDependentOperands(OperandPos op_pos) {
             auto iterator = dependent_operands.find(op_pos);
             if (iterator != dependent_operands.end())
                 return iterator->second;
@@ -234,15 +232,15 @@ namespace einsum::internal {
 			}
 		}
 
-        std::vector<std::vector<OperandPos>> getSubOperatorDependencies() {
+        const std::vector<std::vector<OperandPos>>& getSubOperatorDependencies() {
 			return sub_op_dependencies;
 		}
 
-        const std::vector<OperandPos> getSubOperatorOfOperands() {
+        const std::vector<OperandPos>& getSubOperatorOfOperands() {
             return directed_dependency_graph.getWeakComponentsOfVertices();
         }
 
-		const std::set<Label>& getWWDLabels() {
+		const tsl::hopscotch_set<Label>& getWWDLabels() {
 			return wwd_labels;
 		}
 
@@ -349,22 +347,28 @@ namespace einsum::internal {
 					}
 				}
 			}
-
 			switch (this->type) {
+				case Type::RecursiveLeftJoin: {
+                    label_poss_in_result = raw_subscript.getLabelPossInResult();
+                    auto independent_strong_component = directed_dependency_graph.getIndependentStrongComponent();
+                    wwd_labels = independent_strong_component.wwd_labels;
+                    for(const auto& op_labels_pair : independent_strong_component.vertices_out_edges_labels)
+                        non_optional_operands.emplace_back(op_labels_pair.first);
+					break;
+				}
 				case Type::JoinSelection: {
 					[[fallthrough]];
 				}
 				case Type::LeftJoin: {
                     label_poss_in_result = raw_subscript.getLabelPossInResult();
-
                     for (const auto[op_pos, labels] : iter::enumerate(raw_subscript.operands))
                         for (const Label label : labels)
 							poss_of_operands_with_labels[label].push_back(op_pos);
                     auto independent_strong_component = directed_dependency_graph.getIndependentStrongComponent();
-					// find the left join labels -> outgoing labels
-					// store the non-optional operands of each label
+					// find all non-optional labels
 					for(const auto& out_label : independent_strong_component.outgoing_labels) {
 						left_join_labels.insert(out_label);
+                        // store the non-optional operands of each label
 						for(const auto& [op, op_out_labels] : independent_strong_component.vertices_out_edges_labels) {
 							if(op_out_labels.find(out_label) != op_out_labels.end()) {
 								auto& non_opt_ops_of_label = non_optional_operands_of_label[out_label];
@@ -372,17 +376,14 @@ namespace einsum::internal {
 							}
 						}
 					}
-					wwd_labels = independent_strong_component.wwd_labels;
 					if(this->type != Type::JoinSelection)
 					    break;
 					[[fallthrough]]; // in case of JoinSelection visit Join as well
 				}
 				case Type::Join: {
 					label_poss_in_result = raw_subscript.getLabelPossInResult();
-
-					break;
+                    break;
 				}
-
 				case Type::Cartesian: {
                     label_poss_in_result = raw_subscript.getLabelPossInResult();
 					cartesian_sub_subscripts = {*this};
@@ -474,10 +475,6 @@ namespace einsum::internal {
 			return left_join_labels;
 		}
 
-        const tsl::hopscotch_set<Label>& getJoinLabels() const {
-            return join_labels;
-        }
-
 		const std::vector<OperandPos>& getNonOptionalOperands(Label label) {
 			return non_optional_operands_of_label[label];
 		}
@@ -525,7 +522,11 @@ namespace einsum::internal {
 					}
 					return Type::Join;
 				default: {
-					// multiple operands
+                    // multiple operands
+					// if the graph contains a wwd edge call the recursive left join algorithm
+					if(directed_dependency_graph.wwd) {
+						return  Type::RecursiveLeftJoin;
+					}
                     // more than one WEAKLY connected component means that there is a Cartesian product
 					if (weakly_connected_components.size() > 1) {
 						return Type::Cartesian;
@@ -534,32 +535,21 @@ namespace einsum::internal {
 				}
 			}
 			// use the strongly connected components of the dependency graph in order to choose the proper join operation
-			// the strong components of a graph create a directed acyclic graph (independent strong component)
+			// the strong components of a graph create a directed acyclic graph, whose root is the independent strong component
 			auto ind_strong_comp = directed_dependency_graph.getIndependentStrongComponent();
-			// if the independent component contains multiple operands do a join
-			// if there are multiple operands in the independent component, component_labels will not be empty
-			join_labels.insert(ind_strong_comp.component_labels.begin(), ind_strong_comp.component_labels.end());
-			left_join_labels.insert(ind_strong_comp.outgoing_labels.begin(), ind_strong_comp.outgoing_labels.end());
-			tsl::hopscotch_set<Label> common_labels{};
-            for(const auto& op_labels_pair : ind_strong_comp.vertices_out_edges_labels)
-                non_optional_operands.emplace_back(op_labels_pair.first);
-			if(join_labels.size() > 0) {
-				// store non-optional operands
-                std::set_intersection(join_labels.begin(), join_labels.end(),
-                                      left_join_labels.begin(), left_join_labels.end(),
-									  std::inserter(common_labels, common_labels.end()));
-				// empty common labels -> there is not a label that participates in join and left join -> join
-				if(common_labels.empty()) {
-					return Type::Join;
-				}
-				// common labels not empty && component labels > 0
-				// multiple join labels and at least one label that participates in join and left join
-				if(join_labels.size() > 1 and !common_labels.empty()) {
-					return Type::JoinSelection;
-				}
+			// no outgoing labels -> only one strong component -> join
+			if(ind_strong_comp.outgoing_labels.size() == 0)
+				return Type::Join;
+			// outgoing and component labels
+			else if(ind_strong_comp.component_labels.size() > 0) {
+				// label that participates in join and left-join -> JoinSelection
+                for(auto& c_label : ind_strong_comp.component_labels)
+					if(ind_strong_comp.outgoing_labels.find(c_label) != ind_strong_comp.outgoing_labels.end())
+					    return Type::JoinSelection;
+				// there is no label that participates in join and left-join -> Join first
+				return Type::Join;
 			}
-			// if the independent component contains only one operand do a left join
-            // if there are multiple operands in the independent component, component_labels will be empty
+			// only outgoing labels -> independent strong component has only one operand -> left-join
 			return Type::LeftJoin;
 		}
 

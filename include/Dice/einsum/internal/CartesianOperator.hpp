@@ -114,17 +114,20 @@ namespace einsum::internal {
 			if constexpr(_debugeinsum_) fmt::print("Cartesian {}\n", this->subscript);
 			this->entry = &entry;
 			ended_ = false;
-
 			double max_estimated_size = 0;
 			iterated_pos = 0;
 
 			if constexpr(_debugeinsum_) fmt::print("Cartesian sub start {}\n", this->subscript);
             auto sub_op_dependencies = this->subscript->getSubOperatorDependencies();
 			// skipped operands won't be loaded -> ended() == true
-			std::vector<OperandPos> skip_list{};
+			std::set<OperandPos> skip_list{};
 			for(auto cart_op_pos : iter::range(sub_operators.size())) {
-				if(std::find(skip_list.begin(), skip_list.end(), cart_op_pos) != skip_list.end())
+				if(std::find(skip_list.begin(), skip_list.end(), cart_op_pos) != skip_list.end()) {
+					sub_entries[cart_op_pos].clear(default_key_part);
+					for(auto dependent_sub_op : sub_op_dependencies[cart_op_pos])
+						skip_list.insert(dependent_sub_op);
 					continue;
+				}
                 auto &cart_op = sub_operators[cart_op_pos];
                 auto sub_operands = extractOperands(cart_op_pos, operands);
                 const double estimated_size = CardinalityEstimation<tr>::estimate(sub_operands, cart_op->getSubscript(), this->context);
@@ -134,45 +137,26 @@ namespace einsum::internal {
                 }
                 cart_op->load(std::move(sub_operands), sub_entries[cart_op_pos]);
                 if(cart_op->ended()) {
-					// if the previous operator was a join, do not continue
-                    if(this->context->non_optional_cartesian.find(this->subscript->hash()) != this->context->non_optional_cartesian.end()) {
-                        ended_ = true;
-                        return;
-                    }
-					else {
-						if(this->context->sub_operator_dependency_map.contains(this->subscript->hash()))
-							for(auto dependent_sub_op_pos : this->context->sub_operator_dependency_map[this->subscript->hash()][cart_op_pos])
-								skip_list.push_back(dependent_sub_op_pos);
-                        for(auto dependent_sub_op_pos : sub_op_dependencies[cart_op_pos])
-                            skip_list.push_back(dependent_sub_op_pos);
-					}
+					skip_list.insert(cart_op_pos);
+					// clear sub_entry from previous results
+					sub_entries[cart_op_pos].clear(default_key_part);
+                    for(auto dependent_sub_op_pos : sub_op_dependencies[cart_op_pos])
+                        skip_list.insert(dependent_sub_op_pos);
 				}
             }
-			// check if all operands have ended
-			bool all_ended = true;
-			for(auto cart_op_pos : iter::range(sub_operators.size())) {
-                auto &cart_op = sub_operators[cart_op_pos];
-                if(!cart_op->ended()) {
-					all_ended = false;
-					break;
-				}
-			}
-			if(all_ended) {
+//			// check if all operands have ended
+//			bool all_ended = true;
+//			for(auto cart_op_pos : iter::range(sub_operators.size())) {
+//                auto &cart_op = sub_operators[cart_op_pos];
+//                if(!cart_op->ended()) {
+//					all_ended = false;
+//					break;
+//				}
+//			}
+			if(skip_list.size() == sub_operators.size()) {
 				ended_ = true;
 				return;
 			}
-            // make ended operators to produce an empty entry -> entry generation operators
-            std::vector<std::vector<Label>> empty_operands_labels{}; // for entry generation operator
-            auto sub_subscripts = this->subscript->getCartesianSubscript().getSubSubscripts();
-            for(auto cart_op_pos : iter::range(sub_operators.size())) {
-                auto &cart_op = sub_operators[cart_op_pos];
-                if (cart_op->ended()) {
-                    auto entry_gen_sc = std::make_shared<Subscript>(empty_operands_labels,
-                                                                    sub_subscripts[cart_op_pos]->getRawSubscript().result);
-                    cart_op = std::make_unique<EntryGeneratorOperator_t>(entry_gen_sc, this->context);
-                    cart_op->load({}, sub_entries[cart_op_pos]);
-                }
-            }
 			if constexpr(_debugeinsum_) fmt::print("Cartesian sub gen {}\n", this->subscript);
 			// calculate results of non-iterated sub_operators
 			std::vector<SubResult> sub_results{};
@@ -206,8 +190,9 @@ namespace einsum::internal {
 					}
 				}
 				if (sub_result.empty()) {
-					ended_ = true;
-					return;
+//					ended_ = true;
+//					return;
+                    sub_result[sub_entry.key] = value_type(1);
 				}
 				sub_results.emplace_back(std::move(sub_result));
 			}

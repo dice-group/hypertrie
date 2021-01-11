@@ -66,6 +66,8 @@ namespace einsum::internal {
 			}
 			if (is_result_label)
 				this->entry->key[label_pos_in_result] = current_key_part;
+			else
+                this->entry->active_mapping[label] = current_key_part; // store the value of the label (need for recursive left join)
 
 			if constexpr (_debugeinsum_)
 				fmt::print("[{}]->{} {}\n", fmt::join(this->entry->key, ","), this->entry->value, this->subscript);
@@ -96,7 +98,10 @@ namespace einsum::internal {
 
 		inline void load_impl(std::vector<const_Hypertrie<tr>> operands, Entry_t &entry) {
 			if constexpr (_debugeinsum_) fmt::print("Join {}\n", this->subscript);
-
+			// if one of the operands does not have any entries stop the operation
+			for(auto op : operands)
+				if(op.size() == 0)
+					return;
 			this->entry = &entry;
 			ended_ = false;
 			Label last_label = label;

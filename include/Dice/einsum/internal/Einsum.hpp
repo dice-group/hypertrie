@@ -9,6 +9,7 @@
 #include "Dice/einsum/internal/JoinOperator.hpp"
 #include "Dice/einsum/internal/JoinSelectionOperator.hpp"
 #include "Dice/einsum/internal/LeftJoinOperator.hpp"
+#include "Dice/einsum/internal/RecursiveLeftJoinOperator.hpp"
 #include "Dice/einsum/internal/ResolveOperator.hpp"
 #include "Dice/einsum/internal/CountOperator.hpp"
 #include "Dice/einsum/internal/EntryGeneratorOperator.hpp"
@@ -24,7 +25,7 @@ namespace einsum::internal {
 			case Subscript::Type::Join:
 				return std::make_shared<JoinOperator<value_type, tr>>(subscript, context);
 			case Subscript::Type::LeftJoin:
-				return std::make_shared<LeftJoinOperator<value_type, tr>>(subscript, context);
+				return std::make_shared<RecursiveLeftJoinOperator<value_type, tr>>(subscript, context);
 			case Subscript::Type::JoinSelection:
 				return std::make_shared<JoinSelectionOperator<value_type, tr>>(subscript, context);
 			case Subscript::Type::Resolve:

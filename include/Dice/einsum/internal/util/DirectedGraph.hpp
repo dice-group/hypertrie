@@ -60,6 +60,7 @@ namespace einsum::internal::util {
 			std::set<R> incoming_labels{};
 			std::set<R> component_labels{};
 			std::set<R> outgoing_labels{};
+			std::set<R> wwd_labels{};
 		};
 
 		using StrongComponentLabels_t = StrongComponentLabels;
@@ -131,6 +132,28 @@ namespace einsum::internal::util {
             }
             return target_vertices;
 		}
+
+        std::set<Vertex> transitivelyGetNeighborsUnlabelled(Vertex vertex) {
+            std::set<Vertex> target_vertices{};
+            std::deque<Vertex> to_check{vertex};
+            std::set<Vertex> visited{};
+            while(!to_check.empty()) {
+                auto v = to_check.front();
+                to_check.pop_front();
+                if(visited.find(v) != visited.end())
+                    continue;
+                visited.insert(v);
+                auto out_edges_iterators = boost::out_edges(v, unlabelled_graph);
+                for(auto out_edge_iter = out_edges_iterators.first; out_edge_iter != out_edges_iterators.second; out_edge_iter++) {
+                    auto target = boost::target(*out_edge_iter, unlabelled_graph);
+                    if(target == v)
+                        continue;
+                    target_vertices.insert(boost::target(*out_edge_iter, unlabelled_graph));
+                    to_check.push_back(boost::target(*out_edge_iter, unlabelled_graph));
+                }
+            }
+            return target_vertices;
+        }
 
 		std::vector<Vertex> getStrongComponentNeighbors(Vertex v) {
 			std::vector<Vertex> neighbors{};
@@ -204,6 +227,8 @@ namespace einsum::internal::util {
 					} else {
 						strongly_connected_components[cur_component_idx].outgoing_labels.insert(out_edge_label);
 						strongly_connected_components[out_vertex_component_idx].incoming_labels.insert(out_edge_label);
+						if(graph[*out_edge].wwd)
+                            strongly_connected_components[cur_component_idx].wwd_labels.insert(out_edge_label);
 					}
 				}
 			}

@@ -2,7 +2,6 @@
 #define HYPERTRIE_LEFTJOINOPERATOR_HPP
 
 #include "Dice/einsum/internal/Operator.hpp"
-#include "Dice/einsum/internal/EntryGeneratorOperator.hpp"
 #include <Dice/hypertrie/internal/HashJoin.hpp>
 #include <Dice/hypertrie/internal/LeftHashJoin.hpp>
 

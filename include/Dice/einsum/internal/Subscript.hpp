@@ -179,6 +179,10 @@ namespace einsum::internal {
         tsl::hopscotch_map<Label, std::vector<OperandPos>> non_optional_operands_of_label{};
 		// Left Join TODO: change size_t
         tsl::hopscotch_map<OperandPos, std::set<std::size_t>> dependent_operands;
+		// Recursive Left Join
+		std::vector<OperandPos> non_optional_operands{};
+		// Recursive Left Join
+		std::set<Label> wwd_labels{};
 
 	public:
 		std::shared_ptr<Subscript> removeLabel(Label label) const {
@@ -190,6 +194,14 @@ namespace einsum::internal {
                                 {label, std::make_shared<Subscript>(raw_subscript.removeLabel(label), this->type)})
                         .first->second;
 		}
+
+		std::shared_ptr<Subscript> removeOperands(const std::vector<OperandPos>& operands_poss) {
+			return std::make_shared<Subscript>(raw_subscript.removeOperands(operands_poss), this->type);
+		}
+
+        std::shared_ptr<Subscript> removeLabels(const std::set<Label>& labels) {
+            return std::make_shared<Subscript>(raw_subscript.removeLabels(labels), this->type);
+        }
 
 		const tsl::hopscotch_set<Label> &getLonelyNonResultLabelSet() const {
 			return lonely_non_result_labels;
@@ -232,6 +244,10 @@ namespace einsum::internal {
         auto getSubOperatorOfOperands() {
             return directed_dependency_graph.getWeakComponentsOfVertices();
         }
+
+		const std::set<Label>& getWWDLabels() {
+			return wwd_labels;
+		}
 
 		/**
 		 * for Join
@@ -359,6 +375,7 @@ namespace einsum::internal {
 							}
 						}
 					}
+					wwd_labels = independent_strong_component.wwd_labels;
 					if(this->type != Type::JoinSelection)
 					    break;
 					[[fallthrough]]; // in case of JoinSelection visit Join as well
@@ -370,6 +387,7 @@ namespace einsum::internal {
 				}
 
 				case Type::Cartesian: {
+                    label_poss_in_result = raw_subscript.getLabelPossInResult();
 					cartesian_sub_subscripts = {*this};
 					// find dependencies between sub_operators
 					// store for each operand to which sub_operator it belongs
@@ -384,7 +402,7 @@ namespace einsum::internal {
 					for(auto operand_pos : iter::range(raw_subscript.operands.size())) {
 						auto source_sub_op = operand_sub_op_map[operand_pos];
                         auto& dependent_sub_ops = sub_op_dependencies[source_sub_op];
-						for(auto weakly_dependent_operand : directed_dependency_graph.getNeighborsUnlabelled(operand_pos)) {
+						for(auto weakly_dependent_operand : directed_dependency_graph.transitivelyGetNeighborsUnlabelled(operand_pos)) {
 							dependent_sub_ops.push_back(operand_sub_op_map[weakly_dependent_operand]);
 						}
 					}
@@ -467,6 +485,10 @@ namespace einsum::internal {
 			return non_optional_operands_of_label[label];
 		}
 
+        const std::vector<OperandPos>& getNonOptionalOperands() {
+            return non_optional_operands;
+        }
+
 		const RawSubscript &getRawSubscript() const {
 			return raw_subscript;
 		}
@@ -522,7 +544,10 @@ namespace einsum::internal {
 			join_labels.insert(ind_strong_comp.component_labels.begin(), ind_strong_comp.component_labels.end());
 			left_join_labels.insert(ind_strong_comp.outgoing_labels.begin(), ind_strong_comp.outgoing_labels.end());
 			tsl::hopscotch_set<Label> common_labels{};
+            for(const auto& op_labels_pair : ind_strong_comp.vertices_out_edges_labels)
+                non_optional_operands.emplace_back(op_labels_pair.first);
 			if(join_labels.size() > 0) {
+				// store non-optional operands
                 std::set_intersection(join_labels.begin(), join_labels.end(),
                                       left_join_labels.begin(), left_join_labels.end(),
 									  std::inserter(common_labels, common_labels.end()));
@@ -559,10 +584,6 @@ namespace einsum::internal {
             Depth depth{0};
 			// original operand labels
 			const auto& orig_operands = raw_subscript.original_operands;
-			// the position of the previous operand
-			OperandPos prev_operand_pos = std::numeric_limits<OperandPos>::max();
-			// the position of the last non-optional operand
-			OperandPos last_non_opt_op_pos = std::numeric_limits<OperandPos>::max();
             for(const auto& [orig_op_pos, operand_labels] : iter::enumerate(orig_operands)) {
                 if(operand_labels == opt_begin) {
                     depth++;
@@ -581,7 +602,7 @@ namespace einsum::internal {
                 bool strong_dependency = false; // indicates whether the current operand participates in a strong dependency
 				for(auto label : operand_labels) {
 					// check if the active label has been observed
-					if(label_depth_operand.contains(label) and !label_depth_operand[label].empty()) {
+					if(!label_depth_operand[label].empty()) {
 						// check if there is an operand with the same label in the current group (join)
 						if (label_depth_operand[label].contains(depth)) {
 							auto dominant_op_orig_pos = label_depth_operand[label][depth];
@@ -614,24 +635,23 @@ namespace einsum::internal {
 					last_operand_of_label[label] = orig_op_pos;
                 }
 				// find weak dependencies. for cartesian
-                if(!strong_dependency and prev_operand_pos < std::numeric_limits<OperandPos>::max()) {
-					if(raw_subscript.original_operands[prev_operand_pos] == raw_subscript.original_operands[orig_op_pos-1]) {
-                        operand_directed_dependency_graph.addEdge(operand_pos, prev_operand_pos);
-                        operand_directed_dependency_graph.addEdge(prev_operand_pos, operand_pos);
+				if(!strong_dependency) {
+					for (int8_t d = depth; d >= 0; d--) {
+						std::set<OperandPos> operands_at_depth{};
+						for (const auto &label_entry : label_depth_operand) {
+							if (label_entry.second.contains(d))
+								if (raw_subscript.poss_in_operands[label_entry.second.at(d)] != operand_pos)
+									operands_at_depth.insert(label_entry.second.at(d));
+						}
+						if (operands_at_depth.empty())
+							continue;
+						auto last_pos_of_depth = raw_subscript.poss_in_operands[*operands_at_depth.rbegin()];// set is ordered take its last value
+						operand_directed_dependency_graph.addEdge(last_pos_of_depth, operand_pos);
+						if (d == depth)
+							operand_directed_dependency_graph.addEdge(operand_pos, last_pos_of_depth);
+						break;
 					}
-					else if(std::find(raw_subscript.original_operands.begin()+ prev_operand_pos,
-									   raw_subscript.original_operands.begin()+orig_op_pos, opt_end) != raw_subscript.original_operands.end()) {
-						operand_directed_dependency_graph.addEdge(prev_operand_pos, operand_pos);
-					}
-					if(last_non_opt_op_pos < std::numeric_limits<OperandPos>::max() and last_non_opt_op_pos != prev_operand_pos) {
-						operand_directed_dependency_graph.addEdge(last_non_opt_op_pos, operand_pos);
-						if(depth == 0)
-                            operand_directed_dependency_graph.addEdge(operand_pos, last_non_opt_op_pos);
-					}
-                }
-                if(depth == 0)
-                    last_non_opt_op_pos = operand_pos;
-				prev_operand_pos = orig_op_pos;
+				}
 			}
 			return operand_directed_dependency_graph;
 		}

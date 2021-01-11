@@ -62,7 +62,7 @@ namespace hypertrie::tests::leftjoin {
                 operands_labels.push_back(opt_begin);
                 operands_labels.push_back(op2_labels);
                 operands_labels.push_back(opt_end);
-                SECTION("res_size_1") {
+                SECTION("lj1") {
                     result_labels.push_back('a');
                     expected_results = {
                             {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}
@@ -334,7 +334,7 @@ namespace hypertrie::tests::leftjoin {
 		}
         SECTION("wwd", "weakly well-defined queries") {
 			// a,[ab],[ab]->ab
-			SECTION("non_opt_root", "wwd with non-optional root") {
+			SECTION("lj_lj", "if the 2nd operand does not yield result -> left_join") {
                 operands.push_back(ht1);
                 operands.push_back(ht2);
                 operands.push_back(ht3);
@@ -362,8 +362,8 @@ namespace hypertrie::tests::leftjoin {
                         {8, default_key_part}
                 };
 		    }
-            // ab,[bc],[cd]->abcd if [bc] does not yield a result -> cartesian
-            SECTION("all_opt", "wwd all optional") {
+            // ab,[bc],[cd]->abcd
+            SECTION("lj_cart", "if the second operand does not yield result -> cartesian") {
                 operands.push_back(ht2);
                 operands.push_back(ht3);
                 operands.push_back(ht4);
@@ -389,7 +389,7 @@ namespace hypertrie::tests::leftjoin {
                 };
             }
             // [ab],[ac]->abc
-            SECTION("lj_lj", "left join without left operand followed by left join") {
+            SECTION("lj_all_opt", "left join with only optional operands") {
                 operands.push_back(ht2);
                 operands.push_back(ht3);
                 std::vector<char> op2_labels{'a', 'b'};
@@ -410,7 +410,7 @@ namespace hypertrie::tests::leftjoin {
                 };
             }
             // [ab,bd],[bc]->abc
-            SECTION("lj_lj_elim", "left join without left operand followed by left join, the first left join does not yield results") {
+            SECTION("lj_all_opt_elim", "left join without left operand followed by left join, the first left join does not yield results") {
                 operands.push_back(ht2);
 				operands.push_back(ht5);
                 operands.push_back(ht3);
@@ -429,7 +429,7 @@ namespace hypertrie::tests::leftjoin {
                 result_labels.push_back('c');
                 expected_results = {
                         {default_key_part, 1, 8},
-                        {default_key_part, 1, 6},
+                        {default_key_part, 4, 6},
                         {default_key_part, 3, 5}
                 };
             }
@@ -468,6 +468,44 @@ namespace hypertrie::tests::leftjoin {
                         {6, default_key_part, default_key_part, default_key_part},
                         {7, default_key_part, default_key_part, default_key_part},
                         {8, default_key_part, default_key_part, default_key_part}
+                };
+            }
+                // a,[ab,ac],[bd,ce] -> abcde
+            SECTION("wwd_2", "two wwd edges") {
+                operands.push_back(ht1);
+                operands.push_back(ht2);
+                operands.push_back(ht3);
+                operands.push_back(ht4);
+//                operands.push_back(ht5);
+                std::vector<char> op1_labels{'a'};
+                std::vector<char> op2_labels{'a', 'b'};
+                std::vector<char> op3_labels{'a', 'c'};
+                std::vector<char> op4_labels{'b', 'd'};
+                std::vector<char> op5_labels{'c', 'e'};
+                operands_labels.push_back(op1_labels);
+                operands_labels.push_back(opt_begin);
+                operands_labels.push_back(op2_labels);
+                operands_labels.push_back(op3_labels);
+                operands_labels.push_back(opt_end);
+                operands_labels.push_back(opt_begin);
+                operands_labels.push_back(op4_labels);
+//                operands_labels.push_back(op5_labels);
+                operands_labels.push_back(opt_end);
+                result_labels.push_back('a');
+                result_labels.push_back('b');
+                result_labels.push_back('c');
+                result_labels.push_back('d');
+//                result_labels.push_back('e');
+                expected_results = {
+                        {1, 3, 8, 25, 30},
+                        {1, 6, 8, default_key_part, default_key_part},
+                        {2, default_key_part, default_key_part, default_key_part, default_key_part},
+                        {3, default_key_part, default_key_part, default_key_part, default_key_part},
+                        {4, default_key_part, default_key_part, default_key_part, default_key_part},
+                        {5, default_key_part, default_key_part, default_key_part, default_key_part},
+                        {6, default_key_part, default_key_part, default_key_part, default_key_part},
+                        {7, default_key_part, default_key_part, default_key_part, default_key_part},
+                        {8, default_key_part, default_key_part, default_key_part, default_key_part},
                 };
             }
         }

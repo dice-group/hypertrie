@@ -111,10 +111,15 @@ namespace einsum::internal {
 				next_subscript = opt_subscript;
             sub_operator = Operator_t::construct(next_subscript, this->context);
             sub_entry = std::make_unique<Entry_t>(next_subscript->resultLabelCount(), Operator_t::default_key_part);
-			if(!node_operator->ended() or wwd_subscript) {
+			if(!node_operator->ended()) {
 				ended_ = false;
 				sub_operator->load(std::move(slice_operands()), *sub_entry);
 				updateNodeEntry();
+			}
+			else if(wwd_subscript) {
+                ended_ = false;
+                sub_operator->load(std::move(next_operands), *sub_entry);
+                updateNodeEntry();
 			}
 		}
 

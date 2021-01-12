@@ -177,7 +177,7 @@ namespace einsum::internal {
         tsl::hopscotch_map<Label, std::vector<OperandPos>> non_optional_operands_of_label{};
 		// Left Join
         tsl::hopscotch_map<OperandPos, tsl::hopscotch_set<OperandPos>> dependent_operands;
-		// Recursive Left Join
+		// Join & Recursive Left Join
 		std::vector<OperandPos> non_optional_operands{};
 		// Recursive Left Join
 		tsl::hopscotch_set<Label> wwd_labels{};
@@ -382,6 +382,9 @@ namespace einsum::internal {
 				}
 				case Type::Join: {
 					label_poss_in_result = raw_subscript.getLabelPossInResult();
+                    auto independent_strong_component = directed_dependency_graph.getIndependentStrongComponent();
+                    for(const auto& op_labels_pair : independent_strong_component.vertices_out_edges_labels)
+                        non_optional_operands.emplace_back(op_labels_pair.first);
                     break;
 				}
 				case Type::Cartesian: {

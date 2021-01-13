@@ -9,7 +9,7 @@
 #include "Dice/hypertrie/internal/util/PosType.hpp"
 #include "Dice/hypertrie/internal/util/RawKey.hpp"
 
-#include "Dice/hash/DiceHash.hpp"
+#include <Dice/hash/DiceHash.hpp>
 
 namespace hypertrie::internal::raw {
 

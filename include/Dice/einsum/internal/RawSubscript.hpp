@@ -3,7 +3,7 @@
 
 #include <vector>
 #include <tuple>
-#include "Dice/hash/DiceHash.hpp"
+#include <Dice/hash/DiceHash.hpp>
 #include <tsl/hopscotch_set.h>
 #include <tsl/hopscotch_map.h>
 #include <itertools.hpp>

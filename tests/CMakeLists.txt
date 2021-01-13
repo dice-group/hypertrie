@@ -29,12 +29,6 @@ target_link_libraries(tests_einsum PRIVATE
         hypertrie::hypertrie
         )
 
-add_executable(tests_dice_hash TestDiceHash.cpp)
-target_link_libraries(tests_dice_hash PRIVATE
-        Catch2::Catch2
-        hypertrie::hypertrie
-        )
-
 set(hypertrie_LIBTORCH_PATH "" CACHE PATH "The installation directory of pytorch.")
 if (hypertrie_LIBTORCH_PATH)
     # add path
@@ -54,7 +48,6 @@ include(CTest)
 include(Catch)
 catch_discover_tests(tests_hypertrie_internal)
 catch_discover_tests(tests_einsum)
-catch_discover_tests(tests_dice_hash)
 
 # copy files for testing to the binary folder
 file(COPY data DESTINATION ${CMAKE_CURRENT_BINARY_DIR})

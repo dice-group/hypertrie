@@ -4,7 +4,7 @@
 #include <fmt/format.h>
 #include <tsl/sparse_map.h>
 
-#include "Dice/hash/DiceHash.hpp"
+#include <Dice/hash/DiceHash.hpp>
 
 
 namespace hypertrie::internal::container {

@@ -198,7 +198,7 @@ namespace einsum::internal::util {
         }
 
         // https://www.boost.org/doc/libs/1_74_0/libs/graph/example/strong_components.cpp
-        [[nodiscard]] StrongComponentLabels_t getIndependentStrongComponent() {
+        [[nodiscard]] std::vector<StrongComponentLabels_t> getIndependentStrongComponent() {
 
 			std::vector<StrongComponentID> component(num_vertices(graph)),
 					discover_time(num_vertices(graph));
@@ -236,11 +236,10 @@ namespace einsum::internal::util {
 					}
 				}
 			}
-			StrongComponentLabels_t independent_sc;
+			std::vector<StrongComponentLabels_t> independent_sc;
 			for (auto scc : strongly_connected_components) {
 				if (!scc.incoming_labels.size()) {
-					independent_sc = scc;
-					break;
+					independent_sc.push_back(scc);
 				}
 		    }
 			return independent_sc;

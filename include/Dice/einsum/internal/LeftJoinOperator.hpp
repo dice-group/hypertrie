@@ -128,8 +128,9 @@ namespace einsum::internal {
 					label_pos_in_result = this->subscript->getLabelPosInResult(label);
                 // prepare next_subscript by removing the active label from the current subscript
                 next_subscript = this->subscript->removeLabel(label);
+				// TODO: do we need this here
                 for(auto &non_opt_pos : non_optional_poss)
-                    if(!operands[non_opt_pos].size())
+                    if(operands[non_opt_pos].empty())
                         return;
 			}
             ended_ = false;
@@ -160,6 +161,7 @@ namespace einsum::internal {
 			// the labels of the next_operands
 			std::vector<std::vector<Label>> next_operands_labels{};
 			// bitstring for operands, 0: to be removed, 1: will be passed to sub_operator
+			// todo: std::vector<bool> -> read on it before using it
 			std::string bitstring(join_returned_operands->size(), '1');
 			// iterate over all operands that participated in the join
             for(auto op_pos : iter::range(pos_in_out.size())) {

@@ -119,6 +119,7 @@ namespace einsum::internal {
 
 			if constexpr(_debugeinsum_) fmt::print("Cartesian sub start {}\n", this->subscript);
             auto sub_op_dependencies = this->subscript->getSubOperatorDependencies();
+			// load sub-operators and resolve their dependencies
 			// skipped operands won't be loaded -> ended() == true
 			std::set<OperandPos> skip_list{};
 			for(auto cart_op_pos : iter::range(sub_operators.size())) {
@@ -131,28 +132,20 @@ namespace einsum::internal {
                 auto &cart_op = sub_operators[cart_op_pos];
                 auto sub_operands = extractOperands(cart_op_pos, operands);
                 const double estimated_size = CardinalityEstimation<tr>::estimate(sub_operands, cart_op->getSubscript(), this->context);
-                if (estimated_size > max_estimated_size) {
-                    max_estimated_size = estimated_size;
-                    iterated_pos = cart_op_pos;
-                }
                 cart_op->load(std::move(sub_operands), sub_entries[cart_op_pos]);
-                if(cart_op->ended()) {
-					skip_list.insert(cart_op_pos);
-					// clear sub_entry from previous results
-					sub_entries[cart_op_pos].clear(default_key_part);
-                    for(auto dependent_sub_op_pos : sub_op_dependencies[cart_op_pos])
+                if (not cart_op->ended()) {
+                    if (estimated_size > max_estimated_size) {
+                        max_estimated_size = estimated_size;
+                        iterated_pos = cart_op_pos;
+                    }
+                } else {
+                    skip_list.insert(cart_op_pos);
+                    // clear sub_entry from previous results
+                    sub_entries[cart_op_pos].clear(default_key_part);
+                    for (auto dependent_sub_op_pos : sub_op_dependencies[cart_op_pos])
                         skip_list.insert(dependent_sub_op_pos);
-				}
+                }
             }
-//			// check if all operands have ended
-//			bool all_ended = true;
-//			for(auto cart_op_pos : iter::range(sub_operators.size())) {
-//                auto &cart_op = sub_operators[cart_op_pos];
-//                if(!cart_op->ended()) {
-//					all_ended = false;
-//					break;
-//				}
-//			}
 			if(skip_list.size() == sub_operators.size()) {
 				ended_ = true;
 				return;

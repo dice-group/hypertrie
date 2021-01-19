@@ -350,10 +350,12 @@ namespace einsum::internal {
 			switch (this->type) {
 				case Type::RecursiveLeftJoin: {
                     label_poss_in_result = raw_subscript.getLabelPossInResult();
-                    auto independent_strong_component = directed_dependency_graph.getIndependentStrongComponent();
-                    wwd_labels = independent_strong_component.wwd_labels;
-                    for(const auto& op_labels_pair : independent_strong_component.vertices_out_edges_labels)
-                        non_optional_operands.emplace_back(op_labels_pair.first);
+                    auto independent_strong_components = directed_dependency_graph.getIndependentStrongComponent();
+					for(auto isc : independent_strong_components) {
+						wwd_labels.insert(isc.wwd_labels.begin(), isc.wwd_labels.end());
+						for (const auto &op_labels_pair : isc.vertices_out_edges_labels)
+							non_optional_operands.emplace_back(op_labels_pair.first);
+					}
 					break;
 				}
 				case Type::JoinSelection: {
@@ -365,11 +367,12 @@ namespace einsum::internal {
                         for (const Label label : labels)
 							poss_of_operands_with_labels[label].push_back(op_pos);
                     auto independent_strong_component = directed_dependency_graph.getIndependentStrongComponent();
+					assert(independent_strong_component.size() == 1);
 					// find all non-optional labels
-					for(const auto& out_label : independent_strong_component.outgoing_labels) {
+					for(const auto& out_label : independent_strong_component[0].outgoing_labels) {
 						left_join_labels.insert(out_label);
                         // store the non-optional operands of each label
-						for(const auto& [op, op_out_labels] : independent_strong_component.vertices_out_edges_labels) {
+						for(const auto& [op, op_out_labels] : independent_strong_component[0].vertices_out_edges_labels) {
 							if(op_out_labels.find(out_label) != op_out_labels.end()) {
 								auto& non_opt_ops_of_label = non_optional_operands_of_label[out_label];
 								non_opt_ops_of_label.push_back(op);
@@ -383,7 +386,8 @@ namespace einsum::internal {
 				case Type::Join: {
 					label_poss_in_result = raw_subscript.getLabelPossInResult();
                     auto independent_strong_component = directed_dependency_graph.getIndependentStrongComponent();
-                    for(const auto& op_labels_pair : independent_strong_component.vertices_out_edges_labels)
+                    assert(independent_strong_component.size() == 1);
+                    for(const auto& op_labels_pair : independent_strong_component[0].vertices_out_edges_labels)
                         non_optional_operands.emplace_back(op_labels_pair.first);
                     break;
 				}
@@ -539,12 +543,12 @@ namespace einsum::internal {
 			}
 			// use the strongly connected components of the dependency graph in order to choose the proper join operation
 			// the strong components of a graph create a directed acyclic graph, whose root is the independent strong component
-			auto ind_strong_comp = directed_dependency_graph.getIndependentStrongComponent();
+			auto ind_strong_comp = directed_dependency_graph.getIndependentStrongComponent()[0];
 			// no outgoing labels -> only one strong component -> join
-			if(ind_strong_comp.outgoing_labels.size() == 0)
+			if(ind_strong_comp.outgoing_labels.empty())
 				return Type::Join;
 			// outgoing and component labels
-			else if(ind_strong_comp.component_labels.size() > 0) {
+			else if(not ind_strong_comp.component_labels.empty()) {
 				// label that participates in join and left-join -> JoinSelection
                 for(auto& c_label : ind_strong_comp.component_labels)
 					if(ind_strong_comp.outgoing_labels.find(c_label) != ind_strong_comp.outgoing_labels.end())

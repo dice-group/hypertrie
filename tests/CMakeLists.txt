@@ -1,5 +1,3 @@
-cmake_minimum_required(VERSION 3.13)
-
 # code coverage
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     if ("${CMAKE_C_COMPILER_ID}" MATCHES "(Apple)?[Cc]lang" OR "${CMAKE_CXX_COMPILER_ID}" MATCHES "(Apple)?[Cc]lang")

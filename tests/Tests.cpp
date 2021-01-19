@@ -10,7 +10,6 @@
 #include "TestJoinCombination.cpp"
 //#include "TestDirectedGraph.cpp"
 //#include "TestHashJoin.cpp"
-#include "TestRobinHoodHash.cpp"
 
 #ifdef HYPERTRIE_ENABLE_LIBTORCH
 #include "TestEinsum.cpp"

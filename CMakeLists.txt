@@ -38,10 +38,10 @@ target_include_directories(cppitertools INTERFACE
         $<INSTALL_INTERFACE:include>
         )
 
-find_package(absl REQUIRED)
 find_package(tsl-hopscotch-map REQUIRED)
 find_package(tsl-sparse-map REQUIRED)
 find_package(fmt REQUIRED)
+find_package(dice-hash REQUIRED)
 
 SET(Boost_USE_STATIC_LIBS ON)
 find_package(Boost REQUIRED COMPONENTS)
@@ -58,13 +58,13 @@ target_include_directories(hypertrie INTERFACE
 
 target_link_libraries(hypertrie INTERFACE
         cppitertools
-        absl::absl
         tsl-hopscotch-map::tsl-hopscotch-map
         fmt::fmt
         Boost::Boost
         Threads::Threads
         tsl-sparse-map::tsl-sparse-map
         CONAN_PKG::robin-hood-hashing
+        dice-hash::dice-hash
         )
 
 if (HYPERTRIE_ENABLE_TOOLS)

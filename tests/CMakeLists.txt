@@ -16,9 +16,17 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     endif ()
 endif ()
 
-find_package(Catch2 REQUIRED CONFIG)
+include(FetchContent)
+FetchContent_Declare(
+        Catch2
+        GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+        GIT_TAG v2.13.4
+        GIT_SHALLOW TRUE)
+
+FetchContent_MakeAvailable(Catch2)
+
 add_executable(tests_hypertrie_internal node_based/NodeBasedTests.cpp)
-set_target_properties(tests_hypertrie_internal PROPERTIES LINKER_LANGUAGE CXX)
+#set_target_properties(tests_hypertrie_internal PROPERTIES LINKER_LANGUAGE CXX)
 add_executable(tests_einsum TestEinsum.cpp)
 target_link_libraries(tests_hypertrie_internal PRIVATE
         Catch2::Catch2
@@ -43,8 +51,8 @@ if (hypertrie_LIBTORCH_PATH)
 endif ()
 
 # detect the tests
-
 include(CTest)
+list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/contrib)
 include(Catch)
 catch_discover_tests(tests_hypertrie_internal)
 catch_discover_tests(tests_einsum)

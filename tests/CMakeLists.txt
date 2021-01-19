@@ -20,11 +20,16 @@ find_package(Catch2 REQUIRED CONFIG)
 add_executable(tests_hypertrie_internal node_based/NodeBasedTests.cpp)
 set_target_properties(tests_hypertrie_internal PROPERTIES LINKER_LANGUAGE CXX)
 add_executable(tests_einsum TestEinsum.cpp)
+add_executable(test_left_join Tests.cpp)
 target_link_libraries(tests_hypertrie_internal PRIVATE
         Catch2::Catch2
         hypertrie::hypertrie
         )
 target_link_libraries(tests_einsum PRIVATE
+        Catch2::Catch2
+        hypertrie::hypertrie
+        )
+target_link_libraries(test_left_join PRIVATE
         Catch2::Catch2
         hypertrie::hypertrie
         )

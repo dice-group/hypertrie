@@ -11,6 +11,9 @@
 #include <boost/graph/connected_components.hpp>
 #include <boost/graph/strong_components.hpp>
 
+#include <tsl/hopscotch_set.h>
+#include <tsl/hopscotch_map.h>
+#include <itertools.hpp>
 
 namespace einsum::internal::util {
 

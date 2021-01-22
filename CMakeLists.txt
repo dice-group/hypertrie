@@ -21,6 +21,7 @@ find_package(Threads REQUIRED)
 
 
 # installation directories
+#todo: use absolute paths here with some decent prefix like ${CMAKE_BINARY_DIR}
 set(hypertrie_INSTALL_INCLUDE_DIR "include" CACHE STRING "The installation include directory")
 set(hypertrie_INSTALL_CMAKE_DIR "share/hypertrie/cmake" CACHE STRING "The installation cmake directory")
 
@@ -52,7 +53,7 @@ target_include_directories(hypertrie INTERFACE
 
 
 target_link_libraries(hypertrie INTERFACE
-        cppitertools
+        cppitertools::cppitertools
         tsl-hopscotch-map::tsl-hopscotch-map
         fmt::fmt
         Boost::Boost
@@ -85,7 +86,11 @@ include(CMakePackageConfigHelpers)
 write_basic_package_version_file(hypertrie-config-version.cmake COMPATIBILITY SameMajorVersion)
 
 # install and export target
-install(TARGETS hypertrie cppitertools EXPORT hypertrie-targets)
+install(TARGETS hypertrie EXPORT hypertrie-targets)
+
+# hacky hack to make it build with itertools without exposing them
+target_include_directories(hypertrie INTERFACE
+        $<INSTALL_INTERFACE:${cppitertools_INSTALL_INCLUDE_DIR}/cppitertools>)
 
 install(EXPORT hypertrie-targets
         FILE hypertrie-config.cmake
@@ -97,4 +102,3 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/hypertrie-config-version.cmake DESTINA
 install(DIRECTORY include/ DESTINATION ${hypertrie_INSTALL_INCLUDE_DIR})
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/hypertrie-config-version.cmake DESTINATION ${hypertrie_INSTALL_CMAKE_DIR})
-install(DIRECTORY thirdparty/cppitertools/ DESTINATION ${hypertrie_INSTALL_INCLUDE_DIR})

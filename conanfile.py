@@ -23,7 +23,7 @@ class Hypertrie(ConanFile):
     )
     generators = "cmake", "cmake_find_package", "cmake_paths"
     exports = "LICENSE.txt"
-    exports_sources = "include/*", "thirdparty/*", "CMakeLists.txt", "cmake/*"
+    exports_sources = "include/*", "CMakeLists.txt", "cmake/*"
     no_copy_source = True
 
     def set_version(self):

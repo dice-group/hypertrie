@@ -10,7 +10,7 @@
 
 namespace einsum::internal {
 
-	class Context;
+//	class Context<key_part_type>;
 
 
 	template<typename value_type, HypertrieTrait tr_t>
@@ -29,7 +29,7 @@ namespace einsum::internal {
 		mutable Subscript::Type type = Subscript::Type::None;
 	protected:
 		std::shared_ptr<Subscript> subscript;
-		std::shared_ptr<Context> context;
+		std::shared_ptr<Context<key_part_type>> context;
 		Entry <value_type, tr> *entry;
 
 		/**
@@ -60,7 +60,7 @@ namespace einsum::internal {
 		template<typename T>
 		Operator(Subscript::Type type,
 				 std::shared_ptr<Subscript> subscript,
-				 std::shared_ptr<Context> context,
+				 std::shared_ptr<Context<key_part_type>> context,
 				 [[maybe_unused]] const T * dummy)
 				: type(type),
 				  subscript(std::move(subscript)),
@@ -72,7 +72,8 @@ namespace einsum::internal {
 
 	public:
 
-		static std::shared_ptr<Operator>  construct(const std::shared_ptr<Subscript> &subscript, const std::shared_ptr<Context> &context);
+		static std::shared_ptr<Operator>  construct(const std::shared_ptr<Subscript> &subscript,
+												    const std::shared_ptr<Context<key_part_type>> &context);
 		Operator() = default;
 
 		Operator(Operator &) = default;

@@ -48,11 +48,7 @@ namespace einsum::internal {
 
 		value_type value;
 		Key key;
-
-		// keeps track of the values of non result labels
-		// TODO: move it to context.hpp
-		std::map<char, key_part_type> active_mapping{};
-
+		
 		Entry(const size_t key_size, const key_part_type default_key_part) noexcept {
 			init(key_size, default_key_part);
 		}

@@ -24,7 +24,7 @@ namespace einsum::internal {
 		std::unique_ptr<Entry_t> sub_entry;
 
 	public:
-        RecursiveLeftJoinOperator(const std::shared_ptr<Subscript> &subscript, const std::shared_ptr<Context> &context)
+        RecursiveLeftJoinOperator(const std::shared_ptr<Subscript> &subscript, const std::shared_ptr<Context<key_part_type>> &context)
 			: Operator_t(Subscript::Type::LeftJoin, subscript, context, this),
 			  non_opt_ops_poss(subscript->getNonOptionalOperands()){
 			ended_ = true;
@@ -138,10 +138,7 @@ namespace einsum::internal {
 				// do not slice the operand on the wwd label if the node_operator has ended
 				if(node_operator->ended() and this->subscript->getWWDLabels().find(node_label) != this->subscript->getWWDLabels().end())
 					continue;
-                if(this->entry->active_mapping.contains(node_label))
-                    mapped_value = &this->entry->active_mapping[node_label];
-				else
-                    mapped_value = &this->entry->key[this->subscript->getLabelPosInResult(node_label)];
+                mapped_value = &(this->context->mapping[node_label]);
                 const auto &poss_in_ops = label_poss_in_operands[node_label];
                 for(const auto &[pos, next_operand] : iter::enumerate(next_operands)) {
                     if(poss_in_ops[pos].empty())

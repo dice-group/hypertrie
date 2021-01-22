@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.13)
-project(hypertrie VERSION 0.5.2)
+project(hypertrie VERSION 0.6.0)
 set(CMAKE_CXX_STANDARD 20)
 
 include(${CMAKE_BINARY_DIR}/conan_paths.cmake)
@@ -14,11 +14,6 @@ if (NOT EXISTS ${CMAKE_BINARY_DIR}/CMakeCache.txt)
     endif ()
 endif ()
 
-if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -fomit-frame-pointer -momit-leaf-frame-pointer")
-else ()
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -fomit-frame-pointer")
-endif ()
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -Wextra -g -O0")
 
 set(THREADS_PREFER_PTHREAD_FLAG)
@@ -29,14 +24,14 @@ find_package(Threads REQUIRED)
 set(hypertrie_INSTALL_INCLUDE_DIR "include" CACHE STRING "The installation include directory")
 set(hypertrie_INSTALL_CMAKE_DIR "share/hypertrie/cmake" CACHE STRING "The installation cmake directory")
 
-#include cppitertools, see https://github.com/ryanhaining/cppitertools
-add_library(cppitertools INTERFACE)
-add_library(cppitertools::cppitertools ALIAS cppitertools)
+include(FetchContent)
+FetchContent_Declare(
+        cppitertools
+        GIT_REPOSITORY https://github.com/ryanhaining/cppitertools.git
+        GIT_TAG v2.1
+        GIT_SHALLOW TRUE)
 
-target_include_directories(cppitertools INTERFACE
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/cppitertools/>
-        $<INSTALL_INTERFACE:include>
-        )
+FetchContent_MakeAvailable(cppitertools)
 
 find_package(tsl-hopscotch-map REQUIRED)
 find_package(tsl-sparse-map REQUIRED)
@@ -77,6 +72,7 @@ endif()
 # testing
 option(hypertrie_BUILD_TESTS "Build test programs" OFF)
 if (hypertrie_BUILD_TESTS)
+#    set_property(GLOBAL PROPERTY CTEST_TARGETS_ADDED 1)
     enable_testing()
     add_subdirectory(tests)
 endif ()

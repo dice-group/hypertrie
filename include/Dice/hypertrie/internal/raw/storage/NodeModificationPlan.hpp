@@ -8,7 +8,7 @@
 //from
 //#include "Dice/hypertrie/internal/util/RobinHoodHash.hpp"
 //to
-#include "Dice/hash/DiceHash.hpp"
+#include <Dice/hash/DiceHash.hpp>
 
 
 namespace hypertrie::internal::raw {

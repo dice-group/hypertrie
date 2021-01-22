@@ -1,7 +1,3 @@
-cmake_minimum_required(VERSION 3.13)
-
-set(CMAKE_CXX_STANDARD 20)
-
 # code coverage
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     if ("${CMAKE_C_COMPILER_ID}" MATCHES "(Apple)?[Cc]lang" OR "${CMAKE_CXX_COMPILER_ID}" MATCHES "(Apple)?[Cc]lang")
@@ -18,7 +14,15 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     endif ()
 endif ()
 
-find_package(Catch2 REQUIRED CONFIG)
+include(FetchContent)
+FetchContent_Declare(
+        Catch2
+        GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+        GIT_TAG v2.13.4
+        GIT_SHALLOW TRUE)
+
+FetchContent_MakeAvailable(Catch2)
+
 add_executable(tests_hypertrie_internal basline_hypertrie/BaslineHypertrieTests.cpp)
 set_target_properties(tests_hypertrie_internal PROPERTIES LINKER_LANGUAGE CXX)
 add_executable(tests_einsum TestEinsum.cpp)
@@ -27,12 +31,6 @@ target_link_libraries(tests_hypertrie_internal PRIVATE
         hypertrie::hypertrie
         )
 target_link_libraries(tests_einsum PRIVATE
-        Catch2::Catch2
-        hypertrie::hypertrie
-        )
-
-add_executable(tests_dice_hash TestDiceHash.cpp)
-target_link_libraries(tests_dice_hash PRIVATE
         Catch2::Catch2
         hypertrie::hypertrie
         )
@@ -51,12 +49,11 @@ if (hypertrie_LIBTORCH_PATH)
 endif ()
 
 # detect the tests
-
 include(CTest)
+list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/contrib)
 include(Catch)
 catch_discover_tests(tests_hypertrie_internal)
 catch_discover_tests(tests_einsum)
-catch_discover_tests(tests_dice_hash)
 
 # copy files for testing to the binary folder
 file(COPY data DESTINATION ${CMAKE_CURRENT_BINARY_DIR})

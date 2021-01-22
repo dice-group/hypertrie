@@ -5,7 +5,8 @@
 #include <fmt/format.h>
 #include <tsl/sparse_map.h>
 #include <itertools.hpp>
-#include <absl/hash/hash.h>
+
+#include <Dice/hash/DiceHash.hpp>
 
 namespace hypertrie::tests::raw::node_context {
 
@@ -35,7 +36,7 @@ namespace hypertrie::tests::raw::node_context {
 		using value_type = typename tri::value_type;
 		using key_part_type = typename tri::key_part_type;
 
-		tsl::sparse_map<RawKey<depth>, value_type, absl::Hash<RawKey<depth>>> entries{};
+		tsl::sparse_map<RawKey<depth>, value_type, Dice::hash::DiceHash<RawKey<depth>>> entries{};
 
 		size_t ref_count_;
 
@@ -48,7 +49,7 @@ namespace hypertrie::tests::raw::node_context {
 		}
 
 	public:
-		explicit TestTensor(size_t ref_count = 0, tsl::sparse_map<RawKey<depth>, value_type, absl::Hash<RawKey<depth>>> entries = {}) : entries(entries), ref_count_(ref_count) {
+		explicit TestTensor(size_t ref_count = 0, tsl::sparse_map<RawKey<depth>, value_type, Dice::hash::DiceHash<RawKey<depth>>> entries = {}) : entries(entries), ref_count_(ref_count) {
 			hash_ = this->calcHash(this->entries);
 		}
 
@@ -64,7 +65,7 @@ namespace hypertrie::tests::raw::node_context {
 			return sub_key;
 		}
 
-		const tsl::sparse_map<RawKey<depth>, value_type, absl::Hash<RawKey<depth>>> &getEntries() const {
+		const tsl::sparse_map<RawKey<depth>, value_type, Dice::hash::DiceHash<RawKey<depth>>> &getEntries() const {
 			return entries;
 		}
 
@@ -212,7 +213,7 @@ namespace hypertrie::tests::raw::node_context {
 		auto getSubEntriesByPos(size_t pos) {
 			if constexpr(depth > 1){
 				tsl::sparse_map<key_part_type,
-						tsl::sparse_map<RawKey<depth - 1>, value_type, absl::Hash<RawKey<depth -1>>>
+						tsl::sparse_map<RawKey<depth - 1>, value_type, Dice::hash::DiceHash<RawKey<depth -1>>>
 				> mapped_entries{};
 
 				// find all entries of sub-tensors for that position
@@ -263,7 +264,7 @@ namespace hypertrie::tests::raw::node_context {
 		}
 
 		template<size_t key_depth>
-		static NodeRepr_t<key_depth> calcHash(tsl::sparse_map<RawKey<key_depth>, value_type, absl::Hash<RawKey<key_depth>>> entries) {
+		static NodeRepr_t<key_depth> calcHash(tsl::sparse_map<RawKey<key_depth>, value_type, Dice::hash::DiceHash<RawKey<key_depth>>> entries) {
 			if constexpr (tri::is_bool_valued and tri::is_lsb_unused and key_depth == 1) {
 				if (entries.size() == 1) {
 					return {entries.begin()->first[0]};

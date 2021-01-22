@@ -6,7 +6,7 @@
 #include <boost/container/flat_set.hpp>
 #include <robin_hood.h>
 
-#include "Dice/hash/DiceHash.hpp"
+#include <Dice/hash/DiceHash.hpp>
 
 namespace einsum::internal::util {
 

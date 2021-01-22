@@ -141,7 +141,7 @@ namespace hypertrie::internal::raw {
 
 		template<size_t depth>
 		static inline Key key(const RawKey<depth> &raw_key) {
-			Key key(raw_key.size());
+			Key key(depth);
 			for (auto [raw_key_part, non_raw_key_part] : iter::zip(key, raw_key))
 				raw_key_part = non_raw_key_part;
 			return key;

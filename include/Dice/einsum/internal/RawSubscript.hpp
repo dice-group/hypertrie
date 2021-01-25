@@ -247,9 +247,8 @@ namespace einsum::internal {
             for (const auto &[pos, operand]: iter::enumerate(original_operands)) {
                 OperandSc new_operand{};
                 for (auto current_label: operand)
-                    if (labels.find(current_label) == labels.end() or (
-						std::find(non_opt_poss.begin(), non_opt_poss.end(), poss_in_operands[pos]) == non_opt_poss.end() and
-                                  not non_opt_poss.empty()))
+                    if (labels.find(current_label) == labels.end() or
+						std::find(non_opt_poss.begin(), non_opt_poss.end(), poss_in_operands[pos]) == non_opt_poss.end())
                         new_operand.push_back(current_label);
                 if (not new_operand.empty()) {
                     next_operands.push_back(std::move(new_operand));

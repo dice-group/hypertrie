@@ -17,8 +17,13 @@
 
 namespace einsum::internal::util {
 
+	/**
+	 * Captures the dependencies between the operands of an Einstein Summation
+	 * @tparam VertexType the type of the vertices of the graph
+	 * @tparam EdgeLabel the type of the labels of the edges of the graph
+	 */
     template<typename VertexType = uint32_t, typename EdgeLabel = char>
-    class DirectedGraph {
+    class DependencyGraph {
 
     private:
 
@@ -33,34 +38,29 @@ namespace einsum::internal::util {
 															boost::no_property,
 															LabelledEdge>;
 
-        using DirectedUnLabelledGraph = boost::adjacency_list<boost::vecS,
-															  boost::vecS,
-															  boost::directedS,
-															  boost::no_property,
-															  boost::no_property>;
+        using DirectedGraph = boost::adjacency_list<boost::vecS,
+													boost::vecS,
+													boost::directedS,
+													boost::no_property,
+													boost::no_property>;
 
 		using VertexDesc = typename boost::graph_traits<DirectedLabelledGraph>::vertex_descriptor;
 		using StrongComponentID = VertexType ;
 		using WeakComponentID = VertexType ;
 		static_assert(std::is_same_v<VertexDesc, std::size_t>);
-
-		// stores for each vertex to which strong component it belongs
-        std::vector<StrongComponentID> strong_components;
-
-        // stores for each vertex to which strong component it belongs
-        std::vector<WeakComponentID> weak_components;
+        using WeakComponentLabels_t = tsl::hopscotch_set<EdgeLabel>;
 
 		// it used to capture dependencies between operands in joins and left-joins
 		DirectedLabelledGraph graph{};
 
 		// it used to capture dependencies between sub_operators in cartesian joins
-        DirectedUnLabelledGraph unlabelled_graph{};
+		DirectedGraph unlabelled_graph{};
 
     public:
 
 		bool wwd = false;
 
-		struct StrongComponentLabels {
+		struct StrongComponent {
 			std::map<VertexDesc, tsl::hopscotch_set<EdgeLabel>> vertices_out_edges_labels{};
 			tsl::hopscotch_set<EdgeLabel> incoming_labels{};
 			tsl::hopscotch_set<EdgeLabel> component_labels{};
@@ -68,15 +68,18 @@ namespace einsum::internal::util {
 			tsl::hopscotch_set<EdgeLabel> wwd_labels{};
 		};
 
-		using StrongComponentLabels_t = StrongComponentLabels;
+	private:
 
-		using WeakComponentLabels_t = tsl::hopscotch_set<EdgeLabel>;
+		using IndependentStrongComponents = std::vector<StrongComponent>;
+        IndependentStrongComponents ind_strong_comp{};
 
-        DirectedGraph() = default;
+	public:
 
-		[[maybe_unused]] VertexDesc addVertex() {
+		DependencyGraph() = default;
+
+		void addVertex() {
 			boost::add_vertex(unlabelled_graph);
-			return boost::add_vertex(graph);
+			boost::add_vertex(graph);
 		}
 
 		void addEdge(EdgeLabel label, VertexDesc source, VertexDesc target, bool wwd = false) {
@@ -89,19 +92,7 @@ namespace einsum::internal::util {
 			boost::add_edge(source, target, unlabelled_graph);
 		}
 
-		std::vector<VertexType> getNeighborsLabelled(VertexDesc v) {
-			std::vector<VertexType> target_vertices{};
-            auto out_edges_iterators = boost::out_edges(v, graph);
-			for(auto out_edge_iter = out_edges_iterators.first; out_edge_iter != out_edges_iterators.second; out_edge_iter++) {
-				auto target = boost::target(*out_edge_iter, graph);
-				if(target == v)
-					continue;
-				target_vertices.push_back(boost::target(*out_edge_iter, graph));
-			}
-			return target_vertices;
-		}
-
-        tsl::hopscotch_set<VertexType> transitivelyGetNeighborsLabelled(VertexDesc vertex) {
+        tsl::hopscotch_set<VertexType> getTransitiveNeighbors(VertexDesc vertex) {
             tsl::hopscotch_set<VertexType> target_vertices{};
 			std::deque<VertexDesc> to_check{vertex};
 			tsl::hopscotch_set<VertexDesc> visited{};
@@ -128,19 +119,7 @@ namespace einsum::internal::util {
             return target_vertices;
         }
 
-		std::vector<VertexType> getNeighborsUnlabelled(VertexDesc v) {
-            std::vector<VertexType> target_vertices{};
-            auto out_edges_iterators = boost::out_edges(v, unlabelled_graph);
-            for(auto out_edge_iter = out_edges_iterators.first; out_edge_iter != out_edges_iterators.second; out_edge_iter++) {
-                auto target = boost::target(*out_edge_iter, unlabelled_graph);
-                if(target == v)
-                    continue;
-                target_vertices.push_back(boost::target(*out_edge_iter, unlabelled_graph));
-            }
-            return target_vertices;
-		}
-
-        tsl::hopscotch_set<VertexType> transitivelyGetNeighborsUnlabelled(VertexDesc vertex) {
+        tsl::hopscotch_set<VertexType> getTransitiveNeighborsUnlabelled(VertexDesc vertex) {
             tsl::hopscotch_set<VertexType> target_vertices{};
             std::deque<VertexDesc> to_check{vertex};
             tsl::hopscotch_set<VertexDesc> visited{};
@@ -162,32 +141,14 @@ namespace einsum::internal::util {
             return target_vertices;
         }
 
-		std::vector<VertexType> getStrongComponentNeighbors(VertexDesc v) {
-			std::vector<VertexType> neighbors{};
-			auto component = strong_components[v];
-			for(auto n : iter::range(strong_components.size())) {
-				if(n == v)
-					continue;
-				if(strong_components[n] == component)
-					neighbors.emplace_back(n);
-			}
-			return neighbors;
-		}
-
-		const std::vector<WeakComponentID>& getWeakComponentsOfVertices() {
-			return weak_components;
-		}
-
 		// treats the directed graph as an undirected graph
 		// finds the connected components of the undirected graph
 		// returns the labels of each component
-        [[nodiscard]] std::vector<tsl::hopscotch_set<EdgeLabel>> getWeaklyConnectedComponents() {
-
+        [[nodiscard]] std::vector<WeakComponentLabels_t> getWeaklyConnectedComponentsLabels() {
 			// stores by position (Vertex) which component it belongs to (entry value)
             std::vector<WeakComponentID> component(boost::num_vertices(graph));
             auto num_components = boost::connected_components(graph, &component[0]);
 
-			weak_components = component;
             std::vector<WeakComponentLabels_t> weakly_connected_components(num_components);
 
             for(std::size_t i : iter::range(component.size())) {
@@ -196,12 +157,13 @@ namespace einsum::internal::util {
 					weakly_connected_components[component[i]].insert(graph[*out_edge_it].label);
 				}
 			}
-
             return weakly_connected_components;
         }
 
         // https://www.boost.org/doc/libs/1_74_0/libs/graph/example/strong_components.cpp
-        [[nodiscard]] std::vector<StrongComponentLabels_t> getIndependentStrongComponent() {
+        [[nodiscard]] IndependentStrongComponents getIndependentStrongComponent() {
+			if(not ind_strong_comp.empty())
+				return ind_strong_comp;
 
 			std::vector<StrongComponentID> component(num_vertices(graph)),
 					discover_time(num_vertices(graph));
@@ -215,8 +177,7 @@ namespace einsum::internal::util {
 														   .discover_time_map(make_iterator_property_map(
 																   discover_time.begin(), get(boost::vertex_index, graph))));
 
-			std::vector<StrongComponentLabels_t> strongly_connected_components(num_components);
-			strong_components = component;
+			std::vector<StrongComponent> strongly_connected_components(num_components);
 
             for(std::size_t i : iter::range(component.size())) {
 				auto cur_component_idx = component[i];
@@ -239,13 +200,13 @@ namespace einsum::internal::util {
 					}
 				}
 			}
-			std::vector<StrongComponentLabels_t> independent_sc;
+			// find all independent components - components that do not have any incoming edges
 			for (auto scc : strongly_connected_components) {
-				if (!scc.incoming_labels.size()) {
-					independent_sc.push_back(scc);
+				if (scc.incoming_labels.empty()) {
+					ind_strong_comp.push_back(scc);
 				}
 		    }
-			return independent_sc;
+			return ind_strong_comp;
 		}
 
     };

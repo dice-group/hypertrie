@@ -1,8 +1,8 @@
+#include <Dice/einsum/internal/util/DependencyGraph.hpp>
 #include <Dice/hypertrie/hypertrie.hpp>
-#include <Dice/einsum/internal/util/DirectedGraph.hpp>
+#include <catch2/catch.hpp>
 #include <fmt/core.h>
 #include <fmt/format.h>
-#include <catch2/catch.hpp>
 
 namespace hypertrie::tests::directedgraph {
 

@@ -132,8 +132,7 @@ namespace einsum::internal {
             std::vector<const_Hypertrie<tr>> sliced_operands{};
 			auto opt_non_opt_poss = opt_subscript->getNonOptionalOperands();
 			for(const auto &[pos, operand] : iter::enumerate(opt_operands)) {
-				if(std::find(opt_non_opt_poss.begin(), opt_non_opt_poss.end(), pos) == opt_non_opt_poss.end() and not
-					opt_non_opt_poss.empty()) {
+				if(std::find(opt_non_opt_poss.begin(), opt_non_opt_poss.end(), pos) == opt_non_opt_poss.end()) {
 					sliced_operands.emplace_back(operand);
 					continue;
 				}
@@ -166,8 +165,7 @@ namespace einsum::internal {
             // ensure that only non-optional operands will be sliced
             for(auto &[_, slicing_poss] : slicing_positions) {
                 for(auto op_pos : iter::range(slicing_poss.size()))
-                    if(not opt_non_opt_poss.empty() and
-                        std::find(opt_non_opt_poss.begin(), opt_non_opt_poss.end(), op_pos) == opt_non_opt_poss.end())
+                    if(std::find(opt_non_opt_poss.begin(), opt_non_opt_poss.end(), op_pos) == opt_non_opt_poss.end())
                         slicing_poss[op_pos].clear();
             }
             // create sliced_subscript by removing the sliced labels from the non-opt positions of opt_subscript

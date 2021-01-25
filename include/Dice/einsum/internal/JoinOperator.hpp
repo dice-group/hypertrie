@@ -26,7 +26,7 @@ namespace einsum::internal {
 		bool ended_ = true;
 
 	public:
-		JoinOperator(const std::shared_ptr<Subscript> &subscript, const std::shared_ptr<Context> &context)
+		JoinOperator(const std::shared_ptr<Subscript> &subscript, const std::shared_ptr<Context<key_part_type>> &context)
 				: Operator_t(Subscript::Type::Join, subscript, context, this) {}
 
 
@@ -64,10 +64,10 @@ namespace einsum::internal {
 					return;
 				}
 			}
+            // store the value of the label (needed for recursive left join)
+			this->context->mapping[label] = current_key_part;
 			if (is_result_label)
 				this->entry->key[label_pos_in_result] = current_key_part;
-			else
-                this->entry->active_mapping[label] = current_key_part; // store the value of the label (need for recursive left join)
 
 			if constexpr (_debugeinsum_)
 				fmt::print("[{}]->{} {}\n", fmt::join(this->entry->key, ","), this->entry->value, this->subscript);
@@ -120,9 +120,6 @@ namespace einsum::internal {
 			// check if sub_operator was not yet initialized or if the next subscript is different
 			if (not sub_operator or sub_operator->hash() != next_subscript->hash()) {
 				sub_operator = Operator_t::construct(next_subscript, this->context);
-				if(next_subscript->type == Subscript::Type::Cartesian) {
-					this->context->non_optional_cartesian.insert(next_subscript->hash());
-				}
 			}
 
 			// initialize the join

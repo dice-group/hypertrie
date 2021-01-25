@@ -16,9 +16,9 @@
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 
-#include "Dice/einsum/internal/util/DirectedGraph.hpp"
-#include "Dice/einsum/internal/util/UndirectedGraph.hpp"
 #include "Dice/einsum/internal/RawSubscript.hpp"
+#include "Dice/einsum/internal/util/DependencyGraph.hpp"
+#include "Dice/einsum/internal/util/UndirectedGraph.hpp"
 
 
 #include <vector>
@@ -30,7 +30,7 @@
 namespace einsum::internal {
 
 	using DependencyGraph = util::UndirectedGraph<Label>;
-	using DirectedDependencyGraph = util::DirectedGraph<OperandPos, Label>;
+	using DirectedDependencyGraph = util::DependencyGraph<OperandPos, Label>;
 	using ConnectedComponent = typename DependencyGraph::NodeSet;
 	using ConnectedComponents = std::vector<ConnectedComponent>;
 
@@ -177,7 +177,7 @@ namespace einsum::internal {
         tsl::hopscotch_map<Label, std::vector<OperandPos>> non_optional_operands_of_label{};
 		// Left Join
         tsl::hopscotch_map<OperandPos, tsl::hopscotch_set<OperandPos>> dependent_operands;
-		// Join & Recursive Left Join
+		// All
 		std::vector<OperandPos> non_optional_operands{};
 		// Recursive Left Join
 		tsl::hopscotch_set<Label> wwd_labels{};
@@ -198,7 +198,7 @@ namespace einsum::internal {
 		}
 
         std::shared_ptr<Subscript> removeLabels(const tsl::hopscotch_set<Label>& labels) {
-            return std::make_shared<Subscript>(raw_subscript.removeLabels(labels), this->type);
+            return std::make_shared<Subscript>(raw_subscript.removeLabels(labels, non_optional_operands), this->type);
         }
 
 		const tsl::hopscotch_set<Label> &getLonelyNonResultLabelSet() const {
@@ -227,7 +227,7 @@ namespace einsum::internal {
                 return iterator->second;
             else {
                 return dependent_operands.insert(
-                                {op_pos, directed_dependency_graph.transitivelyGetNeighborsLabelled(op_pos)})
+                                {op_pos, directed_dependency_graph.getTransitiveNeighbors(op_pos)})
                         .first->second;
 			}
 		}
@@ -235,10 +235,6 @@ namespace einsum::internal {
         const std::vector<std::vector<OperandPos>>& getSubOperatorDependencies() {
 			return sub_op_dependencies;
 		}
-
-        const std::vector<OperandPos>& getSubOperatorOfOperands() {
-            return directed_dependency_graph.getWeakComponentsOfVertices();
-        }
 
 		const tsl::hopscotch_set<Label>& getWWDLabels() {
 			return wwd_labels;
@@ -326,7 +322,7 @@ namespace einsum::internal {
 				  operands_label_set(raw_subscript.getOperandsLabelSet()),
 				  result_label_set(raw_subscript.getResultLabelSet()),
                   directed_dependency_graph(calcDirectedDependencyGraph(raw_subscript)),
-                  weakly_connected_components(directed_dependency_graph.getWeaklyConnectedComponents()),
+                  weakly_connected_components(directed_dependency_graph.getWeaklyConnectedComponentsLabels()),
                   type((type == Type::CarthesianMapping) ? Type::CarthesianMapping : calcState(raw_subscript,
                                                                                                operands_label_set,
                                                                                                result_label_set,
@@ -347,14 +343,17 @@ namespace einsum::internal {
 					}
 				}
 			}
+			// store the positions of the non_optional operands
+			auto independent_strong_components = directed_dependency_graph.getIndependentStrongComponent();
+            for(auto isc : independent_strong_components)
+				for(const auto &[vertex, _] : isc.vertices_out_edges_labels)
+                    non_optional_operands.push_back(vertex);
+
 			switch (this->type) {
 				case Type::RecursiveLeftJoin: {
                     label_poss_in_result = raw_subscript.getLabelPossInResult();
-                    auto independent_strong_components = directed_dependency_graph.getIndependentStrongComponent();
 					for(auto isc : independent_strong_components) {
 						wwd_labels.insert(isc.wwd_labels.begin(), isc.wwd_labels.end());
-						for (const auto &op_labels_pair : isc.vertices_out_edges_labels)
-							non_optional_operands.emplace_back(op_labels_pair.first);
 					}
 					break;
 				}
@@ -366,13 +365,12 @@ namespace einsum::internal {
                     for (const auto[op_pos, labels] : iter::enumerate(raw_subscript.operands))
                         for (const Label label : labels)
 							poss_of_operands_with_labels[label].push_back(op_pos);
-                    auto independent_strong_component = directed_dependency_graph.getIndependentStrongComponent();
-					assert(independent_strong_component.size() == 1);
+					assert(independent_strong_components.size() == 1);
 					// find all non-optional labels
-					for(const auto& out_label : independent_strong_component[0].outgoing_labels) {
+					for(const auto& out_label : independent_strong_components[0].outgoing_labels) {
 						left_join_labels.insert(out_label);
                         // store the non-optional operands of each label
-						for(const auto& [op, op_out_labels] : independent_strong_component[0].vertices_out_edges_labels) {
+						for(const auto& [op, op_out_labels] : independent_strong_components[0].vertices_out_edges_labels) {
 							if(op_out_labels.find(out_label) != op_out_labels.end()) {
 								auto& non_opt_ops_of_label = non_optional_operands_of_label[out_label];
 								non_opt_ops_of_label.push_back(op);
@@ -385,10 +383,6 @@ namespace einsum::internal {
 				}
 				case Type::Join: {
 					label_poss_in_result = raw_subscript.getLabelPossInResult();
-                    auto independent_strong_component = directed_dependency_graph.getIndependentStrongComponent();
-                    assert(independent_strong_component.size() == 1);
-                    for(const auto& op_labels_pair : independent_strong_component[0].vertices_out_edges_labels)
-                        non_optional_operands.emplace_back(op_labels_pair.first);
                     break;
 				}
 				case Type::Cartesian: {
@@ -407,7 +401,7 @@ namespace einsum::internal {
 					for(auto operand_pos : iter::range(raw_subscript.operands.size())) {
 						auto source_sub_op = operand_sub_op_map[operand_pos];
                         auto& dependent_sub_ops = sub_op_dependencies[source_sub_op];
-						for(auto weakly_dependent_operand : directed_dependency_graph.transitivelyGetNeighborsUnlabelled(operand_pos)) {
+						for(auto weakly_dependent_operand : directed_dependency_graph.getTransitiveNeighborsUnlabelled(operand_pos)) {
 							dependent_sub_ops.push_back(operand_sub_op_map[weakly_dependent_operand]);
 						}
 					}

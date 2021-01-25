@@ -16,7 +16,7 @@ namespace einsum::internal {
 		typename const_Hypertrie<tr>::const_iterator operand_iter;
 
 	public:
-		ResolveOperator(const std::shared_ptr<Subscript> &subscript, const std::shared_ptr<Context> &context)
+		ResolveOperator(const std::shared_ptr<Subscript> &subscript, const std::shared_ptr<Context<key_part_type>> &context)
 				: Operator_t(Subscript::Type::Resolve, subscript, context, this) {
 			label_pos_in_result = this->subscript->operand2resultMapping_ResolveType();
 			ended_ = true;
@@ -31,8 +31,11 @@ namespace einsum::internal {
 				return;
 			self.entry->value = value_type(1);
 			const auto &operand_key = *self.operand_iter;
-			for (auto i : iter::range(operand_key.size()))
+			for (auto i : iter::range(operand_key.size())) {
+                // store the value of the label (needed for recursive left join)
+                self.context->mapping[self.subscript->getRawSubscript().result[i]] = operand_key[i];
 				self.entry->key[self.label_pos_in_result[i]] = operand_key[i];
+			}
 			if constexpr (bool_value_type) {
 				if (self.subscript->all_result_done) {
 					self.ended_ = true;
@@ -72,8 +75,11 @@ namespace einsum::internal {
 			ended_ = not operand_iter;
 			if (not ended_) {
 				const auto &operand_key = *this->operand_iter;
-				for (auto i : iter::range(operand_key.size()))
+				for (auto i : iter::range(operand_key.size())) {
+                    // store the value of the label (needed for recursive left join)
+                    this->context->mapping[this->subscript->getRawSubscript().result[i]] = operand_key[i];
 					this->entry->key[this->label_pos_in_result[i]] = operand_key[i];
+				}
 			}
 		}
 

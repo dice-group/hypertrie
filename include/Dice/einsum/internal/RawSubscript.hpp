@@ -242,12 +242,13 @@ namespace einsum::internal {
          * @param labels the labels to remove
          * @return a new RawSubscript equal to this but without the given operands.
          */
-        [[nodiscard]] auto removeLabels(const tsl::hopscotch_set<Label>& labels) const noexcept {
+        [[nodiscard]] auto removeLabels(const tsl::hopscotch_set<Label>& labels, std::vector<OperandPos>& non_opt_poss) const noexcept {
             OperandsSc next_operands{};
-            for (const auto &operand: original_operands) {
+            for (const auto &[pos, operand]: iter::enumerate(original_operands)) {
                 OperandSc new_operand{};
                 for (auto current_label: operand)
-                    if (labels.find(current_label) == labels.end())
+                    if (labels.find(current_label) == labels.end() or
+						std::find(non_opt_poss.begin(), non_opt_poss.end(), poss_in_operands[pos]) == non_opt_poss.end())
                         new_operand.push_back(current_label);
                 if (not new_operand.empty()) {
                     next_operands.push_back(std::move(new_operand));

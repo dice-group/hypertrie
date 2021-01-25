@@ -12,7 +12,7 @@ namespace einsum::internal {
 		using CountOperator_t = CountOperator<value_type, tr>;
 		bool _ended;
 	public:
-		CountOperator(const std::shared_ptr<Subscript> &subscript, const std::shared_ptr<Context> &context)
+		CountOperator(const std::shared_ptr<Subscript> &subscript, const std::shared_ptr<Context<key_part_type>> &context)
 				: Operator_t(Subscript::Type::Count, subscript, context, this) {}
 
 		static void next(void *self_raw) {

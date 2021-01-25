@@ -13,7 +13,7 @@ namespace einsum::internal {
 		bool _ended = true;
 
 	public:
-		EntryGeneratorOperator(const std::shared_ptr<Subscript> &subscript, const std::shared_ptr<Context> &context)
+		EntryGeneratorOperator(const std::shared_ptr<Subscript> &subscript, const std::shared_ptr<Context<key_part_type>> &context)
 				: Operator_t(Subscript::Type::EntryGenerator, subscript, context, this) {}
 
 		static void next(void *self_raw) {

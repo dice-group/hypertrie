@@ -44,7 +44,7 @@ namespace einsum::internal {
 		bool ended_ = true;
 
 	public:
-		LeftJoinOperator(const std::shared_ptr<Subscript> &subscript, const std::shared_ptr<Context> &context)
+		LeftJoinOperator(const std::shared_ptr<Subscript> &subscript, const std::shared_ptr<Context<key_part_type>> &context)
 			: Operator_t(Subscript::Type::LeftJoin, subscript, context, this) {
 		}
 

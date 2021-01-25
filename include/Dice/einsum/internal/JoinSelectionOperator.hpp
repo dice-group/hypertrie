@@ -23,7 +23,7 @@ namespace einsum::internal {
 
     public:
 
-        JoinSelectionOperator(const std::shared_ptr<Subscript> &subscript, const std::shared_ptr<Context> &context)
+        JoinSelectionOperator(const std::shared_ptr<Subscript> &subscript, const std::shared_ptr<Context<key_part_type>> &context)
                 : Operator_t(Subscript::Type::Join, subscript, context, this) {
 			ended_ = true;
 		}

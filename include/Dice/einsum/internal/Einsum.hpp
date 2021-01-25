@@ -20,7 +20,7 @@ namespace einsum::internal {
 	template<typename value_type, HypertrieTrait tr>
 	std::shared_ptr<Operator<value_type, tr>>
 	Operator<value_type, tr>::construct(const std::shared_ptr<Subscript> &subscript,
-																	   const std::shared_ptr<Context> &context) {
+										const std::shared_ptr<Context<key_part_type>> &context) {
 		switch (subscript->type) {
 			case Subscript::Type::Join:
 				return std::make_shared<JoinOperator<value_type, tr>>(subscript, context);
@@ -54,7 +54,7 @@ namespace einsum::internal {
 
 
 		std::shared_ptr<Subscript> subscript{};
-		std::shared_ptr<Context> context{};
+		std::shared_ptr<Context<key_part_type>> context{};
 		std::vector<const_Hypertrie<tr>> operands{};
 		std::shared_ptr<Operator_t> op{};
 		Entry_t entry{};
@@ -65,7 +65,7 @@ namespace einsum::internal {
 
 		Einsum(std::shared_ptr<Subscript> subscript, const std::vector<const_Hypertrie<tr>> &operands,
 			   TimePoint timeout = TimePoint::max())
-			: subscript(std::move(subscript)), context{std::make_shared<Context>(timeout)},
+			: subscript(std::move(subscript)), context{std::make_shared<Context<key_part_type>>(timeout)},
 			  operands(operands),
 			  op{Operator_t::construct(this->subscript, context)},
 			  entry(this->subscript->resultLabelCount(), Operator_t::default_key_part) {}
@@ -138,7 +138,7 @@ namespace einsum::internal {
 		using key_part_type = typename tr::key_part_type;
 
 		std::shared_ptr<Subscript> subscript{};
-		std::shared_ptr<Context> context{};
+		std::shared_ptr<Context<key_part_type>> context{};
 		std::vector<const_Hypertrie<tr>> operands{};
 		std::shared_ptr<Operator_t> op{};
 		Entry_t entry{};
@@ -146,7 +146,7 @@ namespace einsum::internal {
 	public:
 		Einsum(std::shared_ptr<Subscript> subscript, const std::vector<const_Hypertrie<tr>> &operands,
 			   TimePoint timeout = std::numeric_limits<TimePoint>::max())
-			: subscript(std::move(subscript)), context{std::make_shared<Context>(timeout)},
+			: subscript(std::move(subscript)), context{std::make_shared<Context<key_part_type>>(timeout)},
 			  operands(operands),
 			  op{Operator_t::construct(this->subscript, context)},
 			  entry(this->subscript->resultLabelCount(), Operator_t::default_key_part) {}

@@ -2,6 +2,7 @@
 #define HYPERTRIE_CONTEXT_HPP
 
 #include "Dice/einsum/internal/Subscript.hpp"
+#include "Dice/einsum/internal/Entry.hpp"
 #include <chrono>
 
 namespace einsum::internal {
@@ -9,12 +10,15 @@ namespace einsum::internal {
 	using TimePoint = std::chrono::steady_clock::time_point;
 
 	/**
+	 * @tparam key_part_type the type of the values assigned to each label
 	 * The context is passed to very operator. It helps to pass information into the operator graph and allows the
 	 * operators to communicate during execution.
 	 * It is also responsible for managing timeouts.
 	 */
+    template<typename value_type>
 	class Context {
 		constexpr static const uint max_counter = 500;
+
 	public:
 		/**
 		 * The time after that the processing shall be stopped.
@@ -31,11 +35,10 @@ namespace einsum::internal {
 		 */
 		bool timed_out = false;
 
-		/**
-		 * Stores the cartesian operators that are generated from join operators
-		 * Such cartesian operators can't return optional results
+		/*
+		 * Stores for each subscript label its assigned value
 		 */
-		std::set<std::size_t> non_optional_cartesian{};
+        std::map<Label, value_type> mapping{};
 
         /**
         * Passes the labels to be used in the LeftJoinOperator/JoinOperator

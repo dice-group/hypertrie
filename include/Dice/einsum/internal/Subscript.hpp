@@ -11,6 +11,7 @@
 #include <ostream>
 
 #include <boost/container/flat_map.hpp>
+#include <boost/container/flat_set.hpp>
 
 #include <fmt/core.h>
 #include <fmt/format.h>
@@ -172,7 +173,7 @@ namespace einsum::internal {
 		// Cartesian
         std::vector<std::vector<OperandPos>> sub_op_dependencies;
 		// Left Join
-        tsl::hopscotch_set<Label> left_join_labels{};
+        boost::container::flat_set<Label> left_join_labels{};
 		// Left Join
         tsl::hopscotch_map<Label, std::vector<OperandPos>> non_optional_operands_of_label{};
 		// Left Join
@@ -180,7 +181,7 @@ namespace einsum::internal {
 		// All
 		std::vector<OperandPos> non_optional_operands{};
 		// Recursive Left Join
-		tsl::hopscotch_set<Label> wwd_labels{};
+        boost::container::flat_set<Label> wwd_labels{};
 
 	public:
 		std::shared_ptr<Subscript> removeLabel(Label label) const {
@@ -236,7 +237,7 @@ namespace einsum::internal {
 			return sub_op_dependencies;
 		}
 
-		const tsl::hopscotch_set<Label>& getWWDLabels() {
+		const boost::container::flat_set<Label>& getWWDLabels() {
 			return wwd_labels;
 		}
 
@@ -472,7 +473,7 @@ namespace einsum::internal {
 			return {std::move(operands_sc), std::move(result_sc)};
 		}
 
-		const tsl::hopscotch_set<Label>& getLeftJoinLabels() const {
+		const boost::container::flat_set<Label>& getLeftJoinLabels() const {
 			return left_join_labels;
 		}
 
@@ -565,9 +566,9 @@ namespace einsum::internal {
 			using Depth = uint8_t;
             DirectedDependencyGraph operand_directed_dependency_graph{};
 			// for each label stores the position of the last observed operand at each depth
-			std::map<Label, std::map<Depth, OperandPos>> label_depth_operand{};
+			robin_hood::unordered_map<Label, std::map<Depth, OperandPos>> label_depth_operand{};
 			// for each label stores the position of the last observed operand and its depth
-			std::map<Label, OperandPos> last_operand_of_label{};
+			boost::container::flat_map<Label, OperandPos> last_operand_of_label{};
 			const auto& [opt_begin, opt_end] = raw_subscript.optional_brackets;
             Depth depth{0};
 			// original operand labels
@@ -590,7 +591,7 @@ namespace einsum::internal {
                 bool strong_dependency = false; // indicates whether the current operand participates in a strong dependency
 				for(auto label : operand_labels) {
 					// check if the active label has been observed
-					if(!label_depth_operand[label].empty()) {
+					if(not label_depth_operand[label].empty()) {
 						// check if there is an operand with the same label in the current group (join)
 						if (label_depth_operand[label].contains(depth)) {
 							auto dominant_op_orig_pos = label_depth_operand[label][depth];
@@ -625,7 +626,7 @@ namespace einsum::internal {
 				// find weak dependencies. for cartesian
 				if(!strong_dependency) {
 					for (int8_t d = depth; d >= 0; d--) {
-						std::set<OperandPos> operands_at_depth{};
+						boost::container::flat_set<OperandPos> operands_at_depth{};
 						for (const auto &label_entry : label_depth_operand) {
 							if (label_entry.second.contains(d))
 								if (raw_subscript.poss_in_operands[label_entry.second.at(d)] != operand_pos)

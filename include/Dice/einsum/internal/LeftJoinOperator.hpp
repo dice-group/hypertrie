@@ -36,7 +36,7 @@ namespace einsum::internal {
 
 		bool generate_optional_value;
 
-		std::map<std::string, std::shared_ptr<Operator_t>> sub_operator_cache{};
+		robin_hood::unordered_map<std::vector<bool>, std::shared_ptr<Operator_t>> sub_operator_cache{};
 
 		std::shared_ptr<Operator_t> sub_operator;
         std::shared_ptr<Subscript> next_subscript;
@@ -161,24 +161,23 @@ namespace einsum::internal {
 			// the labels of the next_operands
 			std::vector<std::vector<Label>> next_operands_labels{};
 			// bitstring for operands, 0: to be removed, 1: will be passed to sub_operator
-			// todo: std::vector<bool> -> read on it before using it
-			std::string bitstring(join_returned_operands->size(), '1');
+			std::vector<bool> bitstring(join_returned_operands->size(), true);
 			// iterate over all operands that participated in the join
             for(auto op_pos : iter::range(pos_in_out.size())) {
-				if(joined[op_pos] || bitstring[pos_in_out[op_pos]] == '0')
+				if(joined[op_pos] || not bitstring[pos_in_out[op_pos]])
                     continue;
 				// operands that do not yield a result need to be removed along with their dependent operands
 				// store the position of the operands to be removed in the next_subscript
 				if(pos_in_out[op_pos] < std::numeric_limits<hypertrie::pos_type>::max())
-					bitstring[pos_in_out[op_pos]] = '0';
+					bitstring[pos_in_out[op_pos]] = false;
 				for(auto op_dependent_pos : this->subscript->getDependentOperands(op_pos)) {
                     if(pos_in_out[op_dependent_pos] < std::numeric_limits<hypertrie::pos_type>::max())
-						bitstring[pos_in_out[op_dependent_pos]] = '0';
+						bitstring[pos_in_out[op_dependent_pos]] = false;
 				}
 			}
 			// populate next operands
 			for(const auto &[op_pos, op] : iter::enumerate(*join_returned_operands))
-				if(bitstring[op_pos] == '1')
+				if(bitstring[op_pos])
                     next_operands.push_back(op.value());
 			// check if the subscript has already been created; otherwise construct a new sub_operator
 			if(sub_operator_cache.contains(bitstring))
@@ -193,7 +192,7 @@ namespace einsum::internal {
 					// get the position of the operand in the operands vector
 					auto op_pos = poss_in_ops.at(orig_op_pos);
 					// save successful operands and their labels
-					if (bitstring[op_pos] == '1')
+					if (bitstring[op_pos])
 						next_operands_labels.push_back(op_labels);
 				}
                 auto sub_op_subscript = std::make_shared<Subscript>(next_operands_labels,

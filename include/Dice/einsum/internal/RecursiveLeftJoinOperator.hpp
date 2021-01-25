@@ -24,7 +24,7 @@ namespace einsum::internal {
  		std::vector<OperandPos> non_opt_ops_poss; // the positions of non-optional operands
 		std::unique_ptr<Entry_t> sub_entry;
 		std::map<Label, LabelPossInOperands> slicing_positions{};
-		tsl::hopscotch_set<Label> wwd_labels{};
+		boost::container::flat_set<Label> wwd_labels{};
 
 	public:
         RecursiveLeftJoinOperator(const std::shared_ptr<Subscript> &subscript, const std::shared_ptr<Context<key_part_type>> &context)
@@ -166,7 +166,7 @@ namespace einsum::internal {
             for(auto &[_, slicing_poss] : slicing_positions) {
                 for(auto op_pos : iter::range(slicing_poss.size()))
                     if(std::find(opt_non_opt_poss.begin(), opt_non_opt_poss.end(), op_pos) == opt_non_opt_poss.end())
-                        slicing_poss[op_pos].clear();
+                        slicing_poss.erase(slicing_poss.begin()+op_pos);
             }
             // create sliced_subscript by removing the sliced labels from the non-opt positions of opt_subscript
             sliced_subscript = opt_subscript->removeLabels(sliced_labels);

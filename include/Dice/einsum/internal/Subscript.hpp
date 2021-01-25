@@ -198,7 +198,7 @@ namespace einsum::internal {
 		}
 
         std::shared_ptr<Subscript> removeLabels(const tsl::hopscotch_set<Label>& labels) {
-            return std::make_shared<Subscript>(raw_subscript.removeLabels(labels), this->type);
+            return std::make_shared<Subscript>(raw_subscript.removeLabels(labels, non_optional_operands), this->type);
         }
 
 		const tsl::hopscotch_set<Label> &getLonelyNonResultLabelSet() const {

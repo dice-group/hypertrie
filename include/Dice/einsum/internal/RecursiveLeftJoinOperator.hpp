@@ -15,23 +15,27 @@ namespace einsum::internal {
         std::shared_ptr<Operator_t> sub_operator; // the operator of the optional part
 		std::shared_ptr<Operator_t> node_operator; // the operator of the non-optional part
 		std::shared_ptr<Subscript> opt_subscript; // the subscript of the optional part
-        std::shared_ptr<Subscript> wwd_subscript; // the subscript of the optional part for wwd cases
+        std::shared_ptr<Subscript> sliced_subscript; // the subscript of the optional part after slicing
+        std::shared_ptr<Subscript> wwd_subscript; // the subscript of the optional part in case of wwd pattern
         std::shared_ptr<Subscript> next_subscript; // the subscript that will be passed to the sub_operator
         std::shared_ptr<Subscript> node_subscript; // the subscript of the non-optional part
-		std::vector<const_Hypertrie<tr>> next_operands{}; // the operands of the optional part before slicing
+        std::vector<const_Hypertrie<tr>> node_operands{}; // the operands of the non-optional part
+        std::vector<const_Hypertrie<tr>> opt_operands{}; // the operands of the optional part before slicing
  		std::vector<OperandPos> non_opt_ops_poss; // the positions of non-optional operands
-        std::map<Label, LabelPossInOperands> label_poss_in_operands{};
 		std::unique_ptr<Entry_t> sub_entry;
+		std::map<Label, LabelPossInOperands> slicing_positions{};
+		tsl::hopscotch_set<Label> wwd_labels{};
 
 	public:
         RecursiveLeftJoinOperator(const std::shared_ptr<Subscript> &subscript, const std::shared_ptr<Context<key_part_type>> &context)
 			: Operator_t(Subscript::Type::LeftJoin, subscript, context, this),
 			  non_opt_ops_poss(subscript->getNonOptionalOperands()){
 			ended_ = true;
-			// prepare node and next subscripts
+			// split the subscript into non-optional and optional subscripts
 			extractSubscripts(subscript);
-			// reserve next_operands size
-			next_operands.resize(subscript->getRawSubscript().operands.size() - non_opt_ops_poss.size());
+			// reserve the size of the operands' vectors
+            node_operands.resize(non_opt_ops_poss.size());
+            opt_operands.resize(subscript->getRawSubscript().operands.size() - non_opt_ops_poss.size());
 			// construct node operator
             node_operator = Operator_t::construct(node_subscript, this->context);
 		}
@@ -96,72 +100,83 @@ namespace einsum::internal {
 			if constexpr (_debugeinsum_) fmt::print("RecursiveLeftJoin {}\n", this->subscript);
 			this->entry = &entry;
             // split non-optional and optional operands
-            std::vector<const_Hypertrie<tr>> node_operands{};
-			std::uint8_t pos = 0;
-            for(const auto &[op_pos, operand] : iter::enumerate(operands)) {
-				if(std::find(non_opt_ops_poss.begin(), non_opt_ops_poss.end(), op_pos) != non_opt_ops_poss.end())
-                    node_operands.emplace_back(std::move(operand));
-				else {
-					next_operands[pos] = operand;
-					pos++;
-				}
-            }
+            extractOperands(operands);
 			// load node_operator
-			node_operator->load(std::move(node_operands), *this->entry);
-			if(node_operator->ended() and wwd_subscript)
-				next_subscript = wwd_subscript;
-			else
-				next_subscript = opt_subscript;
-            sub_operator = Operator_t::construct(next_subscript, this->context);
-            sub_entry = std::make_unique<Entry_t>(next_subscript->resultLabelCount(), Operator_t::default_key_part);
-			// TODO: move them inside the if clauses
-			if(!node_operator->ended()) {
+			node_operator->load(node_operands, *this->entry);
+			if(node_operator->ended() and wwd_labels.empty())
+				return;
+			else {
 				ended_ = false;
-				sub_operator->load(std::move(slice_operands()), *sub_entry);
+				std::vector<const_Hypertrie<tr>> next_operands;
+                if(not sliced_subscript)
+                    sliceSubscript();
+				if(not node_operator->ended()) {
+					next_subscript = sliced_subscript;
+					next_operands = slice_operands();
+				}
+				else {
+					next_subscript = wwd_subscript;
+					next_operands = slice_operands(true);
+				}
+                if (not sub_operator or sub_operator->hash() != next_subscript->hash()) {
+                    sub_operator = Operator_t::construct(next_subscript, this->context);
+                    sub_entry = std::make_unique<Entry_t>(next_subscript->resultLabelCount(), Operator_t::default_key_part);
+                }
+                sub_operator->load(std::move(next_operands), *sub_entry);
 				updateNodeEntry();
-			}
-			else if(wwd_subscript) {
-                ended_ = false;
-                sub_operator->load(next_operands, *sub_entry);
-                updateNodeEntry();
 			}
 		}
 
 		// use the mapped labels to slice the next operands
-		std::vector<const_Hypertrie<tr>> slice_operands() {
-            auto sliced_operands = next_operands;
-            key_part_type* mapped_value;
-			// iterate over the result labels
-			for(auto& node_label : node_subscript->getOperandsLabelSet()) {
-                if(!label_poss_in_operands.contains(node_label))
-                    continue;
-				// do not slice the operand on the wwd label if the node_operator has ended
-				if(node_operator->ended() and this->subscript->getWWDLabels().find(node_label) != this->subscript->getWWDLabels().end())
+		std::vector<const_Hypertrie<tr>> slice_operands(bool wwd = false) {
+            std::vector<const_Hypertrie<tr>> sliced_operands{};
+			auto opt_non_opt_poss = opt_subscript->getNonOptionalOperands();
+			for(const auto &[pos, operand] : iter::enumerate(opt_operands)) {
+				if(std::find(opt_non_opt_poss.begin(), opt_non_opt_poss.end(), pos) == opt_non_opt_poss.end() and not
+					opt_non_opt_poss.empty()) {
+					sliced_operands.emplace_back(operand);
 					continue;
-                mapped_value = &(this->context->mapping[node_label]);
-                const auto &poss_in_ops = label_poss_in_operands[node_label];
-                for(const auto &[pos, next_operand] : iter::enumerate(next_operands)) {
-                    if(poss_in_ops[pos].empty())
-                        continue;
-                    else {
-                        // prepare the slice key for the operand
-                        hypertrie::SliceKey<key_part_type> skey(next_operand.depth(), std::nullopt);
-                        for (const auto &pos_in_op : poss_in_ops[pos])
-                            skey[pos_in_op] = *mapped_value;
-                        // slice the operand
-						if(std::holds_alternative<const_Hypertrie<tr>>(next_operand[skey])) {
-							auto sliced_operand = std::get<0>(next_operand[skey]);
-							sliced_operands[pos] = std::move(sliced_operand);
-						}
-						// wwd case: if the optional operand is of depth 1, we do not care about its contents
-						else {
-							sliced_operands.erase(sliced_operands.begin()+pos);
-						}
-                    }
-                }
+				}
+				hypertrie::SliceKey<key_part_type> s_key(operand.depth(), std::nullopt);
+				for(const auto &[label, slice_poss] : slicing_positions) {
+					if(wwd and wwd_labels.find(label) != wwd_labels.end())
+						continue;
+					if(slice_poss[pos].empty())
+						continue;
+					for(auto &slice_pos : slice_poss[pos])
+						s_key[slice_pos] = this->context->mapping[label];
+				}
+				auto sliced_operand = operand[s_key];
+				if(std::holds_alternative<const_Hypertrie<tr>>(sliced_operand))
+					sliced_operands.push_back(std::move(std::get<0>(sliced_operand)));
 			}
 			return sliced_operands;
         }
+
+		void sliceSubscript() {
+            auto opt_non_opt_poss = opt_subscript->getNonOptionalOperands();
+            // find the slicing positions of the labels that have already been resolved
+			tsl::hopscotch_set<Label> sliced_labels{};
+            for(const auto &[label, _] : this->context->mapping) {
+                sliced_labels.insert(label);
+				if(opt_subscript->getOperandsLabelSet().find(label) == opt_subscript->getOperandsLabelSet().end())
+					continue;
+                slicing_positions[label] = opt_subscript->getLabelPossInOperands(label);
+            }
+            // ensure that only non-optional operands will be sliced
+            for(auto &[_, slicing_poss] : slicing_positions) {
+                for(auto op_pos : iter::range(slicing_poss.size()))
+                    if(not opt_non_opt_poss.empty() and
+                        std::find(opt_non_opt_poss.begin(), opt_non_opt_poss.end(), op_pos) == opt_non_opt_poss.end())
+                        slicing_poss[op_pos].clear();
+            }
+            // create sliced_subscript by removing the sliced labels from the non-opt positions of opt_subscript
+            sliced_subscript = opt_subscript->removeLabels(sliced_labels);
+			// create wwd subscript by removing the labels that do not participate in wwd pattern
+			for(auto label : wwd_labels)
+				sliced_labels.erase(label);
+			wwd_subscript = opt_subscript->removeLabels(sliced_labels);
+		}
 
 		// it prepares the subscripts of the node_operator and sub_operator -- called by constructor
 		void extractSubscripts(const std::shared_ptr<Subscript>& subscript) {
@@ -170,33 +185,35 @@ namespace einsum::internal {
             std::vector<std::vector<Label>> node_operands_labels{};
             tsl::hopscotch_set<Label> non_opt_labels{};
 			// the labels of the node_subscript are found in non_optional_positions of the current subscript
-            for(auto& non_opt_pos : subscript->getNonOptionalOperands()) {
+            for(auto& non_opt_pos : non_opt_ops_poss) {
                 node_operands_labels.emplace_back(operands_labels[non_opt_pos]);
 				non_opt_labels.insert(node_operands_labels.rbegin()->begin(), node_operands_labels.rbegin()->end());
             }
+			// add each non-optional label as a key to the active mapping - value is not set yet
+			for(auto non_opt_label : non_opt_labels)
+				this->context->mapping[non_opt_label];
 			node_subscript = std::make_shared<Subscript>(node_operands_labels, subscript->getRawSubscript().result);
             // prepare the subscripts of the sub_operator
-			opt_subscript = subscript->removeOperands(non_opt_ops_poss); // TODO: workaround, unnecessary creation of subscript
-			// store the slicing positions
-            for(auto &non_opt_label : non_opt_labels)
-				if(opt_subscript->getOperandsLabelSet().find(non_opt_label) != opt_subscript->getOperandsLabelSet().end())
-					label_poss_in_operands[non_opt_label] = opt_subscript->getLabelPossInOperands(non_opt_label);
-			// remove evaluated labels from the optional subscript
-			if(subscript->getWWDLabels().empty()) {
-				opt_subscript = opt_subscript->removeLabels(non_opt_labels);
-			}
-			// if there are wwd edges create opt_subscript and wwd_subscript
-			else {
-                tsl::hopscotch_set<Label> to_remove{};
-				for(auto label : non_opt_labels) {
-					if(subscript->getWWDLabels().find(label) == subscript->getWWDLabels().end())
-                        to_remove.insert(label);
-				}
-				// wwd_subscript contains the labels of wwd edges
-                wwd_subscript = opt_subscript->removeLabels(to_remove);
-				// opt_subscript does not contain the labels of wwd edges
-                opt_subscript = wwd_subscript->removeLabels(subscript->getWWDLabels());
-			}
+			opt_subscript = subscript->removeOperands(non_opt_ops_poss);
+			for(auto label : non_opt_labels)
+				if(subscript->getWWDLabels().find(label) != subscript->getWWDLabels().end())
+					wwd_labels.insert(label);
+		}
+
+		// splits the input operands to non-optional and optional
+		void extractOperands(std::vector<const_Hypertrie<tr>>& operands) {
+			std::uint8_t non_opt_pos = 0;
+            std::uint8_t opt_pos = 0;
+            for(const auto &[op_pos, operand] : iter::enumerate(operands)) {
+                if(std::find(non_opt_ops_poss.begin(), non_opt_ops_poss.end(), op_pos) != non_opt_ops_poss.end()) {
+                    node_operands[non_opt_pos] = std::move(operand);
+                    non_opt_pos++;
+                }
+                else {
+                    opt_operands[opt_pos] = std::move(operand);
+                    opt_pos++;
+                }
+            }
 		}
 
 		// updates the entry of the node operator with the results of the sub_entry

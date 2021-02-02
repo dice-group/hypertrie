@@ -21,7 +21,7 @@ jobs:
           ref: ${{ github.ref }}
           head_ref: ${{ github.head_ref }}
       - name: Enable apt package cache
-        run: echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/50-cache
+        run: echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' | sudo tee /etc/apt/apt.conf.d/50-cache
       - name: Cache apt, conan and pip files
         uses: actions/cache@v2
         with:

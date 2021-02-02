@@ -11,7 +11,7 @@ cp clang10_conan_profile ~/.conan/profiles/default
 #conan remote add stiffstream https://api.bintray.com/conan/stiffstream/public
 # install libtorch
 if [ ! -d libtorch ]; then
-    wget -O libtorch.zip https://download.pytorch.org/libtorch/cpu/libtorch-cxx11-abi-shared-with-deps-1.4.0%2Bcpu.zip
-    unzip libtorch.zip
-    rm libtorch.zip
+    mkdir -p ~/.cache/libtorch/
+    wget --continue --timestamping -O ~/.cache/libtorch/libtorch-cxx11-abi-shared-with-deps-1.4.0+cpu.zip https://download.pytorch.org/libtorch/cpu/libtorch-cxx11-abi-shared-with-deps-1.4.0%2Bcpu.zip
+    unzip ~/.cache/libtorch/libtorch-cxx11-abi-shared-with-deps-1.4.0+cpu.zip
 fi

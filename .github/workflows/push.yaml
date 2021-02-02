@@ -22,13 +22,14 @@ jobs:
           head_ref: ${{ github.head_ref }}
       - name: Enable apt package cache
         run: echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' | sudo tee /etc/apt/apt.conf.d/50-cache
-      - name: Cache apt, conan and pip files
+      - name: Cache apt, conan, pip and libtorch files
         uses: actions/cache@v2
         with:
           path: |
             /var/cache/apt
             ~/.conan/data
             ~/.cache/pip
+            ~/.cache/libtorch
           key: ${{ runner.os }}-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-

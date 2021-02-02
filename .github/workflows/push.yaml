@@ -36,4 +36,4 @@ jobs:
       - name: Build
         run: scripts/build.sh
       - name: Release
-        run: scripts/release-tag.sh ${{ steps.get-ref.outputs.tag }}
+        run: scripts/release.sh ${{ steps.get-ref.outputs.tag }}

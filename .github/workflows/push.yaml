@@ -20,10 +20,13 @@ jobs:
         with:
           ref: ${{ github.ref }}
           head_ref: ${{ github.head_ref }}
-      - name: Cache Docker layers
+      - name: Enable apt package cache
+        run: echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/50-cache
+      - name: Cache apt, conan and pip files
         uses: actions/cache@v2
         with:
           path: |
+            /var/cache/apt
             ~/.conan/data
             ~/.cache/pip
           key: ${{ runner.os }}-${{ github.sha }}

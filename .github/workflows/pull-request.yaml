@@ -36,3 +36,8 @@ jobs:
         run: scripts/build.sh
       - name: Run tests
         run: scripts/test.sh
+      - name: Upload test log
+        uses: actions/upload-artifact@v2
+        with:
+          name: tests.log.xz
+          path: tests.log.xz

@@ -15,6 +15,6 @@ get_conan_profile
 
 mkdir -p build
 cd build
-~/.local/bin/conan install .. --build=missing --profile ${conan_profile}
+conan install .. --build=missing --profile ${conan_profile}
 cmake -Dhypertrie_BUILD_TESTS=ON -Dhypertrie_LIBTORCH_PATH=../libtorch -DCMAKE_BUILD_TYPE="${build_type}" ..
 make

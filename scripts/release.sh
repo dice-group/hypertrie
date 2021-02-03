@@ -2,16 +2,16 @@
 
 set -e
 
-if [ -z ${CONAN_TOKEN+x} ]; then
-    echo "CONAN_TOKEN is not set"
+if [ -z ${BINTRAY_API_KEY+x} ]; then
+    echo "BINTRAY_API_KEY is not set"
     exit 1
 fi
-if [ -z ${CONAN_USER+x} ]; then
-    echo "CONAN_USER is not set"
+if [ -z ${BINTRAY_USER+x} ]; then
+    echo "BINTRAY_USER is not set"
     exit 1
 fi
 
-conan user -p $CONAN_TOKEN -r dice-group $CONAN_USER
+conan user -p $BINTRAY_API_KEY -r dice-group $BINTRAY_USER
 
 if [ "$1" = "development" ] ; then
     hypertrie_deploy_version="dev"

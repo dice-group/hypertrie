@@ -9,8 +9,10 @@ set -e
 cd "$(dirname "$0")/.."
 source scripts/internal/parse_commandline_args.sh
 source scripts/internal/get_conan_profile.sh
+source scripts/internal/find_conan.sh
 
 parse_commandline_args
+find_conan
 get_conan_profile
 
 mkdir -p build

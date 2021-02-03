@@ -40,4 +40,4 @@ jobs:
       - name: Build
         run: scripts/build.sh Release
       - name: Release
-        run: scripts/release.sh ${{ steps.get-ref.outputs.tag }}
+        run: scripts/release.sh Release "" "" ${{ steps.get-ref.outputs.tag }}

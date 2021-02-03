@@ -9,11 +9,22 @@ set -e
 cd "$(dirname "$0")/.."
 source scripts/internal/parse_commandline_args.sh
 source scripts/internal/find_conan.sh
+source scripts/internal/get_conan_profile.sh
 
 parse_commandline_args "${build_type}" "${hypertrie_compiler}" "${compiler_version}"
+
+if ! type "${CC}"; then
+  echo "C compiler ${CC} does not exist."
+fi
+
+if ! type "${CXX}"; then
+  echo "C++ compiler ${CXX} does not exist."
+fi
+
 find_conan
 
-conan_profile="${build_type}_${hypertrie_compiler}-${compiler_version}_hypertrie_profile"
+get_conan_profile
+
 if ! conan profile show "${conan_profile}"; then
   conan user
   conan profile new --detect "${conan_profile}"

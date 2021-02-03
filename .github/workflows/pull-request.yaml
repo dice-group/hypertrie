@@ -31,7 +31,7 @@ jobs:
       - name: Install packages
         run: scripts/install.sh
       - name: Prepare environment
-        run: scripts/prepare.sh
+        run: scripts/prepare.sh Release
       - name: Build
         run: scripts/build.sh Release
       - name: Run tests

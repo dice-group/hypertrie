@@ -38,6 +38,6 @@ jobs:
       - name: Prepare environment
         run: scripts/prepare.sh
       - name: Build
-        run: scripts/build.sh
+        run: scripts/build.sh Release
       - name: Release
         run: scripts/release.sh ${{ steps.get-ref.outputs.tag }}

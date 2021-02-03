@@ -25,8 +25,8 @@ find_conan
 
 get_conan_profile
 
+conan user
 if ! conan profile show "${conan_profile}"; then
-  conan user
   conan profile new --detect "${conan_profile}"
   conan profile update settings.compiler.libcxx=libstdc++11 "${conan_profile}"
   conan profile update env.CXXFLAGS="${CXXFLAGS}" "${conan_profile}"

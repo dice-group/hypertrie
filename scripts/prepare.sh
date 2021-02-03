@@ -33,7 +33,6 @@ if ! conan profile show "${conan_profile}"; then
   conan profile update env.CMAKE_EXE_LINKER_FLAGS="${CMAKE_EXE_LINKER_FLAGS}" "${conan_profile}"
   conan profile update env.CXX="${CXX}" "${conan_profile}"
   conan profile update env.CC="${CC}" "${conan_profile}"
-  conan profile update options.boost:extra_b2_flags="cxxflags=\\\"${CXXFLAGS}\\\"" "${conan_profile}"
 fi
 
 conan remote add -f tsl https://api.bintray.com/conan/tessil/tsl

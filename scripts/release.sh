@@ -1,5 +1,9 @@
 #!/bin/bash
 
+build_type=$1
+hypertrie_compiler=$2
+compiler_version=$3
+
 set -e
 # change to parent dir of this script
 cd "$(dirname "$0")/.."

@@ -38,3 +38,6 @@ jobs:
         run: scripts/build.sh Release
       - name: Release
         run: scripts/release.sh Release "" "" ${{ steps.get-ref.outputs.tag }}
+        env:
+          BINTRAY_API_KEY: ${{ secrets.BINTRAY_API_KEY }}
+          BINTRAY_USER: ${{ secrets.BINTRAY_USER }}

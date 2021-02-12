@@ -15,7 +15,7 @@ namespace einsum::internal {
 	 * operators to communicate during execution.
 	 * It is also responsible for managing timeouts.
 	 */
-    template<typename value_type>
+    template<typename key_part_type>
 	class Context {
 		constexpr static const uint max_counter = 500;
 
@@ -38,7 +38,7 @@ namespace einsum::internal {
 		/*
 		 * Stores for each subscript label its assigned value
 		 */
-        std::map<Label, value_type> mapping{};
+        std::map<Label, key_part_type> mapping{};
 
         /**
         * Passes the labels to be used in the LeftJoinOperator/JoinOperator
@@ -46,7 +46,7 @@ namespace einsum::internal {
         */
         std::map<std::size_t, char> sub_operator_label{};
 
-		Context(TimePoint const &timeout = TimePoint::max()) : timeout(timeout) {}
+		explicit Context(TimePoint const &timeout = TimePoint::max()) : timeout(timeout) {}
 
 		/**
 		 * Checks if the timeout is already reached. This method is intentionally unsynchronized.

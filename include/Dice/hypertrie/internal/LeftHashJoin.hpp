@@ -94,9 +94,14 @@ namespace hypertrie {
                         }
 						original_poss.push_back(pos);
                     } else {
-                        assert(hypertrie.depth() != 0); // TODO: currently not possible
-                        std::get<0>(value).push_back(hypertrie); // this stays unchanged during the iteration
-						joined[pos] = 1;
+						if(hypertrie.depth() > 0) {
+							std::get<0>(value).push_back(hypertrie);// this stays unchanged during the iteration
+							joined[pos] = 1;
+						}
+						else {
+                            std::get<0>(value).push_back(std::nullopt);// this stays unchanged during the iteration
+                            joined[pos] = 0;
+						}
                         pos_in_out.push_back(out_pos++);
                     }
                 }

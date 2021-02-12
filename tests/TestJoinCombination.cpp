@@ -32,11 +32,13 @@ namespace hypertrie::tests::leftjoin {
 		SliceKey<unsigned long> s_key3{std::nullopt, 12, std::nullopt};
 		SliceKey<unsigned long> s_key4{std::nullopt, 13, std::nullopt};
 		SliceKey<unsigned long> s_key5{std::nullopt, 14, std::nullopt};
+        SliceKey<unsigned long> s_key6{std::nullopt, 16, std::nullopt};
 		auto ht1 = std::get<0>(ht[s_key1]);
 		auto ht2 = std::get<0>(ht[s_key2]);
 		auto ht3 = std::get<0>(ht[s_key3]);
 		auto ht4 = std::get<0>(ht[s_key4]);
 		auto ht5 = std::get<0>(ht[s_key5]);
+        auto ht6 = std::get<0>(ht[s_key6]);
 		std::vector<const_Hypertrie<default_bool_Hypertrie_t>> operands{};
 		std::vector<std::vector<char>> operands_labels{};
 		std::vector<std::vector<default_bool_Hypertrie_t::key_part_type>> expected_results;
@@ -641,13 +643,65 @@ namespace hypertrie::tests::leftjoin {
                         {7, default_key_part},
                         {8, default_key_part}
                 };
-                for(auto left_res : expected_results_left) {
+                for(const auto& left_res : expected_results_left) {
                     for(auto right_res : expected_results_right) {
                         auto temp_res = left_res;
                         temp_res.insert(temp_res.end(), right_res.begin(), right_res.end());
                         expected_results.push_back(temp_res);
                     }
                 }
+            }
+            // a,[ab,cd]->abc
+            SECTION("cart_in_opt" , "cartesian in optional with no results") {
+                operands.push_back(ht1);
+                operands.push_back(ht2);
+                operands.push_back(ht6);
+                std::vector<char> op1_labels{'a'};
+                std::vector<char> op2_labels{'a', 'b'};
+                std::vector<char> op3_labels{'c', 'd'};
+                operands_labels.push_back(op1_labels);
+                operands_labels.push_back(opt_begin);
+                operands_labels.push_back(op2_labels);
+                operands_labels.push_back(op3_labels);
+                operands_labels.push_back(opt_end);
+                result_labels.push_back('a');
+                result_labels.push_back('b');
+                expected_results = {
+                        {1, default_key_part},
+                        {2, default_key_part},
+                        {3, default_key_part},
+                        {4, default_key_part},
+                        {5, default_key_part},
+                        {6, default_key_part},
+                        {7, default_key_part},
+                        {8, default_key_part},
+                };
+            }
+            // a,[ab,]->abc
+            SECTION("rank-0" , "rank-0 tensor inside optional") {
+                operands.push_back(ht1);
+                operands.push_back(ht2);
+                operands.emplace_back(const_Hypertrie());
+                std::vector<char> op1_labels{'a'};
+                std::vector<char> op2_labels{'a', 'b'};
+                std::vector<char> op3_labels{};
+                operands_labels.push_back(op1_labels);
+                operands_labels.push_back(opt_begin);
+                operands_labels.push_back(op2_labels);
+                operands_labels.push_back(op3_labels);
+                operands_labels.push_back(opt_end);
+                result_labels.push_back('a');
+                result_labels.push_back('b');
+                expected_results = {
+                        {1, default_key_part},
+                        {2, default_key_part},
+                        {3, default_key_part},
+                        {4, default_key_part},
+                        {5, default_key_part},
+                        {6, default_key_part},
+                        {7, default_key_part},
+                        {8, default_key_part},
+                };
             }
 		}
 		SECTION("no wwd", "not weakly well-designed queries") {
@@ -814,7 +868,7 @@ namespace hypertrie::tests::leftjoin {
         auto subscript = std::make_shared<Subscript>(operands_labels, result_labels);
         auto einsum = Einsum<size_t>(subscript, operands);
         std::vector<std::vector<default_bool_Hypertrie_t::key_part_type>> actual_results{};
-        for(auto entry : einsum) {
+        for(const auto& entry : einsum) {
             for(auto key_part : entry.key)
                 std::cout << key_part << " ";
             std::cout << std::endl;

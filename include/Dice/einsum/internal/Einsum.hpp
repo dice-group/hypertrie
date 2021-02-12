@@ -125,6 +125,11 @@ namespace einsum::internal {
 		void clear() {
 			op->clear();
 		}
+
+        const std::map<Label, value_type>& getMapping() {
+			return context->mapping;
+		}
+
 	};
 
 	template<HypertrieTrait tr_t>

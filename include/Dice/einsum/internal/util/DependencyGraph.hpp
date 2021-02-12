@@ -92,6 +92,21 @@ namespace einsum::internal::util {
 			boost::add_edge(source, target, unlabelled_graph);
 		}
 
+		std::vector<Label> getIncomingLabels(VertexDesc target) {
+			std::vector<Label> incoming_labels{};
+			auto vertices_iterators = boost::vertices(graph);
+            for(auto vertex_iter = vertices_iterators.first; vertex_iter != vertices_iterators.second; vertex_iter++) {
+				if(*vertex_iter == target)
+					continue;
+                auto out_edges_iterators = boost::out_edges(*vertex_iter, graph);
+                for(auto out_edge_iter = out_edges_iterators.first; out_edge_iter != out_edges_iterators.second; out_edge_iter++) {
+					if(target == boost::target(*out_edge_iter, graph))
+						incoming_labels.template emplace_back(graph[*out_edge_iter].label);
+				}
+			}
+			return incoming_labels;
+		}
+
         tsl::hopscotch_set<VertexType> getTransitiveNeighbors(VertexDesc vertex) {
             tsl::hopscotch_set<VertexType> target_vertices{};
 			std::deque<VertexDesc> to_check{vertex};

@@ -152,11 +152,7 @@ namespace einsum::internal {
 
 		tsl::hopscotch_set<Label> lonely_non_result_labels{};
 
-		DependencyGraph dependency_graph{};
-
 		DirectedDependencyGraph directed_dependency_graph{};
-
-		ConnectedComponents connected_components{};
 
 		WeaklyConnectedComponents weakly_connected_components{};
 
@@ -318,7 +314,7 @@ namespace einsum::internal {
 			return true;
 		}
 
-		Subscript(RawSubscript raw_subscript, Type type = Type::None)
+		explicit Subscript(RawSubscript raw_subscript, Type type = Type::None)
 				: raw_subscript(raw_subscript),
 				  operands_label_set(raw_subscript.getOperandsLabelSet()),
 				  result_label_set(raw_subscript.getResultLabelSet()),
@@ -346,7 +342,7 @@ namespace einsum::internal {
 			}
 			// store the positions of the non_optional operands
 			auto independent_strong_components = directed_dependency_graph.getIndependentStrongComponent();
-            for(auto isc : independent_strong_components)
+            for(const auto& isc : independent_strong_components)
 				for(const auto &[vertex, _] : isc.vertices_out_edges_labels)
                     non_optional_operands.push_back(vertex);
 
@@ -371,8 +367,9 @@ namespace einsum::internal {
 					for(const auto& out_label : independent_strong_components[0].outgoing_labels) {
 						left_join_labels.insert(out_label);
                         // store the non-optional operands of each label
-						for(const auto& [op, op_out_labels] : independent_strong_components[0].vertices_out_edges_labels) {
-							if(op_out_labels.find(out_label) != op_out_labels.end()) {
+						for(const auto& [op, _] : independent_strong_components[0].vertices_out_edges_labels) {
+							if(std::find(raw_subscript.operands[op].begin(), raw_subscript.operands[op].end(), out_label)
+								!= raw_subscript.operands[op].end()) {
 								auto& non_opt_ops_of_label = non_optional_operands_of_label[out_label];
 								non_opt_ops_of_label.push_back(op);
 							}
@@ -555,19 +552,12 @@ namespace einsum::internal {
 			return Type::LeftJoin;
 		}
 
-		static DependencyGraph calcDependencyGraph(const RawSubscript &raw_subscript) {
-			DependencyGraph label_dependency_graph{};
-			for (const auto &operand : raw_subscript.operands)
-				label_dependency_graph.addCompleteGraph(operand);
-			return label_dependency_graph;
-		}
-
 		static DirectedDependencyGraph calcDirectedDependencyGraph(const RawSubscript &raw_subscript) {
 			using Depth = uint8_t;
             DirectedDependencyGraph operand_directed_dependency_graph{};
 			// for each label stores the position of the last observed operand at each depth
 			robin_hood::unordered_map<Label, std::map<Depth, OperandPos>> label_depth_operand{};
-			// for each label stores the position of the last observed operand and its depth
+			// for each label stores the position of the last observed operand
 			boost::container::flat_map<Label, OperandPos> last_operand_of_label{};
 			const auto& [opt_begin, opt_end] = raw_subscript.optional_brackets;
             Depth depth{0};
@@ -623,7 +613,8 @@ namespace einsum::internal {
 					label_depth_operand[label][depth] = orig_op_pos;
 					last_operand_of_label[label] = orig_op_pos;
                 }
-				// find weak dependencies. for cartesian
+				// find weak dependencies. for cartesian.
+				// if an operand participates in strong dependencies, propagate them to the current operand
 				if(!strong_dependency) {
 					for (int8_t d = depth; d >= 0; d--) {
 						boost::container::flat_set<OperandPos> operands_at_depth{};
@@ -634,11 +625,22 @@ namespace einsum::internal {
 						}
 						if (operands_at_depth.empty())
 							continue;
-						auto last_pos_of_depth = raw_subscript.poss_in_operands[*operands_at_depth.rbegin()];// set is ordered take its last value
-						operand_directed_dependency_graph.addEdge(last_pos_of_depth, operand_pos);
-						if (d == depth)
-							operand_directed_dependency_graph.addEdge(operand_pos, last_pos_of_depth);
-						break;
+						auto last_pos_of_depth = raw_subscript.poss_in_operands[*operands_at_depth.rbegin()];// set is ordered, take its last value
+						// check if the the operand and last_pos_of_depth participates in strong dependencies
+						auto last_op_of_depth_incoming_labels = operand_directed_dependency_graph.getIncomingLabels(last_pos_of_depth);
+						if(not last_op_of_depth_incoming_labels.empty()) {
+							for(auto label : last_op_of_depth_incoming_labels) {
+								operand_directed_dependency_graph.addEdge(label, last_pos_of_depth, operand_pos);
+								if(d == depth)
+									operand_directed_dependency_graph.addEdge(label, operand_pos, last_pos_of_depth);
+							}
+						}
+						else {
+							operand_directed_dependency_graph.addEdge(last_pos_of_depth, operand_pos);
+							if (d == depth)
+								operand_directed_dependency_graph.addEdge(operand_pos, last_pos_of_depth);
+						}
+                        break;
 					}
 				}
 			}

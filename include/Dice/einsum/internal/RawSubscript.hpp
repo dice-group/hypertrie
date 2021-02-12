@@ -124,7 +124,7 @@ namespace einsum::internal {
 		 * @param raw_subscript the labels of the operands and the labels of the result in a container that supports std::get
 		 */
 		template<template<typename, typename> typename PAIR_t>
-		RawSubscript(const PAIR_t<OperandsSc, ResultSc> &raw_subscript) :
+		explicit RawSubscript(const PAIR_t<OperandsSc, ResultSc> &raw_subscript) :
 				RawSubscript(std::get<0>(raw_subscript), std::get<1>(raw_subscript)) {}
 
 

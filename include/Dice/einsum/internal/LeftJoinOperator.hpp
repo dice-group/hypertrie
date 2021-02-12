@@ -101,6 +101,7 @@ namespace einsum::internal {
                     return;
                 }
 			}
+			this->context->mapping[label] = current_key_part;
             if (is_result_label)
                 this->entry->key[label_pos_in_result] = current_key_part;
 			// this operand already has a result -> we do not need to generate an optional value anymore

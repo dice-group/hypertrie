@@ -126,7 +126,7 @@ namespace einsum::internal {
 			op->clear();
 		}
 
-        const std::map<Label, value_type>& getMapping() {
+        const std::map<Label, key_part_type>& getMapping() {
 			return context->mapping;
 		}
 
@@ -225,6 +225,11 @@ namespace einsum::internal {
 		void clear() {
 			op->clear();
 		}
+
+        const std::map<Label, key_part_type>& getMapping() {
+            return context->mapping;
+        }
+
 	};
 }
 #endif //HYPERTRIE_EINSUM_HPP

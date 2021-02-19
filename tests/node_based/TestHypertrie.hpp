@@ -151,6 +151,30 @@ namespace hypertrie::tests::node_context {
 		WARN((std::string) sliced_hypertrie);
 	}
 
+	TEMPLATE_TEST_CASE("test_depth_0", "[Hypertrie]", lsbunused_bool_Hypertrie_t, default_bool_Hypertrie_t) {
+		using tr = lsbunused_bool_Hypertrie_t;
+		constexpr const size_t depth = 0;
+
+		using Key = tr::Key;
+
+		HypertrieContext<tr> context;
+		Hypertrie<tr> t{depth, context};
+		auto value = t[Key{}];
+		REQUIRE(value == tr::value_type(0));
+		t.set({}, tr::value_type(1));
+
+		value = t[Key{}];
+		REQUIRE(value == tr::value_type(1));
+		WARN((std::string) t);
+
+		t.set({}, tr::value_type(0));
+
+		value = t[Key{}];
+		REQUIRE(value == tr::value_type(0));
+
+		WARN((std::string) t);
+	}
+
 };// namespace hypertrie::tests::node_context
 
 #endif//HYPERTRIE_TESTHYPERTRIE_H

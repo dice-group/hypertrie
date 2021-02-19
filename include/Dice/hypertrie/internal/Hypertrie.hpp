@@ -265,7 +265,7 @@ namespace hypertrie {
 			if (depth() != 0)
 				return iterator{*this};
 			else
-				std::logic_error("Iterator is not yet implemented for depth 0.");
+				throw std::logic_error("Iterator is not yet implemented for depth 0.");
 		}
 
 		[[nodiscard]] const_iterator cbegin() const { return this->begin(); }

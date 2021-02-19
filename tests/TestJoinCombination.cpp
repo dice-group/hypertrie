@@ -704,7 +704,39 @@ namespace hypertrie::tests::leftjoin {
                 };
             }
 		}
-		SECTION("no wwd", "not weakly well-designed queries") {
+		SECTION("left-join_union", "union queries with optional parts") {
+			// a,[ab],[ac]->bc
+			SECTION("lj_union", "one union between optional parts") {
+                operands.push_back(ht1);
+                operands.push_back(ht2);
+                operands.emplace_back(ht3);
+                std::vector<char> op1_labels{'a'};
+                std::vector<char> op2_labels{'a', 'b'};
+                std::vector<char> op3_labels{'a', 'c'};
+                operands_labels.push_back(op1_labels);
+                operands_labels.push_back(opt_begin);
+                operands_labels.push_back(op2_labels);
+                operands_labels.push_back(opt_end);
+                operands_labels.push_back(opt_begin);
+                operands_labels.push_back(op3_labels);
+                operands_labels.push_back(opt_end);
+                result_labels.push_back('b');
+                result_labels.push_back('c');
+                expected_results = {
+                        {3, default_key_part},
+                        {6, default_key_part},
+                        {default_key_part, 8},
+                        {4, default_key_part},
+                        {7, default_key_part},
+                        {default_key_part, 6},
+                        {default_key_part, 5},
+                        {default_key_part, default_key_part},
+                        {default_key_part, default_key_part},
+                        {default_key_part, default_key_part}
+                };
+			}
+		}
+		SECTION("no_wwd", "not weakly well-designed queries") {
             // a,[ab,[bc],cd]->abcd
             SECTION("lj_nlj_j", "nested left join followed by join") {
                 operands.push_back(ht1);
@@ -871,8 +903,11 @@ namespace hypertrie::tests::leftjoin {
         for(const auto& entry : einsum) {
             for(auto key_part : entry.key)
                 std::cout << key_part << " ";
-            std::cout << std::endl;
+            std::cout << "|| ";
+			for(auto val : einsum.getMapping())
+				std::cout << val.second << " ";
             actual_results.push_back(entry.key);
+            std::cout << std::endl;
         }
         std::cout << "---" << std::endl;
         // the subscript will be printed in case of failure

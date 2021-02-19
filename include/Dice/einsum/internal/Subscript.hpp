@@ -28,6 +28,8 @@
 #include <tsl/hopscotch_set.h>
 #include <tsl/hopscotch_map.h>
 
+constexpr bool _union_ = true;
+
 namespace einsum::internal {
 
 	using DependencyGraph = util::UndirectedGraph<Label>;
@@ -54,7 +56,8 @@ namespace einsum::internal {
 	class Subscript {
 	public:
 		enum class Type {
-			None = 0, Join, LeftJoin, RecursiveLeftJoin, JoinSelection, Cartesian, Resolve, Count, EntryGenerator, CarthesianMapping
+			None = 0, Join, LeftJoin, RecursiveLeftJoin, JoinSelection, Cartesian,
+			Union, Resolve, Count, EntryGenerator, CarthesianMapping
 		};
 		using Label = char;
 
@@ -405,6 +408,11 @@ namespace einsum::internal {
 					}
 					break;
 				}
+				case Type::Union: {
+                    label_poss_in_result = raw_subscript.getLabelPossInResult();
+                    cartesian_sub_subscripts = {*this};
+					break;
+				}
 				case Type::Resolve: {
 					label_poss_in_result = raw_subscript.getLabelPossInResult();
 
@@ -528,7 +536,10 @@ namespace einsum::internal {
 					}
                     // more than one WEAKLY connected component means that there is a Cartesian product
 					if (weakly_connected_components.size() > 1) {
-						return Type::Cartesian;
+						if constexpr (not _union_)
+						    return Type::Cartesian;
+						else
+							return Type::Union;
 					}
 					break;
 				}

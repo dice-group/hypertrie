@@ -13,6 +13,7 @@
 #include "Dice/einsum/internal/ResolveOperator.hpp"
 #include "Dice/einsum/internal/CountOperator.hpp"
 #include "Dice/einsum/internal/EntryGeneratorOperator.hpp"
+#include "Dice/einsum/internal/UnionOperator.hpp"
 #include "Dice/einsum/internal/Context.hpp"
 
 namespace einsum::internal {
@@ -36,6 +37,8 @@ namespace einsum::internal {
 				return std::make_shared<CountOperator<value_type, tr>>(subscript, context);
 			case Subscript::Type::Cartesian:
 				return std::make_shared<CartesianOperator<value_type, tr>>(subscript, context);
+			case Subscript::Type::Union:
+				return std::make_shared<UnionOperator<value_type, tr>>(subscript, context);
 			case Subscript::Type::EntryGenerator:
 				return std::make_shared<EntryGeneratorOperator<value_type, tr>>(subscript, context);
 			default:
@@ -85,15 +88,19 @@ namespace einsum::internal {
 		struct iterator {
 		private:
 			std::shared_ptr<Operator_t> op;
+			Context<key_part_type>* ctx;
 			Entry_t *current_entry;
 			bool ended_ = false;
 
 		public:
 			iterator() = default;
 
-			explicit iterator(Einsum &einsum, Entry_t &entry) : op(einsum.op), current_entry{&entry} {}
+			explicit iterator(Einsum &einsum, Entry_t &entry) : op(einsum.op),
+                                                                ctx(einsum.context.get()),
+																current_entry(&entry){}
 
 			iterator &operator++() {
+				ctx->mapping.clear();
 				op->next();
 				return *this;
 			}

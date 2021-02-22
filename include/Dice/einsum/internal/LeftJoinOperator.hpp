@@ -30,7 +30,7 @@ namespace einsum::internal {
         std::vector<hypertrie::pos_type> pos_in_out;
 		// keeps track of the operands that were joined
 		// it is used in order to handle dependencies
-        std::vector<std::size_t> joined;
+        std::vector<bool> joined;
 		// the part of the key that was selected in the join
 		key_part_type current_key_part;
 

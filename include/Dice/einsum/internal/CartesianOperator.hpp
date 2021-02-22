@@ -113,6 +113,10 @@ namespace einsum::internal {
 		inline void load_impl(std::vector<const_Hypertrie<tr>> operands, Entry_t &entry) {
 			if constexpr(_debugeinsum_) fmt::print("Cartesian {}\n", this->subscript);
 			this->entry = &entry;
+			// check for empty depth-0 tensor
+			for(auto &op : operands)
+				if(op.depth() == 0 and op.empty())
+					return;
 			ended_ = false;
 			double max_estimated_size = 0;
 			iterated_pos = 0;

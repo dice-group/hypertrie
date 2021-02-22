@@ -678,7 +678,7 @@ namespace hypertrie::tests::leftjoin {
                 };
             }
             // a,[ab,]->abc
-            SECTION("rank-0" , "rank-0 tensor inside optional") {
+            SECTION("rank-0_opt" , "rank-0 tensor inside optional") {
                 operands.push_back(ht1);
                 operands.push_back(ht2);
                 operands.emplace_back(const_Hypertrie());
@@ -702,6 +702,52 @@ namespace hypertrie::tests::leftjoin {
                         {7, default_key_part},
                         {8, default_key_part},
                 };
+            }
+            // a,,[ab]->abc
+            SECTION("rank-0_non_opt" , "rank-0 tensor outside optional") {
+                operands.push_back(ht1);
+                operands.emplace_back(const_Hypertrie());
+                operands.push_back(ht2);
+                std::vector<char> op1_labels{'a'};
+                std::vector<char> op3_labels{};
+                std::vector<char> op2_labels{'a', 'b'};
+                operands_labels.push_back(op1_labels);
+                operands_labels.push_back(op3_labels);
+                operands_labels.push_back(opt_begin);
+                operands_labels.push_back(op2_labels);
+                operands_labels.push_back(opt_end);
+                result_labels.push_back('a');
+                result_labels.push_back('b');
+                expected_results = {};
+            }
+            // a,,[ab]->abc
+            SECTION("rank-0_non_opt_true" , "rank-0 tensor outside optional holding a true value") {
+                Hypertrie<default_bool_Hypertrie_t> ht_true{0};
+				ht_true.set(Key<unsigned long>(), true);
+                operands.push_back(ht1);
+                operands.emplace_back(ht_true);
+                operands.push_back(ht2);
+                std::vector<char> op1_labels{'a'};
+                std::vector<char> op3_labels{};
+                std::vector<char> op2_labels{'a', 'b'};
+                operands_labels.push_back(op1_labels);
+                operands_labels.push_back(op3_labels);
+                operands_labels.push_back(opt_begin);
+                operands_labels.push_back(op2_labels);
+                operands_labels.push_back(opt_end);
+                result_labels.push_back('a');
+                result_labels.push_back('b');
+                expected_results = {
+                        {1, 3},
+                        {1, 6},
+                        {2, 4},
+                        {3, default_key_part},
+                        {4, default_key_part},
+                        {5, 7},
+                        {6, default_key_part},
+                        {7, default_key_part},
+                        {8, default_key_part}
+				};
             }
 		}
 		SECTION("no wwd", "not weakly well-designed queries") {

@@ -48,7 +48,7 @@ namespace hypertrie {
         private:
             // aliases
             using value_type = std::tuple<std::vector<std::optional<const_Hypertrie<tr>>>,key_part_type,
-										  poss_type, std::vector<std::size_t>>;
+										  poss_type, std::vector<bool>>;
             // members
 			pos_type shortest_op_pos;
             poss_type pos_in_out{};
@@ -57,7 +57,7 @@ namespace hypertrie {
             std::vector<pos_type> ops_non_optional_poss{};
             std::vector<pos_type> result_depths{};
             std::vector<HashDiagonal<tr>> ops{};
-			std::vector<std::size_t> joined{};
+			std::vector<bool> joined{};
 			std::vector<pos_type> original_poss;
             bool ended = false;
             value_type value{};
@@ -94,14 +94,8 @@ namespace hypertrie {
                         }
 						original_poss.push_back(pos);
                     } else {
-						if(hypertrie.depth() > 0) {
-							std::get<0>(value).push_back(hypertrie);// this stays unchanged during the iteration
-							joined[pos] = 1;
-						}
-						else {
-                            std::get<0>(value).push_back(std::nullopt);// this stays unchanged during the iteration
-                            joined[pos] = 0;
-						}
+                        std::get<0>(value).push_back(hypertrie);// this stays unchanged during the iteration
+                        joined[pos] = not hypertrie.empty();
                         pos_in_out.push_back(out_pos++);
                     }
                 }
@@ -122,13 +116,13 @@ namespace hypertrie {
 					for (typename std::vector<tr>::size_type i = 0; i < ops.size(); i++) {
 						// skip shortest operand
 						if(i == shortest_op_pos) {
-							joined[original_poss[i]] = 1;
+							joined[original_poss[i]] = true;
 							continue;
 						}
 						auto &right_operand = ops[i];
 						// if the join was successful save the key of the right operand
 						if (right_operand.find(std::get<1>(value))) {
-							joined[original_poss[i]] = 1;
+							joined[original_poss[i]] = true;
 							if (result_depths[i])
 								std::get<0>(value)[join_ops_in_out[i]] = const_Hypertrie<tr>(right_operand.currentHypertrie());
 						}
@@ -142,7 +136,7 @@ namespace hypertrie {
 							}
 							else if(result_depths[i])
                                     std::get<0>(value)[join_ops_in_out[i]] = std::nullopt;
-                            joined[original_poss[i]] = 0;
+                            joined[original_poss[i]] = false;
 						}
 					}
                     if(found) {

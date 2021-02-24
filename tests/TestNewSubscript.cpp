@@ -1,0 +1,1 @@
+#include <Dice/einsum/internal/new_subscript/Subscript_all.hppc>

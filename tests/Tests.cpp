@@ -13,4 +13,5 @@
 
 #ifdef HYPERTRIE_ENABLE_LIBTORCH
 #include "TestEinsum.cpp"
+#include "TestNewSubscript.cpp"
 #endif

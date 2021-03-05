@@ -179,6 +179,8 @@ namespace einsum::internal {
         tsl::hopscotch_map<OperandPos, tsl::hopscotch_set<OperandPos>> dependent_operands;
 		// All
 		std::vector<OperandPos> non_optional_operands{};
+		// All
+		tsl::hopscotch_set<Label> non_optional_labels{};
 		// Recursive Left Join
         boost::container::flat_set<Label> wwd_labels{};
 
@@ -207,6 +209,10 @@ namespace einsum::internal {
 
 		const tsl::hopscotch_set<Label> &getOperandsLabelSet() const {
 			return operands_label_set;
+		}
+
+		const tsl::hopscotch_set<Label> &getNonOptionalLabelSet() const {
+			return non_optional_labels;
 		}
 
 		const tsl::hopscotch_set<Label> &getResultLabelSet() const {
@@ -343,11 +349,15 @@ namespace einsum::internal {
 					}
 				}
 			}
-			// store the positions of the non_optional operands
+			// store the positions of the non_optional operands and their labels
 			auto independent_strong_components = directed_dependency_graph.getIndependentStrongComponent();
-            for(const auto& isc : independent_strong_components)
-				for(const auto &[vertex, _] : isc.vertices_out_edges_labels)
-                    non_optional_operands.push_back(vertex);
+            for (const auto& isc : independent_strong_components) {
+				for (const auto &[vertex, labels] : isc.vertices_out_edges_labels) {
+					non_optional_operands.push_back(vertex);
+					for (auto label : labels)
+						non_optional_labels.insert(label);
+				}
+			}
 
 			switch (this->type) {
 				case Type::RecursiveLeftJoin: {

@@ -22,7 +22,7 @@ namespace einsum::internal {
 		static Label getMinCardLabel(const std::vector<const_Hypertrie<tr>> &operands,
 		                             const std::shared_ptr<Subscript> &sc,
 		                             [[maybe_unused]] std::shared_ptr<Context<key_part_type>> context) {
-			const tsl::hopscotch_set <Label> &operandsLabelSet = sc->getOperandsLabelSet();
+			const tsl::hopscotch_set <Label> &operandsLabelSet = sc->getNonOptionalLabelSet();
 			const tsl::hopscotch_set <Label> &lonely_non_result_labels = sc->getLonelyNonResultLabelSet();
 			if (operandsLabelSet.size() == 1) {
 				return *operandsLabelSet.begin();

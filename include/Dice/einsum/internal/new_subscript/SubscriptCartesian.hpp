@@ -4,6 +4,9 @@
 
 
 namespace einsum::internal::new_subscript {
+	/**
+	 * Example: xy,z->xz
+	 */
 	class SubscriptCartesian : public Subscript {
 	protected:
 		std::list<std::shared_ptr<Subscript>> cartesian_operands;

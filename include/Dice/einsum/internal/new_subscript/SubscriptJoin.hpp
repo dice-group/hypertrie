@@ -3,6 +3,9 @@
 #include "Dice/einsum/internal/new_subscript/Subscript.hpp"
 
 namespace einsum::internal::new_subscript {
+	/**
+	 * Example: xy,yz->yz
+	 */
 	class SubscriptJoin : public Subscript {
 	protected:
 		std::list<std::shared_ptr<Subscript>> join_operands;

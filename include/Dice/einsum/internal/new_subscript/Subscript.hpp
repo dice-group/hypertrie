@@ -13,6 +13,10 @@ namespace einsum::internal::new_subscript {
 	class SubscriptOperand;
 	class SubscriptUnion;
 
+	/**
+	 * Bag-Semantics: xy,yz,f->x
+	 * Set-Semantics: xy,yz,f-->x
+	 */
 	class Subscript {
 	protected:
 		bool distinct_result;

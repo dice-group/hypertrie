@@ -562,10 +562,20 @@ namespace einsum::internal {
 				return Type::Join;
 			// outgoing and component labels
 			else if(not ind_strong_comp.component_labels.empty()) {
-				// label that participates in join and left-join -> JoinSelection
+                // if all component labels are outgoing labels as well -> LeftJoin
+                bool left_join = true;
                 for(auto& c_label : ind_strong_comp.component_labels)
-					if(ind_strong_comp.outgoing_labels.find(c_label) != ind_strong_comp.outgoing_labels.end())
+					if(ind_strong_comp.outgoing_labels.find(c_label) == ind_strong_comp.outgoing_labels.end()) {
+						left_join = false;
+						break;
+					}
+				if(left_join)
+					return Type::LeftJoin;
+                // label that participates in join and left-join -> JoinSelection
+                for(auto& c_label : ind_strong_comp.component_labels)
+					if(ind_strong_comp.outgoing_labels.find(c_label) != ind_strong_comp.outgoing_labels.end() and not left_join)
 					    return Type::JoinSelection;
+
 				// there is no label that participates in join and left-join -> Join first
 				return Type::Join;
 			}

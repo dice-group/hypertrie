@@ -677,7 +677,7 @@ namespace hypertrie::tests::leftjoin {
                         {8, default_key_part},
                 };
             }
-            // a,[ab,]->abc
+            // a,[ab,]->ab
             SECTION("rank-0_opt" , "rank-0 tensor inside optional") {
                 operands.push_back(ht1);
                 operands.push_back(ht2);
@@ -949,9 +949,6 @@ namespace hypertrie::tests::leftjoin {
         for(const auto& entry : einsum) {
             for(auto key_part : entry.key)
                 std::cout << key_part << " ";
-            std::cout << "|| ";
-			for(auto val : einsum.getMapping())
-				std::cout << val.second << " ";
             actual_results.push_back(entry.key);
             std::cout << std::endl;
         }

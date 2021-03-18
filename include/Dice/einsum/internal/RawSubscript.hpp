@@ -109,7 +109,7 @@ namespace einsum::internal {
                 original_operands.push_back(operand);
                 op_pos++;
 			}
-			this->hash = boost::hash_value(original_operands) + boost::hash_value(result);
+			this->hash = Dice::hash::dice_hash(std::make_tuple(original_operands, result));
 		}
 
 		/**
@@ -240,7 +240,7 @@ namespace einsum::internal {
         /**
          * Create a new RawSubscript without the given labels. removes labels from the result as well
          * @param labels the labels to remove
-         * @return a new RawSubscript equal to this but without the given operands.
+         * @return a new RawSubscript equal to this but without the given label.
          */
         [[nodiscard]] auto removeLabels(const tsl::hopscotch_set<Label>& labels, std::vector<OperandPos>& non_opt_poss) const noexcept {
             OperandsSc next_operands{};
@@ -249,6 +249,7 @@ namespace einsum::internal {
                 for (auto current_label: operand)
                     if (labels.find(current_label) == labels.end() or
 						std::find(non_opt_poss.begin(), non_opt_poss.end(), poss_in_operands[pos]) == non_opt_poss.end())
+//                    if (labels.find(current_label) == labels.end())
                         new_operand.push_back(current_label);
                 if (not new_operand.empty()) {
                     next_operands.push_back(std::move(new_operand));

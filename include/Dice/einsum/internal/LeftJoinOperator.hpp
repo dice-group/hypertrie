@@ -181,9 +181,10 @@ namespace einsum::internal {
 				if(bitstring[op_pos])
                     next_operands.push_back(op.value());
 			// check if the subscript has already been created; otherwise construct a new sub_operator
-			if(sub_operator_cache.contains(bitstring))
-				sub_operator = sub_operator_cache[bitstring];
-			else {
+			try {
+				sub_operator = sub_operator_cache.at(bitstring);
+			}
+			catch (std::out_of_range &e){
 				// populate next operands labels
 				for (const auto &[orig_op_pos, op_labels] : iter::enumerate(original_operands_labels)) {
 					if (op_labels == opt_begin || op_labels == opt_end) {

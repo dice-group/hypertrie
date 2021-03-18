@@ -33,7 +33,7 @@ namespace einsum::internal {
 			const auto &operand_key = *self.operand_iter;
 			for (auto i : iter::range(operand_key.size())) {
                 // store the value of the label (needed for recursive left join)
-                self.context->mapping[self.subscript->getRawSubscript().result[i]] = operand_key[i];
+                self.context->mapping[self.subscript->getRawSubscript().result[self.label_pos_in_result[i]]] = operand_key[i];
 				self.entry->key[self.label_pos_in_result[i]] = operand_key[i];
 			}
 			if constexpr (bool_value_type) {
@@ -77,7 +77,7 @@ namespace einsum::internal {
 				const auto &operand_key = *this->operand_iter;
 				for (auto i : iter::range(operand_key.size())) {
                     // store the value of the label (needed for recursive left join)
-                    this->context->mapping[this->subscript->getRawSubscript().result[i]] = operand_key[i];
+                    this->context->mapping[this->subscript->getRawSubscript().result[this->label_pos_in_result[i]]] = operand_key[i];
 					this->entry->key[this->label_pos_in_result[i]] = operand_key[i];
 				}
 			}

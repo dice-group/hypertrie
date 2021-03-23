@@ -52,13 +52,13 @@ namespace einsum::internal {
 											  self.sub_entries[sub_op_pos]);
 				while(self.sub_op_iter != self.sub_operators.cend() and self.sub_op_iter->get()->ended()) {
 					self.sub_op_iter++;
+                    if(self.sub_op_iter == self.sub_operators.cend()) {
+                        self.ended_ = true;
+                        return;
+                    }
 					sub_op_pos++;
                     self.sub_op_iter->get()->load(std::move(self.extractOperands(sub_op_pos, self.operands)),
                                                   self.sub_entries[sub_op_pos]);
-				}
-				if(self.sub_op_iter == self.sub_operators.cend()) {
-					self.ended_ = true;
-					return;
 				}
 			}
             // updated entry with the sub_entry of the active sub_operator

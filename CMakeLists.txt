@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 3.13)
 project(hypertrie VERSION 0.6.0)
 set(CMAKE_CXX_STANDARD 20)
 
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/version.hpp.in ${CMAKE_CURRENT_SOURCE_DIR}/include/Dice/hypertrie/hypertrie_version.hpp)
+
+
 include(${CMAKE_BINARY_DIR}/conan_paths.cmake)
 
 if (NOT EXISTS ${CMAKE_BINARY_DIR}/CMakeCache.txt)

@@ -1,12 +1,15 @@
 #ifndef HYPERTRIE_HPP
 #define HYPERTRIE_HPP
 
+#include "Dice/hypertrie/hypertrie_version.hpp"
+
 #include "Dice/hypertrie/internal/Hypertrie.hpp"
 #include "Dice/hypertrie/internal/HashJoin.hpp"
 #include "Dice/hypertrie/internal/BulkInserter.hpp"
 #include "Dice/einsum/internal/Einsum.hpp"
 
 namespace hypertrie {
+	using namespace Dice::hypertrie;
 	using Subscript =  einsum::internal::Subscript;
 	using RawSubscript = einsum::internal::RawSubscript;
 

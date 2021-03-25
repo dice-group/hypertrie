@@ -35,8 +35,7 @@ if ! conan profile show "${conan_profile}"; then
   conan profile update env.CC="${CC}" "${conan_profile}"
 fi
 
-conan remote add -f tsl https://api.bintray.com/conan/tessil/tsl
-conan remote add -f dice-group https://api.bintray.com/conan/dice-group/tentris
+conan remote add -f dice-group https://conan.dice-research.org/artifactory/api/conan/tentris
 
 # install libtorch
 if [ ! -d libtorch ]; then

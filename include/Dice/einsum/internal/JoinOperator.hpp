@@ -2,16 +2,16 @@
 #define HYPERTRIE_JOINOPERATOR_HPP
 
 #include "Dice/einsum/internal/Operator.hpp"
+#include <Dice/hypertrie/internal/HashJoin.hpp>
 
 namespace einsum::internal {
 
-	template<typename value_type, typename key_part_type, template<typename, typename> class map_type,
-			template<typename> class set_type>
-	class JoinOperator : public Operator<value_type, key_part_type, map_type, set_type> {
+	template<typename value_type, HypertrieTrait tr_t>
+	class JoinOperator : public Operator<value_type, tr_t> {
 #include "Dice/einsum/internal/OperatorMemberTypealiases.hpp"
 
-		using Join_t = Join<key_part_type, map_type, set_type>;
-		using JoinOperator_t = JoinOperator<value_type, key_part_type, map_type, set_type>;
+		using Join_t = hypertrie::HashJoin<tr>;
+		using JoinOperator_t = JoinOperator<value_type, tr>;
 
 		Join_t join;
 		typename Join_t::iterator join_iter;
@@ -56,12 +56,12 @@ namespace einsum::internal {
 			while (sub_operator->ended()) {
 				++join_iter;
 				if (join_iter and not this->context->hasTimedOut()) {
-					std::vector<const_BoolHypertrie_t> next_operands;
+					std::vector<const_Hypertrie<tr>> next_operands;
 					std::tie(next_operands, current_key_part) = *join_iter;
 					sub_operator->load(std::move(next_operands), *this->entry);
 				} else {
 					ended_ = true;
-					break;
+					return;
 				}
 			}
 			if (is_result_label)
@@ -77,17 +77,24 @@ namespace einsum::internal {
 			return self.ended_ or self.context->hasTimedOut();
 		}
 
+		static void clear(void *self_raw) {
+			return static_cast<JoinOperator_t *>(self_raw)->clear_impl();
+		}
+
 		static void
-		load(void *self_raw, std::vector<const_BoolHypertrie_t> operands, Entry <key_part_type, value_type> &entry) {
+		load(void *self_raw, std::vector<const_Hypertrie<tr>> operands, Entry_t &entry) {
 			static_cast<JoinOperator *>(self_raw)->load_impl(std::move(operands), entry);
 		}
 
-		static std::size_t hash(const void *self_raw) {
-			return static_cast<const JoinOperator *>(self_raw)->subscript->hash();
+	private:
+		inline void clear_impl(){
+			if (this->sub_operator)
+				this->sub_operator->clear();
+			this->join = {};
+			this->join_iter = {};
 		}
 
-	private:
-		inline void load_impl(std::vector<const_BoolHypertrie_t> operands, Entry <key_part_type, value_type> &entry) {
+		inline void load_impl(std::vector<const_Hypertrie<tr>> operands, Entry_t &entry) {
 			if constexpr (_debugeinsum_) fmt::print("Join {}\n", this->subscript);
 
 			this->entry = &entry;
@@ -111,7 +118,7 @@ namespace einsum::internal {
 			join_iter = join.begin();
 			// check if join has entries
 			if (join_iter) {
-				std::vector<const_BoolHypertrie_t> next_operands;
+				std::vector<const_Hypertrie<tr>> next_operands;
 				std::tie(next_operands, current_key_part) = *join_iter;
 				// initialize the next sub_operator
 				sub_operator->load(std::move(next_operands), *this->entry);
@@ -120,7 +127,6 @@ namespace einsum::internal {
 				this->ended_ = true;
 			}
 		}
-
 	};
 }
 #endif //HYPERTRIE_JOINOPERATOR_HPP

@@ -8,10 +8,8 @@
 namespace einsum::internal {
 
 
-	template<typename key_part_type, template<typename, typename> class map_type,
-			template<typename> class set_type>
+	template<HypertrieTrait tr>
 	struct CardinalityEstimation {
-		using const_BoolHypertrie_t = const_BoolHypertrie<key_part_type, map_type, set_type>;
 
 		/**
 		 *
@@ -20,9 +18,9 @@ namespace einsum::internal {
 		 * @param sc
 		 * @return
 		 */
-		static Label getMinCardLabel(const std::vector<const_BoolHypertrie_t> &operands,
+		static Label getMinCardLabel(const std::vector<const_Hypertrie<tr>> &operands,
 		                             const std::shared_ptr<Subscript> &sc,
-		                             std::shared_ptr<Context> context) {
+		                             [[maybe_unused]] std::shared_ptr<Context> context) {
 			const tsl::hopscotch_set <Label> &operandsLabelSet = sc->getOperandsLabelSet();
 			const tsl::hopscotch_set <Label> &lonely_non_result_labels = sc->getLonelyNonResultLabelSet();
 			if (operandsLabelSet.size() == 1) {
@@ -44,6 +42,37 @@ namespace einsum::internal {
 			}
 		}
 
+
+		static double estimate(
+				const std::vector<const_Hypertrie<tr>> &operands,
+				const std::shared_ptr<Subscript> &sc,
+				[[maybe_unused]] std::shared_ptr<Context> context) {
+			const tsl::hopscotch_set<Label> &operandsLabelSet = sc->getOperandsLabelSet();
+			const tsl::hopscotch_set<Label> &lonely_non_result_labels = sc->getLonelyNonResultLabelSet();
+			std::vector<double> operand_sizes(operands.size());
+			for (auto [size, operand] : iter::zip(operand_sizes, operands))
+				size = operand.size();
+
+			std::vector<double> label_factors;
+			for (const Label label :
+				 iter::filterfalse([&](auto label) { return lonely_non_result_labels.count(label); },
+							 operandsLabelSet))
+				label_factors.push_back(calcCard(operands, label, sc));
+
+			double card = 1;
+			bool order = operand_sizes.size() < label_factors.size();
+			auto &shorter_vec = order ? operand_sizes : label_factors;
+			auto &longer_vec = order ? label_factors : operand_sizes;
+
+			for (const auto &[shorter_val, longer_val] : iter::zip(shorter_vec, longer_vec))
+				card *= (shorter_val * longer_val);
+
+			for (const auto &longer_val : iter::slice(longer_vec, shorter_vec.size(), longer_vec.size()))
+				card *= longer_val;
+
+			return card;
+		}
+
 	protected:
 		/**
 		 * Calculates the cardinality of an Label in an Step.
@@ -53,7 +82,7 @@ namespace einsum::internal {
 		 * @param label the label
 		 * @return label's cardinality in current step.
 		 */
-		static double calcCard(const std::vector<const_BoolHypertrie_t> &operands, const Label label,
+		static double calcCard(const std::vector<const_Hypertrie<tr>> &operands, const Label label,
 		                       const std::shared_ptr<Subscript> &sc) {
 			// get operands that have the label
 			const std::vector<LabelPos> &op_poss = sc->getPossOfOperandsWithLabel(label);
@@ -74,20 +103,11 @@ namespace einsum::internal {
 					sizes.insert(op_dim_card);
 
 				label_count += op_dim_cards.size();
-				// update minimal dimenension cardinality
+				// update minimal dimension cardinality
 				if (min_op_dim_card < min_dim_card)
 					min_dim_card = min_op_dim_card;
 
 				op_dim_cardinalities[i] = double(max_op_dim_card); //
-			}
-
-			std::size_t max_op_size = 0;
-			std::vector<std::size_t> op_sizes{};
-			for (auto op_pos : op_poss) {
-				auto current_op_size = operands[op_pos].size();
-				op_sizes.push_back(current_op_size);
-				if (current_op_size > max_op_size)
-					max_op_size = current_op_size;
 			}
 
 			auto const min_dim_card_d = double(min_dim_card);

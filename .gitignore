@@ -1,3 +1,5 @@
+/include/Dice/hypertrie/hypertrie_version.hpp
+
 # Prerequisites
 *.d
 
@@ -37,3 +39,4 @@ cmake-build*/
 # intellij
 .idea/
 venv/
+/build/

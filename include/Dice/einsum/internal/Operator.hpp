@@ -3,8 +3,8 @@
 
 #include <memory>
 #include <utility>
-#include "Dice/einsum/internal/Subscript.hpp"
 #include "Dice/einsum/internal/Entry.hpp"
+#include "Dice/einsum/internal/Subscript.hpp"
 #include "Dice/einsum/internal/Context.hpp"
 #include "Dice/einsum/internal/CardinalityEstimation.hpp"
 
@@ -13,24 +13,24 @@ namespace einsum::internal {
 	class Context;
 
 
-	template<typename value_type, typename key_part_type, template<typename, typename> class map_type,
-			template<typename> class set_type>
+	template<typename value_type, HypertrieTrait tr_t>
 	class Operator {
-	protected:
+	public:
+		using tr = tr_t;
+		// TODO: check if we still need all of that
 		constexpr static const bool bool_value_type = std::is_same_v<value_type, bool>;
-		using const_BoolHypertrie_t = const_BoolHypertrie<key_part_type, map_type, set_type>;
-		typedef Operator<value_type, key_part_type, map_type, set_type> Operator_t;
-		using CardinalityEstimation_t = CardinalityEstimation<key_part_type, map_type, set_type>;
+		typedef Operator<value_type, tr> Operator_t;
+		using CardinalityEstimation_t = CardinalityEstimation<tr>;
+		using key_part_type = typename tr::key_part_type;
 		static constexpr key_part_type default_key_part = []() {
 			if constexpr (std::is_pointer_v<key_part_type>) return nullptr;
 			else return std::numeric_limits<key_part_type>::max();
 		}();
-	public:
 		mutable Subscript::Type type = Subscript::Type::None;
 	protected:
 		std::shared_ptr<Subscript> subscript;
 		std::shared_ptr<Context> context;
-		Entry <key_part_type, value_type> *entry;
+		Entry <value_type, tr> *entry;
 
 		/**
 		 * Pointer to the next Function of the operator implementation.
@@ -51,10 +51,10 @@ namespace einsum::internal {
 		 * @param self actual operator instance
 		 * @param operands operands to be loaded
 		 */
-		void (*load_fp)(void *self, std::vector<const_BoolHypertrie<key_part_type, map_type, set_type>> operands,
-						Entry<key_part_type, value_type> &entry);
+		void (*load_fp)(void *self, std::vector<const_Hypertrie<tr>> operands,
+						Entry<value_type, tr> &entry);
 
-		std::size_t (*hash_fp)(const void *self);
+		void (*clear_fp)(void *self);
 
 	protected:
 		template<typename T>
@@ -68,7 +68,7 @@ namespace einsum::internal {
 				  next_fp(&T::next),
 				  ended_fp(&T::ended),
 				  load_fp(&T::load),
-				  hash_fp(&T::hash) {}
+				  clear_fp(&T::clear){}
 
 	public:
 
@@ -114,15 +114,18 @@ namespace einsum::internal {
 
 		bool end() { return false; }
 
-		void load(std::vector<const_BoolHypertrie<key_part_type, map_type, set_type>> operands,
-				  Entry<key_part_type, value_type> &entry) {
+		void load(std::vector<const_Hypertrie<tr>> operands,
+				  Entry<value_type, tr> &entry) {
 			load_fp(this, std::move(operands), entry);
 		}
 
-		std::size_t hash() const { return hash_fp(this); }
+		std::size_t hash() const { return subscript->hash(); }
+
+		void clear() { clear_fp(this); }
 
 		bool operator!=(const Operator &other) const { return hash() != other.hash(); };
 
+		const std::shared_ptr<Subscript> &getSubscript() { return this->subscript; }
 	};
 
 

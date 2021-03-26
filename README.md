@@ -1,14 +1,17 @@
 # hypertrie
-A flexible data structure for low-rank, sparse tensors supporting slices by any dimension and einstein summation (einsum)
+A flexible data structure for low-rank, sparse tensors supporting slices by any dimension and einstein summation (einsum). 
+
+For details on the data structure refer to https://tentris.dice-research.org/
+
 
 ## build
 ### prerequisites
 
-install conan, cmake (3.13+) and a C++17 compiler. The steps below are tested for gcc/g++ 8 and 9.
+install conan, cmake and a C++20 compiler. The steps below are tested for gcc 10, clang 10 and clang 11.
 
-add conan remotes
+Add dice-hash remote to conan 
 ```shell script
-conan remote add tsl https://api.bintray.com/conan/tessil/tsl && conan remote add public-conan https://api.bintray.com/conan/bincrafters/public-conan && conan remote add stiffstream https://api.bintray.com/conan/stiffstream/public
+conan remote add dice-group https://conan.dice-research.org/artifactory/api/conan/tentris
 ```
 and create a conan profile
  ```shell script

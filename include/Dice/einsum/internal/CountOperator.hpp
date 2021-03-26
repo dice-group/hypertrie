@@ -5,12 +5,11 @@
 
 namespace einsum::internal {
 
-	template<typename value_type, typename key_part_type, template<typename, typename> class map_type,
-			template<typename> class set_type>
-	class CountOperator : public Operator<value_type, key_part_type, map_type, set_type> {
+	template<typename value_type, HypertrieTrait tr_t>
+	class CountOperator : public Operator<value_type, tr_t> {
 #include "Dice/einsum/internal/OperatorMemberTypealiases.hpp"
 
-		using CountOperator_t = CountOperator<value_type, key_part_type, map_type, set_type>;
+		using CountOperator_t = CountOperator<value_type, tr>;
 		bool _ended;
 	public:
 		CountOperator(const std::shared_ptr<Subscript> &subscript, const std::shared_ptr<Context> &context)
@@ -28,26 +27,25 @@ namespace einsum::internal {
 			return self._ended;
 		}
 
+		static void clear([[maybe_unused]]void *self_raw) {
+			//
+		}
+
 		static void
-		load(void *self_raw, std::vector<const_BoolHypertrie_t> operands, Entry <key_part_type, value_type> &entry) {
+		load(void *self_raw, std::vector<const_Hypertrie<tr>> operands, Entry_t &entry) {
 			static_cast<CountOperator *>(self_raw)->load_impl(operands, entry);
 		}
 
-		static std::size_t hash(const void *self_raw) {
-			return static_cast<const CountOperator *>(self_raw)->subscript->hash();
-		}
-
 	private:
-		inline void load_impl(std::vector<const_BoolHypertrie_t> operands, Entry <key_part_type, value_type> &entry) {
+		inline void load_impl(std::vector<const_Hypertrie<tr>> operands, Entry_t &entry) {
 			this->entry = &entry;
-			assert(operands.size() == 1); // only one operand must be left to be resolved
-			this->entry->value = operands[0].size();
-			_ended = not this->entry->value;
-			if (not ended(this))
-				for (auto &key_part : entry.key)
-					key_part = std::numeric_limits<key_part_type>::max();
+			assert(operands.size() == 1);// only one operand must be left to be resolved
+			_ended = operands[0].empty();
+			if (not ended(this)) {
+				entry.clear(default_key_part);
+				this->entry->value = operands[0].size();
+			}
 		}
-
 	};
 }
 #endif //HYPERTRIE_COUNTOPERATOR_HPP

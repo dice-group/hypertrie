@@ -3,7 +3,7 @@
 
 #include <vector>
 #include <tuple>
-#include <boost/container_hash/hash.hpp>
+#include <Dice/hash/DiceHash.hpp>
 #include <tsl/hopscotch_set.h>
 #include <tsl/hopscotch_map.h>
 #include <itertools.hpp>
@@ -85,7 +85,7 @@ namespace einsum::internal {
 		 */
 		RawSubscript(const OperandsSc &operands, const ResultSc &result) :
 				operands(operands), result(result),
-				hash(boost::hash_value(operands) + boost::hash_value(result)) {}
+                hash(Dice::hash::dice_hash(std::make_tuple(operands, result))) {}
 
 		/**
 		 * Constructs a RawSubscript.

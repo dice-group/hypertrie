@@ -11,7 +11,7 @@ namespace hypertrie::internal::util::sort_permutation {
 
 	using SortPermutation = std::vector<std::size_t>;
 
-	SortPermutation getDefault(size_t n) {
+	inline SortPermutation getDefault(size_t n) {
 		SortPermutation permutation(n);
 		std::iota(permutation.begin(), permutation.end(), 0);
 		return permutation;

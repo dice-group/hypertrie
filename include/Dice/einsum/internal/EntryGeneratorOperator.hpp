@@ -5,11 +5,10 @@
 
 namespace einsum::internal {
 
-	template<typename value_type, typename key_part_type, template<typename, typename> class map_type,
-			template<typename> class set_type>
-	class EntryGeneratorOperator : public Operator<value_type, key_part_type, map_type, set_type> {
+	template<typename value_type, HypertrieTrait tr_t>
+	class EntryGeneratorOperator : public Operator<value_type, tr_t> {
 #include "Dice/einsum/internal/OperatorMemberTypealiases.hpp"
-		using EntryGeneratorOperator_t = EntryGeneratorOperator<value_type, key_part_type, map_type, set_type>;
+		using EntryGeneratorOperator_t = EntryGeneratorOperator<value_type, tr>;
 
 		bool _ended = true;
 
@@ -28,25 +27,23 @@ namespace einsum::internal {
 			return static_cast<const EntryGeneratorOperator *>(self_raw)->_ended;
 		}
 
-		static void load(void *self_raw, std::vector<const_BoolHypertrie_t> operands, Entry<key_part_type, value_type> &entry) {
+		static void clear([[maybe_unused]]void *self_raw) {
+			//
+		}
+
+		static void load(void *self_raw, std::vector<const_Hypertrie<tr>> operands, Entry_t &entry) {
 			static_cast<EntryGeneratorOperator *>(self_raw)->load_impl(std::move(operands), entry);
 		}
 
-		static std::size_t hash(const void *self_raw) {
-			return static_cast<const EntryGeneratorOperator *>(self_raw)->subscript->hash();
-		}
-
 	private:
-		inline void load_impl([[maybe_unused]]std::vector<const_BoolHypertrie_t> operands,
-							  Entry <key_part_type, value_type> &entry) {
+		inline void load_impl([[maybe_unused]]std::vector<const_Hypertrie<tr>> operands,
+							  Entry_t &entry) {
+			assert(operands.size() == 0); // no operand must be left
 			if constexpr(_debugeinsum_) fmt::print("EntryGen {}\n", this->subscript);
 			this->entry = &entry;
-			this->entry->value = value_type(1);
-			assert(operands.size() == 0); // no operand must be left
 			_ended = false;
-			if (not _ended)
-				for (auto &key_part : entry.key)
-					key_part = default_key_part;
+			this->entry->clear(default_key_part);
+			this->entry->value = value_type(1);
 		}
 	};
 }

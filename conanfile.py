@@ -16,8 +16,8 @@ class Hypertrie(ConanFile):
     requires = (
         "boost/1.75.0",
         "fmt/7.1.3",
-        "tsl-hopscotch-map/2.3.0@tessil/stable",
-        "tsl-sparse-map/0.6.2@tessil/stable",
+        "tsl-hopscotch-map/2.3.0",
+        "tsl-sparse-map/0.6.2",
         "robin-hood-hashing/3.9.1",
         "dice-hash/0.1.0@dice-group/stable"
     )

@@ -1,0 +1,12 @@
+#ifndef HYPERTRIE_VERSION_HPP
+#define HYPERTRIE_VERSION_HPP
+
+#include <array>
+
+namespace Dice::hypertrie {
+	inline constexpr const char name[] = "@PROJECT_NAME@";
+	inline constexpr const char version[] = "@hypertrie_VERSION@";
+	inline constexpr std::array<int, 3> version_tuple = {@hypertrie_VERSION_MAJOR@, @hypertrie_VERSION_MINOR@, @hypertrie_VERSION_PATCH@};
+}// namespace Dice::hypertrie
+
+#endif//HYPERTRIE_VERSION_HPP

@@ -86,7 +86,7 @@ namespace einsum::internal {
         }
 
         void find_next_valid() {
-			while(sub_operator->ended() and !generate_optional_value and left_join_iterator) {
+			while(sub_operator->ended() and not generate_optional_value and left_join_iterator) {
                 ++left_join_iterator;
                 if (left_join_iterator and not this->context->hasTimedOut()) {
 					// clear entry: since in each iteration we use different sub_operators, some keys of the entry will stay the same
@@ -101,9 +101,10 @@ namespace einsum::internal {
                     return;
                 }
 			}
-			this->context->mapping[label] = current_key_part;
             if (is_result_label)
                 this->entry->key[label_pos_in_result] = current_key_part;
+			if (this->entry->value == 0 and generate_optional_value)
+				this->entry->value = 1;
 			// this operand already has a result -> we do not need to generate an optional value anymore
 			generate_optional_value = false;
 

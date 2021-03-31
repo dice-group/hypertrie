@@ -946,13 +946,9 @@ namespace hypertrie::tests::leftjoin {
         auto subscript = std::make_shared<Subscript>(operands_labels, result_labels);
         auto einsum = Einsum<size_t>(subscript, operands);
         std::vector<std::vector<default_bool_Hypertrie_t::key_part_type>> actual_results{};
-        for(const auto& entry : einsum) {
-            for(auto key_part : entry.key)
-                std::cout << key_part << " ";
-            actual_results.push_back(entry.key);
-            std::cout << std::endl;
-        }
-        std::cout << "---" << std::endl;
+        for(const auto& entry : einsum)
+            for(std::size_t i = 0; i < entry.value; i++)
+                actual_results.push_back(entry.key);
         // the subscript will be printed in case of failure
         CAPTURE(subscript->to_string());
         // check first that the size of the results is equal to the size of the expected results

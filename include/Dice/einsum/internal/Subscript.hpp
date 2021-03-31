@@ -28,7 +28,8 @@
 #include <tsl/hopscotch_set.h>
 #include <tsl/hopscotch_map.h>
 
-constexpr bool _union_ = true;
+constexpr bool _union_ = false;
+constexpr bool _rek_ = false;
 
 namespace einsum::internal {
 
@@ -560,8 +561,10 @@ namespace einsum::internal {
 			// no outgoing labels -> only one strong component -> join
 			if(ind_strong_comp.outgoing_labels.empty())
 				return Type::Join;
+			if constexpr (_rek_)
+				return Type::RecursiveLeftJoin;
 			// outgoing and component labels
-			else if(not ind_strong_comp.component_labels.empty()) {
+			if(not ind_strong_comp.component_labels.empty()) {
                 // if all component labels are outgoing labels as well -> LeftJoin
                 bool left_join = true;
                 for(auto& c_label : ind_strong_comp.component_labels)

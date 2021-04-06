@@ -238,18 +238,24 @@ namespace einsum::internal {
 		}
 
         /**
-         * Create a new RawSubscript without the given labels. removes labels from the result as well
+         * Create a new RawSubscript by removing the provided labels from the provided operands.
+         * Removes labels from the result as well.
          * @param labels the labels to remove
+         * @param non_opt_poss the positions of the operands from which the labels will be removed
          * @return a new RawSubscript equal to this but without the given label.
          */
-        [[nodiscard]] auto removeLabels(const tsl::hopscotch_set<Label>& labels, std::vector<OperandPos>& non_opt_poss) const noexcept {
+        [[nodiscard]] auto slice(const tsl::hopscotch_set<Label>& labels,
+								 const std::vector<OperandPos>& non_opt_poss) const noexcept {
             OperandsSc next_operands{};
             for (const auto &[pos, operand]: iter::enumerate(original_operands)) {
+                if (operand == optional_brackets.first or operand == optional_brackets.second or
+					std::find(non_opt_poss.begin(), non_opt_poss.end(), poss_in_operands[pos]) == non_opt_poss.end()) {
+                    next_operands.push_back(operand);
+                    continue;
+				}
                 OperandSc new_operand{};
-                for (auto current_label: operand)
-                    if (labels.find(current_label) == labels.end() or
-						std::find(non_opt_poss.begin(), non_opt_poss.end(), poss_in_operands[pos]) == non_opt_poss.end())
-//                    if (labels.find(current_label) == labels.end())
+                for (auto current_label : operand)
+                    if (labels.find(current_label) == labels.end())
                         new_operand.push_back(current_label);
                 if (not new_operand.empty()) {
                     next_operands.push_back(std::move(new_operand));

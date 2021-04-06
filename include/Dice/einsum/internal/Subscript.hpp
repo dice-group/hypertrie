@@ -29,7 +29,7 @@
 #include <tsl/hopscotch_map.h>
 
 constexpr bool _union_ = false;
-constexpr bool _rek_ = false;
+constexpr bool _rek_ = true;
 
 namespace einsum::internal {
 
@@ -200,8 +200,8 @@ namespace einsum::internal {
 			return std::make_shared<Subscript>(raw_subscript.removeOperands(operands_poss), this->type);
 		}
 
-        std::shared_ptr<Subscript> removeLabels(const tsl::hopscotch_set<Label>& labels) {
-            return std::make_shared<Subscript>(raw_subscript.removeLabels(labels, non_optional_operands), this->type);
+        std::shared_ptr<Subscript> slice(const tsl::hopscotch_set<Label>& labels) {
+            return std::make_shared<Subscript>(raw_subscript.slice(labels, non_optional_operands), this->type);
         }
 
 		const tsl::hopscotch_set<Label> &getLonelyNonResultLabelSet() const {
@@ -355,8 +355,9 @@ namespace einsum::internal {
             for (const auto& isc : independent_strong_components) {
 				for (const auto &[vertex, labels] : isc.vertices_out_edges_labels) {
 					non_optional_operands.push_back(vertex);
-					for (auto label : labels)
-						non_optional_labels.insert(label);
+					non_optional_labels.insert(raw_subscript.operands[vertex].begin(),
+											   raw_subscript.operands[vertex].end()
+											   );
 				}
 			}
 

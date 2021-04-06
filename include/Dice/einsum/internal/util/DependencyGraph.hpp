@@ -134,7 +134,7 @@ namespace einsum::internal::util {
             return target_vertices;
         }
 
-        tsl::hopscotch_set<VertexType> getTransitiveNeighborsUnlabelled(VertexDesc vertex) {
+        [[nodiscard]] tsl::hopscotch_set<VertexType> getTransitiveNeighborsUnlabelled(VertexDesc vertex) {
             tsl::hopscotch_set<VertexType> target_vertices{};
             std::deque<VertexDesc> to_check{vertex};
             tsl::hopscotch_set<VertexDesc> visited{};

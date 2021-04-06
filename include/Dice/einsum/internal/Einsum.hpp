@@ -100,7 +100,6 @@ namespace einsum::internal {
 																current_entry(&entry){}
 
 			iterator &operator++() {
-				ctx->mapping.clear();
 				op->next();
 				return *this;
 			}

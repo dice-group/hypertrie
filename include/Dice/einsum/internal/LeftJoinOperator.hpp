@@ -166,7 +166,7 @@ namespace einsum::internal {
 			std::vector<bool> bitstring(join_returned_operands->size(), true);
 			// iterate over all operands that participated in the join
             for(auto op_pos : iter::range(pos_in_out.size())) {
-				if(joined[op_pos] || not bitstring[pos_in_out[op_pos]])
+				if(joined[op_pos])
                     continue;
 				// operands that do not yield a result need to be removed along with their dependent operands
 				// store the position of the operands to be removed in the next_subscript

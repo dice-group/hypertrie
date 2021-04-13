@@ -11,9 +11,29 @@ namespace einsum::internal::new_subscript {
 	 * - (x+y),x->x
 	 * - ((x+x)+x)->x
 	 */
-	class SubscriptUnion {
+	class SubscriptUnion : public Subscript {
 	protected:
-		std::list<std::shared_ptr<Subscript>> union_operands;
+		std::list<std::shared_ptr<Subscript>> union_operands_;
+
+	public:
+		virtual ~SubscriptUnion() {}
+
+
+		[[nodiscard]] const std::list<std::shared_ptr<Subscript>> &union_operands() const {
+			return union_operands_;
+		}
+
+		[[nodiscard]] std::list<std::shared_ptr<Subscript>> &union_operands() {
+			return union_operands_;
+		}
+
+		void append_union_operand(std::shared_ptr<Subscript> union_operand) {
+			union_operands_.push_back(union_operand);
+		}
+
+		std::string str(bool parent = true) const {
+			return "";
+		}
 	};
 }// namespace einsum::internal::new_subscript
 

@@ -21,6 +21,13 @@ namespace einsum::internal::new_subscript {
 	class SubscriptNested : public SubscriptOperand {
 	protected:
 		OperandLabels operand_labels_;
+
+	public:
+		virtual ~SubscriptNested() {}
+
+		std::string str(bool parent = true) const {
+			return "";
+		}
 	};
 }// namespace einsum::internal::new_subscript
 

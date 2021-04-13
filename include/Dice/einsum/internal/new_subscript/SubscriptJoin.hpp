@@ -1,7 +1,7 @@
 #ifndef HYPERTRIE_SUBSCRIPTJOIN_HPP
 #define HYPERTRIE_SUBSCRIPTJOIN_HPP
 #include "Dice/einsum/internal/new_subscript/Subscript.hpp"
-
+#include <range/v3/all.hpp>
 namespace einsum::internal::new_subscript {
 	/**
 	 * Example: xy,yz->yz
@@ -9,6 +9,29 @@ namespace einsum::internal::new_subscript {
 	class SubscriptJoin : public Subscript {
 	protected:
 		std::list<std::shared_ptr<Subscript>> join_operands;
+
+	public:
+		void append(std::shared_ptr<Subscript> operand) {
+			join_operands.push_back(operand);
+		}
+
+		SubscriptJoin() = default;
+
+		virtual ~SubscriptJoin() {}
+
+
+		static std::shared_ptr<SubscriptJoin> make_triple_pattern(OperandLabels operand_labels);
+
+		static std::shared_ptr<SubscriptJoin> make_basic_graph_pattern(std::initializer_list<OperandLabels> operands_labels);
+
+		std::string str(bool parent = true) const {
+			auto operands = fmt::join(join_operands | ranges::views::transform([&](auto &n) { return n->str(false); }), ",");
+			if (parent)
+				return fmt::format("({})->{}", fmt::to_string(operands),
+								   fmt::join(this->result_labels() | ranges::views::transform([](auto c) { return std::string(1, c); }), ""));
+			else
+				return fmt::format("({})", fmt::to_string(operands));
+		}
 	};
 }// namespace einsum::internal::new_subscript
 

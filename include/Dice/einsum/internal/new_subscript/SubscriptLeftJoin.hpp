@@ -11,8 +11,35 @@ namespace einsum::internal::new_subscript {
 
 	class SubscriptLeftJoin : public Subscript {
 	protected:
-		std::shared_ptr<Subscript> left_operand;
-		std::list<std::shared_ptr<Subscript>> right_operands;
+		std::shared_ptr<Subscript> left_operand_;
+		std::list<std::shared_ptr<Subscript>> right_operands_;
+
+	public:
+		virtual ~SubscriptLeftJoin() {}
+
+		const std::shared_ptr<Subscript> &left_operand() const {
+			return left_operand_;
+		}
+
+		std::shared_ptr<Subscript> &left_operand() {
+			return left_operand_;
+		}
+
+		const std::list<std::shared_ptr<Subscript>> &right_operands() const {
+			return right_operands_;
+		}
+
+		std::list<std::shared_ptr<Subscript>> &right_operands() {
+			return right_operands_;
+		}
+
+		void append_right_operand(std::shared_ptr<Subscript> operand) {
+			right_operands_.push_back(operand);
+		}
+
+		std::string str(bool parent = true) const {
+			return "";
+		}
 	};
 }// namespace einsum::internal::new_subscript
 

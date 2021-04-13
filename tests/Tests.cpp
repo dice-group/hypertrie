@@ -6,12 +6,13 @@
 //#include "TestRawDiagonal.cpp"
 //#include "TestBoolHypertrie.cpp"
 //#include "TestHashDiagonal.cpp"
-#include "TestLeftJoin.cpp"
-#include "TestJoinCombination.cpp"
+//#include "TestLeftJoin.cpp"
+//#include "TestJoinCombination.cpp"
 //#include "TestDirectedGraph.cpp"
 //#include "TestHashJoin.cpp"
 
 #ifdef HYPERTRIE_ENABLE_LIBTORCH
 #include "TestEinsum.cpp"
-#include "TestNewSubscript.cpp"
 #endif
+
+#include "TestNewSubscript.cpp"

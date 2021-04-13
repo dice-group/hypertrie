@@ -38,6 +38,7 @@ find_package(tsl-hopscotch-map REQUIRED)
 find_package(tsl-sparse-map REQUIRED)
 find_package(fmt REQUIRED)
 find_package(dice-hash REQUIRED)
+find_package(range-v3 REQUIRED)
 
 SET(Boost_USE_STATIC_LIBS ON)
 find_package(Boost REQUIRED COMPONENTS)
@@ -61,6 +62,7 @@ target_link_libraries(hypertrie INTERFACE
         tsl::sparse_map
         robin_hood::robin_hood
         dice-hash::dice-hash
+        range-v3::range-v3
         )
 
 if (HYPERTRIE_ENABLE_TOOLS)

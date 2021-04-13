@@ -14,6 +14,7 @@ class Hypertrie(ConanFile):
     topics = "tensor", "data structure", "einsum", "einstein summation", "hypertrie"
     settings = "build_type", "compiler", "os", "arch"
     requires = (
+        "range-v3/0.11.0",
         "boost/1.75.0",
         "fmt/7.1.3",
         "tsl-hopscotch-map/2.3.0",

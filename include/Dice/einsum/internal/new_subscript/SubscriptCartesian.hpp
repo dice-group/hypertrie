@@ -15,7 +15,9 @@ namespace einsum::internal::new_subscript {
 	public:
 		virtual ~SubscriptCartesian() {}
 		std::string str(bool parent = true) const {
-			return "";
+			return fmt::format("({}){}",
+							   fmt::join(cartesian_operands | ranges::views::transform([&](auto &n) { return n->str(false); }), ","),
+							   (parent) ? this->result_labels_str() : "");
 		}
 	};
 }// namespace einsum::internal::new_subscript

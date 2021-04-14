@@ -32,7 +32,10 @@ namespace einsum::internal::new_subscript {
 		}
 
 		std::string str(bool parent = true) const {
-			return "";
+			auto operands = fmt::join(union_operands_ | ranges::views::transform([&](auto &n) { return n->str(false); }), "+");
+			return fmt::format("({}){}",
+							   fmt::to_string(operands),
+							   (parent) ? this->result_labels_str() : "");
 		}
 	};
 }// namespace einsum::internal::new_subscript

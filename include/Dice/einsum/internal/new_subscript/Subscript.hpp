@@ -2,6 +2,7 @@
 #define HYPERTRIE_SUBSCRIPT_HPP
 
 #include <fmt/format.h>
+#include <range/v3/all.hpp>
 
 namespace einsum::internal::new_subscript {
 
@@ -34,6 +35,12 @@ namespace einsum::internal::new_subscript {
 		[[nodiscard]] ResultLabels &result_labels() { return result_labels_; }
 
 		virtual std::string str(bool parent = true) const = 0;
+
+	protected:
+		auto result_labels_str() const {
+			return fmt::format("->{}",
+							   fmt::join(this->result_labels() | ranges::views::transform([](auto c) { return std::string(1, c); }), ""));
+		}
 	};
 }// namespace einsum::internal::new_subscript
 #endif//HYPERTRIE_SUBSCRIPT_HPP

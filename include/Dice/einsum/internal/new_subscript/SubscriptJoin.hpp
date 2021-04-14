@@ -25,12 +25,9 @@ namespace einsum::internal::new_subscript {
 		static std::shared_ptr<SubscriptJoin> make_basic_graph_pattern(std::initializer_list<OperandLabels> operands_labels);
 
 		std::string str(bool parent = true) const {
-			auto operands = fmt::join(join_operands | ranges::views::transform([&](auto &n) { return n->str(false); }), ",");
-			if (parent)
-				return fmt::format("({})->{}", fmt::to_string(operands),
-								   fmt::join(this->result_labels() | ranges::views::transform([](auto c) { return std::string(1, c); }), ""));
-			else
-				return fmt::format("({})", fmt::to_string(operands));
+			return fmt::format("({}){}",
+							   fmt::join(join_operands | ranges::views::transform([&](auto &n) { return n->str(false); }), ","),
+							   (parent) ? this->result_labels_str() : "");
 		}
 	};
 }// namespace einsum::internal::new_subscript

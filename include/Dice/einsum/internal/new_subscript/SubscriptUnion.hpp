@@ -31,11 +31,11 @@ namespace einsum::internal::new_subscript {
 			union_operands_.push_back(union_operand);
 		}
 
-		std::string str(bool parent = true) const {
-			auto operands = fmt::join(union_operands_ | ranges::views::transform([&](auto &n) { return n->str(false); }), "+");
+		std::string str() const {
+			auto operands = fmt::join(union_operands_ | ranges::views::transform([&](auto &n) { return n->str(); }), "+");
 			return fmt::format("({}){}",
 							   fmt::to_string(operands),
-							   (parent) ? this->result_labels_str() : "");
+							   (this->result_subscript()) ? this->result_subscript()->str() : "");
 		}
 	};
 }// namespace einsum::internal::new_subscript

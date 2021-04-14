@@ -37,11 +37,11 @@ namespace einsum::internal::new_subscript {
 			right_operands_.push_back(operand);
 		}
 
-		std::string str(bool parent = true) const {
+		std::string str() const {
 			return fmt::format("({},[{}]){}",
-							   left_operand_->str(false),
-							   fmt::join(right_operands_ | ranges::views::transform([&](auto &n) { return n->str(false); }), "],["),
-							   (parent) ? this->result_labels_str() : "");
+							   left_operand_->str(),
+							   fmt::join(right_operands_ | ranges::views::transform([&](auto &n) { return n->str(); }), "],["),
+							   (this->result_subscript()) ? this->result_subscript()->str() : "");
 		}
 	};
 }// namespace einsum::internal::new_subscript

@@ -10,6 +10,8 @@ namespace einsum::internal::new_subscript {
 	public:
 		explicit SubscriptOperand(OperandLabels operandLabels) : operand_labels_(std::move(operandLabels)) {}
 
+		explicit SubscriptOperand(std::initializer_list<Label> operandLabels) : operand_labels_(std::move(operandLabels)) {}
+
 		virtual ~SubscriptOperand() {}
 
 		const OperandLabels &operand_labels() const { return operand_labels_; }
@@ -20,10 +22,10 @@ namespace einsum::internal::new_subscript {
 			return operand_labels_.size();
 		}
 
-		std::string str(bool parent = true) const {
+		std::string str() const {
 			return fmt::format("{}{}",
 							   fmt::join(this->operand_labels() | ranges::views::transform([](auto c) { return std::string(1, c); }), ""),
-							   (parent) ? this->result_labels_str() : "");
+							   (this->result_subscript()) ? this->result_subscript()->str() : "");
 		}
 	};
 }// namespace einsum::internal::new_subscript

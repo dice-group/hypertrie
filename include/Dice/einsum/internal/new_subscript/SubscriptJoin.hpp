@@ -12,7 +12,7 @@ namespace einsum::internal::new_subscript {
 
 	public:
 		void append(std::shared_ptr<Subscript> operand) {
-			join_operands.push_back(operand);
+			join_operands.push_back(std::move(operand));
 		}
 
 		SubscriptJoin() = default;
@@ -24,10 +24,10 @@ namespace einsum::internal::new_subscript {
 
 		static std::shared_ptr<SubscriptJoin> make_basic_graph_pattern(std::initializer_list<OperandLabels> operands_labels);
 
-		std::string str(bool parent = true) const {
+		std::string str() const {
 			return fmt::format("({}){}",
-							   fmt::join(join_operands | ranges::views::transform([&](auto &n) { return n->str(false); }), ","),
-							   (parent) ? this->result_labels_str() : "");
+							   fmt::join(join_operands | ranges::views::transform([&](auto &n) { return n->str(); }), ","),
+							   (this->result_subscript()) ? this->result_subscript()->str() : "");
 		}
 	};
 }// namespace einsum::internal::new_subscript

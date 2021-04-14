@@ -9,6 +9,14 @@ TEST_CASE("basic usage", "[new_subscript]") {
 	subscript->append(std::make_shared<SubscriptOperand>(OperandLabels{'b', 'c'}));
 	subscript->append(std::make_shared<SubscriptOperand>(OperandLabels{'c', 'e'}));
 
+	// add sub-query
+	auto sub_subscript = SubscriptJoin::make_basic_graph_pattern({{'a', 'b', 'c'},
+																  {'b', 'c'},
+																  {'c', 'e'}});
+	sub_subscript->set_result_subscript({'a'});
+
+	subscript->append(std::move(sub_subscript));
+
 	// add a left join
 	auto left_join = std::make_shared<SubscriptLeftJoin>();
 	left_join->left_operand() = std::make_shared<SubscriptOperand>(OperandLabels{'a', 'c'});
@@ -23,11 +31,11 @@ TEST_CASE("basic usage", "[new_subscript]") {
 
 	subscript->append(std::move(union_));
 
-	subscript->result_labels() = {'a', 'e', 'f', 'x'};
+	subscript->set_result_subscript({'a', 'e', 'f', 'x'});
 
 	WARN(subscript->str());
 
-	subscript->distinct_result() = true;
+	subscript->distinct() = true;
 
 	WARN(subscript->str());
 }

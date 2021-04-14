@@ -22,6 +22,7 @@ namespace einsum::internal::new_subscript {
 	 */
 	class Subscript {
 	protected:
+//		bool projecting = true; TODO: use this instead of parent in str() to support nested subscripts. We probably won't need SubscriptNested anymore then.
 		bool distinct_result_;
 		ResultLabels result_labels_;
 
@@ -38,7 +39,8 @@ namespace einsum::internal::new_subscript {
 
 	protected:
 		auto result_labels_str() const {
-			return fmt::format("->{}",
+			return fmt::format("{}{}",
+							   (distinct_result_) ? "-->" : "->",
 							   fmt::join(this->result_labels() | ranges::views::transform([](auto c) { return std::string(1, c); }), ""));
 		}
 	};

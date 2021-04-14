@@ -26,4 +26,8 @@ TEST_CASE("basic usage", "[new_subscript]") {
 	subscript->result_labels() = {'a', 'e', 'f', 'x'};
 
 	WARN(subscript->str());
+
+	subscript->distinct_result() = true;
+
+	WARN(subscript->str());
 }

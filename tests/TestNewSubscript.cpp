@@ -19,8 +19,8 @@ TEST_CASE("basic usage", "[new_subscript]") {
 
 	// add a left join
 	auto left_join = std::make_shared<SubscriptLeftJoin>();
-	left_join->left_operand() = std::make_shared<SubscriptOperand>(OperandLabels{'a', 'c'});
-	left_join->append_right_operand(std::make_shared<SubscriptOperand>(OperandLabels{'c', 'x'}));
+	left_join->left_operand() = SubscriptJoin::make_triple_pattern(OperandLabels{'a', 'c'});
+	left_join->append_right_operand(SubscriptJoin::make_triple_pattern(OperandLabels{'c', 'x'}));
 	left_join->append_right_operand(SubscriptJoin::make_triple_pattern({'c', 'x'}));
 	subscript->append(std::move(left_join));
 

@@ -1,17 +1,21 @@
 #ifndef HYPERTRIE_SUBSCRIPTJOIN_HPP
 #define HYPERTRIE_SUBSCRIPTJOIN_HPP
-#include "Dice/einsum/internal/new_subscript/Subscript.hpp"
+
 #include <range/v3/all.hpp>
+
+#include "Dice/einsum/internal/new_subscript/AbstractSubscript.hpp"
+#include "Dice/einsum/internal/new_subscript/Subscript.hpp"
+
 namespace einsum::internal::new_subscript {
 	/**
 	 * Example: xy,yz->yz
 	 */
 	class SubscriptJoin : public Subscript {
 	protected:
-		std::list<std::shared_ptr<Subscript>> join_operands;
+		std::list<std::shared_ptr<AbstractSubscript>> join_operands;
 
 	public:
-		void append(std::shared_ptr<Subscript> operand) {
+		void append(std::shared_ptr<AbstractSubscript> operand) {
 			join_operands.push_back(std::move(operand));
 		}
 

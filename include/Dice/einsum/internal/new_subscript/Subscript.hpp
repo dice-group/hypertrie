@@ -8,6 +8,9 @@
 #include <fmt/format.h>
 #include <range/v3/all.hpp>
 
+#include "Dice/einsum/internal/new_subscript/AbstractSubscript.hpp"
+
+
 namespace einsum::internal::new_subscript {
 
 	using Label = u_int8_t;
@@ -34,22 +37,16 @@ namespace einsum::internal::new_subscript {
 		}
 	};
 
-	class SubscriptCartesian;
-	class SubscriptJoin;
-	class SubscriptLeftJoin;
-	class SubscriptOperand;
-	class SubscriptUnion;
-
 	/**
 	 * Bag-Semantics: xy,yz,f->x
 	 * Set-Semantics: xy,yz,f-->x
 	 */
-	class Subscript {
+	class Subscript : public AbstractSubscript {
 	protected:
 		std::shared_ptr<ResultSubscript> result_subscript_;
 
 	public:
-		virtual ~Subscript() {}
+		virtual ~Subscript() = default;
 
 		void set_result_subscript(ResultLabels resultLabels = {}, bool distinct = false) {
 			result_subscript_ = std::make_shared<ResultSubscript>(resultLabels, distinct);
@@ -67,8 +64,6 @@ namespace einsum::internal::new_subscript {
 
 		[[nodiscard]] const ResultLabels &result_labels() const noexcept(false) { return result_subscript_->result_labels(); }
 		[[nodiscard]] ResultLabels &result_labels() noexcept(false) { return result_subscript_->result_labels(); }
-
-		virtual std::string str() const = 0;
 	};
 }// namespace einsum::internal::new_subscript
 #endif//HYPERTRIE_SUBSCRIPT_HPP

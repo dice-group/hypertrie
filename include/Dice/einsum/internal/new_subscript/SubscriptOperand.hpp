@@ -1,9 +1,13 @@
 #ifndef HYPERTRIE_SUBSCRIPTOPERAND_HPP
 #define HYPERTRIE_SUBSCRIPTOPERAND_HPP
 
-#include "Dice/einsum/internal/new_subscript/Subscript.hpp"
+#include <fmt/format.h>
+#include <range/v3/all.hpp>
+
+#include "Dice/einsum/internal/new_subscript/AbstractSubscript.hpp"
+
 namespace einsum::internal::new_subscript {
-	class SubscriptOperand : public Subscript {
+	class SubscriptOperand : public AbstractSubscript {
 	protected:
 		OperandLabels operand_labels_;
 
@@ -23,9 +27,8 @@ namespace einsum::internal::new_subscript {
 		}
 
 		std::string str() const {
-			return fmt::format("{}{}",
-							   fmt::join(this->operand_labels() | ranges::views::transform([](auto c) { return std::string(1, c); }), ""),
-							   (this->result_subscript()) ? this->result_subscript()->str() : "");
+			return fmt::format("{}",
+							   fmt::join(this->operand_labels() | ranges::views::transform([](auto c) { return std::string(1, c); }), ""));
 		}
 	};
 }// namespace einsum::internal::new_subscript

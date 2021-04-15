@@ -1,8 +1,10 @@
 #ifndef HYPERTRIE_SUBSCRIPTCARTESIAN_HPP
 #define HYPERTRIE_SUBSCRIPTCARTESIAN_HPP
-#include "Dice/einsum/internal/new_subscript/Subscript.hpp"
 
 #include <list>
+
+
+#include "Dice/einsum/internal/new_subscript/Subscript.hpp"
 
 namespace einsum::internal::new_subscript {
 	/**
@@ -13,16 +15,12 @@ namespace einsum::internal::new_subscript {
 		std::list<std::shared_ptr<Subscript>> cartesian_operands;
 
 	public:
-		static std::shared_ptr<SubscriptCartesian> make() {
-			return std::make_shared<SubscriptCartesian>();
-		}
+		virtual ~SubscriptCartesian();
 
-		virtual ~SubscriptCartesian() {}
-		std::string str() const {
-			return fmt::format("({}){}",
-							   fmt::join(cartesian_operands | ranges::views::transform([&](auto &n) { return n->str(); }), ","),
-							   (this->result_subscript()) ? this->result_subscript()->str() : "");
-		}
+		static std::shared_ptr<SubscriptCartesian> make();
+
+
+		std::string str() const;
 	};
 }// namespace einsum::internal::new_subscript
 

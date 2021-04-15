@@ -43,17 +43,27 @@ find_package(range-v3 REQUIRED)
 SET(Boost_USE_STATIC_LIBS ON)
 find_package(Boost REQUIRED COMPONENTS)
 
-add_library(hypertrie INTERFACE)
+add_library(hypertrie
+        include/Dice/einsum/internal/new_subscript/ResultSubscript.cpp
+        include/Dice/einsum/internal/new_subscript/Subscript.cpp
+        include/Dice/einsum/internal/new_subscript/SubscriptJoin.cpp
+        include/Dice/einsum/internal/new_subscript/SubscriptMinus.cpp
+        include/Dice/einsum/internal/new_subscript/SubscriptCartesian.cpp
+        include/Dice/einsum/internal/new_subscript/SubscriptLeftJoin.cpp
+        include/Dice/einsum/internal/new_subscript/SubscriptOperand.cpp
+        include/Dice/einsum/internal/new_subscript/SubscriptUnion.cpp
+        include/Dice/einsum/internal/new_subscript/Subscript_all.cpp
+        )
 add_library(hypertrie::hypertrie ALIAS hypertrie)
 
-target_include_directories(hypertrie INTERFACE
+target_include_directories(hypertrie PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:${hypertrie_INSTALL_CMAKE_DIR}>
         ${Boost_INCLUDE_DIRS}
         )
 
 
-target_link_libraries(hypertrie INTERFACE
+target_link_libraries(hypertrie PRIVATE
         cppitertools::cppitertools
         fmt::fmt
         Boost::Boost

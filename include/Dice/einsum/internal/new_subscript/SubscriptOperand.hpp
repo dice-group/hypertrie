@@ -3,10 +3,8 @@
 
 #include <memory>
 
-#include <fmt/format.h>
-#include <range/v3/all.hpp>
-
 #include "Dice/einsum/internal/new_subscript/AbstractSubscript.hpp"
+#include "Dice/einsum/internal/new_subscript/SubscriptCommons.hpp"
 
 namespace einsum::internal::new_subscript {
 	class SubscriptOperand : public AbstractSubscript, public std::enable_shared_from_this<SubscriptOperand> {
@@ -14,42 +12,27 @@ namespace einsum::internal::new_subscript {
 		OperandLabels operand_labels_;
 
 	public:
-		explicit SubscriptOperand(OperandLabels operand_labels) : operand_labels_(std::move(operand_labels)) {}
+		explicit SubscriptOperand(OperandLabels operand_labels);
 
-		explicit SubscriptOperand(std::initializer_list<Label> operand_labels) : operand_labels_(std::move(operand_labels)) {}
+		explicit SubscriptOperand(std::initializer_list<Label> operand_labels);
 
-		static std::shared_ptr<SubscriptOperand> make(std::initializer_list<Label> operand_labels = {}) {
-			return std::make_shared<SubscriptOperand>(operand_labels);
-		}
+		virtual ~SubscriptOperand();
 
-		static std::shared_ptr<SubscriptOperand> make(OperandLabels operand_labels) {
-			return std::make_shared<SubscriptOperand>(operand_labels);
-		}
+		static std::shared_ptr<SubscriptOperand> make(std::initializer_list<Label> operand_labels = {});
 
-		virtual ~SubscriptOperand() {}
+		static std::shared_ptr<SubscriptOperand> make(OperandLabels operand_labels);
 
-		const OperandLabels &operand_labels() const { return operand_labels_; }
+		const OperandLabels &operand_labels() const;
 
-		OperandLabels &operand_labels() { return operand_labels_; }
+		OperandLabels &operand_labels();
 
-		auto operand_labels(std::initializer_list<Label> operand_labels) {
-			operand_labels_ = operand_labels;
-			return this;
-		}
+		SubscriptOperand *operand_labels(std::initializer_list<Label> operand_labels);
 
-		auto operand_labels(OperandLabels operand_labels) {
-			operand_labels_ = std::move(operand_labels);
-			return this;
-		}
+		SubscriptOperand *operand_labels(OperandLabels operand_labels);
 
-		std::size_t ndim() const noexcept {
-			return operand_labels_.size();
-		}
+		std::size_t ndim() const noexcept;
 
-		std::string str() const {
-			return fmt::format("{}",
-							   fmt::join(this->operand_labels() | ranges::views::transform([](auto c) { return std::string(1, c); }), ""));
-		}
+		std::string str() const;
 	};
 }// namespace einsum::internal::new_subscript
 

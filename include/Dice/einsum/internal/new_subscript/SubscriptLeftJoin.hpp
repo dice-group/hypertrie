@@ -1,6 +1,11 @@
 #ifndef HYPERTRIE_SUBSCRIPTLEFTJOIN_HPP
 #define HYPERTRIE_SUBSCRIPTLEFTJOIN_HPP
+
+#include <list>
+#include <memory>
+
 #include "Dice/einsum/internal/new_subscript/Subscript.hpp"
+
 namespace einsum::internal::new_subscript {
 	/**
 	 * ab,[ac]->bc
@@ -15,49 +20,25 @@ namespace einsum::internal::new_subscript {
 		std::list<std::shared_ptr<Subscript>> right_operands_;
 
 	public:
-		static std::shared_ptr<SubscriptLeftJoin> make() {
-			return std::make_shared<SubscriptLeftJoin>();
-		}
+		static std::shared_ptr<SubscriptLeftJoin> make();
 
-		virtual ~SubscriptLeftJoin() {}
+		virtual ~SubscriptLeftJoin();
 
-		const std::shared_ptr<Subscript> &left_operand() const {
-			return left_operand_;
-		}
+		const std::shared_ptr<Subscript> &left_operand() const;
 
-		std::shared_ptr<Subscript> &left_operand() {
-			return left_operand_;
-		}
+		std::shared_ptr<Subscript> &left_operand();
 
-		auto left_operand(std::shared_ptr<Subscript> left_operand) {
-			this->left_operand_ = std::move(left_operand);
-			return this;
-		}
+		SubscriptLeftJoin *left_operand(std::shared_ptr<Subscript> left_operand);
 
-		const std::list<std::shared_ptr<Subscript>> &right_operands() const {
-			return right_operands_;
-		}
+		const std::list<std::shared_ptr<Subscript>> &right_operands() const;
 
-		std::list<std::shared_ptr<Subscript>> &right_operands() {
-			return right_operands_;
-		}
+		std::list<std::shared_ptr<Subscript>> &right_operands();
 
-		auto right_operands(std::list<std::shared_ptr<Subscript>> right_operands) {
-			this->right_operands_ = std::move(right_operands);
-			return this;
-		}
+		SubscriptLeftJoin *right_operands(std::list<std::shared_ptr<Subscript>> right_operands);
 
-		auto append_right_operand(std::shared_ptr<Subscript> operand) {
-			right_operands_.push_back(operand);
-			return this;
-		}
+		SubscriptLeftJoin *append_right_operand(std::shared_ptr<Subscript> operand);
 
-		std::string str() const {
-			return fmt::format("({},[{}]){}",
-							   left_operand_->str(),
-							   fmt::join(right_operands_ | ranges::views::transform([&](auto &n) { return n->str(); }), "],["),
-							   (this->result_subscript()) ? this->result_subscript()->str() : "");
-		}
+		std::string str() const;
 	};
 }// namespace einsum::internal::new_subscript
 

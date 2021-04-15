@@ -1,7 +1,7 @@
 #ifndef HYPERTRIE_SUBSCRIPTJOIN_HPP
 #define HYPERTRIE_SUBSCRIPTJOIN_HPP
 
-#include <range/v3/all.hpp>
+#include <list>
 
 #include "Dice/einsum/internal/new_subscript/AbstractSubscript.hpp"
 #include "Dice/einsum/internal/new_subscript/Subscript.hpp"
@@ -15,30 +15,20 @@ namespace einsum::internal::new_subscript {
 		std::list<std::shared_ptr<AbstractSubscript>> join_operands;
 
 	public:
-		auto append(std::shared_ptr<AbstractSubscript> operand) {
-			join_operands.push_back(std::move(operand));
-			return this;
-		}
+		virtual ~SubscriptJoin();
 
-		auto append(std::initializer_list<Label> operand_labels);
+		SubscriptJoin *append(std::shared_ptr<AbstractSubscript> operand);
+		SubscriptJoin *append(std::initializer_list<Label> operand_labels);
+		SubscriptJoin *append(OperandLabels operand_labels);
 
-		SubscriptJoin() = default;
-
-		virtual ~SubscriptJoin() {}
-
-		static std::shared_ptr<SubscriptJoin> make() {
-			return std::make_shared<SubscriptJoin>();
-		}
+		static std::shared_ptr<SubscriptJoin> make();
 
 		static std::shared_ptr<SubscriptJoin> make_triple_pattern(OperandLabels operand_labels);
+		static std::shared_ptr<SubscriptJoin> make_triple_pattern(std::initializer_list<Label> operand_labels);
 
 		static std::shared_ptr<SubscriptJoin> make_basic_graph_pattern(std::initializer_list<OperandLabels> operands_labels);
 
-		std::string str() const {
-			return fmt::format("({}){}",
-							   fmt::join(join_operands | ranges::views::transform([&](auto &n) { return n->str(); }), ","),
-							   (this->result_subscript()) ? this->result_subscript()->str() : "");
-		}
+		std::string str() const;
 	};
 }// namespace einsum::internal::new_subscript
 

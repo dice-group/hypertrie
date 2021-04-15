@@ -9,12 +9,16 @@ namespace einsum::internal::new_subscript {
 	 * - Later: AND without variables that influence left-side variables (via filters)
 	 */
 
-	class SubscriptLeftJoin : public Subscript {
+	class SubscriptLeftJoin : public Subscript, public std::enable_shared_from_this<SubscriptLeftJoin> {
 	protected:
 		std::shared_ptr<Subscript> left_operand_;
 		std::list<std::shared_ptr<Subscript>> right_operands_;
 
 	public:
+		static std::shared_ptr<SubscriptLeftJoin> make() {
+			return std::make_shared<SubscriptLeftJoin>();
+		}
+
 		virtual ~SubscriptLeftJoin() {}
 
 		const std::shared_ptr<Subscript> &left_operand() const {
@@ -25,6 +29,11 @@ namespace einsum::internal::new_subscript {
 			return left_operand_;
 		}
 
+		auto left_operand(std::shared_ptr<Subscript> left_operand) {
+			this->left_operand_ = std::move(left_operand);
+			return this;
+		}
+
 		const std::list<std::shared_ptr<Subscript>> &right_operands() const {
 			return right_operands_;
 		}
@@ -33,8 +42,14 @@ namespace einsum::internal::new_subscript {
 			return right_operands_;
 		}
 
-		void append_right_operand(std::shared_ptr<Subscript> operand) {
+		auto right_operands(std::list<std::shared_ptr<Subscript>> right_operands) {
+			this->right_operands_ = std::move(right_operands);
+			return this;
+		}
+
+		auto append_right_operand(std::shared_ptr<Subscript> operand) {
 			right_operands_.push_back(operand);
+			return this;
 		}
 
 		std::string str() const {

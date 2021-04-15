@@ -24,6 +24,12 @@ namespace einsum::internal::new_subscript {
 			tmp->append(std::make_shared<SubscriptOperand>(operand_labels));
 		return tmp;
 	}
+
+	auto SubscriptJoin::append(std::initializer_list<Label> operand_labels) {
+		join_operands.push_back(SubscriptOperand::make(operand_labels));
+		return this;
+	}
+
 }// namespace einsum::internal::new_subscript
 
 #endif//HYPERTRIE_SUBSCRIPT_ALL_HPP

@@ -2,34 +2,42 @@
 
 TEST_CASE("basic usage", "[new_subscript]") {
 	using namespace einsum::internal::new_subscript;
+	// subscripts are entirely based on pointers/shared-pointers. So don't their the constructors but their make methods.
+	// constructors might be set to private later.
 
-	auto subscript = std::make_shared<SubscriptJoin>();
 	// add triple patterns
-	subscript->append(std::make_shared<SubscriptOperand>(OperandLabels{'a', 'b', 'c'}));
-	subscript->append(std::make_shared<SubscriptOperand>(OperandLabels{'b', 'c'}));
-	subscript->append(std::make_shared<SubscriptOperand>(OperandLabels{'c', 'e'}));
+	auto subscript = SubscriptJoin::make()
+							 ->append(SubscriptOperand::make({'c', 'e'}))// verbose way
+							 ->append({'b', 'c'})                        // easier
+							 ->append({'a', 'b', 'c'})
+							 ->shared_from_this();// checkout https://en.cppreference.com/w/cpp/memory/enable_shared_from_this/shared_from_this
 
-	// add sub-query
+	// add "sub-query"
+	// only result labels are relevant to the outside
 	auto sub_subscript = SubscriptJoin::make_basic_graph_pattern({{'a', 'b', 'c'},
 																  {'b', 'c'},
 																  {'c', 'e'}});
-	sub_subscript->set_result_subscript({'a'});
+	// it becomes a subquery by specifying result_labels and distinct
+	// TODO: make set_result_subscript chainable
+	sub_subscript->set_result_subscript({'a'}, false);
 
 	subscript->append(std::move(sub_subscript));
 
 	// add a left join
-	auto left_join = std::make_shared<SubscriptLeftJoin>();
-	left_join->left_operand() = SubscriptJoin::make_triple_pattern(OperandLabels{'a', 'c'});
-	left_join->append_right_operand(SubscriptJoin::make_triple_pattern(OperandLabels{'c', 'x'}));
-	left_join->append_right_operand(SubscriptJoin::make_triple_pattern({'c', 'x'}));
+	auto left_join =
+			std::make_shared<SubscriptLeftJoin>()
+					->left_operand(SubscriptJoin::make_triple_pattern(OperandLabels{'a', 'c'}))
+					->append_right_operand(SubscriptJoin::make_triple_pattern({'c', 'x'}))
+					->append_right_operand(SubscriptJoin::make_triple_pattern({'c', 'y'}))
+					->shared_from_this();
 	subscript->append(std::move(left_join));
 
 	// add a union
-	auto union_ = std::make_shared<SubscriptUnion>();
-	union_->append_union_operand(SubscriptJoin::make_triple_pattern({'a', 'f'}));
-	union_->append_union_operand(SubscriptJoin::make_basic_graph_pattern({{'a', 'f'}, {'a', 'g'}}));
 
-	subscript->append(std::move(union_));
+	subscript->append(SubscriptUnion::make()
+							  ->append_union_operand(SubscriptJoin::make_triple_pattern({'a', 'f'}))
+							  ->append_union_operand(SubscriptJoin::make_basic_graph_pattern({{'a', 'f'}, {'a', 'g'}}))
+							  ->shared_from_this());
 
 	subscript->set_result_subscript({'a', 'e', 'f', 'x'});
 

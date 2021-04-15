@@ -10,19 +10,25 @@ namespace einsum::internal::new_subscript {
 	/**
 	 * Example: xy,yz->yz
 	 */
-	class SubscriptJoin : public Subscript {
+	class SubscriptJoin : public Subscript, public std::enable_shared_from_this<SubscriptJoin> {
 	protected:
 		std::list<std::shared_ptr<AbstractSubscript>> join_operands;
 
 	public:
-		void append(std::shared_ptr<AbstractSubscript> operand) {
+		auto append(std::shared_ptr<AbstractSubscript> operand) {
 			join_operands.push_back(std::move(operand));
+			return this;
 		}
+
+		auto append(std::initializer_list<Label> operand_labels);
 
 		SubscriptJoin() = default;
 
 		virtual ~SubscriptJoin() {}
 
+		static std::shared_ptr<SubscriptJoin> make() {
+			return std::make_shared<SubscriptJoin>();
+		}
 
 		static std::shared_ptr<SubscriptJoin> make_triple_pattern(OperandLabels operand_labels);
 

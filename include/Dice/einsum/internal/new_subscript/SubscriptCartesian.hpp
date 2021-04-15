@@ -8,11 +8,15 @@ namespace einsum::internal::new_subscript {
 	/**
 	 * Example: xy,z->xz
 	 */
-	class SubscriptCartesian : public Subscript {
+	class SubscriptCartesian : public Subscript, public std::enable_shared_from_this<SubscriptCartesian> {
 	protected:
 		std::list<std::shared_ptr<Subscript>> cartesian_operands;
 
 	public:
+		static std::shared_ptr<SubscriptCartesian> make() {
+			return std::make_shared<SubscriptCartesian>();
+		}
+
 		virtual ~SubscriptCartesian() {}
 		std::string str() const {
 			return fmt::format("({}){}",

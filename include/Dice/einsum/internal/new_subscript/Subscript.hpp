@@ -1,6 +1,7 @@
 #ifndef HYPERTRIE_SUBSCRIPT_HPP
 #define HYPERTRIE_SUBSCRIPT_HPP
 
+#include <memory>
 #include <optional>
 #include <string>
 #include <vector>
@@ -17,18 +18,34 @@ namespace einsum::internal::new_subscript {
 	using ResultLabels = std::vector<Label>;
 	using OperandLabels = std::vector<Label>;
 
-	class ResultSubscript {
+	class ResultSubscript : public std::enable_shared_from_this<ResultSubscript> {
 		ResultLabels result_labels_;
 		bool distinct_;
 
 	public:
+		explicit ResultSubscript(ResultLabels resultLabels = {}, bool distinct = false) : result_labels_(resultLabels), distinct_(distinct) {}
+
+		static std::shared_ptr<ResultSubscript> make(ResultLabels resultLabels = {}, bool distinct = false) {
+			return std::make_shared<ResultSubscript>(resultLabels, distinct);
+		}
+
 		[[nodiscard]] const ResultLabels &result_labels() const { return result_labels_; }
 		[[nodiscard]] ResultLabels &result_labels() { return result_labels_; }
+		auto result_labels(ResultLabels result_labels) {
+			this->result_labels_.swap(result_labels);
+			return this;
+		}
+		auto result_labels(std::initializer_list<Label> result_labels) {
+			this->result_labels_ = {result_labels};
+			return this;
+		}
 
 		[[nodiscard]] bool distinct() const { return distinct_; }
 		[[nodiscard]] bool &distinct() { return distinct_; }
-
-		explicit ResultSubscript(ResultLabels resultLabels = {}, bool distinct = false) : result_labels_(resultLabels), distinct_(distinct) {}
+		auto distinct(bool distinct) {
+			distinct_ = distinct;
+			return this;
+		}
 
 		auto str() const {
 			return fmt::format("{}{}",
@@ -36,6 +53,7 @@ namespace einsum::internal::new_subscript {
 							   fmt::join(this->result_labels() | ranges::views::transform([](auto c) { return std::string(1, c); }), ""));
 		}
 	};
+
 
 	/**
 	 * Bag-Semantics: xy,yz,f->x
@@ -48,12 +66,12 @@ namespace einsum::internal::new_subscript {
 	public:
 		virtual ~Subscript() = default;
 
-		void set_result_subscript(ResultLabels resultLabels = {}, bool distinct = false) {
-			result_subscript_ = std::make_shared<ResultSubscript>(resultLabels, distinct);
+		void set_result_subscript(ResultLabels result_labels = {}, bool distinct = false) {
+			result_subscript_ = ResultSubscript::make(result_labels, distinct);
 		}
 
-		void set_result_subscript(std::initializer_list<Label> resultLabels, bool distinct = false) {
-			result_subscript_ = std::make_shared<ResultSubscript>(resultLabels, distinct);
+		void set_result_subscript(std::initializer_list<Label> result_labels, bool distinct = false) {
+			result_subscript_ = ResultSubscript::make(result_labels, distinct);
 		}
 
 		[[nodiscard]] std::shared_ptr<ResultSubscript> &result_subscript() { return result_subscript_; }

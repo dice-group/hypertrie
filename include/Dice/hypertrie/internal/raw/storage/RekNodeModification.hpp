@@ -493,6 +493,7 @@ namespace hypertrie::internal::raw {
 		template<size_t depth>
 		void newUncompressedBulk(const Modification_t<depth> &update, const size_t after_count_diff) {
 			// TODO: implement for valued
+			// TODO: same optimization here
 			static constexpr const auto subkey = &tri::template subkey<depth>;
 			using red = re<depth>;
 			// move or copy the node from old_hash to new_hash
@@ -523,6 +524,12 @@ namespace hypertrie::internal::raw {
 					// maps key parts to the keys to be inserted for that child
 					::robin_hood::unordered_map<key_part_type, std::vector<Entry<depth - 1>>> children_inserted_keys{};
 
+					std::vector<std::pair<key_part_type, TaggedTensorHash<tri>>>
+							new_inlined_entries;
+
+					std::vector<std::pair<key_part_type, TensorHash>>
+							new_entries;
+
 					// populate children_inserted_keys
 					for (const Entry<depth> &entry : update.entries())
 						children_inserted_keys[red::key(entry)[pos]]
@@ -538,7 +545,7 @@ namespace hypertrie::internal::raw {
 							if constexpr (not (depth == 2 and tri::is_bool_valued and tri::is_lsb_unused)) {
 								child_update.modOp() = ModificationOperations::NEW_COMPRESSED_NODE;
 							} else {
-								node->edges(pos)[key_part] = TaggedTensorHash<tri>{child_inserted_entries[0][0]};
+								new_inlined_entries.push_back({key_part, TaggedTensorHash<tri>{child_inserted_entries[0][0]}});
 								continue;
 							}
 						} else
@@ -546,10 +553,19 @@ namespace hypertrie::internal::raw {
 						child_update.entries() = std::move(child_inserted_entries);
 
 						// insert reference to subnode
-						node->edges(pos)[key_part] = child_update.hashAfter();
+						new_entries.push_back({key_part, child_update.hashAfter()});
 						// submit subnode plan
 						planUpdate(std::move(child_update), INC_COUNT_DIFF_AFTER);
 					}
+
+					auto &edges = node->edges(pos);
+					edges.reserve(edges.size() + new_inlined_entries.size() + new_entries.size());
+					if constexpr (depth == 2 and tri::is_bool_valued and tri::is_lsb_unused)
+						for (const auto &[key_part, inlined_entry] : new_inlined_entries)
+							edges.insert({key_part, inlined_entry});
+
+					for (const auto &[key_part, hash] : new_entries)
+						edges.insert({key_part, hash});
 				}
 			}
 			if constexpr (depth == update_depth)
@@ -653,7 +669,7 @@ namespace hypertrie::internal::raw {
 									}
 								} else {
 									if (child_inserted_entries.size() == 1) {
-new_inlined_entries.push_back({key_part, TaggedTensorHash<tri>{child_inserted_entries[0][0]}});
+										new_inlined_entries.push_back({key_part, TaggedTensorHash<tri>{child_inserted_entries[0][0]}});
 										continue;
 									} else {
 										child_update.modOp() = ModificationOperations::NEW_UNCOMPRESSED_NODE;

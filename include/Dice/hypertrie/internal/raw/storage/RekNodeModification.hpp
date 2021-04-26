@@ -599,6 +599,7 @@ namespace hypertrie::internal::raw {
 				// update the node (new_hash)
 				for (const size_t pos : iter::range(depth)) {
 					if constexpr (depth == 1) {
+						node->edges().reserve(node->size());
 						for (const Entry <depth> &entry : update.entries()){
 							if constexpr (tri_t::is_bool_valued)
 								node->edges().insert(red::key(entry)[0]);
@@ -610,6 +611,12 @@ namespace hypertrie::internal::raw {
 
 						// maps key parts to the keys to be inserted for that child
 						::robin_hood::unordered_map<key_part_type, std::vector<Entry<depth - 1>>> children_inserted_keys{};
+
+						std::vector<std::pair<key_part_type, TaggedTensorHash<tri>>>
+								new_inlined_entries;
+
+						std::vector<std::pair<key_part_type, TensorHash>>
+								new_entries;
 
 						// populate children_inserted_keys
 						for (const Entry<depth> &entry : update.entries())
@@ -646,7 +653,7 @@ namespace hypertrie::internal::raw {
 									}
 								} else {
 									if (child_inserted_entries.size() == 1) {
-										node->edges(pos)[key_part] = TaggedTensorHash<tri>{child_inserted_entries[0][0]};
+new_inlined_entries.push_back({key_part, TaggedTensorHash<tri>{child_inserted_entries[0][0]}});
 										continue;
 									} else {
 										child_update.modOp() = ModificationOperations::NEW_UNCOMPRESSED_NODE;
@@ -664,10 +671,19 @@ namespace hypertrie::internal::raw {
 								else
 									tri::template deref<key_part_type, TaggedTensorHash<tri>>(iter) = child_update.hashAfter();
 							else
-								node->edges(pos)[key_part] = child_update.hashAfter();
+								new_entries.push_back({key_part, child_update.hashAfter()});
 
 							planUpdate(std::move(child_update), INC_COUNT_DIFF_AFTER);
 						}
+
+						auto &edges = node->edges(pos);
+						edges.reserve(edges.size() + new_inlined_entries.size() + new_entries.size());
+						if constexpr (depth == 2 and tri::is_bool_valued and tri::is_lsb_unused)
+							for (const auto &[key_part, inlined_entry] : new_inlined_entries)
+								edges.insert({key_part, inlined_entry});
+
+						for (const auto &[key_part, hash] : new_entries)
+							edges.insert({key_part, hash});
 					}
 				}
 				if constexpr (depth == update_depth)

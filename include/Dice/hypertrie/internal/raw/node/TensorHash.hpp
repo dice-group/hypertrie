@@ -271,7 +271,7 @@ namespace std {
 	};
 }// namespace std
 
-template<> std::size_t Dice::hash::dice_hash(::hypertrie::internal::raw::TensorHash const &hash) noexcept {
+template<> inline std::size_t Dice::hash::dice_hash(::hypertrie::internal::raw::TensorHash const &hash) noexcept {
         return hash.hash();
 }
 #endif//HYPERTRIE_TENSORHASH_HPP

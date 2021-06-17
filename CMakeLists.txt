@@ -31,11 +31,17 @@ FetchContent_Declare(
         GIT_TAG v2.1
         GIT_SHALLOW TRUE)
 
+FetchContent_Declare(
+        tsl-sparse-map-our-version
+        GIT_REPOSITORY https://github.com/dice-group/sparse-map.git
+        GIT_TAG custom_tests
+        GIT_SHALLOW TRUE)
 FetchContent_MakeAvailable(cppitertools)
+FetchContent_MakeAvailable(tsl-sparse-map-our-version)
 
 find_package(robin_hood REQUIRED)
 find_package(tsl-hopscotch-map REQUIRED)
-find_package(tsl-sparse-map REQUIRED)
+#find_package(tsl-sparse-map REQUIRED)
 find_package(fmt REQUIRED)
 find_package(dice-hash REQUIRED)
 

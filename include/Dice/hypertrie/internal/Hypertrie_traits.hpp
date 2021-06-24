@@ -15,16 +15,16 @@ namespace hypertrie {
 
 	template<typename key_part_type_t = unsigned long,
 			 typename value_type_t = bool,
-			 template<typename, typename> class map_type_t = hypertrie::internal::container::tsl_sparse_map,
-			 template<typename> class set_type_t = hypertrie::internal::container::tsl_sparse_set,
+			 template<typename, typename, typename> class map_type_t = hypertrie::internal::container::tsl_sparse_map,
+			 template<typename, typename> class set_type_t = hypertrie::internal::container::tsl_sparse_set,
 			 bool lsb_unused_v = false>
 	struct Hypertrie_t {
 		using key_part_type = key_part_type_t;
 		using value_type = value_type_t;
-		template<typename key, typename value>
-		using map_type = map_type_t<key, value>;
-		template<typename key>
-		using set_type = set_type_t<key>;
+		template<typename key, typename value, typename Allocator>
+		using map_type = map_type_t<key, value, Allocator>;
+		template<typename key, typename Allocator>
+		using set_type = set_type_t<key, Allocator>;
 
 		using SliceKey = ::hypertrie::SliceKey<key_part_type>;
 		using Key = ::hypertrie::Key<key_part_type>;
@@ -65,8 +65,8 @@ namespace hypertrie {
 					"< key_part = {}, value = {}, map = {}, set = {}, lsb_unused = {} >",
 					nameOfType<key_part_type>(),
 					nameOfType<value_type>(),
-					nameOfType<map_type<key_part_type, value_type>>(),
-					nameOfType<set_type<key_part_type>>(),
+					nameOfType<map_type<key_part_type, value_type, std::allocator<std::pair<const key_part_type, value_type>>>>(),
+					nameOfType<set_type<key_part_type, std::allocator<key_part_type>>>(),
 					lsb_unused)};
 		}
 	};
@@ -74,8 +74,8 @@ namespace hypertrie {
 	namespace internal::hypertrie_trait {
 		template<typename T, template<typename,
 									  typename,
+									  template<typename, typename, typename> class,
 									  template<typename, typename> class,
-									  template<typename> class,
 									  bool>
 							 typename U>
 		struct is_instance_impl : public std::false_type {
@@ -83,22 +83,22 @@ namespace hypertrie {
 
 		template<template<typename,
 						  typename,
+						  template<typename, typename, typename> class,
 						  template<typename, typename> class,
-						  template<typename> class,
 						  bool>
 				 typename U,
 				 typename key_part_type_t,
 				 typename value_type_t,
-				 template<typename, typename> class map_type_t,
-				 template<typename> class set_type_t,
-				bool lsb_unused_v>
+				 template<typename, typename, typename> class map_type_t,
+				 template<typename, typename> class set_type_t,
+				 bool lsb_unused_v>
 		struct is_instance_impl<U<key_part_type_t, value_type_t, map_type_t, set_type_t, lsb_unused_v>, U> : public std::true_type {
 		};
 
 		template<typename T, template<typename,
 									  typename,
+									  template<typename, typename, typename> class,
 									  template<typename, typename> class,
-									  template<typename> class,
 									  bool>
 							 typename U>
 		using is_instance = is_instance_impl<std::decay_t<T>, U>;

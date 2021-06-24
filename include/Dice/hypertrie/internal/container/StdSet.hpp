@@ -5,7 +5,7 @@
 #include <fmt/format.h>
 
 namespace hypertrie::internal::container {
-    template<typename key_type, typename Allocator = std::allocator<Key>>
+    template<typename key_type, typename Allocator = std::allocator<key_type>>
     using std_set = std::set
             <
                     key_type,

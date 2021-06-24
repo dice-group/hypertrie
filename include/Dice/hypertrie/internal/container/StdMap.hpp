@@ -5,12 +5,12 @@
 #include <map>
 
 namespace hypertrie::internal::container {
-	template<typename key_type, typename value, typename Allocator = std::allocator<std::pair<Key, T>>>
+	template<typename key_type, typename value, typename Allocator = std::allocator<std::pair<key_type, value>>>
 	using std_map = std::map<
 			key_type,
 			value,
 			std::less<key_type>,
-			Alloctor>;
+			Allocator>;
 }
 
 

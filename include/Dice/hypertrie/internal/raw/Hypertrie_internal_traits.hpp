@@ -149,7 +149,8 @@ namespace hypertrie::internal::raw {
 
 		constexpr static bool is_bool_valued = tr::is_bool_valued;
 		constexpr static const bool is_lsb_unused = tr::lsb_unused;
-		constexpr static bool is_tsl_map = std::is_same_v<map_type<int, int>, container::tsl_sparse_map<int, int>>;
+		constexpr static bool is_tsl_map = std::is_same_v<map_type<int, int, std::allocator<std::pair<const key_part_type, value_type>>>,
+		        container::tsl_sparse_map<int, int, std::allocator<std::pair<const key_part_type, value_type>>>>;
 
 		/**
 		 * Generates a subkey by removing a key_part at the given position
@@ -173,8 +174,8 @@ namespace hypertrie::internal::raw {
 		 * @param map_it a valid iterator pointing to an entry
 		 * @return a reference to the mapped_type
 		 */
-		template<typename K, typename V>
-		static V &deref(typename map_type<K, V>::iterator &map_it) {
+		template<typename K, typename V, typename Allocator>
+		static V &deref(typename map_type<K, V, Allocator>::iterator &map_it) {
 			if constexpr (is_tsl_map) return map_it.value();
 			else
 				return map_it->second;

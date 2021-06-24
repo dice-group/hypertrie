@@ -10,7 +10,8 @@ TEST_CASE("create compressed node", "[Node]") {
 
 	using namespace hypertrie::internal::raw;
 
-	Node<3,NodeCompression::uncompressed,  hypertrie::internal::lsbunused_bool_Hypertrie_internal_t> node;
+	Node<3,NodeCompression::uncompressed,  ::hypertrie::internal::raw::lsbunused_bool_Hypertrie_internal_t, std::allocator<int>> node(std::allocator<int>());
+
 }
 
 #endif//HYPERTRIE_TESTNODE_HPP

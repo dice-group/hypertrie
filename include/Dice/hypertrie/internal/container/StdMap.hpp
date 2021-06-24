@@ -1,16 +1,16 @@
 #ifndef HYPERTRIE_STDMAP_HPP
 #define HYPERTRIE_STDMAP_HPP
 
-#include <map>
 #include <fmt/format.h>
+#include <map>
 
 namespace hypertrie::internal::container {
-    template<typename key_type, typename value>
-    using std_map = std::map
-            <
-                    key_type,
-                    value
-            >;
+	template<typename key_type, typename value, typename Allocator = std::allocator<std::pair<Key, T>>>
+	using std_map = std::map<
+			key_type,
+			value,
+			std::less<key_type>,
+			Alloctor>;
 }
 
 
@@ -73,4 +73,4 @@ public:
 	}
 };
 
-#endif //HYPERTRIE_HYPERTRIE_STDMAP_HPPBOOSTFLATMAP_HPP
+#endif//HYPERTRIE_HYPERTRIE_STDMAP_HPPBOOSTFLATMAP_HPP

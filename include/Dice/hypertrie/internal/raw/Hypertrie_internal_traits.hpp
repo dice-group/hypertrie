@@ -16,10 +16,10 @@ namespace hypertrie::internal::raw {
 		/// public definitions
 		using key_part_type = typename tr::key_part_type;
 		using value_type = typename tr::value_type;
-		template<typename key, typename value>
-		using map_type = typename tr::template map_type<key, value>;
-		template<typename key>
-		using set_type = typename tr::template set_type<key>;
+		template<typename key, typename value, typename Allocator>
+		using map_type = typename tr::template map_type<key, value, Allocator>;
+		template<typename key, typename Allocator>
+		using set_type = typename tr::template set_type<key, Allocator>;
 
 		using SliceKey = typename tr::SliceKey;
 		using Key = typename tr::Key;

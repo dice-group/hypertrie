@@ -7,13 +7,12 @@
 
 namespace hypertrie::internal::container {
 
-	template<typename Key>
+	template<typename Key, typename Allocator = std::allocator<Key>>
 	using tsl_sparse_set = tsl::sparse_set<
 			Key,
-			//hypertrie::internal::robin_hood::hash<Key>,
 			Dice::hash::DiceHash<Key>,
 			std::equal_to<Key>,
-			std::allocator<Key>,
+			Allocator,
 			tsl::sh::power_of_two_growth_policy<2>,
 			tsl::sh::exception_safety::basic,
 			tsl::sh::sparsity::high>;

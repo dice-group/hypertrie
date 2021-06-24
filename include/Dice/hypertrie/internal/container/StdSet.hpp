@@ -5,10 +5,12 @@
 #include <fmt/format.h>
 
 namespace hypertrie::internal::container {
-    template<typename key_type>
+    template<typename key_type, typename Allocator = std::allocator<Key>>
     using std_set = std::set
             <
-                    key_type
+                    key_type,
+					std::less<key_type>,
+					Allocator
             >;
 }
 

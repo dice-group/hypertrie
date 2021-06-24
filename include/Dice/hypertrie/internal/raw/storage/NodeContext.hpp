@@ -17,10 +17,12 @@ namespace hypertrie::internal::raw {
 
 	template<size_t max_depth,
 			 HypertrieInternalTrait tri_t = Hypertrie_internal_t<>,
+			 typename Allocator = std::allocator<size_t>,
 			 typename = typename std::enable_if_t<(max_depth >= 1)>>
 	class NodeContext {
 	public:
 		using tri = tri_t;
+		using allocator_type = Allocator;
 		/// public definitions
 		using key_part_type = typename tri::key_part_type;
 		using value_type = typename tri::value_type;
@@ -37,10 +39,13 @@ namespace hypertrie::internal::raw {
 		template<size_t depth>
 		using DiagonalPositions = typename tri::template DiagonalPositions<depth>;
 
-		using NodeStorage_t = NodeStorage<max_depth, tri>;
+		using NodeStorage_t = NodeStorage<max_depth, tri, allocator_type>;
 
 	public:
-		NodeStorage_t storage{};
+		NodeStorage_t storage;
+
+		NodeContext(const Allocator& alloc // = Allocator()
+		) : storage(alloc){}
 
 		/**
 		 *
@@ -388,6 +393,6 @@ namespace hypertrie::internal::raw {
 				return nodec.uncompressed_node()->size();
 		}
 	};
-}// namespace hypertrie::internal
+}// namespace hypertrie::internal::raw
 
 #endif//HYPERTRIE_NODECONTEXT_HPP

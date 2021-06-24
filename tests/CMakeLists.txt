@@ -26,11 +26,17 @@ FetchContent_MakeAvailable(Catch2)
 add_executable(tests_hypertrie_internal node_based/NodeBasedTests.cpp)
 #set_target_properties(tests_hypertrie_internal PROPERTIES LINKER_LANGUAGE CXX)
 add_executable(tests_einsum TestEinsum.cpp)
+add_executable(tests_allocator_awareness allocator_awareness/TestAllocatorAwareness.cpp)
+target_include_directories(tests_allocator_awareness PUBLIC allocator_awareness)
 target_link_libraries(tests_hypertrie_internal PRIVATE
         Catch2::Catch2
         hypertrie::hypertrie
         )
 target_link_libraries(tests_einsum PRIVATE
+        Catch2::Catch2
+        hypertrie::hypertrie
+        )
+target_link_libraries(tests_allocator_awareness PRIVATE
         Catch2::Catch2
         hypertrie::hypertrie
         )
@@ -54,6 +60,7 @@ list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/contrib)
 include(Catch)
 catch_discover_tests(tests_hypertrie_internal)
 catch_discover_tests(tests_einsum)
+catch_discover_tests(tests_allocator_awareness)
 
 # copy files for testing to the binary folder
 file(COPY data DESTINATION ${CMAKE_CURRENT_BINARY_DIR})

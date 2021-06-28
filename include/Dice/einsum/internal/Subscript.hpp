@@ -28,8 +28,7 @@
 #include <tsl/hopscotch_set.h>
 #include <tsl/hopscotch_map.h>
 
-constexpr bool _union_ = false;
-constexpr bool _rek_ = true;
+constexpr bool _rek_ = false;
 
 namespace einsum::internal {
 
@@ -547,12 +546,8 @@ namespace einsum::internal {
 						return  Type::RecursiveLeftJoin;
 					}
                     // more than one WEAKLY connected component means that there is a Cartesian product
-					if (weakly_connected_components.size() > 1) {
-						if constexpr (not _union_)
-						    return Type::Cartesian;
-						else
-							return Type::Union;
-					}
+					if (weakly_connected_components.size() > 1)
+                        return Type::Cartesian;
 					break;
 				}
 			}

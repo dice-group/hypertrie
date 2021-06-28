@@ -40,13 +40,19 @@ namespace einsum::internal {
 		 */
         std::map<Label, key_part_type> mapping{};
 
+		/*
+		 * Indicates if a cartesian operator should be replaces by a union operator
+		 */
+        bool union_ = false;
+
         /**
         * Passes the labels to be used in the LeftJoinOperator/JoinOperator
         * Populated by JoinSelectionOperator
         */
         std::map<std::size_t, char> sub_operator_label{};
 
-		explicit Context(TimePoint const &timeout = TimePoint::max()) : timeout(timeout) {}
+		explicit Context(TimePoint const &timeout = TimePoint::max(), bool union_ = false) : timeout(timeout),
+																							 union_(union_){}
 
 		/**
 		 * Checks if the timeout is already reached. This method is intentionally unsynchronized.

@@ -45,6 +45,7 @@ namespace hypertrie::tests::leftjoin {
 		std::vector<char> result_labels{};
         std::vector<char> opt_begin{'['};
         std::vector<char> opt_end{']'};
+		bool union_ = false;
         // a,ab,[bc]->abc
 		SECTION("join_left-join", "combination of joins and left-joins") {
 			SECTION("j_lj_dl", "join before left join, different join labels") {
@@ -751,6 +752,7 @@ namespace hypertrie::tests::leftjoin {
             }
 		}
 		SECTION("left-join_union", "union queries with optional parts") {
+			union_ = true;
 			// a,[ab],[ac]->bc
 			SECTION("lj_union", "one union between optional parts") {
                 operands.push_back(ht1);
@@ -944,7 +946,7 @@ namespace hypertrie::tests::leftjoin {
             }
 		}
         auto subscript = std::make_shared<Subscript>(operands_labels, result_labels);
-        auto einsum = Einsum<size_t>(subscript, operands);
+        auto einsum = Einsum<size_t>(subscript, operands, std::numeric_limits<TimePoint>::max(), union_);
         std::vector<std::vector<default_bool_Hypertrie_t::key_part_type>> actual_results{};
         for(const auto& entry : einsum)
             for(std::size_t i = 0; i < entry.value; i++)

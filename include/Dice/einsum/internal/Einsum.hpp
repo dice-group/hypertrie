@@ -36,7 +36,9 @@ namespace einsum::internal {
 			case Subscript::Type::Count:
 				return std::make_shared<CountOperator<value_type, tr>>(subscript, context);
 			case Subscript::Type::Cartesian:
-				return std::make_shared<CartesianOperator<value_type, tr>>(subscript, context);
+				if (not context->union_)
+				    return std::make_shared<CartesianOperator<value_type, tr>>(subscript, context);
+				[[fallthrough]];
 			case Subscript::Type::Union:
 				return std::make_shared<UnionOperator<value_type, tr>>(subscript, context);
 			case Subscript::Type::EntryGenerator:
@@ -67,8 +69,9 @@ namespace einsum::internal {
 		Einsum() = default;
 
 		Einsum(std::shared_ptr<Subscript> subscript, const std::vector<const_Hypertrie<tr>> &operands,
-			   TimePoint timeout = TimePoint::max())
-			: subscript(std::move(subscript)), context{std::make_shared<Context<key_part_type>>(timeout)},
+			   TimePoint timeout = TimePoint::max(), bool union_ = false)
+			: subscript(std::move(subscript)),
+			  context{std::make_shared<Context<key_part_type>>(timeout, union_)},
 			  operands(operands),
 			  op{Operator_t::construct(this->subscript, context)},
 			  entry(this->subscript->resultLabelCount(), Operator_t::default_key_part) {}
@@ -132,10 +135,6 @@ namespace einsum::internal {
 			op->clear();
 		}
 
-        const std::map<Label, key_part_type>& getMapping() {
-			return context->mapping;
-		}
-
 	};
 
 	template<HypertrieTrait tr_t>
@@ -156,8 +155,8 @@ namespace einsum::internal {
 
 	public:
 		Einsum(std::shared_ptr<Subscript> subscript, const std::vector<const_Hypertrie<tr>> &operands,
-			   TimePoint timeout = std::numeric_limits<TimePoint>::max())
-			: subscript(std::move(subscript)), context{std::make_shared<Context<key_part_type>>(timeout)},
+			   TimePoint timeout = std::numeric_limits<TimePoint>::max(), bool union_ = false)
+			: subscript(std::move(subscript)), context{std::make_shared<Context<key_part_type>>(timeout, union_)},
 			  operands(operands),
 			  op{Operator_t::construct(this->subscript, context)},
 			  entry(this->subscript->resultLabelCount(), Operator_t::default_key_part) {}
@@ -231,10 +230,6 @@ namespace einsum::internal {
 		void clear() {
 			op->clear();
 		}
-
-        const std::map<Label, key_part_type>& getMapping() {
-            return context->mapping;
-        }
 
 	};
 }

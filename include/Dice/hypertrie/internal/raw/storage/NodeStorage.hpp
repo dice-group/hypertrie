@@ -7,6 +7,8 @@
 #include "Dice/hypertrie/internal/util/CONSTANTS.hpp"
 #include "Dice/hypertrie/internal/util/IntegralTemplatedTuple.hpp"
 
+#include <memory>
+
 namespace hypertrie::internal::raw {
 
 	template<size_t depth,
@@ -17,28 +19,41 @@ namespace hypertrie::internal::raw {
 		using tri = tri_t;
 		using allocator_type = Allocator;
 		template<typename mapped_type>
-		using mapped_type_ptr = std:allocator_traits<allocator_type>::rebind_traits<mapped_type>::pointer;
+		using map_alloc_type = typename std::allocator_traits<allocator_type>::template rebind_alloc<mapped_type>;
+
+		template<typename mapped_type>
+		using mapped_type_ptr = typename std::allocator_traits<map_alloc_type<mapped_type>>::pointer;
 		template<typename K, typename V>
-		using map_type = typename tri::template map_type<K, mapped_type_ptr<V>, allocator_type>;
-		using CompressedNodeMap = map_type<TensorHash, CompressedNode<depth, tri, map_type::allocator_type>>;
-		using UncompressedNodeMap = map_type<TensorHash, UncompressedNode<depth, tri, map_type::allocator_type>>;
+		using map_type = typename tri::template map_type<K, mapped_type_ptr<V>, map_alloc_type<std::pair<K, mapped_type_ptr<V>>>>;
+		using CompressedNodeMap = map_type<TensorHash, CompressedNode<depth, tri, allocator_type>>;
+		using UncompressedNodeMap = map_type<TensorHash, UncompressedNode<depth, tri, allocator_type>>;
 		// TODO: add "revision" for compressed_nodes_ and uncompressed_nodes_
 		// TODO: A node container must be updated if the revision does not fit the associated node storage
 	protected:
+		map_alloc_type<CompressedNode<depth, tri, allocator_type>> compressed_nodes_alloc_;
+		map_alloc_type<UncompressedNode<depth, tri, allocator_type>> uncompressed_nodes_alloc_;
 		CompressedNodeMap compressed_nodes_;
 		UncompressedNodeMap uncompressed_nodes_;
 
 	public:
 
 		LevelNodeStorage(const Allocator& alloc // = Allocator()
-						 ) : compressed_nodes_(alloc),
+						 ) : compressed_nodes_alloc_(alloc),
+							 uncompressed_nodes_alloc_(alloc),
+							 compressed_nodes_(alloc),
 							 uncompressed_nodes_(alloc) {}
 
 		~LevelNodeStorage() {
-			for(auto &[hash, node] : compressed_nodes_)
-				delete node;
-			for(auto &[hash, node] : uncompressed_nodes_)
-				delete node;
+			for (auto &[hash, node] : this->compressed_nodes_) {
+				using alloc_trait = std::allocator_traits<map_alloc_type<CompressedNode<depth, tri, allocator_type>>>;
+				alloc_trait::destroy(compressed_nodes_alloc_, std::to_address(node));
+				alloc_trait::deallocate(compressed_nodes_alloc_, node, 1);
+			}
+			for (auto &[hash, node] : this->uncompressed_nodes_) {
+				using alloc_trait = std::allocator_traits<map_alloc_type<UncompressedNode<depth, tri, allocator_type>>>;
+				alloc_trait::destroy(uncompressed_nodes_alloc_, std::to_address(node));
+				alloc_trait::deallocate(uncompressed_nodes_alloc_, node, 1);
+			}
 		}
 
 		const CompressedNodeMap &compressedNodes() const { return this->compressed_nodes_; }
@@ -66,7 +81,7 @@ namespace hypertrie::internal::raw {
 		using allocator_type = Allocator;
 
 		template<typename mapped_type>
-		using mapped_type_ptr = std:allocator_traits<allocator_type>::rebind_traits<mapped_type>::pointer;
+		using mapped_type_ptr = typename std::allocator_traits<allocator_type>::template rebind_traits<mapped_type>::pointer;
 		//we maybe need to cast the allocator accordingly for the map
 		template<typename K, typename V>
 		using map_type = typename tri::template map_type<K, mapped_type_ptr<V>, allocator_type>;
@@ -101,7 +116,7 @@ namespace hypertrie::internal::raw {
 		}
 	};
 
-	template<size_t max_depth,
+	/*template<size_t max_depth,
 			 HypertrieInternalTrait tri_t = Hypertrie_internal_t<>,
 			 typename Allocator = std::allocator<size_t>,
 			 typename = typename std::enable_if_t<(max_depth >= 1)>>
@@ -120,7 +135,7 @@ namespace hypertrie::internal::raw {
 		using RawSliceKey = typename tri::template RawSliceKey<depth>;
 
 		template<size_t depth>
-		using NodeStorage_t = LevelNodeStorage<depth, tri, allocator>;
+		using NodeStorage_t = LevelNodeStorage<depth, tri, allocator_type>;
 
 		template<size_t depth>
 		using CompressedNodeMap = typename NodeStorage_t<depth>::CompressedNodeMap;
@@ -205,9 +220,9 @@ namespace hypertrie::internal::raw {
 		}
 
 
-		/**
+		*//**
 		 * creates a new node with the value changed. The old node is NOT deleted if keep_old is true and must eventually be deleted afterwards.
-		 */
+		 *//*
 		template<size_t depth, NodeCompression compression, bool keep_old = true, typename = std::enable_if_t<(not (depth == 1 and tri_t::is_lsb_unused and tri_t::is_bool_valued and compression == NodeCompression::compressed))>>
 		auto changeNodeValue(SpecificNodeContainer<depth, compression, tri> nc, RawKey<depth> key, value_type old_value, value_type new_value, long count_diff, TensorHash new_hash)
 				-> SpecificNodeContainer<depth, compression, tri> {
@@ -286,7 +301,7 @@ namespace hypertrie::internal::raw {
 			os << (std::string) storage;
 			return os;
 		}
-	};
+	};*/
 
 
 }// namespace hypertrie::internal::raw

@@ -9,6 +9,10 @@
 #include <metall/metall.hpp>
 
 
+template<typename T>
+using m_alloc_t = metall::manager::allocator_type<T>;
+
+
 TEST_CASE("OffsetAllocator -- create uncompressed node", "[Node]") {
 
 	using namespace hypertrie::internal::raw;

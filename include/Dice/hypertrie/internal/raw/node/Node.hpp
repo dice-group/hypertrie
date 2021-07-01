@@ -2,10 +2,10 @@
 #define HYPERTRIE_NODE_HPP
 
 #include "Dice/hypertrie/internal/raw/Hypertrie_internal_traits.hpp"
-#include "Dice/hypertrie/internal/util/PosType.hpp"
 #include "Dice/hypertrie/internal/raw/node/NodeCompression.hpp"
 #include "Dice/hypertrie/internal/raw/node/TaggedTensorHash.hpp"
 #include "Dice/hypertrie/internal/raw/node/TensorHash.hpp"
+#include "Dice/hypertrie/internal/util/PosType.hpp"
 #include <range.hpp>
 
 namespace hypertrie::internal::raw {
@@ -134,10 +134,14 @@ namespace hypertrie::internal::raw {
 																TaggedTensorHash<tri>,
 																TensorHash>,
 											 value_type>;
+		using collection_alloc = std::conditional_t<((depth == 1) and tri::is_bool_valued),
+													typename std::allocator_traits<allocator_type>::template rebind_alloc<key_part_type>,
+													typename std::allocator_traits<allocator_type>::template rebind_alloc<std::pair<typename tri::key_part_type, ChildType>>>;
+
 		// allocator might need to be casted to specific type for set/map
 		using ChildrenType = std::conditional_t<((depth == 1) and tri::is_bool_valued),
-												typename tri::template set_type<key_part_type, allocator_type>,
-												typename tri::template map_type<typename tri::key_part_type, ChildType, allocator_type>>;
+												typename tri::template set_type<key_part_type, collection_alloc>,
+												typename tri::template map_type<typename tri::key_part_type, ChildType, collection_alloc>>;
 
 		using EdgesType = std::conditional_t<(depth > 1),
 											 std::array<ChildrenType, depth>,
@@ -161,21 +165,21 @@ namespace hypertrie::internal::raw {
 		}
 
 
-		static inline EdgesType init([[maybe unused]]const Allocator &alloc) {
+		static inline EdgesType init([[maybe_unused]] const Allocator &alloc) {
 			if constexpr (depth == 1) {
 				return EdgesType(alloc);
 			} else {
 				return fill<depth>(alloc);
 			}
 		}
-	public:
-//		(const Allocator& alloc // = Allocator()
-//		) : storage(alloc){}
-		WithEdges(const Allocator &alloc// = Allocator()
-				  ) : edges_(alloc) {}
 
-		WithEdges(EdgesType edges
-		) : edges_(std::move(edges)) {}
+	public:
+		//		(const Allocator& alloc // = Allocator()
+		//		) : storage(alloc){}
+		WithEdges(const Allocator &alloc// = Allocator()
+				  ) : edges_(init(alloc)) {}
+
+		WithEdges(EdgesType edges) : edges_(std::move(edges)) {}
 
 		EdgesType &edges() { return this->edges_; }
 
@@ -233,10 +237,9 @@ namespace hypertrie::internal::raw {
 			return min_pos;
 		}
 
-		[[nodiscard]]
-		std::vector<size_t> getCards(const std::vector<pos_type> &positions) const {
+		[[nodiscard]] std::vector<size_t> getCards(const std::vector<pos_type> &positions) const {
 			std::vector<size_t> cards(positions.size());
-			for (auto i : iter::range(positions.size())){
+			for (auto i : iter::range(positions.size())) {
 				auto pos = positions[i];
 				assert(pos < depth);
 				cards[i] = edges(pos).size();
@@ -325,19 +328,19 @@ namespace hypertrie::internal::raw {
 		using allocator_type = Allocator;
 		using RawKey = typename tri::template RawKey<depth>;
 		using value_type = typename tri::value_type;
-		using ChildrenType = typename WithEdges<depth, tri_t, allocator_type>::ChildrenType;
-		using EdgesType = typename WithEdges<depth, tri_t, allocator_type>::EdgesType;
+		using WithEdges_t = WithEdges<depth, tri_t, allocator_type>;
+		using ChildrenType = typename WithEdges_t::ChildrenType;
+		using EdgesType = typename WithEdges_t::EdgesType;
 
 	private:
+		using map_alloc = typename WithEdges_t::collection_alloc;
 		static constexpr const auto subkey = &tri::template subkey<depth>;
-		static constexpr const auto deref = &tri::template deref<typename ChildrenType::key_type, typename ChildrenType::mapped_type>;
+		static constexpr auto deref = &tri::template deref<typename ChildrenType::key_type, typename ChildrenType::mapped_type, map_alloc>;
+
 	public:
-
-
-
 		size_t size_ = 0;
 		Node(size_t ref_count /*= 0*/, const Allocator &alloc /*= Allocator()*/)
-			: ReferenceCounted(), WithEdges<depth, tri_t, allocator_type>(alloc) {}
+			: ReferenceCounted(ref_count), WithEdges<depth, tri_t, allocator_type>(alloc) {}
 
 
 		void change_value(const RawKey &key, value_type old_value, value_type new_value) noexcept {
@@ -378,7 +381,7 @@ namespace hypertrie::internal::raw {
 
 
 		Node(size_t ref_count /*= 0*/, const Allocator &alloc /*= Allocator()*/)
-				: ReferenceCounted(), WithEdges<depth, tri_t, allocator_type>(alloc) {}
+			: ReferenceCounted(ref_count), WithEdges<depth, tri_t, allocator_type>(alloc) {}
 
 		Node(const RawKey &key, [[maybe_unused]] value_type value, const RawKey &second_key,
 			 [[maybe_unused]] value_type second_value, size_t ref_count = 0)
@@ -416,7 +419,7 @@ namespace hypertrie::internal::raw {
 			 HypertrieInternalTrait tri = Hypertrie_internal_t<>>
 	using UncompressedNode = Node<depth, NodeCompression::uncompressed, tri>;
 
-}// namespace hypertrie::internal
+}// namespace hypertrie::internal::raw
 
 template<size_t depth, hypertrie::internal::raw::NodeCompression compressed, hypertrie::internal::raw::HypertrieInternalTrait tri_t, typename enabled>
 std::ostream &operator<<(std::ostream &os, const hypertrie::internal::raw::Node<depth, compressed, tri_t, enabled> &node) {

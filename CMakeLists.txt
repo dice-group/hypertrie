@@ -39,6 +39,16 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(cppitertools)
 FetchContent_MakeAvailable(tsl-sparse-map-our-version)
 
+FetchContent_Declare(
+        metall
+        GIT_REPOSITORY https://github.com/LLNL/metall.git
+        GIT_TAG         e53ff5992d00136052e1e903c9e4e93da1e25981 # v0.15
+        GIT_SHALLOW    TRUE
+)
+FetchContent_GetProperties(metall)
+FetchContent_Populate(metall)
+include_directories(${metall_SOURCE_DIR}/include)
+
 find_package(robin_hood REQUIRED)
 find_package(tsl-hopscotch-map REQUIRED)
 #find_package(tsl-sparse-map REQUIRED)

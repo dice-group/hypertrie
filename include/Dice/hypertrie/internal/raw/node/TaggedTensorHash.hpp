@@ -22,7 +22,7 @@ namespace hypertrie::internal::raw {
 	 */
 	template<HypertrieInternalTrait tri>
 	class TaggedTensorHash {
-		TensorHash hash_{};
+		TensorHash hash_;
 
 	public:
 		using tr = tri;

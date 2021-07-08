@@ -4,9 +4,11 @@
 #include <boost/container/flat_set.hpp>
 
 namespace hypertrie::internal::container {
-    template<typename key_type>
+    template<typename key_type, typename Allocator = boost::container::new_allocator<key_type>>
     using boost_flat_set = boost::container::flat_set<
-            key_type
+            key_type,
+			std::less<>,
+			Allocator
             >;
 }
 

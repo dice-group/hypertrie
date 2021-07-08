@@ -43,7 +43,7 @@ namespace hypertrie::internal::raw {
 		/**
 		 * hash value
 		 */
-		RawTensorHash hash_{};
+		RawTensorHash hash_;
 
 	public:
 
@@ -67,16 +67,8 @@ namespace hypertrie::internal::raw {
 		/**
 		 * all zero hash.
 		 */
-		TensorHash() {}
-
-		TensorHash(const TensorHash &other)  noexcept: hash_(other.hash_) {}
-
-		TensorHash(const size_t &hash)  noexcept: hash_(hash) {}
-
-		TensorHash(TensorHash &&other)  noexcept= default;
-
-		TensorHash &operator=(const TensorHash &)  noexcept= default;
-		TensorHash &operator=(TensorHash &&)  noexcept= default;
+		TensorHash() = default;
+		explicit TensorHash(const size_t &hash)  noexcept: hash_(hash) {}
 
 		/*
 		 * Member Access

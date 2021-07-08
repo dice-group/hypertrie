@@ -25,13 +25,16 @@ namespace hypertrie::internal::raw {
 		using mapped_type_ptr = typename std::allocator_traits<map_alloc_type<mapped_type>>::pointer;
 		template<typename K, typename V>
 		using map_type = typename tri::template map_type<K, mapped_type_ptr<V>, map_alloc_type<std::pair<K, mapped_type_ptr<V>>>>;
-		using CompressedNodeMap = map_type<TensorHash, CompressedNode<depth, tri, allocator_type>>;
-		using UncompressedNodeMap = map_type<TensorHash, UncompressedNode<depth, tri, allocator_type>>;
+		using CompressedNode_type = CompressedNode<depth, tri, allocator_type>;
+		using UncompressedNodeMap_type = UncompressedNode<depth, tri, allocator_type>;
+		using map_key_type = TensorHash;
+		using CompressedNodeMap = map_type<map_key_type, CompressedNode_type>;
+		using UncompressedNodeMap = map_type<map_key_type, UncompressedNodeMap_type>;
 		// TODO: add "revision" for compressed_nodes_ and uncompressed_nodes_
 		// TODO: A node container must be updated if the revision does not fit the associated node storage
 	protected:
-		map_alloc_type<CompressedNode<depth, tri, allocator_type>> compressed_nodes_alloc_;
-		map_alloc_type<UncompressedNode<depth, tri, allocator_type>> uncompressed_nodes_alloc_;
+		map_alloc_type<CompressedNode_type> compressed_nodes_alloc_;
+		map_alloc_type<UncompressedNodeMap_type> uncompressed_nodes_alloc_;
 		CompressedNodeMap compressed_nodes_;
 		UncompressedNodeMap uncompressed_nodes_;
 
@@ -45,12 +48,12 @@ namespace hypertrie::internal::raw {
 
 		~LevelNodeStorage() {
 			for (auto &[hash, node] : this->compressed_nodes_) {
-				using alloc_trait = std::allocator_traits<map_alloc_type<CompressedNode<depth, tri, allocator_type>>>;
+				using alloc_trait = std::allocator_traits<map_alloc_type<CompressedNode_type>>;
 				alloc_trait::destroy(compressed_nodes_alloc_, std::to_address(node));
 				alloc_trait::deallocate(compressed_nodes_alloc_, node, 1);
 			}
 			for (auto &[hash, node] : this->uncompressed_nodes_) {
-				using alloc_trait = std::allocator_traits<map_alloc_type<UncompressedNode<depth, tri, allocator_type>>>;
+				using alloc_trait = std::allocator_traits<map_alloc_type<UncompressedNodeMap_type>>;
 				alloc_trait::destroy(uncompressed_nodes_alloc_, std::to_address(node));
 				alloc_trait::deallocate(uncompressed_nodes_alloc_, node, 1);
 			}
@@ -63,8 +66,8 @@ namespace hypertrie::internal::raw {
 		UncompressedNodeMap &uncompressedNodes() { return this->uncompressed_nodes_; }
 
 		template<NodeCompression compression>
-		static Node<depth, compression, tri> &deref(typename map_type<TensorHash, Node<depth, compression, tri>>::iterator &map_it) {
-			return *tri::template deref<TensorHash, Node<depth, compression, tri> *>(map_it);
+		static Node<depth, compression, tri> &deref(typename map_type<map_key_type, Node<depth, compression, tri>>::iterator &map_it) {
+			return *tri::template deref<map_key_type, Node<depth, compression, tri> *>(map_it);
 		}
 
 		explicit operator std::string() const {

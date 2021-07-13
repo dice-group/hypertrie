@@ -47,15 +47,15 @@ namespace hypertrie::internal::raw {
 							 uncompressed_nodes_(alloc) {}
 
 		~LevelNodeStorage() {
+			using c_alloc_trait = std::allocator_traits<map_alloc_type<CompressedNode_type>>;
 			for (auto &[hash, node] : this->compressed_nodes_) {
-				using alloc_trait = std::allocator_traits<map_alloc_type<CompressedNode_type>>;
-				alloc_trait::destroy(compressed_nodes_alloc_, std::to_address(node));
-				alloc_trait::deallocate(compressed_nodes_alloc_, node, 1);
+				c_alloc_trait::destroy(compressed_nodes_alloc_, std::to_address(node));
+				c_alloc_trait::deallocate(compressed_nodes_alloc_, node, 1);
 			}
+			using uc_alloc_trait = std::allocator_traits<map_alloc_type<UncompressedNodeMap_type>>;
 			for (auto &[hash, node] : this->uncompressed_nodes_) {
-				using alloc_trait = std::allocator_traits<map_alloc_type<UncompressedNodeMap_type>>;
-				alloc_trait::destroy(uncompressed_nodes_alloc_, std::to_address(node));
-				alloc_trait::deallocate(uncompressed_nodes_alloc_, node, 1);
+				uc_alloc_trait::destroy(uncompressed_nodes_alloc_, std::to_address(node));
+				uc_alloc_trait::deallocate(uncompressed_nodes_alloc_, node, 1);
 			}
 		}
 
@@ -82,25 +82,32 @@ namespace hypertrie::internal::raw {
 	struct LevelNodeStorage<1, tri_t, Allocator, std::enable_if_t<(tri_t::is_lsb_unused and tri_t::is_bool_valued)>> {
 		using tri = tri_t;
 		using allocator_type = Allocator;
+		template<typename mapped_type>
+		using map_alloc_type = typename std::allocator_traits<allocator_type>::template rebind_alloc<mapped_type>;
 
 		template<typename mapped_type>
-		using mapped_type_ptr = typename std::allocator_traits<allocator_type>::template rebind_traits<mapped_type>::pointer;
-		//we maybe need to cast the allocator accordingly for the map
+		using mapped_type_ptr = typename std::allocator_traits<map_alloc_type<mapped_type>>::pointer;
 		template<typename K, typename V>
-		using map_type = typename tri::template map_type<K, mapped_type_ptr<V>, allocator_type>;
-
-		using UncompressedNodeMap = map_type<TensorHash, UncompressedNode<1, tri, allocator_type>>;
+		using map_type = typename tri::template map_type<K, mapped_type_ptr<V>, map_alloc_type<std::pair<K, mapped_type_ptr<V>>>>;
+		using UncompressedNodeMap_type = UncompressedNode<1, tri, allocator_type>;
+		using map_key_type = TensorHash;
+		using UncompressedNodeMap = map_type<map_key_type, UncompressedNodeMap_type>;
 
 	protected:
+		map_alloc_type<UncompressedNodeMap_type> uncompressed_nodes_alloc_;
 		UncompressedNodeMap uncompressed_nodes_;
 
 	public:
-		LevelNodeStorage(const Allocator& alloc // = Allocator()
-		) : uncompressed_nodes_(alloc) {}
+		LevelNodeStorage(const Allocator &alloc /* = Allocator()*/)
+			: uncompressed_nodes_alloc_(alloc),
+			  uncompressed_nodes_(alloc) {}
 
 		~LevelNodeStorage() {
-			for (auto &[hash, node] : uncompressed_nodes_)
-				delete node;
+			using uc_alloc_trait = std::allocator_traits<map_alloc_type<UncompressedNodeMap_type>>;
+			for (auto &[hash, node] : this->uncompressed_nodes_) {
+				uc_alloc_trait::destroy(uncompressed_nodes_alloc_, std::to_address(node));
+				uc_alloc_trait::deallocate(uncompressed_nodes_alloc_, node, 1);
+			}
 		}
 
 		const UncompressedNodeMap &uncompressedNodes() const { return this->uncompressed_nodes_; }
@@ -108,8 +115,8 @@ namespace hypertrie::internal::raw {
 
 		template<NodeCompression compression = NodeCompression::uncompressed>
 		static UncompressedNode<1, tri> &deref(typename map_type<TensorHash, UncompressedNode<1, tri>>::iterator &map_it) {
-			assert(compression == NodeCompression::uncompressed);
-			return *tri::template deref<TensorHash, UncompressedNode<1, tri> *>(map_it);
+			static_assert(compression == NodeCompression::uncompressed, "LevelNodeStorage of depth 1 with is_lsb_unused and is_bool_valued doesn't manage compressed nodes.");
+			return *tri::template deref<map_key_type, UncompressedNode<1, tri> *>(map_it);
 		}
 
 		explicit operator std::string() const {

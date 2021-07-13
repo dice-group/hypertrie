@@ -324,7 +324,6 @@ namespace hypertrie::internal::raw {
 	// uncompressed depth >= 2
 	template<size_t depth, HypertrieInternalTrait tri_t, typename Allocator>
 	struct Node<depth, NodeCompression::uncompressed, tri_t, Allocator, typename std::enable_if_t<((depth >= 2))>> : public ReferenceCounted, public WithEdges<depth, tri_t, Allocator> {
-		// TODO: make allocator aware
 		using tri = tri_t;
 		using allocator_type = Allocator;
 		using RawKey = typename tri::template RawKey<depth>;

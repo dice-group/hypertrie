@@ -1,20 +1,21 @@
 #ifndef HYPERTRIE_TESTINTEGRALTEMPLATEDTUPLEALLOC_HPP
 #define HYPERTRIE_TESTINTEGRALTEMPLATEDTUPLEALLOC_HPP
 
+#include <Dice/hypertrie/internal/util/IntegralTemplatedTuple.hpp>
 #include <catch2/catch.hpp>
 #include <iostream>
 
-namespace dev{
+namespace dev {
 	/** A helper struct to generate tuples of the Form (T<FIRST>, T<FIRST+1>,..., T<LAST>).
 	 * T uses an allocator to construct.
 	 * @tparam EntryTypeTemplate The type used in the tuple entries.
 	 * It must be a template of the Form T<INTEGER, ALLOCATOR>.
 	 * @tparam Allocator The allocator type to use for the entries.
 	 */
-    template<template<auto N, typename Allocator> typename EntryTypeTemplate,
-             typename Allocator>
-    struct TupleGenerator {
-		template <std::integral auto N>
+	template<template<auto N, typename Allocator> typename EntryTypeTemplate,
+			 typename Allocator>
+	struct TupleGenerator {
+		template<std::integral auto N>
 		using Entry = EntryTypeTemplate<N, Allocator>;
 
 		/** Generates a single entry.
@@ -23,10 +24,10 @@ namespace dev{
 		 * @param alloc The allocator to pass to the constructor of the entry.
 		 * @return Constructed entry.
 		 */
-        template<std::integral auto N>
-        static Entry<N> gen_single(Allocator const &alloc) {
-            return Entry<N>(alloc);
-        }
+		template<std::integral auto N>
+		static Entry<N> gen_single(Allocator const &alloc) {
+			return Entry<N>(alloc);
+		}
 
 		/** Generates the tuple with gen_single based on entries of an integer_sequence.
 		 *
@@ -36,9 +37,9 @@ namespace dev{
 		 * @param alloc The allocator to use.
 		 * @return A tuple of entries.
 		 */
-		template <std::integral auto FIRST, typename INTEGER, INTEGER ...IDS>
-		static auto gen_tuple(Allocator const& alloc, std::integer_sequence<INTEGER, IDS...>){
-			return std::make_tuple(gen_single<FIRST+IDS>(alloc)...);
+		template<std::integral auto FIRST, typename INTEGER, INTEGER... IDS>
+		static auto gen_tuple(Allocator const &alloc, std::integer_sequence<INTEGER, IDS...>) {
+			return std::make_tuple(gen_single<FIRST + IDS>(alloc)...);
 		}
 
 		/** Wrapper for gen_tuple above.
@@ -50,110 +51,111 @@ namespace dev{
 		 * @return See the other gen_tuple implementation.
 		 */
 		template<std::integral auto FIRST, std::integral auto LAST>
-		requires std::is_same<decltype(FIRST), decltype(LAST)>::value
-		static auto gen_tuple(Allocator const &alloc) {
-			static_assert(FIRST < LAST);
-			return gen_tuple<FIRST>(alloc, std::make_integer_sequence<decltype(FIRST), LAST-FIRST+1>());
+		requires std::is_same<decltype(FIRST), decltype(LAST)>::value static auto gen_tuple(Allocator const &alloc) {
+			static_assert(FIRST <= LAST);
+			return gen_tuple<FIRST>(alloc, std::make_integer_sequence<decltype(FIRST), LAST - FIRST + 1>());
 		}
 
-        template<std::integral auto FIRST, std::integral auto LAST>
-        using type = std::invoke_result_t<decltype(gen_tuple<FIRST,LAST>), Allocator>;
-    };
+		template<std::integral auto FIRST, std::integral auto LAST>
+		using type = std::invoke_result_t<decltype(gen_tuple<FIRST, LAST>), Allocator>;
+	};
 
 
-    template<template<std::integral auto N, typename Allocator> typename EntryTypeTemplate,
+	template<template<std::integral auto N, typename Allocator> typename EntryTypeTemplate,
 			 std::integral auto FIRST, std::integral auto LAST, typename Allocator>
 	struct IntegralTemplatedTupleAlloc {
 		using generator = TupleGenerator<EntryTypeTemplate, Allocator>;
-		typename generator::template type<FIRST,LAST> count_up_tuple_;
+		typename generator::template type<FIRST, LAST> count_up_tuple_;
 
-        IntegralTemplatedTupleAlloc(Allocator const& alloc)
-			:count_up_tuple_(generator::template gen_tuple<FIRST,LAST>(alloc)){}
-
-		constexpr static auto abs(std::intptr_t a, std::intptr_t b) noexcept {
-			return (a < b) ? (b-a) : (a-b);
+		auto gen_tuple(Allocator const& alloc) {
+			if constexpr(FIRST <= LAST) {
+				return generator::template gen_tuple<FIRST, LAST>(alloc);
+			} else {
+				return generator::template gen_tuple<LAST, FIRST>(alloc);
+			}
 		}
 
-        template<auto I>
-        constexpr auto &get() noexcept {
-            constexpr const auto pos = (FIRST <= LAST) ? LAST - I : I - LAST;
-            static_assert(pos >= 0 and pos <= abs(LAST, FIRST));
-            return std::get<pos>(count_up_tuple_);
-        }
+		IntegralTemplatedTupleAlloc(Allocator const &alloc)
+			: count_up_tuple_(gen_tuple(alloc)) {}
 
-        template<auto I>
-        constexpr const auto &get() const noexcept {
-            constexpr const auto pos = (FIRST <= LAST) ? LAST - I : I - LAST;
-            static_assert(pos >= 0 and pos <= abs(LAST, FIRST));
-            return std::get<pos>(count_up_tuple_);
-        }
-    };
+		constexpr static auto abs(std::intptr_t a, std::intptr_t b) noexcept {
+			return (a < b) ? (b - a) : (a - b);
+		}
+
+		template<auto I>
+		static constexpr auto calcPos() {
+			static_assert(FIRST <= I && I <= LAST);
+			return abs(I, FIRST);
+		}
+
+		template<auto I>
+		constexpr auto &get() noexcept {
+			return std::get<calcPos<I>()>(count_up_tuple_);
+		}
+
+		template<auto I>
+		constexpr const auto &get() const noexcept {
+			return std::get<calcPos<I>()>(count_up_tuple_);
+		}
+	};
 }// namespace dev
 
 
-template<size_t N, typename Allocator>
-struct TestStruct {
+template<size_t N>
+struct NonAlloc {
 	static constexpr size_t value = N;
-
-	TestStruct(Allocator const &) {}
-
-	friend std::ostream& operator<<(std::ostream& os, TestStruct const&) {
-		return os << N << ' ';
+	friend std::ostream &operator<<(std::ostream &os, NonAlloc const &na) {
+		return os << na.value << ' ';
 	}
 };
 
-template <typename ...Args, size_t ...IDS>
-std::ostream& printTuple(std::ostream &os, std::tuple<Args...> const& tuple, std::index_sequence<IDS...>) {
-    return (os << ... << get<IDS>(tuple));
-}
-
-template<typename ...Args>
-std::ostream& operator<<(std::ostream& os, std::tuple<Args...> const& tuple) {
-	return printTuple(os, tuple, std::make_index_sequence<sizeof...(Args)>());
-}
-
-template <size_t N, typename Allocator>
-using PrepTestStruct = TestStruct<N, Allocator>;
-
-TEST_CASE("Single value can be constructed", "[TupleWithAllocator]") {
-	constexpr size_t N = 4;
-	auto test = dev::TupleGenerator<PrepTestStruct, std::allocator<int>>::
-	        gen_single<N>(std::allocator<int>{});
-	REQUIRE(test.value == N);
-}
-
-TEST_CASE("Tuple of values can be constructed", "[TupleWithAllocator]") {
-    constexpr size_t FIRST = 4;
-    constexpr size_t LAST = 8;
-    auto [a, b, c, d, e]= dev::TupleGenerator<PrepTestStruct, std::allocator<int>>::
-    gen_tuple<FIRST, LAST>(std::allocator<int>{});
-	REQUIRE(a.value == FIRST);
-    REQUIRE(b.value == FIRST+1);
-    REQUIRE(c.value == FIRST+2);
-    REQUIRE(d.value == FIRST+3);
-    REQUIRE(e.value == FIRST+4);
-}
-
-
-template <typename>
-struct A {
-	template <typename>
-	static auto f(int) {
-		return 42;
+template<size_t N, typename Allocator>
+struct Alloc {
+	static constexpr size_t value = N;
+	Alloc(Allocator const &) {}
+	friend std::ostream &operator<<(std::ostream &os, Alloc const &a) {
+		return os << a.value << ' ';
 	}
 };
 
-TEST_CASE("Wrapper can be constructed", "[TupleWithAllocator]") {
-    constexpr size_t FIRST = 4;
-    constexpr size_t LAST = 8;
 
-	dev::IntegralTemplatedTupleAlloc<PrepTestStruct, FIRST, LAST, std::allocator<int>> test(std::allocator<int>{});
+/* Helper functions to check if the two approaches result in the same tuple.
+ * The std::make_index_sequence trick is used here.
+ */
+template<size_t Index, typename NoAlloc, typename WithAlloc>
+bool equal(NoAlloc const &na, WithAlloc &a) {
+	return na.template get<Index>().value == a.template get<Index>().value;
+}
 
-	std::cout << test.get<4>() << std::endl;
-    std::cout << test.get<5>() << std::endl;
-    std::cout << test.get<6>() << std::endl;
-    std::cout << test.get<7>() << std::endl;
-    std::cout << test.get<8>() << std::endl;
+template<size_t FIRST, typename NoAlloc, typename WithAlloc, size_t... IDS>
+bool equal(NoAlloc const &na, WithAlloc &a, std::index_sequence<IDS...>) {
+	return (equal<FIRST + IDS>(na, a) && ...);
+}
+template<size_t FIRST, size_t LAST, typename NoAlloc, typename WithAlloc>
+bool equal(NoAlloc const &na, WithAlloc &a) {
+	return equal<FIRST>(na, a, std::make_index_sequence<LAST - FIRST + 1>());
+}
+
+using dev::IntegralTemplatedTupleAlloc;
+using hypertrie::internal::util::IntegralTemplatedTuple;
+
+template<size_t FIRST, size_t LAST>
+void NonAllocVsAlloc() {
+	IntegralTemplatedTuple<NonAlloc, FIRST, LAST> na;
+	IntegralTemplatedTupleAlloc<Alloc, FIRST, LAST, std::allocator<int>> a(std::allocator<int>{});
+	REQUIRE(equal<FIRST, LAST>(na, a));
+}
+
+TEST_CASE("Is same for single value at 0", "[TupleWithAllocator]") { NonAllocVsAlloc<0, 0>(); }
+TEST_CASE("Is same for single value at 4", "[TupleWithAllocator]") { NonAllocVsAlloc<4, 4>(); }
+TEST_CASE("Is same for multiple values starting at 0", "[TupleWithAllocator]") { NonAllocVsAlloc<0, 10>(); }
+TEST_CASE("Is same for multiple values starting at 4", "[TupleWithAllocator]") { NonAllocVsAlloc<4, 20>(); }
+//when I comment it in, my ram explodes?
+//TEST_CASE("Is same for multiple values counting down", "[TupleWithAllocator]") { NonAllocVsAlloc<4, 0>(); }
+TEST_CASE("Is same for multiple values starting at 4", "[TupleWithAllocator]") {
+	constexpr size_t FIRST = 4;
+    constexpr size_t LAST =  0;
+    //IntegralTemplatedTupleAlloc<Alloc, FIRST, LAST, std::allocator<int>> a(std::allocator<int>{});
 }
 
 #endif//HYPERTRIE_TESTINTEGRALTEMPLATEDTUPLEALLOC_HPP

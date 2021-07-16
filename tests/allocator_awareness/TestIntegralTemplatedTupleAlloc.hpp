@@ -150,7 +150,8 @@ namespace dev {
 		template<auto I>
 		static constexpr auto calcPos() {
 			static_assert(MIN <= I && I <= MAX);
-			return I - MIN;
+			if constexpr(Use_up_type) {return I - MIN;}
+			else {return MAX - I;}
 		}
 
 		template<auto I>
@@ -276,7 +277,7 @@ TEST_CASE("Is same for single value at 0", "[TupleWithAllocator]") { NonAllocVsA
 TEST_CASE("Is same for single value at 4", "[TupleWithAllocator]") { NonAllocVsAlloc<4, 4>();}
 TEST_CASE("Is same for multiple values starting at 0", "[TupleWithAllocator]") { NonAllocVsAlloc<0, 10>();}
 TEST_CASE("Is same for multiple values starting at 4", "[TupleWithAllocator]") { NonAllocVsAlloc<4, 20>();}
-TEST_CASE("Is same for multiple values counting down", "[TupleWithAllocator]") { NonAllocVsAlloc<4, 0>(true);}
+TEST_CASE("Is same for multiple values counting down", "[TupleWithAllocator]") { NonAllocVsAlloc<4, 0>();}
 
 
 

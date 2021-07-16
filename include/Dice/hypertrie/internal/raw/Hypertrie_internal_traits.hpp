@@ -187,9 +187,14 @@ namespace hypertrie::internal::raw {
 	};
 
 	namespace internal::hypertrie_internal_trait {
+		template <typename T, template<typename> typename U>
+		struct is_instance_impl : public std::false_type{};
+
+		/*
 		template<typename T, template<HypertrieTrait> typename U>
 		struct is_instance_impl : public std::false_type {
 		};
+		 */
 
 		template<template<HypertrieTrait> typename U,
 				 HypertrieTrait tr_t>

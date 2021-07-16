@@ -11,7 +11,7 @@ namespace hypertrie::internal::raw {
 	 * The sole purpose of this class is to have the same memory layout as a template instantiation of SpecificNodeContainer and NodeContainer.
 	 */
 	struct RawNodeContainer {
-		TensorHash hash_sized = 0;
+		TensorHash hash_sized {0};
 		void * pointer_sized = nullptr;
 	};
 

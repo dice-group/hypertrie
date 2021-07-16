@@ -9,6 +9,13 @@
 #include <metall/metall.hpp>
 #include <tsl/boost_offset_pointer.h>
 
+//gcc-10 would not compile without this specialisation
+namespace std {
+    template <typename T>
+    struct indirectly_readable_traits<boost::interprocess::offset_ptr<T>> {
+        using value_type = typename boost::interprocess::offset_ptr<T>::value_type;
+    };
+}
 
 TEST_CASE("OffsetAllocator -- create uncompressed node", "[NodeStorage]") {
 
@@ -18,30 +25,43 @@ TEST_CASE("OffsetAllocator -- create uncompressed node", "[NodeStorage]") {
 
 	LevelNodeStorage_t level_node_storage(OffsetAllocator<int>{});
 }
-template<typename T>
-using m_alloc_t = metall::manager::allocator_type<T>;
 
-using namespace hypertrie::internal::raw;
-/*
-using tri = hypertrie::Hypertrie_t<unsigned long,
+namespace details {
+	template<typename T>
+	using m_alloc_t = metall::manager::allocator_type<T>;
+
+	using namespace hypertrie::internal::raw;
+	/*
+    using tri = hypertrie::Hypertrie_t<unsigned long,
 		bool,
 		hypertrie::internal::container::boost_flat_map ,
 		hypertrie::internal::container::boost_flat_set>;
-using boost_internal_type_trait = Hypertrie_internal_t<tri>;
-*/
-using tri = ::hypertrie::internal::raw::lsbunused_bool_Hypertrie_internal_t;
+    using boost_internal_type_trait = Hypertrie_internal_t<tri>;
+    */
+	using tri = ::hypertrie::internal::raw::lsbunused_bool_Hypertrie_internal_t;
 
-template<size_t depth>
-using LevelNodeStorage_t = LevelNodeStorage<depth, tri, m_alloc_t<int>>;
+	template<size_t depth>
+	using LevelNodeStorage_t = LevelNodeStorage<depth, tri, m_alloc_t<int>>;
 
+    // N=1 not possible!
+    template<size_t N>
+    auto create_compressed_node(metall::manager::allocator_type<typename LevelNodeStorage_t<N>::CompressedNode_type> alloc) {
+        auto address = std::allocator_traits<decltype(alloc)>::allocate(alloc, 1);
+        std::allocator_traits<decltype(alloc)>::construct(alloc, std::to_address(address));
+        return address;
+    }
 
-// N=1 not possible!
-template<size_t N>
-auto create_compressed_node(metall::manager::allocator_type<typename LevelNodeStorage_t<N>::CompressedNode_type> alloc) {
-	auto address = std::allocator_traits<decltype(alloc)>::allocate(alloc, 1);
-	std::allocator_traits<decltype(alloc)>::construct(alloc, std::to_address(address));
-	return address;
+    // N=1 not possible!
+    template<size_t N>
+    auto create_uncompressed_node(metall::manager::allocator_type<typename LevelNodeStorage_t<N>::UncompressedNodeMap_type> alloc) {
+        auto address = std::allocator_traits<decltype(alloc)>::allocate(alloc, 1);
+        std::allocator_traits<decltype(alloc)>::construct(alloc, std::to_address(address), 0, alloc);
+        return address;
+    }
 }
+using namespace details;
+
+
 
 template<size_t N>
 void MetallAllocator_creat_compressed_nodes_in_LevelStorage() {
@@ -109,13 +129,6 @@ TEST_CASE("MetallAllocator -- create compressed node depth 3", "[NodeStorage]") 
 	MetallAllocator_creat_compressed_nodes_in_LevelStorage<3>();
 }
 
-// N=1 not possible!
-template<size_t N>
-auto create_uncompressed_node(metall::manager::allocator_type<typename LevelNodeStorage_t<N>::UncompressedNodeMap_type> alloc) {
-	auto address = std::allocator_traits<decltype(alloc)>::allocate(alloc, 1);
-	std::allocator_traits<decltype(alloc)>::construct(alloc, std::to_address(address), 0, alloc);
-	return address;
-}
 
 template<size_t N>
 void MetallAllocator_creat_uncompressed_nodes_in_LevelStorage() {
@@ -220,4 +233,48 @@ TEST_CASE("MetallAllocator -- create uncompressed node depth 2", "[NodeStorage]"
 TEST_CASE("MetallAllocator -- create uncompressed node depth 1", "[NodeStorage]") {
 	MetallAllocator_creat_uncompressed_nodes_in_LevelStorage<1>();
 }
+
+
+template <size_t N>
+struct IntWrapper {
+	static constexpr size_t value = N;
+};
+
+template <size_t N>
+std::ostream& operator<<(std::ostream &os, IntWrapper<N> const&) {
+	return os << IntWrapper<N>::value << ' ';
+}
+
+using hypertrie::internal::util::IntegralTemplatedTuple;
+
+
+template <typename Tuple, size_t ...I>
+void _printTuple(Tuple const& tuple, std::index_sequence<I...>) {
+    (std::cout << ... << tuple.template get<I>());
+}
+
+
+template <template<auto> typename T, auto FIRST, auto LAST>
+void printTuple(IntegralTemplatedTuple<T, FIRST, LAST> const& tuple) {
+	_printTuple(tuple, std::make_index_sequence<LAST>());
+}
+
+TEST_CASE("NodeStorage", "[NodeStorage]"){
+	using hypertrie::internal::RawKey;
+	std::allocator<int> alloc;
+
+	IntegralTemplatedTuple<IntWrapper, 0, 10> tuple;
+	printTuple(tuple);
+	/*
+	NodeStorage<1> store(alloc);
+    NodeStorage<1>::RawKey<2> key {0};
+	TensorHash hash {42};
+	bool value = 1;
+	size_t ref_count = 0;
+	store.newCompressedNode(key, value, ref_count, hash);
+    */
+}
+
+
+
 #endif//HYPERTRIE_TESTNODESTORAGE_HPP

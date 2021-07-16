@@ -6,6 +6,7 @@
 #include "Dice/hypertrie/internal/raw/node/TensorHash.hpp"
 #include "Dice/hypertrie/internal/util/CONSTANTS.hpp"
 #include "Dice/hypertrie/internal/util/IntegralTemplatedTuple.hpp"
+#include "Dice/hypertrie/internal/raw/node/NodeContainer.hpp"
 
 #include <memory>
 
@@ -126,7 +127,7 @@ namespace hypertrie::internal::raw {
 		}
 	};
 
-	/*template<size_t max_depth,
+	template<size_t max_depth,
 			 HypertrieInternalTrait tri_t = Hypertrie_internal_t<>,
 			 typename Allocator = std::allocator<size_t>,
 			 typename = typename std::enable_if_t<(max_depth >= 1)>>
@@ -157,6 +158,44 @@ namespace hypertrie::internal::raw {
 		using storage_t = util::IntegralTemplatedTuple<NodeStorage_t, 1, max_depth>;
 
 		storage_t storage_;
+        allocator_type alloc_ = std::allocator<int>();
+
+
+		/*
+		 * This might become a performance problem. I do not know if alloc_ is implicitly passed into a copy constructor
+		 */
+		template <size_t depth>
+		using cn_alloc_traits = typename std::allocator_traits<allocator_type>::template rebind_traits<CompressedNode<depth, tri>>;
+
+		template <size_t depth>
+		auto allocate_CompressedNode() {
+			return cn_alloc_traits<depth>::allocate(alloc_, 1);
+		}
+
+        template <size_t depth, typename pointer>
+        void construct_CompressedNode(pointer ptr, const RawKey<depth> &key, value_type value, size_t ref_count) {
+            cn_alloc_traits<depth>::construct(alloc_, ptr, key, value, ref_count, alloc_);
+        }
+
+        template <size_t depth, typename pointer>
+        void construct_CompressedNode(pointer ptr, const RawKey<depth> &key, size_t ref_count) {
+            cn_alloc_traits<depth>::construct(alloc_, ptr, key, ref_count, alloc_);
+        }
+
+		template <size_t depth>
+		auto alloc_new(const RawKey<depth> &key, value_type value, size_t ref_count) {
+			auto ptr = allocate_CompressedNode<depth>();
+            construct_CompressedNode<depth>(ptr, key, value, ref_count);
+			return ptr;
+		}
+
+		//CompressedNode<depth, tri>{key, ref_count}
+		template <size_t depth>
+		auto alloc_new(const RawKey<depth> key, size_t ref_count) {
+            auto ptr = allocate_CompressedNode<depth>();
+            construct_CompressedNode<depth>(ptr, key, ref_count);
+            return ptr;
+		}
 
 
 		// TODO: remove
@@ -171,8 +210,7 @@ namespace hypertrie::internal::raw {
 		}
 
 	public:
-		NodeStorage(const Allocator& alloc // = Allocator()
-					) : storage_(alloc){}
+		NodeStorage(allocator_type const &alloc = Allocator()) : storage_(alloc) , alloc_(alloc) {}
 
 		// TODO: private?
 		template<size_t depth, NodeCompression compression, typename = std::enable_if_t<(not (depth == 1 and tri_t::is_lsb_unused and tri_t::is_bool_valued and compression == NodeCompression::compressed))>>
@@ -230,9 +268,9 @@ namespace hypertrie::internal::raw {
 		}
 
 
-		*//**
+		/**
 		 * creates a new node with the value changed. The old node is NOT deleted if keep_old is true and must eventually be deleted afterwards.
-		 *//*
+		 */
 		template<size_t depth, NodeCompression compression, bool keep_old = true, typename = std::enable_if_t<(not (depth == 1 and tri_t::is_lsb_unused and tri_t::is_bool_valued and compression == NodeCompression::compressed))>>
 		auto changeNodeValue(SpecificNodeContainer<depth, compression, tri> nc, RawKey<depth> key, value_type old_value, value_type new_value, long count_diff, TensorHash new_hash)
 				-> SpecificNodeContainer<depth, compression, tri> {
@@ -311,7 +349,7 @@ namespace hypertrie::internal::raw {
 			os << (std::string) storage;
 			return os;
 		}
-	};*/
+	};
 
 
 }// namespace hypertrie::internal::raw

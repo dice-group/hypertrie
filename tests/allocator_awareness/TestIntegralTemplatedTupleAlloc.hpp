@@ -15,6 +15,11 @@ namespace test_details {
 		using hypertrie::internal::util::IntegralTemplatedTuple;
 	}
 
+	/** Class used for result checking in the test cases.
+	 * Should only be used via the create_x_check functions.
+	 * @tparam T Integer type of the values.
+	 * @tparam Values The expected values of the test.
+	 */
 	template<typename T, T... Values>
 	struct CheckWrapper {
 		template<T V>
@@ -31,15 +36,29 @@ namespace test_details {
 			return std::get<Index>(values);
 		}
 	};
+	/** Function used in the specific creation functions.
+	 * Should only be used via the create_x_check functions.
+	 * @tparam T Integer type of the values.
+	 * @tparam Values The expected values of the test.
+	 * @return
+	 */
 	template<typename T, T... Values>
 	auto create_check() { return CheckWrapper<T, Values...>{}; }
 
 
+	/** A type trait that collects information from the tested tuples to simplify the access of single values.
+	 * ELEMENT_COUNT is equal to the number of elements in the tuple. It is useful for std::make_integer_sequence().
+	 * INDEX() converts an index from (0,...,ELEMENT_COUNT-1) to (MIN,...,MAX), where MIN and MAX are used in the tuple.
+	 * This unspecialized template cannot be instantiated.
+	 * @tparam T
+	 */
 	template<typename T>
 	struct TestTrait {
 		template<typename>
 		struct AlwaysFalse : std::false_type {};
 		static_assert(AlwaysFalse<T>::value, "TestTrait is not defined for this type");
+        static constexpr auto INDEX(auto Value);
+        static constexpr size_t ELEMENT_COUNT{};
 	};
 
 	template<template<auto N, typename Allocator> typename T,
@@ -72,46 +91,45 @@ namespace test_details {
 		static constexpr size_t ELEMENT_COUNT = sizeof...(Values);
 	};
 
-
-	template<size_t N>
-	struct UnsignedNonAlloc {
-		static constexpr size_t value = N;
-		friend std::ostream &operator<<(std::ostream &os, UnsignedNonAlloc const &na) {
-			return os << na.value << ' ';
-		}
+	/** Test class template for types that do not use an allocator.
+	 * Should only be used via the xNonAlloc aliases.
+	 */
+	template <typename INTEGER, INTEGER N>
+	struct NonAlloc {
+        static constexpr INTEGER value = N;
+        friend std::ostream &operator<<(std::ostream &os, NonAlloc const &na) {
+            return os << na.value << ' ';
+        }
 	};
+    /** Test class template for types that do use an allocator.
+     * Should only be used via the xAlloc aliases.
+     */
+    template<typename INTEGER, INTEGER N, typename Allocator>
+    struct Alloc {
+        static constexpr INTEGER value = N;
+        Alloc(Allocator const &) {}
+        friend std::ostream &operator<<(std::ostream &os, Alloc const &a) {
+            return os << a.value << ' ';
+        }
+    };
 
-	template<short N>
-	struct SignedNonAlloc {
-		static constexpr short value = N;
-		friend std::ostream &operator<<(std::ostream &os, SignedNonAlloc const &a) {
-			return os << a.value << ' ';
-		}
-	};
-
-	template<size_t N, typename Allocator>
-	struct UnsignedAlloc {
-		static constexpr size_t value = N;
-		UnsignedAlloc(Allocator const &) {}
-		friend std::ostream &operator<<(std::ostream &os, UnsignedAlloc const &a) {
-			return os << a.value << ' ';
-		}
-	};
-
-	template<short N, typename Allocator>
-	struct SignedAlloc {
-		static constexpr short value = N;
-		SignedAlloc(Allocator const &) {}
-		friend std::ostream &operator<<(std::ostream &os, SignedAlloc const &a) { return os << a.value << ' '; }
-	};
-
-
+	/* Aliases to use directly in the tests.
+	 */
+	template <size_t N> using UnsignedNonAlloc = NonAlloc<size_t, N>;
+    template <short N> using SignedNonAlloc = NonAlloc<short, N>;
+    template <size_t N, typename Allocator> using UnsignedAlloc = Alloc<size_t, N, Allocator>;
+    template <short N, typename Allocator> using SignedAlloc = Alloc<short, N, Allocator>;
 	template<size_t... Values>
+	/* Function wrapper to use directly in the tests.
+	 */
 	auto create_unsigned_check() { return create_check<size_t, Values...>(); }
 	template<short... Values>
 	auto create_signed_check() { return create_check<short, Values...>(); }
 
 
+	/* Helper function to check whether two tuples (or a tuple and a check) contain equal elements.
+	 * The types need to specialize the TestTrait and they need to define get<INDEX>().
+	 */
 	template<typename INTEGER, INTEGER Index, typename FirstType, typename SecondType>
 	bool equal(FirstType const &first, SecondType const &second) {
 		return first.template get<TestTrait<FirstType>::INDEX(Index)>().value == second.template get<TestTrait<SecondType>::INDEX(Index)>().value;
@@ -126,6 +144,9 @@ namespace test_details {
 		return equal<INTEGER>(first, second, std::make_integer_sequence<INTEGER, TestTrait<FirstType>::ELEMENT_COUNT>{});
 	}
 
+	/* Helper functions to print a tuple.
+	 * The type needs to specialize the TestTrait and needs to define get<INDEX>().
+	 */
 	template<typename INTEGER, typename ToPrint, INTEGER... IDS>
 	std::ostream &printing(std::ostream &os, ToPrint const &toPrint, std::integer_sequence<INTEGER, IDS...>) {
 		return (os << ... << toPrint.template get<TestTrait<ToPrint>::INDEX(IDS)>());
@@ -134,21 +155,26 @@ namespace test_details {
 	std::ostream &printing(std::ostream &os, ToPrint const &toPrint) {
 		return printing(os, toPrint, std::make_integer_sequence<INTEGER, TestTrait<ToPrint>::ELEMENT_COUNT>{});
 	}
+	/* Helper class to print a tuple directly via std::ostream.
+	 */
 	template<typename INTEGER, typename T>
 	struct PrintingWrapper {
 		T const &ref;
 		friend std::ostream &operator<<(std::ostream &os, PrintingWrapper const &wrap) { return printing<INTEGER>(os, wrap.ref); }
 	};
+	/* Helper function to enable better type deduction.
+	 */
 	template<typename INTEGER, typename T>
-	auto Printer(T const &t) {
-		return PrintingWrapper<INTEGER, T>{t};
-	}
+	auto Printer(T const &t) {return PrintingWrapper<INTEGER, T>{t};}
 
 
 }// namespace test_details
 using namespace test_details;
 
 
+/** Test to check whether all the tuples create the result that the check describes.
+ * Should only be used via the x_NonAllocVsAlloc functions.
+ */
 template<template<auto> typename NonAlloc, template<auto, typename> typename Alloc, typename INTEGER, INTEGER FIRST, INTEGER LAST, typename Check>
 void comparison_Test(Check const &check, bool print) {
 	old_version::IntegralTemplatedTuple<NonAlloc, FIRST, LAST> old_na;
@@ -165,6 +191,9 @@ void comparison_Test(Check const &check, bool print) {
 	REQUIRE((equal<INTEGER>(check, a) && equal<INTEGER>(check, na) && equal<INTEGER>(check, old_na)));
 }
 
+/** Test to check whether all the tuples create the result that the check describes if a reinterpret_cast is used on them.
+ * Should only be used via the x_reinterpret_cast_Test functions.
+ */
 template<template<auto> typename NonAlloc, template<auto, typename> typename Alloc, typename INTEGER, INTEGER FIRST, INTEGER LAST, INTEGER NFIRST, INTEGER NLAST, typename Check>
 void reinterpret_cast_Test(Check const &check, bool print) {
 	old_version::IntegralTemplatedTuple<NonAlloc, FIRST, LAST> old_na;

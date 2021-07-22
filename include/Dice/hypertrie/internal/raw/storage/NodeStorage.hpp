@@ -69,8 +69,9 @@ namespace hypertrie::internal::raw {
 
 		template<NodeCompression compression>
 		static Node<depth, compression, tri> &deref(typename map_type<map_key_type, Node<depth, compression, tri>>::iterator &map_it) {
-			using ALLOC_TYPE = typename map_type<map_key_type, Node<depth, compression, tri>>::allocator_type;
-			return *tri::template deref<map_key_type, Node<depth, compression, tri> *, ALLOC_TYPE>(map_it);
+			using VALUE = mapped_type_ptr<Node<depth, compression, tri>>;
+            using ALLOC_TYPE = map_alloc_type<std::pair<map_key_type, VALUE>>;
+			return *tri::template deref<map_key_type, VALUE, ALLOC_TYPE>(map_it);
 		}
 
 		explicit operator std::string() const {
@@ -137,6 +138,7 @@ namespace hypertrie::internal::raw {
 	public:
 		using tri = tri_t;
 		using allocator_type = Allocator;
+		using pointer = typename std::allocator_traits<allocator_type>::pointer;
 
 		using key_part_type = typename tri::key_part_type;
 		using value_type = typename tri::value_type;
@@ -165,41 +167,33 @@ namespace hypertrie::internal::raw {
         allocator_type alloc_ = std::allocator<int>();
 
 
-		/*
-		 * This might become a performance problem. I do not know if alloc_ is implicitly passed into a copy constructor
+		/* This class might create a performance problem, because the allocators need to be copied to rebind them.
 		 */
 		template <size_t depth>
-		using cn_alloc_traits = typename std::allocator_traits<allocator_type>::template rebind_traits<CompressedNode<depth, tri>>;
+		class Allocation_CompressedNode {
+			using cn_allocator_type = typename std::allocator_traits<allocator_type>::template rebind_alloc<CompressedNode<depth, tri, allocator_type>>;
+			using cn_allocator_traits = typename std::allocator_traits<cn_allocator_type>;
 
-		template <size_t depth>
-		auto allocate_CompressedNode() {
-			return cn_alloc_traits<depth>::allocate(alloc_, 1);
-		}
+			static auto allocate(cn_allocator_type alloc, size_t n) {
+				return cn_allocator_traits::allocate(alloc, n);
+			}
+			template<typename... Args>
+			static void construct(cn_allocator_type alloc, Args &&...args) {
+				cn_allocator_traits::construct(alloc, std::forward<Args>(args)...);
+			}
 
-        template <size_t depth, typename pointer>
-        void construct_CompressedNode(pointer ptr, const RawKey<depth> &key, value_type value, size_t ref_count) {
-            cn_alloc_traits<depth>::construct(alloc_, ptr, key, value, ref_count, alloc_);
-        }
-
-        template <size_t depth, typename pointer>
-        void construct_CompressedNode(pointer ptr, const RawKey<depth> &key, size_t ref_count) {
-            cn_alloc_traits<depth>::construct(alloc_, ptr, key, ref_count, alloc_);
-        }
-
-		template <size_t depth>
-		auto alloc_new(const RawKey<depth> &key, value_type value, size_t ref_count) {
-			auto ptr = allocate_CompressedNode<depth>();
-            construct_CompressedNode<depth>(ptr, key, value, ref_count);
-			return ptr;
-		}
-
-		//CompressedNode<depth, tri>{key, ref_count}
-		template <size_t depth>
-		auto alloc_new(const RawKey<depth> key, size_t ref_count) {
-            auto ptr = allocate_CompressedNode<depth>();
-            construct_CompressedNode<depth>(ptr, key, ref_count);
-            return ptr;
-		}
+		public:
+			static auto create(allocator_type const& alloc, const RawKey<depth> &key, value_type value, size_t ref_count) {
+				auto ptr = allocate(alloc, 1);
+				construct(alloc, ptr, key, value, ref_count, alloc);
+				return ptr;
+			}
+			static auto create(allocator_type const& alloc, const RawKey<depth> &key, size_t ref_count) {
+				auto ptr = allocate(alloc, 1);
+                construct(alloc, ptr, key, ref_count);
+				return ptr;
+			}
+		};
 
 
 		// TODO: remove
@@ -259,16 +253,26 @@ namespace hypertrie::internal::raw {
 			}
 		}
 
+
+		template <typename ReturnType>
+		auto createPointer(ReturnType &toReturn) {
+			using ReturnPointer = typename std::pointer_traits<pointer>::template rebind<std::remove_reference_t<ReturnType>>;
+			return std::pointer_traits<ReturnPointer>::pointer_to(toReturn);
+		}
+
 	public:
 		template<size_t depth, typename = std::enable_if_t<(not (depth == 1 and tri_t::is_lsb_unused and tri_t::is_bool_valued))>>
 		CompressedNodeContainer<depth, tri> newCompressedNode(const RawKey<depth> &key, value_type value, size_t ref_count, TensorHash hash) {
 			auto &node_storage = getNodeStorage<depth, NodeCompression::compressed>();
 			auto [it, success] = [&]() {
-			  if constexpr(tri::is_bool_valued) return node_storage.insert({hash, new CompressedNode<depth, tri, allocator_type>{key, ref_count}});
-			  else return node_storage.insert({hash, new CompressedNode<depth, tri, allocator_type>{key, value, ref_count}});
+			  if constexpr(tri::is_bool_valued) {
+				  return node_storage.insert({hash, Allocation_CompressedNode<depth>::create(alloc_, key, ref_count)});
+			  } else {
+				  return node_storage.insert({hash, Allocation_CompressedNode<depth>::create(alloc_, key, value, ref_count)});
+			}
 			}();
 			assert(success);
-			return CompressedNodeContainer<depth, tri>{hash, &LevelNodeStorage<depth, tri>::template deref<NodeCompression::compressed>(it)};
+			return CompressedNodeContainer<depth, tri>{hash, createPointer(LevelNodeStorage<depth, tri>::template deref<NodeCompression::compressed>(it))};
 		}
 
 

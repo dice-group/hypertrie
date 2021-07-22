@@ -6,6 +6,7 @@
 #include "Dice/hypertrie/internal/raw/node/TensorHash.hpp"
 #include "Dice/hypertrie/internal/util/CONSTANTS.hpp"
 #include "Dice/hypertrie/internal/util/IntegralTemplatedTuple.hpp"
+#include "Dice/hypertrie/internal/util/IntegralTemplatedTupleNew.hpp"
 #include "Dice/hypertrie/internal/raw/node/NodeContainer.hpp"
 
 #include <memory>
@@ -68,7 +69,8 @@ namespace hypertrie::internal::raw {
 
 		template<NodeCompression compression>
 		static Node<depth, compression, tri> &deref(typename map_type<map_key_type, Node<depth, compression, tri>>::iterator &map_it) {
-			return *tri::template deref<map_key_type, Node<depth, compression, tri> *>(map_it);
+			using ALLOC_TYPE = typename map_type<map_key_type, Node<depth, compression, tri>>::allocator_type;
+			return *tri::template deref<map_key_type, Node<depth, compression, tri> *, ALLOC_TYPE>(map_it);
 		}
 
 		explicit operator std::string() const {
@@ -145,6 +147,8 @@ namespace hypertrie::internal::raw {
 		template<size_t depth>
 		using RawSliceKey = typename tri::template RawSliceKey<depth>;
 
+		template <size_t depth, typename ALLOC>
+		using AllocNodeStorage_t = LevelNodeStorage<depth, tri, ALLOC>;
 		template<size_t depth>
 		using NodeStorage_t = LevelNodeStorage<depth, tri, allocator_type>;
 
@@ -155,7 +159,7 @@ namespace hypertrie::internal::raw {
 		using UncompressedNodeMap = typename NodeStorage_t<depth>::UncompressedNodeMap;
 
 	private:
-		using storage_t = util::IntegralTemplatedTuple<NodeStorage_t, 1, max_depth>;
+		using storage_t = util::IntegralTemplatedTupleAlloc<AllocNodeStorage_t, (size_t)1, max_depth, allocator_type>;
 
 		storage_t storage_;
         allocator_type alloc_ = std::allocator<int>();
@@ -260,8 +264,8 @@ namespace hypertrie::internal::raw {
 		CompressedNodeContainer<depth, tri> newCompressedNode(const RawKey<depth> &key, value_type value, size_t ref_count, TensorHash hash) {
 			auto &node_storage = getNodeStorage<depth, NodeCompression::compressed>();
 			auto [it, success] = [&]() {
-			  if constexpr(tri::is_bool_valued) return node_storage.insert({hash, new CompressedNode<depth, tri>{key, ref_count}});
-			  else return node_storage.insert({hash, new CompressedNode<depth, tri>{key, value, ref_count}});
+			  if constexpr(tri::is_bool_valued) return node_storage.insert({hash, new CompressedNode<depth, tri, allocator_type>{key, ref_count}});
+			  else return node_storage.insert({hash, new CompressedNode<depth, tri, allocator_type>{key, value, ref_count}});
 			}();
 			assert(success);
 			return CompressedNodeContainer<depth, tri>{hash, &LevelNodeStorage<depth, tri>::template deref<NodeCompression::compressed>(it)};

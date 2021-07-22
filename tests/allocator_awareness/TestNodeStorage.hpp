@@ -235,44 +235,24 @@ TEST_CASE("MetallAllocator -- create uncompressed node depth 1", "[NodeStorage]"
 }
 
 
-template <size_t N>
-struct IntWrapper {
-	static constexpr size_t value = N;
-};
-
-template <size_t N>
-std::ostream& operator<<(std::ostream &os, IntWrapper<N> const&) {
-	return os << IntWrapper<N>::value << ' ';
-}
-
-using hypertrie::internal::util::IntegralTemplatedTuple;
-
-
-template <typename Tuple, size_t ...I>
-void _printTuple(Tuple const& tuple, std::index_sequence<I...>) {
-    (std::cout << ... << tuple.template get<I>());
-}
-
-
-template <template<auto> typename T, auto FIRST, auto LAST>
-void printTuple(IntegralTemplatedTuple<T, FIRST, LAST> const& tuple) {
-	_printTuple(tuple, std::make_index_sequence<LAST>());
-}
-
-TEST_CASE("NodeStorage", "[NodeStorage]"){
-	using hypertrie::internal::RawKey;
+TEST_CASE("NodeStorage constructor compiles with std::allocator", "[NodeStorage]"){
 	std::allocator<int> alloc;
-
-	IntegralTemplatedTuple<IntWrapper, 0, 10> tuple;
-	printTuple(tuple);
-	/*
 	NodeStorage<1> store(alloc);
-    NodeStorage<1>::RawKey<2> key {0};
-	TensorHash hash {42};
-	bool value = 1;
-	size_t ref_count = 0;
-	store.newCompressedNode(key, value, ref_count, hash);
-    */
+}
+
+TEST_CASE("NodeStorage newCompressedNode", "[NodeStorage]"){
+    using hypertrie::internal::RawKey;
+    std::allocator<int> alloc;
+    NodeStorage<1> store(alloc);
+    NodeStorage<1>::RawKey<1> key {0};
+    TensorHash hash {42};
+    bool value = true;
+    size_t ref_count = 0;
+    store.newCompressedNode(key, value, ref_count, hash);
+
+	REQUIRE((store.getCompressedNode<1>(hash).compressed_node()->value() == true));
+    //why is this true???
+    REQUIRE((store.getCompressedNode<1>(TensorHash{43}).compressed_node()->value() == true));
 }
 
 

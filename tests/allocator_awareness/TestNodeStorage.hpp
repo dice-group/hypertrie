@@ -254,10 +254,11 @@ TEST_CASE("NodeStorage newCompressedNode with std::allocator", "[NodeStorage]"){
     bool value = true;
     size_t ref_count = 0;
     store.newCompressedNode(key, value, ref_count, hash);
-
-	REQUIRE((store.getCompressedNode<1>(hash).compressed_node()->value() == true));
-    //why is this true???
-    REQUIRE((store.getCompressedNode<1>(TensorHash{43}).compressed_node()->value() == true));
+	auto container42 = store.getCompressedNode<1>(hash);
+	REQUIRE(not container42.empty());
+	REQUIRE(container42.compressed_node()->value() == true);
+	auto container43 = store.getCompressedNode<1>(TensorHash{43});
+	REQUIRE(container43.empty());
 }
 
 /*

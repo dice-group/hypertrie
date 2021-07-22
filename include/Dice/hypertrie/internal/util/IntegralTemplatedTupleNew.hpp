@@ -2,7 +2,21 @@
 #define HYPERTRIE_INTEGRALTEMPLATEDTUPLENEW_HPP
 
 namespace hypertrie::internal::util {
+	/* There is an older implementation at
+	 * "include/Dice/hypertrie/internal/util/IntegralTemplatedTuple.hpp".
+	 */
 	namespace new_impl {
+        /**
+         * This class is a wrapper around a tuple std::tuple<T<FIRST> .. T<LAST>>.
+         * FIRST is allowed to be smaller then LAST.
+         * It allows access to the elements via get<i>() -> T<I>.
+         * Elements are memory aligned from FIRST to LAST which means you can reinterpret
+         * an IntegralTemplatedTuple<T,1,5> as an IntegralTemplatedTuple<T,1,3>
+         * and will still be able to access the elements 1-3.
+         * @tparam EntryTypeTemplate T in  the text above.
+         * @tparam FIRST
+         * @tparam LAST
+         */
 		template<template<std::integral auto> typename EntryTypeTemplate,
 				 std::integral auto FIRST, std::integral auto LAST>
 		class IntegralTemplatedTuple {
@@ -22,15 +36,11 @@ namespace hypertrie::internal::util {
 
 		private:
 			/** A helper struct to generate tuples of the Form (T<MIN>, T<MIN+1>,..., T<MAX>).
-         * T uses an allocator to construct.
-         * @tparam EntryTypeTemplate The type used in the tuple entries.
-         * It must be a template of the Form T<INTEGER, ALLOCATOR>.
-         * @tparam Allocator The allocator type to use for the entries.
-         */
-			struct TupleGenerator {
-				/** Generates the tuple with gen_single based on entries of an integer_sequence.
-             * @tparam IDS The indices itself.
              */
+			struct TupleGenerator {
+				/** Generates the tuple based on entries of an integer_sequence.
+                 * @tparam IDS The indices itself.
+                 */
 				template<integral_type... IDS>
 				static auto gen_tuple(std::integer_sequence<integral_type, IDS...>) {
 					if constexpr (DIRECTION == Direction::up)
@@ -39,13 +49,16 @@ namespace hypertrie::internal::util {
 						return std::make_tuple(Entry<integral_type(MAX - LENGTH + 1 + IDS)>{}...);
 				}
 
-				/** Wrapper for gen_tuple above.
-             * @return See the other gen_tuple implementation.
-             */
+				/** Wrapper for gen_tuple.
+                 * @return The constructed tuple.
+                 */
 				static auto make_tuple() {
 					return gen_tuple(std::make_integer_sequence<integral_type, LENGTH>());
 				}
 
+				/* CAUTION: has to be __after__ the make_tuple function.
+				 * Also make_tuple isn't allowed to have overloads.
+				 */
 				using type = std::invoke_result_t<decltype(make_tuple)>;
 			};
 
@@ -56,6 +69,11 @@ namespace hypertrie::internal::util {
 				: count_tuple_(TupleGenerator::make_tuple()) {}
 
 		private:
+			/** Because FIRST can be larger than LAST the indexing must change based on those values.
+			 * This function does exactly that.
+			 * @tparam I Index between FIRST and LAST or rather LAST and FIRST.
+			 * @return The indexed value.
+			 */
 			template<integral_type I>
 			static constexpr size_t calcPos() {
 				static_assert(MIN <= I && I <= MAX);
@@ -80,6 +98,18 @@ namespace hypertrie::internal::util {
 		};
 	}
 
+    /** This is a more specialized version of IntegralTemplatedTuple that is able to handle an Allocator.
+     * This class is a wrapper around a tuple std::tuple<T<FIRST> .. T<LAST>>.
+     * FIRST is allowed to be smaller then LAST.
+     * It allows access to the elements via get<i>() -> T<I>.
+     * Elements are memory aligned from FIRST to LAST which means you can reinterpret
+     * an IntegralTemplatedTuple<T,1,5> as an IntegralTemplatedTuple<T,1,3>
+     * and will still be able to access the elements 1-3.
+     * @tparam EntryTypeTemplate T in  the text above.
+     * @tparam FIRST
+     * @tparam LAST
+     * @tparam Allocator
+     */
     template<template<std::integral auto, typename> typename EntryTypeTemplate,
             std::integral auto FIRST, std::integral auto LAST, typename Allocator>
     class IntegralTemplatedTupleAlloc {
@@ -105,7 +135,7 @@ namespace hypertrie::internal::util {
          * @tparam Allocator The allocator type to use for the entries.
          */
         struct TupleGenerator {
-            /** Generates the tuple with gen_single based on entries of an integer_sequence.
+            /** Generates the tuple based on entries of an integer_sequence.
              * @tparam IDS The indices itself.
              */
             template<integral_type... IDS>
@@ -133,6 +163,11 @@ namespace hypertrie::internal::util {
                 : count_tuple_(TupleGenerator::make_tuple(alloc)) {}
 
     private:
+        /** Because FIRST can be larger than LAST the indexing must change based on those values.
+         * This function does exactly that.
+         * @tparam I Index between FIRST and LAST or rather LAST and FIRST.
+         * @return The indexed value.
+         */
         template<integral_type I>
         static constexpr size_t calcPos() {
             static_assert(MIN <= I && I <= MAX);
@@ -157,5 +192,14 @@ namespace hypertrie::internal::util {
         }
     };
 }// namespace dev
+
+/* Possible improvements:
+ * - Combine the two classes.
+ * - Retype the second class to
+ *     template<template<std::integral auto> typename EntryTypeTemplate,
+ *       std::integral auto FIRST, std::integral auto LAST, typename Allocator>
+ *   , because all entries get the same allocator type. So you could simply use an template alias before
+ *   using this class.
+ */
 
 #endif//HYPERTRIE_INTEGRALTEMPLATEDTUPLENEW_HPP

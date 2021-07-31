@@ -67,11 +67,12 @@ namespace hypertrie::internal::raw {
 		const UncompressedNodeMap &uncompressedNodes() const { return this->uncompressed_nodes_; }
 		UncompressedNodeMap &uncompressedNodes() { return this->uncompressed_nodes_; }
 
-		template<NodeCompression compression>
-		static Node<depth, compression, tri> &deref(typename map_type<map_key_type, Node<depth, compression, tri>>::iterator &map_it) {
-			using VALUE = mapped_type_ptr<Node<depth, compression, tri>>;
-            using ALLOC_TYPE = map_alloc_type<std::pair<map_key_type, VALUE>>;
-			return *tri::template deref<map_key_type, VALUE, ALLOC_TYPE>(map_it);
+		template<NodeCompression compression, typename Map = map_type<map_key_type, Node<depth, compression, tri>>>
+		static auto &deref(typename Map::iterator &map_it) {
+			using KEY = typename Map::key_type;
+			using MAPPED = typename Map::mapped_type;
+            using ALLOC_TYPE = typename Map::allocator_type;
+			return *tri::template deref<KEY, MAPPED, ALLOC_TYPE>(map_it);
 		}
 
 		explicit operator std::string() const {
@@ -117,10 +118,13 @@ namespace hypertrie::internal::raw {
 		const UncompressedNodeMap &uncompressedNodes() const { return this->uncompressed_nodes_; }
 		UncompressedNodeMap &uncompressedNodes() { return this->uncompressed_nodes_; }
 
-		template<NodeCompression compression = NodeCompression::uncompressed>
-		static UncompressedNode<1, tri> &deref(typename map_type<TensorHash, UncompressedNode<1, tri>>::iterator &map_it) {
-			static_assert(compression == NodeCompression::uncompressed, "LevelNodeStorage of depth 1 with is_lsb_unused and is_bool_valued doesn't manage compressed nodes.");
-			return *tri::template deref<map_key_type, UncompressedNode<1, tri> *>(map_it);
+		template<NodeCompression compression = NodeCompression::uncompressed, typename Map = map_type<TensorHash, UncompressedNode<1, tri>>>
+		static auto &deref(typename Map::iterator &map_it) {
+            static_assert(compression == NodeCompression::uncompressed, "LevelNodeStorage of depth 1 with is_lsb_unused and is_bool_valued doesn't manage compressed nodes.");
+            using KEY = typename Map::key_type;
+            using MAPPED = typename Map::mapped_type;
+			using ALLOC_TYPE = typename Map::allocator_type;
+            return *tri::template deref<KEY, MAPPED, ALLOC_TYPE>(map_it);
 		}
 
 		explicit operator std::string() const {
@@ -177,9 +181,9 @@ namespace hypertrie::internal::raw {
 			static auto allocate(cn_allocator_type alloc, size_t n) {
 				return cn_allocator_traits::allocate(alloc, n);
 			}
-			template<typename... Args>
-			static void construct(cn_allocator_type alloc, Args &&...args) {
-				cn_allocator_traits::construct(alloc, std::forward<Args>(args)...);
+			template<typename Ptr, typename... Args>
+			static void construct(cn_allocator_type alloc, Ptr ptr, Args &&...args) {
+				cn_allocator_traits::construct(alloc, std::to_address(ptr), std::forward<Args>(args)...);
 			}
 
 		public:
@@ -272,7 +276,7 @@ namespace hypertrie::internal::raw {
 			}
 			}();
 			assert(success);
-			return CompressedNodeContainer<depth, tri>{hash, createPointer(LevelNodeStorage<depth, tri>::template deref<NodeCompression::compressed>(it))};
+            return CompressedNodeContainer<depth, tri>{hash, createPointer(LevelNodeStorage<depth, tri>::template deref<NodeCompression::compressed, std::remove_cvref_t<decltype(node_storage)>>(it))};
 		}
 
 

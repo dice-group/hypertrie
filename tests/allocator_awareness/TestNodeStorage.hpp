@@ -261,7 +261,6 @@ TEST_CASE("NodeStorage newCompressedNode with std::allocator", "[NodeStorage]"){
 	REQUIRE(container43.empty());
 }
 
-/*
 TEST_CASE("NodeStorage newCompressedNode with OffsetAllocator", "[NodeStorage]"){
 using hypertrie::internal::RawKey;
 OffsetAllocator<int> alloc;
@@ -272,11 +271,12 @@ bool value = true;
 size_t ref_count = 0;
 store.newCompressedNode(key, value, ref_count, hash);
 
+/*
 REQUIRE((store.getCompressedNode<1>(hash).compressed_node()->value() == true));
 //why is this true???
 REQUIRE((store.getCompressedNode<1>(TensorHash{43}).compressed_node()->value() == true));
-}
 */
+}
 
 
 #endif//HYPERTRIE_TESTNODESTORAGE_HPP

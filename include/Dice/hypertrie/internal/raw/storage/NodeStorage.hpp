@@ -224,7 +224,7 @@ namespace hypertrie::internal::raw {
 		}
 
 		template<size_t depth, NodeCompression compression, typename = std::enable_if_t<(not (depth == 1 and tri_t::is_lsb_unused and tri_t::is_bool_valued and compression == NodeCompression::compressed))>>
-		SpecificNodeContainer<depth, compression, tri> getNode(const TensorHash &node_hash) {
+		SpecificNodeContainer<depth, compression, tri, allocator_type> getNode(const TensorHash &node_hash) {
 			auto &nodes = getNodeStorage<depth, compression>();
 			auto found = nodes.find(node_hash);
 			if (found != nodes.end())
@@ -237,17 +237,17 @@ namespace hypertrie::internal::raw {
 		}
 
 		template<size_t depth, typename = std::enable_if_t<(not (depth == 1 and tri_t::is_lsb_unused and tri_t::is_bool_valued))>>
-		CompressedNodeContainer<depth, tri> getCompressedNode(const TensorHash &node_hash) {
+		CompressedNodeContainer<depth, tri, allocator_type> getCompressedNode(const TensorHash &node_hash) {
 			return getNode<depth, NodeCompression::compressed>(node_hash);
 		}
 
 		template<size_t depth>
-		UncompressedNodeContainer<depth, tri> getUncompressedNode(const TensorHash &node_hash) {
+		UncompressedNodeContainer<depth, tri, allocator_type> getUncompressedNode(const TensorHash &node_hash) {
 			return getNode<depth, NodeCompression::uncompressed>(node_hash);
 		}
 
 		template<size_t depth>
-		NodeContainer<depth, tri> getNode(const TensorHash &node_hash) {
+		NodeContainer<depth, tri, allocator_type> getNode(const TensorHash &node_hash) {
 			if (node_hash.isCompressed()) {
 				assert(not (depth == 1 and tri_t::is_lsb_unused and tri_t::is_bool_valued));
 				if constexpr(not (depth == 1 and tri_t::is_lsb_unused and tri_t::is_bool_valued))
@@ -266,7 +266,7 @@ namespace hypertrie::internal::raw {
 
 	public:
 		template<size_t depth, typename = std::enable_if_t<(not (depth == 1 and tri_t::is_lsb_unused and tri_t::is_bool_valued))>>
-		CompressedNodeContainer<depth, tri> newCompressedNode(const RawKey<depth> &key, value_type value, size_t ref_count, TensorHash hash) {
+		CompressedNodeContainer<depth, tri, allocator_type> newCompressedNode(const RawKey<depth> &key, value_type value, size_t ref_count, TensorHash hash) {
 			auto &node_storage = getNodeStorage<depth, NodeCompression::compressed>();
 			auto [it, success] = [&]() {
 			  if constexpr(tri::is_bool_valued) {
@@ -276,7 +276,7 @@ namespace hypertrie::internal::raw {
 			}
 			}();
 			assert(success);
-            return CompressedNodeContainer<depth, tri>{hash, createPointer(LevelNodeStorage<depth, tri>::template deref<NodeCompression::compressed, std::remove_cvref_t<decltype(node_storage)>>(it))};
+            return CompressedNodeContainer<depth, tri, allocator_type>{hash, {createPointer(LevelNodeStorage<depth, tri>::template deref<NodeCompression::compressed, std::remove_cvref_t<decltype(node_storage)>>(it))}};
 		}
 
 
@@ -284,8 +284,8 @@ namespace hypertrie::internal::raw {
 		 * creates a new node with the value changed. The old node is NOT deleted if keep_old is true and must eventually be deleted afterwards.
 		 */
 		template<size_t depth, NodeCompression compression, bool keep_old = true, typename = std::enable_if_t<(not (depth == 1 and tri_t::is_lsb_unused and tri_t::is_bool_valued and compression == NodeCompression::compressed))>>
-		auto changeNodeValue(SpecificNodeContainer<depth, compression, tri> nc, RawKey<depth> key, value_type old_value, value_type new_value, long count_diff, TensorHash new_hash)
-				-> SpecificNodeContainer<depth, compression, tri> {
+		auto changeNodeValue(SpecificNodeContainer<depth, compression, tri, allocator_type> nc, RawKey<depth> key, value_type old_value, value_type new_value, long count_diff, TensorHash new_hash)
+				-> SpecificNodeContainer<depth, compression, tri, allocator_type> {
 			auto &nodes = getNodeStorage<depth, compression>();
 			assert(nc.hash() != new_hash);
 
@@ -323,7 +323,7 @@ namespace hypertrie::internal::raw {
 			nodes.erase(it);
 		}
 
-		void setLSBCompressedLeaf(NodeContainer<1, tri> &nodec, const key_part_type &key_part, const bool &value) {
+		void setLSBCompressedLeaf(NodeContainer<1, tri, allocator_type> &nodec, const key_part_type &key_part, const bool &value) {
 			if (value)
 				nodec.hash() = TaggedTensorHash<tri>{key_part};
 		}

@@ -234,6 +234,10 @@ namespace hypertrie::internal::raw {
 			return fmt::format("{}_{:#019}", compression, size_t(this->hash_ & (~size_t(1))));
 		}
 
+		explicit operator size_t() const noexcept {
+			return hash_;
+		}
+
 		friend std::ostream &operator<<(std::ostream &os, const TensorHash &hash) {
 			os << (std::string) hash;
 			return os;

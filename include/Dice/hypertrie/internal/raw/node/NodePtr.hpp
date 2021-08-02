@@ -5,35 +5,47 @@
 
 namespace hypertrie::internal::raw {
 	/**
-	 * NodePtr is a union class of CompressedNode* and UncompressedNode*.
+	 * NodePtr is a union class of void, CompressedNode and UncompressedNode pointers.
 	 * @tparam depth
 	 * @tparam tri_t
 	 */
 	template<size_t depth,
-			 HypertrieInternalTrait tri_t = Hypertrie_internal_t<>>
+			 HypertrieInternalTrait tri_t = Hypertrie_internal_t<>,
+			 typename Allocator = std::allocator<size_t>>
 	union NodePtr {
-		/// stored pointer
-		void *raw;
-		UncompressedNode<depth, tri_t> *uncompressed;
-		CompressedNode<depth, tri_t> *compressed;
+	public:
+		using tri = tri_t;
+
+		using alloc = typename std::allocator_traits<Allocator>::template rebind_alloc<size_t>;
+		using uncompressed_alloc = typename std::allocator_traits<alloc>::template rebind_alloc<UncompressedNode<depth, tri, alloc>>;
+		using compressed_alloc = typename std::allocator_traits<alloc>::template rebind_alloc<CompressedNode<depth, tri, alloc>>;
+
+		using void_ptr_type = typename std::allocator_traits<alloc>::void_pointer;
+		using uncompressed_ptr_type = typename std::allocator_traits<uncompressed_alloc>::pointer;
+		using compressed_ptr_type = typename std::allocator_traits<compressed_alloc>::pointer;
+
+		void_ptr_type raw;                 //!< void pointer
+		uncompressed_ptr_type uncompressed;//!< uncompressed node pointer
+		compressed_ptr_type compressed;    //!< compressed node pointer
 
 		/// Constructors
 		NodePtr() noexcept : raw(nullptr) {}
 		NodePtr(const NodePtr &node_ptr) noexcept : raw(node_ptr.raw) {}
 		NodePtr(NodePtr &&node_ptr) noexcept : raw(node_ptr.raw) {}
-		NodePtr(void *raw) noexcept : raw(raw) {}
-		NodePtr(UncompressedNode<depth, tri_t> *uncompressed) noexcept : uncompressed(uncompressed) {}
-		NodePtr(CompressedNode<depth, tri_t> *compressed) noexcept : compressed(compressed) {}
 
+		NodePtr(void_ptr_type raw) noexcept : raw(raw) {}
+		NodePtr(uncompressed_ptr_type uncompressed) noexcept : uncompressed(uncompressed) {}
+		NodePtr(compressed_ptr_type compressed) noexcept : compressed(compressed) {}
 
 		/**
-	 * Get CompressedNode pointer
-	 */
-		operator CompressedNode<depth, tri_t> *() const noexcept { return this->compressed; }
+		 * Cast to CompressedNode ptr
+		 */
+		operator compressed_ptr_type() const noexcept { return this->compressed; }
+
 		/**
-	 * Get UncompressedNode pointer
-	 */
-		operator UncompressedNode<depth, tri_t> *() const noexcept { return this->uncompressed; }
+		 * Cast to UncompressedNode Ptr
+		 */
+		operator uncompressed_ptr_type() const noexcept { return this->uncompressed; }
 
 		NodePtr &operator=(const NodePtr &node_ptr) noexcept {
 			raw = node_ptr.raw;
@@ -45,6 +57,6 @@ namespace hypertrie::internal::raw {
 			return *this;
 		}
 	};
-}// namespace hypertrie::internal
+}// namespace hypertrie::internal::raw
 
 #endif//HYPERTRIE_NODEPTR_HPP

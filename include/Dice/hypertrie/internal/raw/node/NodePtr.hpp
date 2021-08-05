@@ -16,11 +16,11 @@ namespace hypertrie::internal::raw {
 	public:
 		using tri = tri_t;
 
-		using alloc = typename std::allocator_traits<Allocator>::template rebind_alloc<size_t>;
-		using uncompressed_alloc = typename std::allocator_traits<alloc>::template rebind_alloc<UncompressedNode<depth, tri, alloc>>;
-		using compressed_alloc = typename std::allocator_traits<alloc>::template rebind_alloc<CompressedNode<depth, tri, alloc>>;
+		using allocator_type = typename std::allocator_traits<Allocator>::template rebind_alloc<size_t>;
+		using uncompressed_alloc = typename std::allocator_traits<allocator_type>::template rebind_alloc<UncompressedNode<depth, tri, allocator_type>>;
+		using compressed_alloc = typename std::allocator_traits<allocator_type>::template rebind_alloc<CompressedNode<depth, tri, allocator_type>>;
 
-		using void_ptr_type = typename std::allocator_traits<alloc>::void_pointer;
+		using void_ptr_type = typename std::allocator_traits<allocator_type>::void_pointer;
 		using uncompressed_ptr_type = typename std::allocator_traits<uncompressed_alloc>::pointer;
 		using compressed_ptr_type = typename std::allocator_traits<compressed_alloc>::pointer;
 
@@ -34,6 +34,11 @@ namespace hypertrie::internal::raw {
 		NodePtr(NodePtr &&node_ptr) noexcept : raw(node_ptr.raw) {}
 
 		NodePtr(void_ptr_type raw) noexcept : raw(raw) {}
+		/**
+		 * TODO: we might need to have a templated alloctor here to rebind allocators
+		 * example: <depth, tri, alloc<A>> vs <depth, tri, alloc<B>>
+		 * @param uncompressed
+		 */
 		NodePtr(uncompressed_ptr_type uncompressed) noexcept : uncompressed(uncompressed) {}
 		NodePtr(compressed_ptr_type compressed) noexcept : compressed(compressed) {}
 

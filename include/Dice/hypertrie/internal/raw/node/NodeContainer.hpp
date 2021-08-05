@@ -4,6 +4,7 @@
 #include "Dice/hypertrie/internal/raw/node/Node.hpp"
 #include "Dice/hypertrie/internal/raw/node/NodePtr.hpp"
 #include "Dice/hypertrie/internal/raw/node/TensorHash.hpp"
+#include "Dice/hypertrie/internal/util/UnsafeCast.hpp"
 
 namespace hypertrie::internal::raw {
 
@@ -14,10 +15,8 @@ namespace hypertrie::internal::raw {
 	 *
 	 * <p>Note: this class was not templated before.</p>
 	 */
-	template<HypertrieInternalTrait tri_t = Hypertrie_internal_t<>,
-			 typename Allocator = std::allocator<size_t>>
+	template<typename Allocator = std::allocator<size_t>>
 	struct RawNodeContainer {
-		using tri = tri_t;
 		using alloc = typename std::allocator_traits<Allocator>::template rebind_alloc<size_t>;
 
 	protected:
@@ -46,8 +45,8 @@ namespace hypertrie::internal::raw {
 	template<size_t depth,
 			 HypertrieInternalTrait tri_t = Hypertrie_internal_t<>,
 			 typename Allocator = std::allocator<size_t>>
-	struct NodeContainer : public RawNodeContainer<tri_t, Allocator> {
-		using RawNodeContainer_t = RawNodeContainer<tri_t, Allocator>;
+	struct NodeContainer : public RawNodeContainer<Allocator> {
+		using RawNodeContainer_t = RawNodeContainer<Allocator>;
 		using tri = tri_t;
 		using alloc = typename RawNodeContainer_t::alloc;
 
@@ -67,8 +66,8 @@ namespace hypertrie::internal::raw {
 		template<NodeCompression compressed>
 		NodeContainer(SpecificNodeContainer<depth, compressed, tri_t> &&other) noexcept : RawNodeContainer_t{other.node_identifier, other.node_ptr} {}
 
-		[[nodiscard]] NodePtr_t &node() noexcept { return *reinterpret_cast<NodePtr_t *>(&this->node_ptr); }
-		[[nodiscard]] NodePtr_t node() const noexcept { return *reinterpret_cast<NodePtr_t const *>(&this->node_ptr); }
+		[[nodiscard]] NodePtr_t &node() noexcept { return util::unsafe_cast<NodePtr_t>(this->node_ptr); }
+		[[nodiscard]] NodePtr_t node() const noexcept { return util::unsafe_cast<NodePtr_t const>(this->node_ptr); }
 
 		[[nodiscard]] CompressedNodePtr &compressed_node() noexcept { return node().compressed; }
 		[[nodiscard]] CompressedNodePtr compressed_node() const noexcept { return node().compressed; }
@@ -97,9 +96,9 @@ namespace hypertrie::internal::raw {
 
 		[[nodiscard]] auto uncompressed() const noexcept { return specific<NodeCompression::uncompressed>(); }
 
-		[[nodiscard]] NodeRepr hash() const noexcept { return *reinterpret_cast<NodeRepr const *>(&this->node_identifier); }
+		[[nodiscard]] NodeRepr hash() const noexcept { return util::unsafe_cast<NodeRepr const>(this->node_ptr); }
 
-		[[nodiscard]] NodeRepr &hash() noexcept { return *reinterpret_cast<NodeRepr *>(&this->node_identifier); }
+		[[nodiscard]] NodeRepr &hash() noexcept { return util::unsafe_cast<NodeRepr>(this->node_ptr); }
 
 		[[nodiscard]] bool isCompressed() const noexcept { return hash().isCompressed(); }
 
@@ -112,6 +111,7 @@ namespace hypertrie::internal::raw {
 
 		/**
 		 * Check if the the NodePtr is empty.
+		 * TODO: might not always work
 		 */
 		[[nodiscard]] bool null() const noexcept { return node() == nullptr; }
 
@@ -126,9 +126,6 @@ namespace hypertrie::internal::raw {
 		}
 
 		operator NodeRepr() const noexcept { return this->repr_; }
-
-		friend struct SpecificNodeContainer<depth, NodeCompression::compressed, tri_t>;
-		friend struct SpecificNodeContainer<depth, NodeCompression::uncompressed, tri_t>;
 	};
 
 	template<size_t depth,
@@ -173,14 +170,10 @@ namespace hypertrie::internal::raw {
 		[[nodiscard]] constexpr SpecificNodePtr node() const noexcept { return this->template specific_node<compression>(); }
 
 		inline auto getChildHashOrValue(size_t pos, typename tri_t::key_part_type key_part) {
-			assert(compression == NodeCompression::uncompressed);
+			static_assert(compression == NodeCompression::uncompressed, "Function getChildHashOrValue is only applicable for uncompressed nodes.");
 
-			if constexpr (compression == NodeCompression::uncompressed) {
-				assert(pos < depth);
-				return this->uncompressed_node()->child(pos, key_part);
-			} else {
-				throw std::logic_error{"Function getChildHashOrValue is only applicable for uncompressed nodes."};
-			}
+			assert(pos < depth);
+			return this->uncompressed_node()->child(pos, key_part);
 		}
 
 		[[nodiscard]] bool isCompressed() const noexcept { return compression == NodeCompression::compressed; }

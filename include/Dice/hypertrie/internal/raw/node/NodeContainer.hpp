@@ -57,7 +57,7 @@ namespace hypertrie::internal::raw {
 
 
 	public:
-		NodeContainer() noexcept {}
+		NodeContainer() = default;
 
 		NodeContainer(const NodeRepr &repr, NodePtr_t node) noexcept : RawNodeContainer_t{(size_t) repr, node.raw} {}
 
@@ -96,9 +96,9 @@ namespace hypertrie::internal::raw {
 
 		[[nodiscard]] auto uncompressed() const noexcept { return specific<NodeCompression::uncompressed>(); }
 
-		[[nodiscard]] NodeRepr hash() const noexcept { return util::unsafe_cast<NodeRepr const>(this->node_ptr); }
+		[[nodiscard]] NodeRepr hash() const noexcept { return util::unsafe_cast<NodeRepr const>(this->node_identifier); }
 
-		[[nodiscard]] NodeRepr &hash() noexcept { return util::unsafe_cast<NodeRepr>(this->node_ptr); }
+		[[nodiscard]] NodeRepr &hash() noexcept { return util::unsafe_cast<NodeRepr>(this->node_identifier); }
 
 		[[nodiscard]] bool isCompressed() const noexcept { return hash().isCompressed(); }
 
@@ -152,7 +152,7 @@ namespace hypertrie::internal::raw {
 												   typename NodePtr_t::compressed_ptr_type,
 												   typename NodePtr_t::uncompressed_ptr_type>;
 
-		SpecificNodeContainer() noexcept : NodeContainer_t{} {}
+		SpecificNodeContainer() = default;
 
 		SpecificNodeContainer(const SpecificNodeContainer &nodec) noexcept : NodeContainer_t{nodec} {}
 

@@ -11,11 +11,11 @@
 
 //gcc-10 would not compile without this specialisation
 namespace std {
-    template <typename T>
-    struct indirectly_readable_traits<boost::interprocess::offset_ptr<T>> {
-        using value_type = typename boost::interprocess::offset_ptr<T>::value_type;
-    };
-}
+	template<typename T>
+	struct indirectly_readable_traits<boost::interprocess::offset_ptr<T>> {
+		using value_type = typename boost::interprocess::offset_ptr<T>::value_type;
+	};
+}// namespace std
 
 TEST_CASE("OffsetAllocator -- create uncompressed node", "[NodeStorage]") {
 
@@ -43,24 +43,23 @@ namespace details {
 	template<size_t depth>
 	using LevelNodeStorage_t = LevelNodeStorage<depth, tri, m_alloc_t<int>>;
 
-    // N=1 not possible!
-    template<size_t N>
-    auto create_compressed_node(metall::manager::allocator_type<typename LevelNodeStorage_t<N>::CompressedNode_type> alloc) {
-        auto address = std::allocator_traits<decltype(alloc)>::allocate(alloc, 1);
-        std::allocator_traits<decltype(alloc)>::construct(alloc, std::to_address(address));
-        return address;
-    }
+	// N=1 not possible!
+	template<size_t N>
+	auto create_compressed_node(metall::manager::allocator_type<typename LevelNodeStorage_t<N>::CompressedNode_type> alloc) {
+		auto address = std::allocator_traits<decltype(alloc)>::allocate(alloc, 1);
+		std::allocator_traits<decltype(alloc)>::construct(alloc, std::to_address(address));
+		return address;
+	}
 
-    // N=1 not possible!
-    template<size_t N>
-    auto create_uncompressed_node(metall::manager::allocator_type<typename LevelNodeStorage_t<N>::UncompressedNodeMap_type> alloc) {
-        auto address = std::allocator_traits<decltype(alloc)>::allocate(alloc, 1);
-        std::allocator_traits<decltype(alloc)>::construct(alloc, std::to_address(address), 0, alloc);
-        return address;
-    }
-}
+	// N=1 not possible!
+	template<size_t N>
+	auto create_uncompressed_node(metall::manager::allocator_type<typename LevelNodeStorage_t<N>::UncompressedNodeMap_type> alloc) {
+		auto address = std::allocator_traits<decltype(alloc)>::allocate(alloc, 1);
+		std::allocator_traits<decltype(alloc)>::construct(alloc, std::to_address(address), 0, alloc);
+		return address;
+	}
+}// namespace details
 using namespace details;
-
 
 
 template<size_t N>
@@ -193,7 +192,6 @@ void MetallAllocator_creat_uncompressed_nodes_in_LevelStorage() {
 			REQUIRE(ucnodes.at(map_key_type{0})->edges().count(0));
 			REQUIRE(ucnodes.at(map_key_type{1})->edges().count(1));
 		}
-
 	}
 
 	// read
@@ -235,25 +233,25 @@ TEST_CASE("MetallAllocator -- create uncompressed node depth 1", "[NodeStorage]"
 }
 
 
-TEST_CASE("NodeStorage constructor compiles with std::allocator", "[NodeStorage]"){
+TEST_CASE("NodeStorage constructor compiles with std::allocator", "[NodeStorage]") {
 	std::allocator<int> alloc;
 	NodeStorage<1> store(alloc);
 }
 
-TEST_CASE("NodeStorage constructor compiles with OffsetAllocator", "[NodeStorage]"){
-    OffsetAllocator<int> alloc;
-    NodeStorage<1, Hypertrie_internal_t<>, OffsetAllocator<int>> store(alloc);
+TEST_CASE("NodeStorage constructor compiles with OffsetAllocator", "[NodeStorage]") {
+	OffsetAllocator<int> alloc;
+	NodeStorage<1, Hypertrie_internal_t<>, OffsetAllocator<int>> store(alloc);
 }
 
-TEST_CASE("NodeStorage newCompressedNode with std::allocator", "[NodeStorage]"){
-    using hypertrie::internal::RawKey;
-    std::allocator<int> alloc;
-    NodeStorage<1> store(alloc);
-    NodeStorage<1>::RawKey<1> key {0};
-    TensorHash hash {42};
-    bool value = true;
-    size_t ref_count = 0;
-    store.newCompressedNode(key, value, ref_count, hash);
+TEST_CASE("NodeStorage newCompressedNode with std::allocator", "[NodeStorage]") {
+	using hypertrie::internal::RawKey;
+	std::allocator<int> alloc;
+	NodeStorage<1> store(alloc);
+	NodeStorage<1>::RawKey<1> key{0};
+	TensorHash hash{42};
+	bool value = true;
+	size_t ref_count = 0;
+	store.newCompressedNode(key, value, ref_count, hash);
 	auto container42 = store.getCompressedNode<1>(hash);
 	REQUIRE(not container42.empty());
 	REQUIRE(container42.compressed_node()->value() == true);
@@ -261,21 +259,22 @@ TEST_CASE("NodeStorage newCompressedNode with std::allocator", "[NodeStorage]"){
 	REQUIRE(container43.empty());
 }
 
-TEST_CASE("NodeStorage newCompressedNode with OffsetAllocator", "[NodeStorage]"){
-using hypertrie::internal::RawKey;
-OffsetAllocator<int> alloc;
-NodeStorage<1, Hypertrie_internal_t<>, OffsetAllocator<int>> store(alloc);
-NodeStorage<1>::RawKey<1> key {0};
-TensorHash hash {42};
-bool value = true;
-size_t ref_count = 0;
-store.newCompressedNode(key, value, ref_count, hash);
-
-/*
-REQUIRE((store.getCompressedNode<1>(hash).compressed_node()->value() == true));
-//why is this true???
-REQUIRE((store.getCompressedNode<1>(TensorHash{43}).compressed_node()->value() == true));
-*/
+TEST_CASE("NodeStorage newCompressedNode with OffsetAllocator", "[NodeStorage]") {
+	using hypertrie::internal::RawKey;
+	OffsetAllocator<size_t> alloc;
+	NodeStorage<1, Hypertrie_internal_t<>, OffsetAllocator<size_t>> store(alloc);
+	NodeStorage<1>::RawKey<1> key{0};
+	TensorHash hash{42};
+	bool value = true;
+	size_t ref_count = 0;
+	auto container42or = store.newCompressedNode(key, value, ref_count, hash);
+	auto container42 = store.getCompressedNode<1>(hash);
+	REQUIRE(container42.compressed_node() == container42or.compressed_node());
+	REQUIRE(not container42.empty());
+	REQUIRE(container42.compressed_node()->value() == true);
+	auto container43 = store.getCompressedNode<1>(TensorHash{43});
+	REQUIRE((container43.empty()));
+//	REQUIRE(std::is_trivially_default_constructible_v<RawNodeContainer<OffsetAllocator<size_t>>>);
 }
 
 

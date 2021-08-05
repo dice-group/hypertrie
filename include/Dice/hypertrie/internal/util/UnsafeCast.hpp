@@ -6,7 +6,7 @@ namespace hypertrie::internal::util {
 
 	template<typename out_type, typename in_type>
 	inline constexpr out_type &unsafe_cast(in_type &in) {
-		return *reinterpret_cast<out_type *>(std::to_address(in));
+		return *reinterpret_cast<out_type *>(std::addressof(in));
 	}
 
 //	template<typename out_type, size_t out_N , typename in_type, size_t in_N>

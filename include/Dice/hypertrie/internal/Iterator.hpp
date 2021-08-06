@@ -47,7 +47,7 @@ namespace hypertrie {
 		  using namespace internal;
 		  std::vector<RawMethods> raw_methods;
 		  for(size_t depth : iter::range(1UL,hypertrie_depth_limit))
-			  raw_methods.push_back(compiled_switch<hypertrie_depth_limit, 1>::switch_(
+			  raw_methods.push_back(switch_cases<1, hypertrie_depth_limit>(
 					  depth,
 					  [](auto depth_arg) -> RawMethods {
 						return generateRawMethods<depth_arg>();

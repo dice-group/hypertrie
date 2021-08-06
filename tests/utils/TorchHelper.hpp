@@ -10,7 +10,7 @@ namespace hypertrie::tests {
 	class TorchHelper {
 	public:
 		static dtype &resolve(torch::Tensor &tensor, const hypertrie::Key<size_t> &key) {
-			auto x =  internal::compiled_switch<hypertrie::hypertrie_depth_limit, 1>::switch_(
+			auto x =  internal::switch_cases<1, hypertrie::hypertrie_depth_limit>(
 					key.size(),
 					[&](auto depth_arg) -> dtype* {
 						auto &x = getTorchValue_raw<depth_arg>(tensor, key);

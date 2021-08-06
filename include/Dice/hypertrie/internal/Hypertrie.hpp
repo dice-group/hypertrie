@@ -55,7 +55,7 @@ namespace hypertrie {
 					return;
 				using namespace internal;
 				assert(node_container_.pointer_sized != nullptr);
-				compiled_switch<hypertrie_depth_limit, 1>::switch_void(
+				switch_cases<1, hypertrie_depth_limit>(
 						this->depth_,
 						[&](auto depth_arg) {
 						  using CND = typename internal::raw::template CompressedNodeContainer<depth_arg, tri>;
@@ -68,7 +68,7 @@ namespace hypertrie {
 
 		void copy_contextless_node() noexcept {
 			if (contextless() and not empty() and depth() != 0) {
-				if (not(tr::is_bool_valued and tr::lsb_unused and depth_ == 1 and size() == 1))internal::compiled_switch<hypertrie_depth_limit, 1>::switch_void(
+				if (not(tr::is_bool_valued and tr::lsb_unused and depth_ == 1 and size() == 1))internal::switch_cases<1, hypertrie_depth_limit>(
 						this->depth_,
 						[&](auto depth_arg) {
 						  using CNodec = typename internal::raw::template NodeContainer<depth_arg, tri>;
@@ -155,7 +155,7 @@ namespace hypertrie {
 				if (depth() == 0)
 					return 1;
 				else
-					return internal::compiled_switch<hypertrie_depth_limit, 1>::switch_(
+					return internal::switch_cases<1, hypertrie_depth_limit>(
 							this->depth_,
 							[&](auto depth_arg) -> size_t {
 								const auto &node_container = *reinterpret_cast<const internal::raw::NodeContainer<depth_arg, tri> *>(&this->node_container_);
@@ -182,7 +182,7 @@ namespace hypertrie {
 					throw std::logic_error{"Types with sizeof larger than void* are not supported"};
 				}
 			} else
-				return internal::compiled_switch<hypertrie_depth_limit, 1>::switch_(
+				return internal::switch_cases<1, hypertrie_depth_limit>(
 						this->depth_,
 						[&](auto depth_arg) mutable -> value_type {
 							RawKey<depth_arg> raw_key;
@@ -212,10 +212,10 @@ namespace hypertrie {
 				return this->operator[](key);
 			} else {
 				const_Hypertrie<tr> result{depth_ - fixed_depth};
-				internal::compiled_switch<hypertrie_depth_limit, 1>::switch_void(
+				internal::switch_cases<1, hypertrie_depth_limit>(
 						this->depth_,
 						[&](auto depth_arg) {
-						  internal::compiled_switch<depth_arg, 1>::switch_void(
+						  internal::switch_cases<1, depth_arg>(
 									fixed_depth,
 									[&](auto slice_key_depth_arg) {
 										RawSliceKey<slice_key_depth_arg> raw_slice_key(slice_key);
@@ -246,7 +246,7 @@ namespace hypertrie {
 			} else if (size() == 1) {
 				return std::vector<size_t>(positions.size(),1);
 			} else {
-				return internal::compiled_switch<hypertrie_depth_limit, 2>::switch_(
+				return internal::switch_cases<2, hypertrie_depth_limit>(
 						this->depth_,
 						[&](auto depth_arg) -> std::vector<size_t> {
 							const auto &node_container = *reinterpret_cast<const internal::raw::UncompressedNodeContainer<depth_arg, tri> *>(&this->node_container_);
@@ -343,7 +343,7 @@ namespace hypertrie {
 					throw std::logic_error{"Types with sizeof larger than void* are not supported"};
 				}
 			} else
-				return internal::compiled_switch<hypertrie_depth_limit, 1>::switch_(
+				return internal::switch_cases<1, hypertrie_depth_limit>(
 						this->depth_,
 						[&](auto depth_arg) -> value_type {
 							RawKey<depth_arg> raw_key;
@@ -356,7 +356,7 @@ namespace hypertrie {
 
 		Hypertrie(const Hypertrie<tr> &hypertrie) : const_Hypertrie<tr>(hypertrie) {
 			if (not this->empty())
-				internal::compiled_switch<hypertrie_depth_limit, 1>::switch_void(
+				internal::switch_cases<1, hypertrie_depth_limit>(
 						this->depth_,
 						[&](auto depth_arg){
 						  auto &typed_nodec = *reinterpret_cast<internal::raw::NodeContainer<depth_arg, tri> *>(&this->node_container_);
@@ -370,7 +370,7 @@ namespace hypertrie {
 				if (hypertrie.contextless())// TODO: add copying contextless hypertries
 					throw std::logic_error{"Copying contextless const_Hypertries is not yet supported."};
 				else
-					internal::compiled_switch<hypertrie_depth_limit, 1>::switch_void(
+					internal::switch_cases<1, hypertrie_depth_limit>(
 							this->depth_,
 							[&](auto depth_arg) {
 								auto &typed_nodec = *reinterpret_cast<internal::raw::NodeContainer<depth_arg, tri> *>(&this->node_container_);
@@ -386,7 +386,7 @@ namespace hypertrie {
 
 		~Hypertrie() {
 			if (not this->empty())
-				internal::compiled_switch<hypertrie_depth_limit, 1>::switch_void(
+				internal::switch_cases<1, hypertrie_depth_limit>(
 						this->depth_,
 						[&](auto depth_arg){
 							auto &typed_nodec = *reinterpret_cast<internal::raw::NodeContainer<depth_arg, tri> *>(&this->node_container_);

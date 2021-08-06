@@ -63,7 +63,7 @@ namespace hypertrie {
 		void flush(const bool blocking = false) {
 			if (insertion_thread.joinable())
 				insertion_thread.join();
-			internal::compiled_switch<hypertrie_depth_limit, 1>::switch_void(
+			internal::switch_cases<1, hypertrie_depth_limit, 1>(
 					hypertrie->depth(),
 					[&](auto depth_arg) {
 						this->load_entries = std::move(this->new_entries);

@@ -7,7 +7,7 @@
 
 namespace hypertrie::internal {
 
-	namespace detail_compiled_switch {
+	namespace detail_switch_cases {
 
 		template<std::integral auto first, std::integral auto last>
 		struct Range {
@@ -41,9 +41,9 @@ namespace hypertrie::internal {
      * @return The value returned from the switch case
      */
 	template<std::integral auto first, std::integral auto last, class F, class D>
-	auto compiled_switch(typename detail_compiled_switch::Range<first, last>::int_type condition, F cases_function,
+	auto switch_cases(typename detail_switch_cases::Range<first, last>::int_type condition, F cases_function,
 						 D default_function) {
-		using namespace detail_compiled_switch;
+		using namespace detail_switch_cases;
 		using range = Range<first, last>;
 
 		if (range::min <= condition and condition < range::max)
@@ -66,15 +66,15 @@ namespace hypertrie::internal {
 	 * @return The value returned from the switch case
 	 */
 	template<std::integral auto last, class F, class D>
-	auto compiled_switch(typename detail_compiled_switch::Range<0, last>::int_type x, F cases_function,
+	auto switch_cases(typename detail_switch_cases::Range<0, last>::int_type condition, F cases_function,
 						 D default_function) {
-		return compiled_switch<0, last>(x, cases_function, default_function);
+		return switch_cases<0, last>(condition, cases_function, default_function);
 	}
 
 	/**
 	 * Generates a switch-case function at compile-time which is evaluated at runtime. The switch is a lambda like: `[&](auto i_t){ ... }`.
 	 * `i_t` can be used as template parameter. It will be instantiated with the values between first and last excluding
-	 * the maximum value. This overload does not allow to return a value from compiled_switch and has no default_function.
+	 * the maximum value. This overload does not allow to return a value from switch_cases and has no default_function.
 	 * @tparam first first value of the integer range which is switched over. It doesn't matter if first or last is
 	 * @tparam last last value of the integer range which is switched over
 	 * @tparam F automatically deduced type of switch function
@@ -84,8 +84,8 @@ namespace hypertrie::internal {
 	 * @return The value returned from the switch case
 	 */
 	template<std::integral auto first, std::integral auto last, class F>
-	void compiled_switch(typename detail_compiled_switch::Range<first, last>::int_type x, F cases_function) {
-		using namespace detail_compiled_switch;
+	void switch_cases(typename detail_switch_cases::Range<first, last>::int_type x, F cases_function) {
+		using namespace detail_switch_cases;
 		using range = Range<first, last>;
 
 		if (range::min <= x and x < range::max)
@@ -95,7 +95,7 @@ namespace hypertrie::internal {
 	/**
 	 * Generates a switch-case function at compile-time which is evaluated at runtime. The switch is a lambda like: `[&](auto i_t){ ... }`.
 	 * `i_t` can be used as template parameter. It will be instantiated with the values between first and last excluding
-	 * the maximum value. First is fixed to 0. This overload does not allow to return a value from compiled_switch and has no default_function.
+	 * the maximum value. First is fixed to 0. This overload does not allow to return a value from switch_cases and has no default_function.
 	 * @tparam last last value of the integer range which is switched over
 	 * @tparam F automatically deduced type of switch function
 	 * @tparam D automatically deduced type of default_function
@@ -104,8 +104,8 @@ namespace hypertrie::internal {
 	 * @return The value returned from the switch case
 	 */
 	template<std::integral auto last, class F>
-	void compiled_switch(typename detail_compiled_switch::Range<0, last>::int_type x, F cases_function) {
-		compiled_switch<0, last>(x, cases_function);
+	void switch_cases(typename detail_switch_cases::Range<0, last>::int_type x, F cases_function) {
+		switch_cases<0, last>(x, cases_function);
 	}
 }// namespace hypertrie::internal
 

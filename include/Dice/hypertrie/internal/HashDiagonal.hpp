@@ -136,13 +136,13 @@ namespace hypertrie {
 			for (size_t depth : iter::range(1UL, hypertrie_depth_limit))
 				for (size_t diag_depth : iter::range(1UL, depth + 1))
 					for (int compression : iter::range(2))
-						compiled_switch<hypertrie_depth_limit, 1>::switch_void(
+						switch_cases<1, hypertrie_depth_limit>(
 								depth,
 								[&](auto depth_arg) {//
-									compiled_switch<depth_arg + 1, 1>::switch_void(
+									switch_cases<1, depth_arg + 1>(
 											diag_depth,
 											[&](auto diag_depth_arg) {
-												compiled_switch<2, 0>::switch_void(
+												switch_cases<2>(
 														compression,
 														[&](auto compression_arg) {
 															raw_methods[compression_arg][depth_arg - 1].push_back(generateRawMethods<diag_depth_arg, depth_arg, static_cast<NodeCompression>(bool(compression_arg))>());

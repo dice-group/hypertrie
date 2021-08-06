@@ -17,7 +17,7 @@ namespace hypertrie::internal {
 		};
 
 		template<std::integral auto i, std::integral auto max, class T, class F>
-		auto execute_case(T value, F f) {
+		constexpr auto execute_case(T value, F f) {
 			if constexpr (i < max)
 				if (value != i)
 					return execute_case<i + 1, max, T, F>(value, f);
@@ -41,7 +41,7 @@ namespace hypertrie::internal {
      * @return The value returned from the switch case
      */
 	template<std::integral auto first, std::integral auto last, class F, class D>
-	auto switch_cases(typename detail_switch_cases::Range<first, last>::int_type condition, F cases_function,
+	constexpr auto switch_cases(typename detail_switch_cases::Range<first, last>::int_type condition, F cases_function,
 						 D default_function) {
 		using namespace detail_switch_cases;
 		using range = Range<first, last>;
@@ -66,7 +66,7 @@ namespace hypertrie::internal {
 	 * @return The value returned from the switch case
 	 */
 	template<std::integral auto last, class F, class D>
-	auto switch_cases(typename detail_switch_cases::Range<0, last>::int_type condition, F cases_function,
+	constexpr auto switch_cases(typename detail_switch_cases::Range<0, last>::int_type condition, F cases_function,
 						 D default_function) {
 		return switch_cases<0, last>(condition, cases_function, default_function);
 	}
@@ -84,7 +84,7 @@ namespace hypertrie::internal {
 	 * @return The value returned from the switch case
 	 */
 	template<std::integral auto first, std::integral auto last, class F>
-	void switch_cases(typename detail_switch_cases::Range<first, last>::int_type x, F cases_function) {
+	constexpr void switch_cases(typename detail_switch_cases::Range<first, last>::int_type x, F cases_function) {
 		using namespace detail_switch_cases;
 		using range = Range<first, last>;
 
@@ -104,7 +104,7 @@ namespace hypertrie::internal {
 	 * @return The value returned from the switch case
 	 */
 	template<std::integral auto last, class F>
-	void switch_cases(typename detail_switch_cases::Range<0, last>::int_type x, F cases_function) {
+	constexpr void switch_cases(typename detail_switch_cases::Range<0, last>::int_type x, F cases_function) {
 		switch_cases<0, last>(x, cases_function);
 	}
 }// namespace hypertrie::internal

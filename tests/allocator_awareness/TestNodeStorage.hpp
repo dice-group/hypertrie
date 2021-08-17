@@ -260,21 +260,63 @@ TEST_CASE("NodeStorage newCompressedNode with std::allocator", "[NodeStorage]") 
 }
 
 TEST_CASE("NodeStorage newCompressedNode with OffsetAllocator", "[NodeStorage]") {
+	//create store
 	using hypertrie::internal::RawKey;
 	OffsetAllocator<size_t> alloc;
 	NodeStorage<1, Hypertrie_internal_t<>, OffsetAllocator<size_t>> store(alloc);
+	//create value to store
 	NodeStorage<1>::RawKey<1> key{0};
 	TensorHash hash{42};
 	bool value = true;
 	size_t ref_count = 0;
 	auto container42or = store.newCompressedNode(key, value, ref_count, hash);
+	//get value back + check
 	auto container42 = store.getCompressedNode<1>(hash);
 	REQUIRE(container42.compressed_node() == container42or.compressed_node());
 	REQUIRE(not container42.empty());
 	REQUIRE(container42.compressed_node()->value() == true);
+	//try not-set value + check
 	auto container43 = store.getCompressedNode<1>(TensorHash{43});
 	REQUIRE((container43.empty()));
 //	REQUIRE(std::is_trivially_default_constructible_v<RawNodeContainer<OffsetAllocator<size_t>>>);
+}
+
+TEST_CASE("NodeStorage newCompressedNode with Metall", "[NodeStorage]") {
+	// "globals"
+	using hypertrie::internal::RawKey;
+	using NodeStorage_t = NodeStorage<1, Hypertrie_internal_t<>, metall::manager::allocator_type<size_t>>;
+	std::string path = "tmp";
+	std::string name = "NodeStorage_with_metall";
+	TensorHash true_hash{42};
+	TensorHash false_hash{43};
+	// create segment
+	{
+		metall::manager manager(metall::create_only, path.c_str());
+	}
+	// write to segment (create store)
+	{
+		metall::manager manager(metall::open_only, path.c_str());
+		auto allocator = manager.get_allocator();
+		manager.construct<NodeStorage_t>(name.c_str())(allocator);
+		auto store = manager.find<NodeStorage_t>(name.c_str()).first;
+		NodeStorage<1>::RawKey<1> key{0};
+		store->newCompressedNode(key, true, 0, true_hash);
+	}
+	// read
+	{
+		metall::manager manager(metall::open_only, path.c_str());
+		auto store = manager.find<NodeStorage_t>(name.c_str()).first;
+		auto container42 = store->getCompressedNode<1>(true_hash);
+		REQUIRE(not container42.empty());
+		REQUIRE(container42.compressed_node()->value() == true);
+		auto container43 = store->getCompressedNode<1>(false_hash);
+		REQUIRE((container43.empty()));
+	}
+	// destroy segment
+	{
+		metall::manager manager(metall::open_only, path.c_str());
+		manager.destroy<NodeStorage_t>(name.c_str());
+	}
 }
 
 

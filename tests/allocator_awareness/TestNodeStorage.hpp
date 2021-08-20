@@ -319,5 +319,57 @@ TEST_CASE("NodeStorage newCompressedNode with Metall", "[NodeStorage]") {
 	}
 }
 
+template <std::integral T>
+constexpr T msb_mask() noexcept {
+	T mask = 1;
+	return mask << (sizeof(T)*8 - 1);
+}
+
+template <std::integral T>
+constexpr T lsb_mask() noexcept {
+	return static_cast<T>(1);
+}
+
+template <std::integral T>
+std::string binary(T value) {
+	std::string result;
+	result.reserve(sizeof(T)*8);
+	for (T mask = msb_mask<T>(); mask != 0; mask >>= 1) {
+		result.push_back((mask & value) != 0 ? '1' : '0');
+	}
+	return result;
+}
+
+template <std::integral T>
+auto set_single_bit(T value, size_t position, bool to_set) {
+	assert(position < sizeof(value)*8 && "position value is too high");
+	T mask = lsb_mask<T>() << position;
+	if (to_set) {
+		return value | mask;
+	}
+	return value & ~mask;
+}
+
+TensorHash make_compressed(TensorHash const &hash) {
+	return TensorHash(set_single_bit(hash.hash(), hash.compression_tag_pos, hash.compressed_tag));
+}
+
+/* I found one problem:
+ * 42s LSB is 0, so the hash thinks it isn't compressed.
+ *
+ * However the delete still crashes the programm
+ */
+TEST_CASE("NodeStorage deleteNode", "[NodeStorage]") {
+	using hypertrie::internal::RawKey;
+	std::allocator<int> alloc;
+	NodeStorage<1> store(alloc);
+	NodeStorage<1>::RawKey<1> key{0};
+	auto hash = make_compressed(TensorHash(42));
+	bool value = true;
+	size_t ref_count = 0;
+	store.newCompressedNode(key, value, ref_count, hash);
+	store.deleteNode<1>(hash);
+}
+
 
 #endif//HYPERTRIE_TESTNODESTORAGE_HPP

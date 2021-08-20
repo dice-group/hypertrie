@@ -286,7 +286,6 @@ TEST_CASE("NodeStorage constructor compiles with OffsetAllocator", "[NodeStorage
 }
 
 TEST_CASE("NodeStorage newCompressedNode with std::allocator", "[NodeStorage]") {
-	using hypertrie::internal::RawKey;
 	std::allocator<int> alloc;
 	NodeStorage<1> store(alloc);
 	NodeStorage<1>::RawKey<1> key{0};
@@ -303,7 +302,6 @@ TEST_CASE("NodeStorage newCompressedNode with std::allocator", "[NodeStorage]") 
 
 TEST_CASE("NodeStorage newCompressedNode with OffsetAllocator", "[NodeStorage]") {
 	//create store
-	using hypertrie::internal::RawKey;
 	OffsetAllocator<size_t> alloc;
 	NodeStorage<1, Hypertrie_internal_t<>, OffsetAllocator<size_t>> store(alloc);
 	//create value to store
@@ -325,8 +323,7 @@ TEST_CASE("NodeStorage newCompressedNode with OffsetAllocator", "[NodeStorage]")
 
 TEST_CASE("NodeStorage newCompressedNode with Metall", "[NodeStorage]") {
 	// "globals"
-	using hypertrie::internal::RawKey;
-	using NodeStorage_t = NodeStorage<1, Hypertrie_internal_t<>, metall::manager::allocator_type<size_t>>;
+	using NodeStorage_t = NodeStorage<1, Hypertrie_internal_t<>, m_alloc_t<size_t>>;
 	std::string path = "tmp";
 	std::string name = "NodeStorage_with_metall";
 	TensorHash true_hash{42};
@@ -361,7 +358,6 @@ TensorHash make_compressed(TensorHash const &hash) {
 }
 
 TEST_CASE("NodeStorage deleteNode with std::allocator", "[NodeStorage]") {
-	using hypertrie::internal::RawKey;
 	std::allocator<int> alloc;
 	NodeStorage<1> store(alloc);
 	NodeStorage<1>::RawKey<1> key{0};
@@ -376,8 +372,6 @@ TEST_CASE("NodeStorage deleteNode with std::allocator", "[NodeStorage]") {
 
 
 TEST_CASE("NodeStorage deleteNode with OffsetAllocator", "[NodeStorage]") {
-	//create store
-	using hypertrie::internal::RawKey;
 	using NodeStorage_t = NodeStorage<1, Hypertrie_internal_t<>, OffsetAllocator<size_t>>;
 	OffsetAllocator<size_t> alloc;
 	NodeStorage_t store(alloc);
@@ -389,6 +383,40 @@ TEST_CASE("NodeStorage deleteNode with OffsetAllocator", "[NodeStorage]") {
 	store.deleteNode<1>(hash);
 	auto container = store.getCompressedNode<1>(hash);
 	REQUIRE((container.empty()));
+}
+
+TEST_CASE("NodeStorage deleteNode with metall", "[NodeStorage]") {
+	using NodeStorage_t = NodeStorage<1, Hypertrie_internal_t<>, m_alloc_t<size_t>>;
+	std::string path = "tmp";
+	std::string name = "NodeStorage_with_metall_delete";
+	auto hash = make_compressed(TensorHash(42));
+
+	m::create_segment(path);
+
+	//create data
+	{
+		m::Context con(path);
+		auto store = con.construct<NodeStorage_t>(name, con.allocator);
+		NodeStorage_t::RawKey<1> key{0};
+		bool value = true;
+		size_t ref_count = 0;
+		store->newCompressedNode(key, value, ref_count, hash);
+	}
+
+	//delete data
+	{
+		m::Context con(path);
+		auto store = con.find<NodeStorage_t>(name);
+		store->deleteNode<1>(hash);
+		auto container = store->getCompressedNode<1>(hash);
+		REQUIRE((container.empty()));
+	}
+
+	//destroy segment
+	{
+		m::Context con(path);
+		con.destroy<NodeStorage_t>(name);
+	}
 }
 
 #endif//HYPERTRIE_TESTNODESTORAGE_HPP

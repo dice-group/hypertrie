@@ -17,14 +17,6 @@ namespace std {
 	};
 }// namespace std
 
-TEST_CASE("OffsetAllocator -- create uncompressed node", "[NodeStorage]") {
-
-	using namespace hypertrie::internal::raw;
-
-	using LevelNodeStorage_t = LevelNodeStorage<2, ::hypertrie::internal::raw::lsbunused_bool_Hypertrie_internal_t, OffsetAllocator<int>>;
-
-	LevelNodeStorage_t level_node_storage(OffsetAllocator<int>{});
-}
 
 namespace details {
 	template<typename T>
@@ -58,8 +50,72 @@ namespace details {
 		std::allocator_traits<decltype(alloc)>::construct(alloc, std::to_address(address), 0, alloc);
 		return address;
 	}
+
+	/** Contains all code to simplify interaction with metall.
+	 */
+	namespace m {
+		void create_segment(std::string const& path) {
+			metall::manager manager(metall::create_only, path.c_str());
+		}
+
+		struct Context {
+			metall::manager manager;
+			metall::manager::allocator_type<std::byte> allocator;
+			Context(std::string const& path) : manager(metall::open_only, path.c_str()), allocator(manager.get_allocator()) {}
+
+			template <typename T, typename ...Args>
+			auto* construct(std::string const& name, Args&&... args) {
+				return manager.template construct<T>(name.c_str())(std::forward<Args>(args)...);
+			}
+			template <typename T> auto* find(std::string const& name) {
+				return manager.template find<T>(name.c_str()).first;
+			}
+			template <typename T> void destroy(std::string const& name){
+				manager.template destroy<T>(name.c_str());
+			}
+		};
+	}
+
+	namespace bit{
+		template <std::integral T>
+		constexpr T msb_mask() noexcept {
+			T mask = 1;
+			return mask << (sizeof(T)*8 - 1);
+		}
+
+		template <std::integral T>
+		constexpr T lsb_mask() noexcept {
+			return static_cast<T>(1);
+		}
+
+		template <std::integral T>
+		std::string binary(T value) {
+			std::string result;
+			result.reserve(sizeof(T)*8);
+			for (T mask = msb_mask<T>(); mask != 0; mask >>= 1) {
+				result.push_back((mask & value) != 0 ? '1' : '0');
+			}
+			return result;
+		}
+
+		template <std::integral T>
+		auto set_single_bit(T value, size_t position, bool to_set) {
+			assert(position < sizeof(value)*8 && "position value is too high");
+			T mask = lsb_mask<T>() << position;
+			if (to_set) {
+				return value | mask;
+			}
+			return value & ~mask;
+		}
+	}
 }// namespace details
 using namespace details;
+
+
+TEST_CASE("OffsetAllocator -- create uncompressed node", "[NodeStorage]") {
+	using LevelNodeStorage_t = LevelNodeStorage<2, ::hypertrie::internal::raw::lsbunused_bool_Hypertrie_internal_t, OffsetAllocator<int>>;
+	LevelNodeStorage_t level_node_storage(OffsetAllocator<int>{});
+}
 
 
 template<size_t N>
@@ -69,54 +125,45 @@ void MetallAllocator_creat_compressed_nodes_in_LevelStorage() {
 
 	std::string path = "tmp";
 	std::string name = "LevelNodeStorage_t_with_metall";
-	// create segment
-	{
-		metall::manager manager(metall::create_only, path.c_str());
-	}
+
+	m::create_segment(path);
 
 	// write to segment (create level storage and add an entry)
 	{
-		metall::manager manager(metall::open_only, path.c_str());
-		auto allocator = manager.get_allocator<>();
-		manager.construct<LevelNodeStorage_tt>(name.c_str())(allocator);
-		auto level_storage = manager.find<LevelNodeStorage_tt>(name.c_str()).first;
-
+		m::Context con(path);
+		con.construct<LevelNodeStorage_tt>(name, con.allocator);
+		auto level_storage = con.find<LevelNodeStorage_tt>(name);
 		auto &cnodes = level_storage->compressedNodes();
 		auto hash = map_key_type{0};
-		cnodes[hash] = create_compressed_node<N>(allocator);
+		cnodes[hash] = create_compressed_node<N>(con.allocator);
 		cnodes[hash]->key()[0] = 5;
 	}
 
 	// read and write
 	{
-		metall::manager manager(metall::open_only, path.c_str());
-		auto level_storage = manager.find<LevelNodeStorage_tt>(name.c_str()).first;
-		auto allocator = manager.get_allocator<>();
-
+		m::Context con(path);
+		auto level_storage = con.find<LevelNodeStorage_tt>(name.c_str());
 		auto &cnodes = level_storage->compressedNodes();
 		auto hash = map_key_type{1};
-		cnodes[hash] = create_compressed_node<N>(allocator);
+		cnodes[hash] = create_compressed_node<N>(con.allocator);
 		cnodes[hash]->key()[0] = 4;
 
 		REQUIRE(cnodes.at(map_key_type{0})->key()[0] == 5);
 		REQUIRE(cnodes.at(map_key_type{1})->key()[0] == 4);
 	}
 
-	// read
 	{
-		metall::manager manager(metall::open_only, path.c_str());
-		auto level_storage = manager.find<LevelNodeStorage_tt>(name.c_str()).first;
-
+		m::Context con(path);
+		auto level_storage = con.find<LevelNodeStorage_tt>(name);
 		auto &cnodes = level_storage->compressedNodes();
 
 		REQUIRE(cnodes.at(map_key_type{0})->key()[0] == 5);
 		REQUIRE(cnodes.at(map_key_type{1})->key()[0] == 4);
 	}
 
-	// destroy segment
 	{
-		metall::manager manager(metall::open_only, path.c_str());
-		manager.destroy<LevelNodeStorage_tt>(name.c_str());
+		m::Context con(path);
+		con.destroy<LevelNodeStorage_tt>(name);
 	}
 }
 
@@ -136,20 +183,17 @@ void MetallAllocator_creat_uncompressed_nodes_in_LevelStorage() {
 
 	std::string path = "tmp";
 	std::string name = "LevelNodeStorage_t_with_metall";
-	// create segment
-	{
-		metall::manager manager(metall::create_only, path.c_str());
-	}
+
+	m::create_segment(path);
 
 	// write to segment (create level storage and add an entry)
 	{
-		metall::manager manager(metall::open_only, path.c_str());
-		auto allocator = manager.get_allocator<>();
-		manager.construct<LevelNodeStorage_tt>(name.c_str())(allocator);
-		auto level_storage = manager.find<LevelNodeStorage_tt>(name.c_str()).first;
+		m::Context con(path);
+		con.construct<LevelNodeStorage_tt>(name, con.allocator);
+		auto level_storage = con.find<LevelNodeStorage_tt>(name);
 
 		auto &ucnodes = level_storage->uncompressedNodes();
-		auto new_ucnode = create_uncompressed_node<N>(allocator);
+		auto new_ucnode = create_uncompressed_node<N>(con.allocator);
 
 		if constexpr (N >= 3) {
 			new_ucnode->edges(0)[0] = TensorHash(5);
@@ -165,12 +209,10 @@ void MetallAllocator_creat_uncompressed_nodes_in_LevelStorage() {
 
 	// read and write
 	{
-		metall::manager manager(metall::open_only, path.c_str());
-		auto level_storage = manager.find<LevelNodeStorage_tt>(name.c_str()).first;
-		auto allocator = manager.get_allocator<>();
-
+		m::Context con(path);
+		auto level_storage = con.find<LevelNodeStorage_tt>(name);
 		auto &ucnodes = level_storage->uncompressedNodes();
-		auto new_ucnode = create_uncompressed_node<N>(allocator);
+		auto new_ucnode = create_uncompressed_node<N>(con.allocator);
 
 		if constexpr (N >= 3) {
 			new_ucnode->edges(0)[1] = TensorHash(6);
@@ -196,8 +238,8 @@ void MetallAllocator_creat_uncompressed_nodes_in_LevelStorage() {
 
 	// read
 	{
-		metall::manager manager(metall::open_only, path.c_str());
-		auto level_storage = manager.find<LevelNodeStorage_tt>(name.c_str()).first;
+		m::Context con(path);
+		auto level_storage = con.find<LevelNodeStorage_tt>(name);
 
 		auto &ucnodes = level_storage->uncompressedNodes();
 
@@ -215,8 +257,8 @@ void MetallAllocator_creat_uncompressed_nodes_in_LevelStorage() {
 
 	// destroy segment
 	{
-		metall::manager manager(metall::open_only, path.c_str());
-		manager.destroy<LevelNodeStorage_tt>(name.c_str());
+		m::Context con(path);
+		con.destroy<LevelNodeStorage_tt>(name);
 	}
 }
 
@@ -289,23 +331,18 @@ TEST_CASE("NodeStorage newCompressedNode with Metall", "[NodeStorage]") {
 	std::string name = "NodeStorage_with_metall";
 	TensorHash true_hash{42};
 	TensorHash false_hash{43};
-	// create segment
-	{
-		metall::manager manager(metall::create_only, path.c_str());
-	}
+	m::create_segment(path);
 	// write to segment (create store)
 	{
-		metall::manager manager(metall::open_only, path.c_str());
-		auto allocator = manager.get_allocator();
-		manager.construct<NodeStorage_t>(name.c_str())(allocator);
-		auto store = manager.find<NodeStorage_t>(name.c_str()).first;
+		m::Context con(path);
+		auto store = con.construct<NodeStorage_t>(name, con.allocator);
 		NodeStorage<1>::RawKey<1> key{0};
 		store->newCompressedNode(key, true, 0, true_hash);
 	}
 	// read
 	{
-		metall::manager manager(metall::open_only, path.c_str());
-		auto store = manager.find<NodeStorage_t>(name.c_str()).first;
+		m::Context con(path);
+		auto store = con.find<NodeStorage_t>(name);
 		auto container42 = store->getCompressedNode<1>(true_hash);
 		REQUIRE(not container42.empty());
 		REQUIRE(container42.compressed_node()->value() == true);
@@ -314,51 +351,15 @@ TEST_CASE("NodeStorage newCompressedNode with Metall", "[NodeStorage]") {
 	}
 	// destroy segment
 	{
-		metall::manager manager(metall::open_only, path.c_str());
-		manager.destroy<NodeStorage_t>(name.c_str());
+		m::Context con(path);
+		con.destroy<NodeStorage_t>(name);
 	}
-}
-
-template <std::integral T>
-constexpr T msb_mask() noexcept {
-	T mask = 1;
-	return mask << (sizeof(T)*8 - 1);
-}
-
-template <std::integral T>
-constexpr T lsb_mask() noexcept {
-	return static_cast<T>(1);
-}
-
-template <std::integral T>
-std::string binary(T value) {
-	std::string result;
-	result.reserve(sizeof(T)*8);
-	for (T mask = msb_mask<T>(); mask != 0; mask >>= 1) {
-		result.push_back((mask & value) != 0 ? '1' : '0');
-	}
-	return result;
-}
-
-template <std::integral T>
-auto set_single_bit(T value, size_t position, bool to_set) {
-	assert(position < sizeof(value)*8 && "position value is too high");
-	T mask = lsb_mask<T>() << position;
-	if (to_set) {
-		return value | mask;
-	}
-	return value & ~mask;
 }
 
 TensorHash make_compressed(TensorHash const &hash) {
-	return TensorHash(set_single_bit(hash.hash(), hash.compression_tag_pos, hash.compressed_tag));
+	return TensorHash(bit::set_single_bit(hash.hash(), hash.compression_tag_pos, hash.compressed_tag));
 }
 
-/* I found one problem:
- * 42s LSB is 0, so the hash thinks it isn't compressed.
- *
- * However the delete still crashes the programm
- */
 TEST_CASE("NodeStorage deleteNode with std::allocator", "[NodeStorage]") {
 	using hypertrie::internal::RawKey;
 	std::allocator<int> alloc;

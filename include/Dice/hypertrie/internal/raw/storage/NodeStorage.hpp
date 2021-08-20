@@ -177,17 +177,30 @@ namespace hypertrie::internal::raw {
 
 		/* This class might create a performance problem, because the allocators need to be copied to rebind them.
 		 */
-		template <size_t depth>
-		class Allocation_CompressedNode {
-			using cn_allocator_type = typename std::allocator_traits<allocator_type>::template rebind_alloc<CompressedNode<depth, tri, allocator_type>>;
-			using cn_allocator_traits = typename std::allocator_traits<cn_allocator_type>;
 
+		template <size_t depth, typename Node>
+		class Allocation_Node {
+		public:
+			using node_type = Node;
+			using cn_allocator_type = typename std::allocator_traits<allocator_type>::template rebind_alloc<node_type>;
+			using cn_allocator_traits = typename std::allocator_traits<cn_allocator_type>;
+			using pointer = typename cn_allocator_traits::pointer;
+
+		private:
 			static auto allocate(cn_allocator_type alloc, size_t n) {
 				return cn_allocator_traits::allocate(alloc, n);
 			}
-			template<typename Ptr, typename... Args>
-			static void construct(cn_allocator_type alloc, Ptr ptr, Args &&...args) {
+			template<typename... Args>
+			static void construct(cn_allocator_type alloc, pointer ptr, Args &&...args) {
 				cn_allocator_traits::construct(alloc, std::to_address(ptr), std::forward<Args>(args)...);
+			}
+
+			static void destroy(cn_allocator_type alloc, pointer ptr) {
+				cn_allocator_traits::destroy(alloc, std::to_address(ptr));
+			}
+
+			static auto deallocate(cn_allocator_type alloc, pointer ptr, size_t n) {
+				cn_allocator_traits::deallocate(alloc, ptr, n);
 			}
 
 		public:
@@ -198,10 +211,20 @@ namespace hypertrie::internal::raw {
 			}
 			static auto create(allocator_type const& alloc, const RawKey<depth> &key, size_t ref_count) {
 				auto ptr = allocate(alloc, 1);
-                construct(alloc, ptr, key, ref_count);
+				construct(alloc, ptr, key, ref_count);
 				return ptr;
 			}
+			static void erase(allocator_type const& alloc, pointer to_erase) {
+				destroy(alloc, to_erase);
+				deallocate(alloc, to_erase, 1);
+			}
 		};
+
+		template <size_t depth>
+		class Allocation_CompressedNode : public Allocation_Node<depth, CompressedNode<depth, tri, allocator_type>>{};
+
+		template <size_t depth>
+		class Allocation_UncompressedNode : public Allocation_Node<depth, UncompressedNode<depth, tri, allocator_type>>{};
 
 
 		// TODO: remove
@@ -322,8 +345,15 @@ namespace hypertrie::internal::raw {
 			auto &nodes = getNodeStorage<depth, compression>();
 			auto it = nodes.find(node_hash);
 			assert(it != nodes.end());
-			auto *node = &LevelNodeStorage<depth, tri>::template deref<compression>(it);
+			auto node = LevelNodeStorage<depth, tri, allocator_type>::template deref<compression>(it);
+			/*
 			delete node; // TODO: deallocate
+			 */
+			if constexpr(compression == NodeCompression::compressed) {
+				Allocation_CompressedNode<depth>::erase(alloc_, node);
+			} else {
+				Allocation_UncompressedNode<depth>::erase(alloc_, node);
+			}
 			nodes.erase(it);
 		}
 

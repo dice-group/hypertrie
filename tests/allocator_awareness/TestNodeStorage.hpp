@@ -359,7 +359,7 @@ TensorHash make_compressed(TensorHash const &hash) {
  *
  * However the delete still crashes the programm
  */
-TEST_CASE("NodeStorage deleteNode", "[NodeStorage]") {
+TEST_CASE("NodeStorage deleteNode with std::allocator", "[NodeStorage]") {
 	using hypertrie::internal::RawKey;
 	std::allocator<int> alloc;
 	NodeStorage<1> store(alloc);
@@ -369,7 +369,25 @@ TEST_CASE("NodeStorage deleteNode", "[NodeStorage]") {
 	size_t ref_count = 0;
 	store.newCompressedNode(key, value, ref_count, hash);
 	store.deleteNode<1>(hash);
+	auto container = store.getCompressedNode<1>(hash);
+	REQUIRE((container.empty()));
 }
 
+
+TEST_CASE("NodeStorage deleteNode with OffsetAllocator", "[NodeStorage]") {
+	//create store
+	using hypertrie::internal::RawKey;
+	using NodeStorage_t = NodeStorage<1, Hypertrie_internal_t<>, OffsetAllocator<size_t>>;
+	OffsetAllocator<size_t> alloc;
+	NodeStorage_t store(alloc);
+	NodeStorage_t::RawKey<1> key{0};
+	auto hash = make_compressed(TensorHash(42));
+	bool value = true;
+	size_t ref_count = 0;
+	store.newCompressedNode(key, value, ref_count, hash);
+	store.deleteNode<1>(hash);
+	auto container = store.getCompressedNode<1>(hash);
+	REQUIRE((container.empty()));
+}
 
 #endif//HYPERTRIE_TESTNODESTORAGE_HPP

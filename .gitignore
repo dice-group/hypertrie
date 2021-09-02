@@ -1,4 +1,4 @@
-/include/Dice/hypertrie/hypertrie_version.hpp
+include/Dice/hypertrie/hypertrie_version.hpp
 
 # Prerequisites
 *.d

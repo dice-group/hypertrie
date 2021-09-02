@@ -8,7 +8,7 @@ namespace hypertrie::internal::container {
     using boost_flat_set = boost::container::flat_set<
             key_type,
 			std::less<>,
-			Allocator
+			typename std::allocator_traits<Allocator>::template rebind_alloc<key_type>
             >;
 }
 

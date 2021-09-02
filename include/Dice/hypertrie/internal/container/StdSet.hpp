@@ -2,6 +2,8 @@
 #define HYPERTRIE_STDSET_HPP
 
 #include <set>
+#include <vector>
+#include <memory> //allocator_traits
 #include <fmt/format.h>
 
 namespace hypertrie::internal::container {
@@ -10,7 +12,7 @@ namespace hypertrie::internal::container {
             <
                     key_type,
 					std::less<key_type>,
-					Allocator
+					typename std::allocator_traits<Allocator>::template rebind_alloc<key_type>
             >;
 }
 

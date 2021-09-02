@@ -8,7 +8,6 @@
 
 namespace test_details {
 	namespace new_version {
-		using hypertrie::internal::util::IntegralTemplatedTupleAlloc;
 		using hypertrie::internal::util::new_impl::IntegralTemplatedTuple;
 	}// namespace new_version
 	namespace old_version {
@@ -61,9 +60,9 @@ namespace test_details {
         static constexpr size_t ELEMENT_COUNT{};
 	};
 
-	template<template<auto N, typename Allocator> typename T,
+	template<template<auto N> typename T,
 			 std::integral auto FIRST, std::integral auto LAST, typename Allocator>
-	struct TestTrait<new_version::IntegralTemplatedTupleAlloc<T, FIRST, LAST, Allocator>> {
+	struct TestTrait<new_version::IntegralTemplatedTuple<T, FIRST, LAST, Allocator>> {
 		static constexpr auto MIN = std::min(FIRST, LAST);
 		static constexpr auto MAX = std::max(FIRST, LAST);
 		static constexpr auto INDEX(auto Value) { return MIN + Value; }
@@ -104,9 +103,10 @@ namespace test_details {
     /** Test class template for types that do use an allocator.
      * Should only be used via the xAlloc aliases.
      */
-    template<typename INTEGER, INTEGER N, typename Allocator>
+    template<typename INTEGER, INTEGER N>
     struct Alloc {
         static constexpr INTEGER value = N;
+		template<typename Allocator>
         Alloc(Allocator const &) {}
         friend std::ostream &operator<<(std::ostream &os, Alloc const &a) {
             return os << a.value << ' ';
@@ -117,8 +117,8 @@ namespace test_details {
 	 */
 	template <size_t N> using UnsignedNonAlloc = NonAlloc<size_t, N>;
     template <short N> using SignedNonAlloc = NonAlloc<short, N>;
-    template <size_t N, typename Allocator> using UnsignedAlloc = Alloc<size_t, N, Allocator>;
-    template <short N, typename Allocator> using SignedAlloc = Alloc<short, N, Allocator>;
+    template <size_t N> using UnsignedAlloc = Alloc<size_t, N>;
+    template <short N> using SignedAlloc = Alloc<short, N>;
 	template<size_t... Values>
 	/* Function wrapper to use directly in the tests.
 	 */
@@ -175,11 +175,11 @@ using namespace test_details;
 /** Test to check whether all the tuples create the result that the check describes.
  * Should only be used via the x_NonAllocVsAlloc functions.
  */
-template<template<auto> typename NonAlloc, template<auto, typename> typename Alloc, typename INTEGER, INTEGER FIRST, INTEGER LAST, typename Check>
+template<template<auto> typename NonAlloc, template<auto> typename Alloc, typename INTEGER, INTEGER FIRST, INTEGER LAST, typename Check>
 void comparison_Test(Check const &check, bool print) {
 	old_version::IntegralTemplatedTuple<NonAlloc, FIRST, LAST> old_na;
 	new_version::IntegralTemplatedTuple<NonAlloc, FIRST, LAST> na;
-	new_version::IntegralTemplatedTupleAlloc<Alloc, FIRST, LAST, std::allocator<int>> a(std::allocator<int>{});
+	new_version::IntegralTemplatedTuple<Alloc, FIRST, LAST, std::allocator<int>> a(std::allocator<int>{});
 	if (print) {
 		size_t fill_width = 20;
 		std::cout << std::left << std::setfill(' ')
@@ -194,14 +194,14 @@ void comparison_Test(Check const &check, bool print) {
 /** Test to check whether all the tuples create the result that the check describes if a reinterpret_cast is used on them.
  * Should only be used via the x_reinterpret_cast_Test functions.
  */
-template<template<auto> typename NonAlloc, template<auto, typename> typename Alloc, typename INTEGER, INTEGER FIRST, INTEGER LAST, INTEGER NFIRST, INTEGER NLAST, typename Check>
+template<template<auto> typename NonAlloc, template<auto> typename Alloc, typename INTEGER, INTEGER FIRST, INTEGER LAST, INTEGER NFIRST, INTEGER NLAST, typename Check>
 void reinterpret_cast_Test(Check const &check, bool print) {
 	old_version::IntegralTemplatedTuple<NonAlloc, FIRST, LAST> old_na;
 	new_version::IntegralTemplatedTuple<NonAlloc, FIRST, LAST> na;
-	new_version::IntegralTemplatedTupleAlloc<Alloc, FIRST, LAST, std::allocator<int>> a(std::allocator<int>{});
+	new_version::IntegralTemplatedTuple<Alloc, FIRST, LAST, std::allocator<int>> a(std::allocator<int>{});
 	auto recast_old_na = reinterpret_cast<old_version::IntegralTemplatedTuple<NonAlloc, NFIRST, NLAST> *>(&old_na);
 	auto recast_na = reinterpret_cast<new_version::IntegralTemplatedTuple<NonAlloc, NFIRST, NLAST> *>(&old_na);
-	auto recast_a = reinterpret_cast<new_version::IntegralTemplatedTupleAlloc<Alloc, NFIRST, NLAST, std::allocator<int>> *>(&a);
+	auto recast_a = reinterpret_cast<new_version::IntegralTemplatedTuple<Alloc, NFIRST, NLAST, std::allocator<int>> *>(&a);
 
 	if (print) {
 		size_t fill_width = 20;

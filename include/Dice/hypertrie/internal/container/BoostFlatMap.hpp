@@ -10,7 +10,7 @@ namespace hypertrie::internal::container {
                     key_type,
                     value,
                     std::less<key_type>,
-                    Allocator
+					typename std::allocator_traits<Allocator>::template rebind_alloc<std::pair<const key_type, value>>
             >;
 }
 

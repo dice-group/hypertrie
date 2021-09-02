@@ -3,6 +3,7 @@
 
 #include <fmt/format.h>
 #include <map>
+#include <memory>//allocator_traits
 
 namespace hypertrie::internal::container {
 	template<typename key_type, typename value, typename Allocator = std::allocator<std::pair<key_type, value>>>
@@ -10,7 +11,7 @@ namespace hypertrie::internal::container {
 			key_type,
 			value,
 			std::less<key_type>,
-			Allocator>;
+			typename std::allocator_traits<Allocator>::template rebind_alloc<std::pair<const key_type, value>>>;
 }
 
 
@@ -47,9 +48,9 @@ public:
 };
 
 template<typename K, typename V>
-struct fmt::formatter<hypertrie::internal::container::std_map<K, V*>> {
+struct fmt::formatter<hypertrie::internal::container::std_map<K, V *>> {
 private:
-	using map_type = hypertrie::internal::container::std_map<K, V*>;
+	using map_type = hypertrie::internal::container::std_map<K, V *>;
 
 public:
 	auto parse(format_parse_context &ctx) {

@@ -14,12 +14,24 @@ namespace hypertrie::internal::raw {
 	struct Hypertrie_internal_t {
 		using tr = tr_t;
 		/// public definitions
+		using allocator_type = typename tr::allocator_type;
+
+		template <typename PointedType>
+		using allocator_pointer = typename std::pointer_traits<typename allocator_type::pointer>::template rebind<PointedType>;
+
+		template <typename PointedType>
+		using allocator_const_pointer = typename std::pointer_traits<typename allocator_type::const_pointer>::template rebind<PointedType>;
+
+		template<typename T>
+		using rebind_alloc = typename std::allocator_traits<allocator_type>::template rebind_alloc<T>;
+
 		using key_part_type = typename tr::key_part_type;
 		using value_type = typename tr::value_type;
-		template<typename key, typename value, typename Allocator>
-		using map_type = typename tr::template map_type<key, value, Allocator>;
-		template<typename key, typename Allocator>
-		using set_type = typename tr::template set_type<key, Allocator>;
+
+		template<typename key, typename value>
+		using map_type = typename tr::template map_type<key, value>;
+		template<typename key>
+		using set_type = typename tr::template set_type<key>;
 
 		using SliceKey = typename tr::SliceKey;
 		using Key = typename tr::Key;
@@ -149,8 +161,8 @@ namespace hypertrie::internal::raw {
 
 		constexpr static bool is_bool_valued = tr::is_bool_valued;
 		constexpr static const bool is_lsb_unused = tr::lsb_unused;
-		constexpr static bool is_tsl_map = std::is_same_v<map_type<int, int, std::allocator<std::pair<const key_part_type, value_type>>>,
-		        container::tsl_sparse_map<int, int, std::allocator<std::pair<const key_part_type, value_type>>>>;
+		constexpr static bool is_tsl_map = std::is_same_v<map_type<int, int>,
+														  container::tsl_sparse_map<int, int, allocator_type>>;
 
 		/**
 		 * Generates a subkey by removing a key_part at the given position
@@ -174,8 +186,8 @@ namespace hypertrie::internal::raw {
 		 * @param map_it a valid iterator pointing to an entry
 		 * @return a reference to the mapped_type
 		 */
-		template<typename K, typename V, typename Allocator>
-		static V &deref(typename map_type<K, V, Allocator>::iterator &map_it) {
+		template<typename K, typename V>
+		static V &deref(typename map_type<K, V>::iterator &map_it) {
 			if constexpr (is_tsl_map) return map_it.value();
 			else
 				return map_it->second;

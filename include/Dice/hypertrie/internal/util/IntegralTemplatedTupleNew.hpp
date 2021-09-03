@@ -6,16 +6,21 @@ namespace hypertrie::internal::util {
 	 * "include/Dice/hypertrie/internal/util/IntegralTemplatedTuple.hpp".
 	 */
 	namespace new_impl {
-        /**
+		/**
          * This class is a wrapper around a tuple std::tuple<T<FIRST> .. T<LAST>>.
          * FIRST is allowed to be smaller then LAST.
          * It allows access to the elements via get<i>() -> T<I>.
          * Elements are memory aligned from FIRST to LAST which means you can reinterpret
          * an IntegralTemplatedTuple<T,1,5> as an IntegralTemplatedTuple<T,1,3>
          * and will still be able to access the elements 1-3.
-         * @tparam EntryTypeTemplate T in  the text above.
+         * You can give the constructor parameters to pass through to the constructors of
+         * the elements. However all elements will get exactly the same parameter.
+         * You can use the function make_integral_template_tuple to create an
+         * IntegralTemplatedTuple without explicitly listing the Args parameters.
+         * @tparam EntryTypeTemplate T in the text above.
          * @tparam FIRST
          * @tparam LAST
+         * @tparam Args Types of the constructor parameters.
          */
 		template<template<std::integral auto> typename EntryTypeTemplate,
 				 std::integral auto FIRST, std::integral auto LAST, typename... Args>
@@ -42,7 +47,7 @@ namespace hypertrie::internal::util {
                  * @tparam IDS The indices itself.
                  */
 				template<integral_type... IDS>
-				static auto gen_tuple(std::integer_sequence<integral_type, IDS...>, Args&& ...args) {
+				static auto gen_tuple(std::integer_sequence<integral_type, IDS...>, Args &&...args) {
 					if constexpr (DIRECTION == Direction::up)
 						return std::make_tuple(Entry<integral_type(MIN + LENGTH - 1 - IDS)>{args...}...);
 					else
@@ -54,20 +59,20 @@ namespace hypertrie::internal::util {
                  */
 
 
-				static auto make_tuple(Args&&... args) {
+				static auto make_tuple(Args &&...args) {
 					return gen_tuple(std::make_integer_sequence<integral_type, LENGTH>(), std::forward<Args>(args)...);
 				}
 
 				/* CAUTION: has to be __after__ the make_tuple function.
 				 * Also make_tuple isn't allowed to have overloads.
 				 */
-				using type = std::invoke_result_t<decltype(make_tuple)>;
+				using type = std::invoke_result_t<decltype(make_tuple), Args &&...>;
 			};
 
 			typename TupleGenerator::type count_tuple_;
 
 		public:
-			explicit IntegralTemplatedTuple(Args&&... args)
+			explicit IntegralTemplatedTuple(Args &&...args)
 				: count_tuple_(TupleGenerator::make_tuple(std::forward<Args>(args)...)) {}
 
 		private:
@@ -100,19 +105,10 @@ namespace hypertrie::internal::util {
 		};
 		template<template<auto> typename EntryTypeTemplate,
 				 std::integral auto FIRST, std::integral auto LAST, typename... Args>
-		auto make_integral_template_tuple(Args&&... args) {
+		auto make_integral_template_tuple(Args &&...args) {
 			return IntegralTemplatedTuple<EntryTypeTemplate, FIRST, LAST, Args...>(std::forward<Args>(args)...);
 		}
-	}
-}// namespace dev
-
-/* Possible improvements:
- * - Combine the two classes.
- * - Retype the second class to
- *     template<template<std::integral auto> typename EntryTypeTemplate,
- *       std::integral auto FIRST, std::integral auto LAST, typename Allocator>
- *   , because all entries get the same allocator type. So you could simply use an template alias before
- *   using this class.
- */
+	}// namespace new_impl
+}// namespace hypertrie::internal::util
 
 #endif//HYPERTRIE_INTEGRALTEMPLATEDTUPLENEW_HPP

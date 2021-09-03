@@ -56,21 +56,13 @@ namespace test_details {
 		template<typename>
 		struct AlwaysFalse : std::false_type {};
 		static_assert(AlwaysFalse<T>::value, "TestTrait is not defined for this type");
-        static constexpr auto INDEX(auto Value);
-        static constexpr size_t ELEMENT_COUNT{};
+		static constexpr auto INDEX(auto Value);
+		static constexpr size_t ELEMENT_COUNT{};
 	};
 
 	template<template<auto N> typename T,
-			 std::integral auto FIRST, std::integral auto LAST, typename Allocator>
-	struct TestTrait<new_version::IntegralTemplatedTuple<T, FIRST, LAST, Allocator>> {
-		static constexpr auto MIN = std::min(FIRST, LAST);
-		static constexpr auto MAX = std::max(FIRST, LAST);
-		static constexpr auto INDEX(auto Value) { return MIN + Value; }
-		static constexpr size_t ELEMENT_COUNT = MAX - MIN + 1;
-	};
-	template<template<auto N> typename T,
-			 std::integral auto FIRST, std::integral auto LAST>
-	struct TestTrait<new_version::IntegralTemplatedTuple<T, FIRST, LAST>> {
+			 std::integral auto FIRST, std::integral auto LAST, typename... Args>
+	struct TestTrait<new_version::IntegralTemplatedTuple<T, FIRST, LAST, Args...>> {
 		static constexpr auto MIN = std::min(FIRST, LAST);
 		static constexpr auto MAX = std::max(FIRST, LAST);
 		static constexpr auto INDEX(auto Value) { return MIN + Value; }
@@ -93,35 +85,39 @@ namespace test_details {
 	/** Test class template for types that do not use an allocator.
 	 * Should only be used via the xNonAlloc aliases.
 	 */
-	template <typename INTEGER, INTEGER N>
+	template<typename INTEGER, INTEGER N>
 	struct NonAlloc {
-        static constexpr INTEGER value = N;
-        friend std::ostream &operator<<(std::ostream &os, NonAlloc const &na) {
-            return os << na.value << ' ';
-        }
+		static constexpr INTEGER value = N;
+		friend std::ostream &operator<<(std::ostream &os, NonAlloc const &na) {
+			return os << na.value << ' ';
+		}
 	};
-    /** Test class template for types that do use an allocator.
+	/** Test class template for types that do use an allocator.
      * Should only be used via the xAlloc aliases.
      */
-    template<typename INTEGER, INTEGER N>
-    struct Alloc {
-        static constexpr INTEGER value = N;
+	template<typename INTEGER, INTEGER N>
+	struct Alloc {
+		static constexpr INTEGER value = N;
 		template<typename Allocator>
-        Alloc(Allocator const &) {}
-        friend std::ostream &operator<<(std::ostream &os, Alloc const &a) {
-            return os << a.value << ' ';
-        }
-    };
+		Alloc(Allocator const &) {}
+		friend std::ostream &operator<<(std::ostream &os, Alloc const &a) {
+			return os << a.value << ' ';
+		}
+	};
 
 	/* Aliases to use directly in the tests.
 	 */
-	template <size_t N> using UnsignedNonAlloc = NonAlloc<size_t, N>;
-    template <short N> using SignedNonAlloc = NonAlloc<short, N>;
-    template <size_t N> using UnsignedAlloc = Alloc<size_t, N>;
-    template <short N> using SignedAlloc = Alloc<short, N>;
-	template<size_t... Values>
+	template<size_t N>
+	using UnsignedNonAlloc = NonAlloc<size_t, N>;
+	template<short N>
+	using SignedNonAlloc = NonAlloc<short, N>;
+	template<size_t N>
+	using UnsignedAlloc = Alloc<size_t, N>;
+	template<short N>
+	using SignedAlloc = Alloc<short, N>;
 	/* Function wrapper to use directly in the tests.
 	 */
+	template<size_t... Values>
 	auto create_unsigned_check() { return create_check<size_t, Values...>(); }
 	template<short... Values>
 	auto create_signed_check() { return create_check<short, Values...>(); }
@@ -165,7 +161,7 @@ namespace test_details {
 	/* Helper function to enable better type deduction.
 	 */
 	template<typename INTEGER, typename T>
-	auto Printer(T const &t) {return PrintingWrapper<INTEGER, T>{t};}
+	auto Printer(T const &t) { return PrintingWrapper<INTEGER, T>{t}; }
 
 
 }// namespace test_details
@@ -228,7 +224,7 @@ void Unsigned_NonAllocVsAlloc(Check const &check, bool print = false) {
 
 template<short FIRST, short LAST, typename Check>
 void Signed_NonAllocVsAlloc(Check const &check, bool print = false) {
-    comparison_Test<SignedNonAlloc, SignedAlloc, short, FIRST, LAST>(check, print);
+	comparison_Test<SignedNonAlloc, SignedAlloc, short, FIRST, LAST>(check, print);
 }
 
 template<size_t FIRST, size_t LAST, size_t NFIRST, size_t NLAST, typename Check>
@@ -238,7 +234,7 @@ void Unsigned_reinterpret_cast_Test(Check const &check, bool print = false) {
 
 template<short FIRST, short LAST, short NFIRST, short NLAST, typename Check>
 void Signed_reinterpret_cast_Test(Check const &check, bool print = false) {
-    reinterpret_cast_Test<SignedNonAlloc, SignedAlloc, short, FIRST, LAST, NFIRST, NLAST>(check, print);
+	reinterpret_cast_Test<SignedNonAlloc, SignedAlloc, short, FIRST, LAST, NFIRST, NLAST>(check, print);
 }
 
 TEST_CASE("Unsigned: Is same for single value at 0", "[TupleWithAllocator]") { Unsigned_NonAllocVsAlloc<0, 0>(create_unsigned_check<0>(), false); }
@@ -261,7 +257,7 @@ TEST_CASE("Signed: negative values counting down work fine", "[TupleWithAllocato
 TEST_CASE("Signed: reinterpret_cast counting up", "[TupleWithAllocator]") { Signed_reinterpret_cast_Test<0, 3, 0, 2>(create_signed_check<0, 1, 2>(), false); }
 TEST_CASE("Signed: reinterpret_cast counting up from negative", "[TupleWithAllocator]") { Signed_reinterpret_cast_Test<-1, 3, -1, 2>(create_signed_check<-1, 0, 1, 2>(), false); }
 TEST_CASE("Signed: reinterpret_cast counting down", "[TupleWithAllocator]") { Signed_reinterpret_cast_Test<3, 0, 3, 1>(create_signed_check<1, 2, 3>(), false); }
-TEST_CASE("Signed: reinterpret_cast counting down into negative", "[TupleWithAllocator]") { Signed_reinterpret_cast_Test<3, -2, 3 ,-1>(create_signed_check<-1, 0, 1, 2, 3>(), false); }
+TEST_CASE("Signed: reinterpret_cast counting down into negative", "[TupleWithAllocator]") { Signed_reinterpret_cast_Test<3, -2, 3, -1>(create_signed_check<-1, 0, 1, 2, 3>(), true); }
 
 
 #endif//HYPERTRIE_TESTINTEGRALTEMPLATEDTUPLEALLOC_HPP

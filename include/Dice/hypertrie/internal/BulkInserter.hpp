@@ -53,11 +53,40 @@ namespace hypertrie {
 		template<typename T>
 		void add(T &&entry) {
 			assert(EntryFunctions::key(entry).size() == hypertrie->depth());
-			hypertrie->set(tr::iterator_entry::key(entry), tr::iterator_entry::value(entry));
+			if ((*hypertrie)[EntryFunctions::key(entry)] == value_type{}) {
+				new_entries.insert(std::forward<T>(entry));
+				if (threshold != 0 and new_entries.size() > threshold)
+					flush();
+			}
 		}
 
-		void flush([[maybe_unused]] const bool blocking = false) {
+		void flush(const bool blocking = false) {
+			if (insertion_thread.joinable())
+				insertion_thread.join();
+			internal::compiled_switch<hypertrie_depth_limit, 1>::switch_void(
+					hypertrie->depth(),
+					[&](auto depth_arg) {
+						this->load_entries = std::move(this->new_entries);
+						this->new_entries = {};
+						if (load_entries.size() > 0)
+							insertion_thread = std::thread([&]() {
+								// todo: add support for non-boolean
+								using RawKey = typename tri::template RawKey<depth_arg>;
+								std::vector<RawKey> keys{};
+								keys.reserve(load_entries.size());
+								for (const auto &key : load_entries)
+									if (not(*hypertrie)[key])
+										keys.push_back(tri::template rawKey<depth_arg>(key));
 
+								if (keys.size() > 0) {
+									auto &typed_nodec = *reinterpret_cast<internal::raw::NodeContainer<depth_arg, tri> *>(const_cast<hypertrie::internal::raw::RawNodeContainer *>(hypertrie->rawNodeContainer()));
+									hypertrie->context()->rawContext().template bulk_insert<depth_arg>(typed_nodec, std::move(keys));
+								}
+							});
+					});
+			if (blocking)
+				if (insertion_thread.joinable())
+					insertion_thread.join();
 		}
 
 		[[nodiscard]] size_t size() const {

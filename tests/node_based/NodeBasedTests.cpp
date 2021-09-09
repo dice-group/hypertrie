@@ -6,7 +6,13 @@
 #include <catch2/catch.hpp>
 
 #include "TestHypertrie.hpp"
-#include "TestIterator.hpp"
-#include "TestDiagonal.hpp"
+#include "TestNode.hpp"
+#include "TestNodeContainer.hpp"
+#include "TestRawIterator.hpp"
+#include "TestRawDiagonal.hpp"
+#include "TestNodeContext.hpp"
+#include "TestNodeContextRandomized.hpp"
+#include "TestTaggedNodeHash.hpp"
+#include "TestSlicing.hpp"
 
 #endif//NODEBASED_HYPERTRIE_TESTS_H

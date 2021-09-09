@@ -1,5 +1,5 @@
-#ifndef HYPERTRIE_TESTDIAGONAL_HPP
-#define HYPERTRIE_TESTDIAGONAL_HPP
+#ifndef HYPERTRIE_TESTRAWDIAGONAL_HPP
+#define HYPERTRIE_TESTRAWDIAGONAL_HPP
 
 #include <Dice/hypertrie/internal/Hypertrie_traits.hpp>
 #include <Dice/hypertrie/internal/raw/iterator/Diagonal.hpp>
@@ -9,13 +9,14 @@
 #include "../utils/AssetGenerator.hpp"
 #include "../utils/DiagonalTestDataGenerator.hpp"
 #include "../utils/NameOfType.hpp"
+#include "TestTensor.hpp"
 namespace hypertrie::tests::raw::node_context::diagonal_test {
 
 	using namespace hypertrie::tests::utils;
 
-	using namespace fmt::literals;
-
 	using namespace hypertrie::internal::raw;
+
+	using namespace hypertrie::internal;
 
 	// TODO: that will be helpful for non-raw diagonals
 	std::vector<std::vector<size_t>> getAllSubsets(size_t depth) {
@@ -137,13 +138,14 @@ namespace hypertrie::tests::raw::node_context::diagonal_test {
 
 		static utils::DiagonalTestDataGenerator<diag_depth, depth, key_part_type, value_type, size_t(tri::is_lsb_unused)> gen{};
 
-		Hypertrie<tr> nodec{depth};
+		NodeContext<depth, tri> context{};
+		NodeContainer<depth, tri> nodec{};
 
 		static auto all_diagonal_positions = getAllCombinations(depth, diag_depth);
 		for (const auto &diagonal_positions : all_diagonal_positions) {
 			SECTION("diagonal positions: {}"_format(fmt::join(diagonal_positions, ","))) {
 				for (auto diagonal_size : iter::range(0,2)) {
-					if (diag_depth == 1 and diagonal_size == 0) // TODO: remove
+					if (diag_depth == 1 and diagonal_size == 0)
 						continue;
 					SECTION("diagonal size: {}"_format(diagonal_size)) {
 						size_t total_size = 1;
@@ -160,16 +162,18 @@ namespace hypertrie::tests::raw::node_context::diagonal_test {
 								auto raw_diag_poss = tri::template rawDiagonalPositions<depth>(diagonal_positions);
 
 								for (const auto &[raw_key, value] : diag_data.tensor_entries)
-									nodec.set(tri::key(raw_key), value);
+									context.template set<depth>(nodec, raw_key, value);
 
 								std::set<key_part_type> found_key_parts{};
 
+								auto cnodec = nodec.compressed();
 
-								const const_Hypertrie<tr> &hypertrie1 = const_Hypertrie<tr>{nodec};
-								::hypertrie::HashDiagonal<tr> diag(hypertrie1, diagonal_positions);
+								::hypertrie::internal::raw::HashDiagonal<diag_depth, depth, NodeCompression::compressed, tri> diag(cnodec, raw_diag_poss);
 
-								for (diag.begin(); diag != false; ++diag) {
-									auto actual_key_part = diag.currentKeyPart();
+								INFO((std::string) context.storage);
+
+								for (auto iter = diag.begin(); iter != false; ++iter) {
+									auto actual_key_part = iter.currentKeyPart();
 
 									// check if the key_part is valid
 									REQUIRE(diag_data.diagonal_entries.count(actual_key_part));
@@ -181,16 +185,18 @@ namespace hypertrie::tests::raw::node_context::diagonal_test {
 									INFO("diagonal key part: {}\n"_format(actual_key_part));
 
 									if constexpr (depth != diag_depth) {
-										auto actual_iter_entry = diag.currentHypertrie();
+										auto actual_iter_entry = iter.currentValue();
 
 										auto expected_entries = diag_data.diagonal_entries[actual_key_part];
 										for (auto &[raw_key, expected_value] : expected_entries) {
-											auto actual_value = actual_iter_entry[tri::key(raw_key)];
+											auto actual_value = context.template get(actual_iter_entry.nodec, raw_key);
 											REQUIRE(actual_value == expected_value);
 										}
 
-										size_t size = actual_iter_entry.size();
+										size_t size = context.template size(actual_iter_entry.nodec);
 										REQUIRE(size == expected_entries.size());
+
+										REQUIRE(actual_iter_entry.is_managed == true);
 									}
 								}
 								REQUIRE(found_key_parts.size() == diagonal_size);
@@ -207,10 +213,19 @@ namespace hypertrie::tests::raw::node_context::diagonal_test {
 		randomized_diagonal_test<default_bool_Hypertrie_internal_t, depth, 1>();
 	}
 
+	TEMPLATE_TEST_CASE_SIG("Depth 1 diagonals [bool lsb-unused]", "[RawDiagonal]", ((size_t depth), depth), 1, 2, 3, 4, 5) {
+		randomized_diagonal_compressed_test<lsbunused_bool_Hypertrie_internal_t, depth, 1>();
+		randomized_diagonal_test<lsbunused_bool_Hypertrie_internal_t, depth, 1>();
+	}
 
 	TEMPLATE_TEST_CASE_SIG("Depth 2 diagonals [bool]", "[RawDiagonal]", ((size_t depth), depth), 2, 3, 4, 5) {
 		randomized_diagonal_compressed_test<default_bool_Hypertrie_internal_t, depth, 2>();
 		randomized_diagonal_test<default_bool_Hypertrie_internal_t, depth, 2>();
+	}
+
+	TEMPLATE_TEST_CASE_SIG("Depth 2 diagonals [bool lsb-unused]", "[RawDiagonal]", ((size_t depth), depth), 2, 3, 4, 5) {
+		randomized_diagonal_compressed_test<lsbunused_bool_Hypertrie_internal_t, depth, 2>();
+		randomized_diagonal_test<lsbunused_bool_Hypertrie_internal_t, depth, 2>();
 	}
 
 	TEMPLATE_TEST_CASE_SIG("Depth 3 diagonals [bool]", "[RawDiagonal]", ((size_t depth), depth), 3, 4, 5) {
@@ -218,11 +233,23 @@ namespace hypertrie::tests::raw::node_context::diagonal_test {
 		randomized_diagonal_test<default_bool_Hypertrie_internal_t, depth, 3>();
 	}
 
+	TEMPLATE_TEST_CASE_SIG("Depth 3 diagonals [bool lsb-unused]", "[RawDiagonal]", ((size_t depth), depth), 3, 4, 5) {
+		randomized_diagonal_compressed_test<lsbunused_bool_Hypertrie_internal_t, depth, 3>();
+		randomized_diagonal_test<lsbunused_bool_Hypertrie_internal_t, depth, 3>();
+	}
+
 	TEMPLATE_TEST_CASE_SIG("Depth 4 diagonals [bool]", "[RawDiagonal]", ((size_t depth), depth), 4, 5) {
 		randomized_diagonal_compressed_test<default_bool_Hypertrie_internal_t, depth, 4>();
 		randomized_diagonal_test<default_bool_Hypertrie_internal_t, depth, 4>();
 	}
 
+	TEMPLATE_TEST_CASE_SIG("Depth 4 diagonals [bool lsb-unused]", "[RawDiagonal]", ((size_t depth), depth), 4, 5) {
+		randomized_diagonal_compressed_test<lsbunused_bool_Hypertrie_internal_t, depth, 4>();
+		randomized_diagonal_test<lsbunused_bool_Hypertrie_internal_t, depth, 4>();
+	}
+
+	// TODO: test long valued diagonals
+
 };
 
-#endif//HYPERTRIE_TESTDIAGONAL_HPP
+#endif//HYPERTRIE_TESTRAWDIAGONAL_HPP

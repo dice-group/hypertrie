@@ -1,7 +1,6 @@
 #ifndef HYPERTRIE_EINSUMTESTDATA_HPP
 #define HYPERTRIE_EINSUMTESTDATA_HPP
 
-#include <ranges>
 #include <fmt/core.h>
 #include <fmt/format.h>
 #include <set>

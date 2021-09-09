@@ -10,6 +10,7 @@
 #include "../utils/AssetGenerator.hpp"
 #include "../utils/NameOfType.hpp"
 #include "../utils/GenerateTriples.hpp"
+#include "TestTensor.hpp"
 
 
 namespace hypertrie::tests::node_context {
@@ -27,7 +28,8 @@ namespace hypertrie::tests::node_context {
 			utils::EntryGenerator<key_part_type, value_type, tr::lsb_unused> gen{};
 			auto keys = gen.keys(500, depth);
 			for (const auto &key : keys) {
-				Hypertrie<tr> t{depth};
+				HypertrieContext<tr> context;
+				Hypertrie<tr> t{depth, context};
 				WARN(fmt::format("[ {} ]", fmt::join(key, ", ")));
 				t.set(key, true);
 				REQUIRE(t[key]);
@@ -55,7 +57,8 @@ namespace hypertrie::tests::node_context {
 
 		//		std::cout << keys << std::endl;
 
-		Hypertrie<tr> t{depth};
+		HypertrieContext<tr> context;
+		Hypertrie<tr> t{depth, context};
 		for (const auto &key : keys) {
 			//			WARN(fmt::format("[ {} ]",fmt::join(key, ", ")));
 			t.set(key, true);
@@ -86,7 +89,8 @@ namespace hypertrie::tests::node_context {
 
 		//		std::cout << keys << std::endl;
 		{
-			Hypertrie<tr> t{depth};
+			HypertrieContext<tr> context;
+			Hypertrie<tr> t{depth, context};
 			t.set({2, 4, 6, 8}, true);
 			HashDiagonal d{t, {2}};
 			d.begin();
@@ -97,7 +101,8 @@ namespace hypertrie::tests::node_context {
 		}
 
 		{
-			Hypertrie<tr> t{depth};
+			HypertrieContext<tr> context;
+			Hypertrie<tr> t{depth, context};
 			t.set({2, 10, 6, 8}, true);
 			t.set({2, 4, 6, 8}, true);
 			HashDiagonal d{t, {1}};
@@ -112,7 +117,8 @@ namespace hypertrie::tests::node_context {
 		}
 
 		{
-			Hypertrie<tr> t{depth};
+			HypertrieContext<tr> context;
+			Hypertrie<tr> t{depth, context};
 			t.set({2, 10, 6, 8}, true);
 			t.set({2, 4, 6, 8}, true);
 			HashDiagonal d{t, {3}};
@@ -128,7 +134,8 @@ namespace hypertrie::tests::node_context {
 		using tr = lsbunused_bool_Hypertrie_t;
 		constexpr const size_t depth = 4;
 
-		Hypertrie<tr> t{depth};
+		HypertrieContext<tr> context;
+		Hypertrie<tr> t{depth, context};
 		//			WARN(fmt::format("[ {} ]",fmt::join(key, ", ")));
 		t.set({2, 4, 6, 8}, true);
 		t.set({2, 10, 12, 14}, true);
@@ -142,6 +149,30 @@ namespace hypertrie::tests::node_context {
 		const_Hypertrie sliced_hypertrie = std::get<0>(result);
 
 		WARN((std::string) sliced_hypertrie);
+	}
+
+	TEMPLATE_TEST_CASE("test_depth_0", "[Hypertrie]", lsbunused_bool_Hypertrie_t, default_bool_Hypertrie_t) {
+		using tr = lsbunused_bool_Hypertrie_t;
+		constexpr const size_t depth = 0;
+
+		using Key = tr::Key;
+
+		HypertrieContext<tr> context;
+		Hypertrie<tr> t{depth, context};
+		auto value = t[Key{}];
+		REQUIRE(value == tr::value_type(0));
+		t.set({}, tr::value_type(1));
+
+		value = t[Key{}];
+		REQUIRE(value == tr::value_type(1));
+		WARN((std::string) t);
+
+		t.set({}, tr::value_type(0));
+
+		value = t[Key{}];
+		REQUIRE(value == tr::value_type(0));
+
+		WARN((std::string) t);
 	}
 
 };// namespace hypertrie::tests::node_context

@@ -23,8 +23,8 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(Catch2)
 
-add_executable(tests_hypertrie_internal basline_hypertrie/BaslineHypertrieTests.cpp)
-set_target_properties(tests_hypertrie_internal PROPERTIES LINKER_LANGUAGE CXX)
+add_executable(tests_hypertrie_internal node_based/NodeBasedTests.cpp)
+#set_target_properties(tests_hypertrie_internal PROPERTIES LINKER_LANGUAGE CXX)
 add_executable(tests_einsum TestEinsum.cpp)
 target_link_libraries(tests_hypertrie_internal PRIVATE
         Catch2::Catch2

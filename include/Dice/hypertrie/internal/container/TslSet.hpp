@@ -4,13 +4,13 @@
 #include <fmt/format.h>
 #include <tsl/sparse_set.h>
 #include <vector>
+#include <Dice/hash/DiceHash.hpp>
 
 namespace hypertrie::internal::container {
 
 	template<typename Key>
 	using tsl_sparse_set = tsl::sparse_set<
 			Key,
-			//hypertrie::internal::robin_hood::hash<Key>,
 			Dice::hash::DiceHash<Key>,
 			std::equal_to<Key>,
 			std::allocator<Key>,

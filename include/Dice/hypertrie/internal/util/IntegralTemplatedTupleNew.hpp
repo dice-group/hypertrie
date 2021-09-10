@@ -33,7 +33,7 @@ namespace hypertrie::internal::util {
 			static constexpr enum class Direction : bool {
 				up = true,
 				down = false
-			} DIRECTION = static_cast<const Direction>(FIRST <= LAST);
+			} DIRECTION = static_cast<const Direction>(integral_type(FIRST) <= integral_type(LAST));
 
 		public:
 			template<integral_type N>

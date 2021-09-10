@@ -16,7 +16,7 @@ namespace hypertrie::internal::container {
 										   //hypertrie::internal::robin_hood::hash<Key>,
 										   Dice::hash::DiceHash<Key>,
 										   std::equal_to<Key>,
-										   typename std::allocator_traits<Allocator>::template rebind_alloc<std::pair<const Key, T>>,
+										   typename std::allocator_traits<Allocator>::template rebind_alloc<std::pair<Key, T>>,
 										   tsl::sh::power_of_two_growth_policy<2>,
 										   tsl::sh::exception_safety::basic,
 										   tsl::sh::sparsity::high>;

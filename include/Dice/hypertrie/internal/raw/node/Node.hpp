@@ -338,7 +338,7 @@ namespace hypertrie::internal::raw {
 	private:
 		using map_alloc = typename WithEdges_t::collection_alloc;
 		static constexpr const auto subkey = &tri::template subkey<depth>;
-		static constexpr auto deref = &tri::template deref<typename ChildrenType::key_type, typename ChildrenType::mapped_type, map_alloc>;
+		static constexpr auto deref = &tri::template deref<typename ChildrenType::key_type, typename ChildrenType::mapped_type>;
 
 	public:
 		size_t size_ = 0;

@@ -22,7 +22,7 @@ namespace hypertrie {
 	struct Hypertrie_t {
 		using key_part_type = key_part_type_t;
 		using value_type = value_type_t;
-		using allocator_type = Allocator;
+		using allocator_type = typename std::allocator_traits<Allocator>::template rebind_alloc<std::byte>;
 
 		template<typename key, typename value>
 		using map_type = map_type_t<key, value, allocator_type>;

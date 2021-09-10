@@ -17,10 +17,10 @@ namespace hypertrie::internal::raw {
 		using allocator_type = typename tr::allocator_type;
 
 		template <typename PointedType>
-		using allocator_pointer = typename std::pointer_traits<typename allocator_type::pointer>::template rebind<PointedType>;
+		using allocator_pointer = typename std::pointer_traits<typename std::allocator_traits<allocator_type>::pointer>::template rebind<PointedType>;
 
 		template <typename PointedType>
-		using allocator_const_pointer = typename std::pointer_traits<typename allocator_type::const_pointer>::template rebind<PointedType>;
+		using allocator_const_pointer = typename std::pointer_traits<typename std::allocator_traits<allocator_type>::const_pointer>::template rebind<PointedType>;
 
 		template<typename T>
 		using rebind_alloc = typename std::allocator_traits<allocator_type>::template rebind_alloc<T>;

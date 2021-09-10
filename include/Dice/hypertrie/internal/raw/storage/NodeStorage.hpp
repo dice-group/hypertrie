@@ -18,10 +18,10 @@ namespace hypertrie::internal::raw {
 			 typename = void>
 	struct LevelNodeStorage {
 		using tri = tri_t;
-		using allocator_type = typename tri::alloctor_type;
+		using allocator_type = typename tri::allocator_type;
 
 		template<typename mapped_type>
-		using mapped_type_ptr = typename tri::template allocator_pointer_type<mapped_type>;
+		using mapped_type_ptr = typename tri::template allocator_pointer<mapped_type>;
 		template<typename K, typename V>
 		using map_type = typename tri::template map_type<K, mapped_type_ptr<V>>;
 		using CompressedNode_type = CompressedNode<depth, tri>;
@@ -88,11 +88,11 @@ namespace hypertrie::internal::raw {
 	template<HypertrieInternalTrait tri_t>
 	struct LevelNodeStorage<1, tri_t, std::enable_if_t<(tri_t::is_lsb_unused and tri_t::is_bool_valued)>> {
 		using tri = tri_t;
-		using allocator_type = typename tri::alloctor_type;
+		using allocator_type = typename tri::allocator_type;
 
 
 		template<typename mapped_type>
-		using mapped_type_ptr = typename tri::template allocator_pointer_type<mapped_type>;
+		using mapped_type_ptr = typename tri::template allocator_pointer<mapped_type>;
 		template<typename K, typename V>
 		using map_type = typename tri::template map_type<K, mapped_type_ptr<V>>;
 		using UncompressedNode_type = UncompressedNode<1, tri>;
@@ -164,7 +164,9 @@ namespace hypertrie::internal::raw {
 		using UncompressedNodeMap = typename NodeStorage_t<depth>::UncompressedNodeMap;
 
 	private:
-		using storage_t = util::new_impl::IntegralTemplatedTuple<AllocNodeStorage_t, 1, max_depth, allocator_type>;
+		//CAUTION: allocator is used with perfect forwarding, so by setting the type manually you NEED to be aware of that.
+		// in this case, const& will be used.
+		using storage_t = util::new_impl::IntegralTemplatedTuple<AllocNodeStorage_t, 1, max_depth, allocator_type const&>;
 
 		storage_t storage_;
 		allocator_type alloc_;
@@ -233,7 +235,9 @@ namespace hypertrie::internal::raw {
 		}
 
 	public:
-		NodeStorage(allocator_type const &alloc) : storage_(alloc), alloc_(alloc) {}
+		NodeStorage(allocator_type const &alloc) :
+												   storage_(alloc),
+												   alloc_(alloc) {}
 
 		// TODO: private?
 		template<size_t depth, NodeCompression compression, typename = std::enable_if_t<(not(depth == 1 and tri_t::is_lsb_unused and tri_t::is_bool_valued and compression == NodeCompression::compressed))>>

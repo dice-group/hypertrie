@@ -10,15 +10,14 @@ namespace hypertrie::internal::raw {
 	 * @tparam tri_t
 	 */
 	template<size_t depth,
-			 HypertrieInternalTrait tri_t = Hypertrie_internal_t<>,
-			 typename Allocator = std::allocator<size_t>>
+			 HypertrieInternalTrait tri_t = Hypertrie_internal_t<>>
 	union NodePtr {
 	public:
 		using tri = tri_t;
 
-		using allocator_type = typename std::allocator_traits<Allocator>::template rebind_alloc<size_t>;
-		using uncompressed_alloc = typename std::allocator_traits<allocator_type>::template rebind_alloc<UncompressedNode<depth, tri, allocator_type>>;
-		using compressed_alloc = typename std::allocator_traits<allocator_type>::template rebind_alloc<CompressedNode<depth, tri, allocator_type>>;
+		using allocator_type = typename tri::allocator_type;
+		using uncompressed_alloc = typename std::allocator_traits<allocator_type>::template rebind_alloc<UncompressedNode<depth, tri>>;
+		using compressed_alloc = typename std::allocator_traits<allocator_type>::template rebind_alloc<CompressedNode<depth, tri>>;
 
 		using void_ptr_type = typename std::allocator_traits<allocator_type>::void_pointer;
 		using uncompressed_ptr_type = typename std::allocator_traits<uncompressed_alloc>::pointer;

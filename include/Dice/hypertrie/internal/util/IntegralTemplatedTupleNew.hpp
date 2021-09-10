@@ -27,8 +27,8 @@ namespace hypertrie::internal::util {
 		class IntegralTemplatedTuple {
 			static constexpr bool USE_SIGNED = FIRST < 0 or LAST < 0;
 			using integral_type = std::conditional_t<USE_SIGNED, intmax_t, uintmax_t>;
-			static constexpr integral_type MIN = std::min(FIRST, LAST);
-			static constexpr integral_type MAX = std::max(FIRST, LAST);
+			static constexpr integral_type MIN = std::min(integral_type(FIRST), integral_type(LAST));
+			static constexpr integral_type MAX = std::max(integral_type(FIRST), integral_type(LAST));
 			static constexpr uint64_t LENGTH = MAX + 1 - MIN;
 			static constexpr enum class Direction : bool {
 				up = true,

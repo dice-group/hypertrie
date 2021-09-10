@@ -120,9 +120,9 @@ namespace hypertrie::internal::raw {
 		const value_type &value() const { return this->value_; }
 	};
 
-	template<size_t depth, HypertrieInternalTrait tri, typename Allocator>
+	template<size_t depth, HypertrieInternalTrait tri>
 	struct WithEdges {
-		using allocator_type = Allocator;
+		using allocator_type = typename tri::allocator_type;
 		using RawKey = typename tri::template RawKey<depth>;
 		using value_type = typename tri::value_type;
 		using key_part_type = typename tri::key_part_type;
@@ -140,8 +140,8 @@ namespace hypertrie::internal::raw {
 
 		// allocator might need to be casted to specific type for set/map
 		using ChildrenType = std::conditional_t<((depth == 1) and tri::is_bool_valued),
-												typename tri::template set_type<key_part_type, collection_alloc>,
-												typename tri::template map_type<typename tri::key_part_type, ChildType, collection_alloc>>;
+												typename tri::template set_type<key_part_type>,
+												typename tri::template map_type<typename tri::key_part_type, ChildType>>;
 
 		using EdgesType = std::conditional_t<(depth > 1),
 											 std::array<ChildrenType, depth>,
@@ -153,20 +153,20 @@ namespace hypertrie::internal::raw {
 
 		// TODO: move to util
 		template <size_t I>
-		static inline auto f(const Allocator &alloc) { return ChildrenType(alloc); }
+		static inline auto f(const allocator_type &alloc) { return ChildrenType(alloc); }
 
 		template <size_t N, size_t... Is>
-		static inline auto fill(const Allocator &alloc, std::index_sequence<Is...>) {
+		static inline auto fill(const allocator_type &alloc, std::index_sequence<Is...>) {
 			return std::array<ChildrenType, N>{f<Is>(alloc)...};
 		}
 
 		template <size_t N>
-		static inline std::array<ChildrenType, N> fill(const Allocator &alloc) {
+		static inline std::array<ChildrenType, N> fill(const allocator_type &alloc) {
 			return fill<N>(alloc, std::make_index_sequence<N>());
 		}
 
 
-		static inline EdgesType init([[maybe_unused]] const Allocator &alloc) {
+		static inline EdgesType init([[maybe_unused]] const allocator_type &alloc) {
 			if constexpr (depth == 1) {
 				return EdgesType(alloc);
 			} else {
@@ -175,10 +175,7 @@ namespace hypertrie::internal::raw {
 		}
 
 	public:
-		//		(const Allocator& alloc // = Allocator()
-		//		) : storage(alloc){}
-		WithEdges(const Allocator &alloc// = Allocator()
-				  ) : edges_(init(alloc)) {}
+		WithEdges(const allocator_type &alloc) : edges_(init(alloc)) {}
 
 		WithEdges(EdgesType edges) : edges_(std::move(edges)) {}
 
@@ -270,13 +267,19 @@ namespace hypertrie::internal::raw {
 	template<size_t depth,
 			 NodeCompression compressed,
 			 HypertrieInternalTrait tri_t = Hypertrie_internal_t<>,
-			 typename Allocator = std::allocator<size_t>,
 			 typename = typename std::enable_if_t<(depth >= 1)>>
 	struct Node;
+	/*
+	{
+		template <typename>
+		using AllwaysFalse = std::false_type;
+		static_assert(AllwaysFalse<tri_t>::value, "Node is not defined for those template parameter");
+	};
+    */
 
 	// compressed nodes with boolean value_type
-	template<size_t depth, HypertrieInternalTrait tri_t, typename Allocator>
-	struct Node<depth, NodeCompression::compressed, tri_t, Allocator, typename std::enable_if_t<((depth >= 1) and tri_t::is_bool_valued)>> : public ReferenceCounted, public Compressed<depth, tri_t> {
+	template<size_t depth, HypertrieInternalTrait tri_t>
+	struct Node<depth, NodeCompression::compressed, tri_t, typename std::enable_if_t<((depth >= 1) and tri_t::is_bool_valued)>> : public ReferenceCounted, public Compressed<depth, tri_t> {
 		using tri = tri_t;
 		using RawKey = typename Compressed<depth, tri_t>::RawKey;
 
@@ -299,8 +302,8 @@ namespace hypertrie::internal::raw {
 	};
 
 	// compressed nodes with non-boolean value_type
-	template<size_t depth, HypertrieInternalTrait tri_t, typename Allocator>
-	struct Node<depth, NodeCompression::compressed, tri_t, Allocator, std::enable_if_t<((depth >= 1 + uint(tri_t::is_lsb_unused)) and not tri_t::is_bool_valued)>> : public ReferenceCounted, public Compressed<depth, tri_t>, Valued<tri_t> {
+	template<size_t depth, HypertrieInternalTrait tri_t>
+	struct Node<depth, NodeCompression::compressed, tri_t, std::enable_if_t<((depth >= 1 + uint(tri_t::is_lsb_unused)) and not tri_t::is_bool_valued)>> : public ReferenceCounted, public Compressed<depth, tri_t>, Valued<tri_t> {
 		using tri = tri_t;
 		using RawKey = typename tri::template RawKey<depth>;
 		using value_type = typename tri::value_type;
@@ -322,13 +325,13 @@ namespace hypertrie::internal::raw {
 	};
 
 	// uncompressed depth >= 2
-	template<size_t depth, HypertrieInternalTrait tri_t, typename Allocator>
-	struct Node<depth, NodeCompression::uncompressed, tri_t, Allocator, typename std::enable_if_t<((depth >= 2))>> : public ReferenceCounted, public WithEdges<depth, tri_t, Allocator> {
+	template<size_t depth, HypertrieInternalTrait tri_t>
+	struct Node<depth, NodeCompression::uncompressed, tri_t, typename std::enable_if_t<((depth >= 2))>> : public ReferenceCounted, public WithEdges<depth, tri_t> {
 		using tri = tri_t;
-		using allocator_type = Allocator;
+		using allocator_type = typename tri::allocator_type;
 		using RawKey = typename tri::template RawKey<depth>;
 		using value_type = typename tri::value_type;
-		using WithEdges_t = WithEdges<depth, tri_t, allocator_type>;
+		using WithEdges_t = WithEdges<depth, tri_t>;
 		using ChildrenType = typename WithEdges_t::ChildrenType;
 		using EdgesType = typename WithEdges_t::EdgesType;
 
@@ -339,8 +342,8 @@ namespace hypertrie::internal::raw {
 
 	public:
 		size_t size_ = 0;
-		Node(size_t ref_count /*= 0*/, const Allocator &alloc /*= Allocator()*/)
-			: ReferenceCounted(ref_count), WithEdges<depth, tri_t, allocator_type>(alloc) {}
+		Node(size_t ref_count /*= 0*/, const allocator_type &alloc)
+			: ReferenceCounted(ref_count), WithEdges<depth, tri_t>(alloc) {}
 
 
 		void change_value(const RawKey &key, value_type old_value, value_type new_value) noexcept {
@@ -367,26 +370,26 @@ namespace hypertrie::internal::raw {
 	};
 
 	// uncompressed depth == 1
-	template<size_t depth, HypertrieInternalTrait tri_t, typename Allocator>
-	struct Node<depth, NodeCompression::uncompressed, tri_t, Allocator, typename std::enable_if_t<((depth == 1))>> : public ReferenceCounted, public WithEdges<depth, tri_t, Allocator> {
+	template<size_t depth, HypertrieInternalTrait tri_t>
+	struct Node<depth, NodeCompression::uncompressed, tri_t, typename std::enable_if_t<((depth == 1))>> : public ReferenceCounted, public WithEdges<depth, tri_t> {
 		using tri = tri_t;
-		using allocator_type = Allocator;
+		using allocator_type = typename tri::allocator_type;
 
 		using key_part_type = typename tri::key_part_type;
 		using RawKey = typename tri::template RawKey<depth>;
 		using value_type = typename tri::value_type;
 		static constexpr const auto subkey = &tri::template subkey<depth>;
 		// use a set to for value_type bool, otherwise a map
-		using EdgesType = typename WithEdges<depth, tri_t, allocator_type>::ChildrenType;
+		using EdgesType = typename WithEdges<depth, tri_t>::ChildrenType;
 
 
-		Node(size_t ref_count /*= 0*/, const Allocator &alloc /*= Allocator()*/)
-			: ReferenceCounted(ref_count), WithEdges<depth, tri_t, allocator_type>(alloc) {}
+		Node(size_t ref_count /*= 0*/, const allocator_type &alloc /*= Allocator()*/)
+			: ReferenceCounted(ref_count), WithEdges<depth, tri_t>(alloc) {}
 
 		Node(const RawKey &key, [[maybe_unused]] value_type value, const RawKey &second_key,
 			 [[maybe_unused]] value_type second_value, size_t ref_count = 0)
 			: ReferenceCounted(ref_count),
-			  WithEdges<depth, tri_t, allocator_type>([&]() {
+			  WithEdges<depth, tri_t>([&]() {
 				  if constexpr (std::is_same_v<value_type, bool>)
 					  return EdgesType{{{key[0]},
 										{second_key[0]}}};
@@ -412,14 +415,12 @@ namespace hypertrie::internal::raw {
 	};
 
 	template<size_t depth,
-			 HypertrieInternalTrait tri = Hypertrie_internal_t<>,
-			typename Alloctor = std::allocator<char>>
-	using CompressedNode = Node<depth, NodeCompression::compressed, tri, Alloctor>;
+			 HypertrieInternalTrait tri = Hypertrie_internal_t<>>
+	using CompressedNode = Node<depth, NodeCompression::compressed, tri>;
 
 	template<size_t depth,
-			 HypertrieInternalTrait tri = Hypertrie_internal_t<>,
-			         typename Alloctor = std::allocator<char>>
-	using UncompressedNode = Node<depth, NodeCompression::uncompressed, tri, Alloctor>;
+			 HypertrieInternalTrait tri = Hypertrie_internal_t<>>
+	using UncompressedNode = Node<depth, NodeCompression::uncompressed, tri>;
 
 }// namespace hypertrie::internal::raw
 

@@ -33,8 +33,7 @@ namespace hypertrie::internal::raw {
 
 	template<size_t depth,
 			 NodeCompression compressed,
-			 HypertrieInternalTrait tri_t = Hypertrie_internal_t<>,
-			 typename Allocator = std::allocator<size_t>>
+			 HypertrieInternalTrait tri_t = Hypertrie_internal_t<>>
 	struct SpecificNodeContainer;
 
 	/**
@@ -43,15 +42,14 @@ namespace hypertrie::internal::raw {
 	 * @tparam tri_t
 	 */
 	template<size_t depth,
-			 HypertrieInternalTrait tri_t = Hypertrie_internal_t<>,
-			 typename Allocator = std::allocator<size_t>>
-	struct NodeContainer : public RawNodeContainer<Allocator> {
-		using RawNodeContainer_t = RawNodeContainer<Allocator>;
+			 HypertrieInternalTrait tri_t = Hypertrie_internal_t<>>
+	struct NodeContainer : public RawNodeContainer<typename tri_t::allocator_type> {
+		using RawNodeContainer_t = RawNodeContainer<typename tri_t::allocator_type>;
 		using tri = tri_t;
 		using alloc = typename RawNodeContainer_t::alloc;
 
 		using NodeRepr = std::conditional_t<(not(depth == 1 and tri::is_bool_valued and tri::is_lsb_unused)), TensorHash, TaggedTensorHash<tri_t>>;
-		using NodePtr_t = NodePtr<depth, tri, alloc>;
+		using NodePtr_t = NodePtr<depth, tri>;
 		using CompressedNodePtr = typename NodePtr_t::compressed_ptr_type;
 		using UncompressedNodePtr = typename NodePtr_t::uncompressed_ptr_type;
 
@@ -90,7 +88,7 @@ namespace hypertrie::internal::raw {
 		}
 
 		template<NodeCompression compression>
-		[[nodiscard]] auto specific() const noexcept { return static_cast<SpecificNodeContainer<depth, compression, tri_t, Allocator>>(*this); }
+		[[nodiscard]] auto specific() const noexcept { return static_cast<SpecificNodeContainer<depth, compression, tri_t>>(*this); }
 
 		[[nodiscard]] auto compressed() const noexcept { return specific<NodeCompression::compressed>(); }
 
@@ -129,19 +127,17 @@ namespace hypertrie::internal::raw {
 	};
 
 	template<size_t depth,
-			 HypertrieInternalTrait tri_t = Hypertrie_internal_t<>,
-			 typename Allocator = std::allocator<size_t>>
-	using CompressedNodeContainer = SpecificNodeContainer<depth, NodeCompression::compressed, tri_t, Allocator>;
+			 HypertrieInternalTrait tri_t = Hypertrie_internal_t<>>
+	using CompressedNodeContainer = SpecificNodeContainer<depth, NodeCompression::compressed, tri_t>;
 
 	template<size_t depth,
-			 HypertrieInternalTrait tri_t = Hypertrie_internal_t<>,
-			 typename Allocator = std::allocator<size_t>>
-	using UncompressedNodeContainer = SpecificNodeContainer<depth, NodeCompression::uncompressed, tri_t, Allocator>;
+			 HypertrieInternalTrait tri_t = Hypertrie_internal_t<>>
+	using UncompressedNodeContainer = SpecificNodeContainer<depth, NodeCompression::uncompressed, tri_t>;
 
-	template<size_t depth, NodeCompression compression, HypertrieInternalTrait tri_t, typename Allocator>
-	struct SpecificNodeContainer : public NodeContainer<depth, tri_t, Allocator> {
+	template<size_t depth, NodeCompression compression, HypertrieInternalTrait tri_t>
+	struct SpecificNodeContainer : public NodeContainer<depth, tri_t> {
 		using tri = tri_t;
-		using NodeContainer_t = NodeContainer<depth, tri, Allocator>;
+		using NodeContainer_t = NodeContainer<depth, tri>;
 		using RawNodeContainer_t = typename NodeContainer_t::RawNodeContainer_t;
 		using alloc = typename RawNodeContainer_t::alloc;
 

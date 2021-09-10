@@ -328,7 +328,7 @@ TEST_CASE("NodeStorage newCompressedNode with OffsetAllocator", "[NodeStorage]")
 
 TEST_CASE("NodeStorage newCompressedNode with Metall", "[NodeStorage]") {
 	// "globals"
-	using NodeStorage_t = NodeStorage<1, Hypertrie_internal_t<>, m_alloc_t<size_t>>;
+	using NodeStorage_t = NodeStorage<1, Hypertrie_internal_t<>>;
 	std::string path = "tmp";
 	std::string name = "NodeStorage_with_metall";
 	TensorHash true_hash{42};
@@ -391,7 +391,7 @@ TEST_CASE("NodeStorage deleteNode with OffsetAllocator", "[NodeStorage]") {
 }
 
 TEST_CASE("NodeStorage deleteNode with metall", "[NodeStorage]") {
-	using NodeStorage_t = NodeStorage<1, Hypertrie_internal_t<>, m_alloc_t<size_t>>;
+	using NodeStorage_t = NodeStorage<1, Hypertrie_internal_t<>>;
 	std::string path = "tmp";
 	std::string name = "NodeStorage_with_metall_delete";
 	auto hash = make_compressed(TensorHash(42));

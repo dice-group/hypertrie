@@ -228,8 +228,9 @@ namespace einsum::internal {
 
 		// updates the entry of the node operator with the results of the sub_entry
 		void updateNodeEntry() {
-			if(sub_entry->value > 0)
-				this->entry->value *= sub_entry->value;
+            if constexpr (not bool_value_type)
+				if (sub_entry->value > 0)
+					this->entry->value *= sub_entry->value;
             for(auto &sub_res_label : next_subscript->getResultLabelSet())
                 this->entry->key[node_subscript->getLabelPosInResult(sub_res_label)] =
                         sub_entry->key[next_subscript->getLabelPosInResult(sub_res_label)];

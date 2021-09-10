@@ -98,10 +98,6 @@ namespace einsum::internal {
 
 		inline void load_impl(std::vector<const_Hypertrie<tr>> operands, Entry_t &entry) {
 			if constexpr (_debugeinsum_) fmt::print("Join {}\n", this->subscript);
-			// if one of the join operands does not have any entries stop the operation
-			for(auto op_pos : this->subscript->getNonOptionalOperands())
-				if(operands[op_pos].size() == 0)
-					return;
 			this->entry = &entry;
 			ended_ = false;
 			Label last_label = label;

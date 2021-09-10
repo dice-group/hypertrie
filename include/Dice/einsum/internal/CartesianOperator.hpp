@@ -2,7 +2,6 @@
 #define HYPERTRIE_CARTESIANOPERATOR_HPP
 
 #include "Dice/einsum/internal/Operator.hpp"
-#include "Dice/einsum/internal/EntryGeneratorOperator.hpp"
 #include <tsl/sparse_map.h>
 
 namespace einsum::internal {
@@ -12,7 +11,6 @@ namespace einsum::internal {
 #include "Dice/einsum/internal/OperatorMemberTypealiases.hpp"
 
 		using CartesianOperator_t = CartesianOperator<value_type, tr>;
-        using EntryGeneratorOperator_t = EntryGeneratorOperator<value_type, tr>;
 
         using SubResult = tsl::sparse_map<Key<key_part_type>, size_t, Dice::hash::DiceHash<Key < key_part_type>>>;
 
@@ -114,9 +112,6 @@ namespace einsum::internal {
 			if constexpr(_debugeinsum_) fmt::print("Cartesian {}\n", this->subscript);
 			this->entry = &entry;
 			// check for empty depth-0 tensor
-			for(auto &op : operands)
-				if(op.depth() == 0 and op.empty())
-					return;
 			ended_ = false;
 			double max_estimated_size = 0;
 			iterated_pos = 0;
@@ -186,11 +181,9 @@ namespace einsum::internal {
 						return;
 					}
 				}
-				if (sub_result.empty()) {
-//					ended_ = true;
-//					return;
-                    sub_result[sub_entry.key] = value_type(1);
-				}
+				if (sub_result.empty())
+                    sub_result[sub_entry.key] = value_type(1); // for optional operators
+
 				sub_results.emplace_back(std::move(sub_result));
 			}
 			calculated_operands = FullCartesianResult(std::move(sub_results), this->subscript->getCartesianSubscript(),
@@ -209,7 +202,9 @@ namespace einsum::internal {
 			iterated_sub_operator_result_mapping = {
 					this->subscript->getCartesianSubscript().getOriginalResultPoss()[iterated_pos]};
 			updateEntryKey(iterated_sub_operator_result_mapping, *this->entry, sub_entries[iterated_pos].key);
-			this->entry->value *= sub_entries[iterated_pos].value;
+            if constexpr (not bool_value_type) {
+				this->entry->value *= sub_entries[iterated_pos].value;
+			}
 		}
 
 

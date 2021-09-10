@@ -26,6 +26,8 @@ namespace hypertrie::tests::leftjoin {
 		ht.set({5, 14, 30}, true);
 		ht.set({1, 14, 35}, true);
 		ht.set({8, 14, 30}, true);
+		ht.set({8, 15, 35}, true);
+		ht.set({7, 15, 30}, true);
 		auto default_key_part = std::numeric_limits<default_bool_Hypertrie_t::key_part_type>::max();
 		SliceKey<unsigned long> s_key1{std::nullopt, 10, 20};
 		SliceKey<unsigned long> s_key2{std::nullopt, 11, std::nullopt};
@@ -33,12 +35,14 @@ namespace hypertrie::tests::leftjoin {
 		SliceKey<unsigned long> s_key4{std::nullopt, 13, std::nullopt};
 		SliceKey<unsigned long> s_key5{std::nullopt, 14, std::nullopt};
         SliceKey<unsigned long> s_key6{std::nullopt, 16, std::nullopt};
+        SliceKey<unsigned long> s_key7{std::nullopt, 15, std::nullopt};
 		auto ht1 = std::get<0>(ht[s_key1]);
 		auto ht2 = std::get<0>(ht[s_key2]);
 		auto ht3 = std::get<0>(ht[s_key3]);
 		auto ht4 = std::get<0>(ht[s_key4]);
 		auto ht5 = std::get<0>(ht[s_key5]);
         auto ht6 = std::get<0>(ht[s_key6]);
+        auto ht7 = std::get<0>(ht[s_key7]);
 		std::vector<const_Hypertrie<default_bool_Hypertrie_t>> operands{};
 		std::vector<std::vector<char>> operands_labels{};
 		std::vector<std::vector<default_bool_Hypertrie_t::key_part_type>> expected_results;
@@ -51,23 +55,28 @@ namespace hypertrie::tests::leftjoin {
 			SECTION("j_lj_dl", "join before left join, different join labels") {
 				operands.push_back(ht1);
 				operands.push_back(ht2);
-				operands.push_back(ht3);
+				operands.push_back(ht7);
 				std::vector<char> op1_labels{'a'};
 				std::vector<char> op2_labels{'a', 'b'};
-				std::vector<char> op3_labels{'b', 'c'};
+				std::vector<char> op3_labels{'c', 'd'};
 				operands_labels.push_back(op1_labels);
 				operands_labels.push_back(op2_labels);
-				operands_labels.push_back(opt_begin);
+//				operands_labels.push_back(opt_begin);
 				operands_labels.push_back(op3_labels);
-				operands_labels.push_back(opt_begin);
+//				operands_labels.push_back(opt_end);
 				result_labels.push_back('a');
 				result_labels.push_back('b');
 				result_labels.push_back('c');
 				expected_results = {
-						{1, 3, 5},
-						{1, 6, default_key_part},
-						{2, 4, 6},
-						{5, 7, default_key_part}};
+						{1, 3, 8},
+						{1, 6, 8},
+						{2, 4, 8},
+						{5, 7, 8},
+                        {1, 3, 7},
+                        {1, 6, 7},
+                        {2, 4, 7},
+                        {5, 7, 7}
+				};
 			}
             // a,ab,[ac]->abc
             SECTION("j_lj_sl", "join before left join, on same labels") {
@@ -493,7 +502,7 @@ namespace hypertrie::tests::leftjoin {
 						{7, default_key_part, default_key_part, default_key_part, default_key_part},
 						{8, default_key_part, default_key_part, default_key_part, default_key_part}};
 			}
-            // a,[bc,cd]->abc
+			// a,[bc,cd]->abc
             SECTION("c_opt", "cartesian with optional operand") {
                 operands.push_back(ht1);
                 operands.push_back(ht4);
@@ -652,7 +661,7 @@ namespace hypertrie::tests::leftjoin {
                     }
                 }
             }
-            // a,[ab,cd]->abc
+            // a,[ab,cd]->ab
             SECTION("cart_in_opt" , "cartesian in optional with no results") {
                 operands.push_back(ht1);
                 operands.push_back(ht2);

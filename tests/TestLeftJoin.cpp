@@ -47,6 +47,7 @@ namespace hypertrie::tests::leftjoin {
 		std::vector<const_Hypertrie<default_bool_Hypertrie_t>> operands{};
 		std::vector<std::vector<char>> operands_labels{};
         std::vector<std::vector<default_bool_Hypertrie_t::key_part_type>> expected_results;
+        std::vector<std::vector<default_bool_Hypertrie_t::key_part_type>> expected_distinct_results;
 		std::vector<char> opt_begin{'['};
 		std::vector<char> opt_end{']'};
         std::vector<char> result_labels{};
@@ -67,6 +68,9 @@ namespace hypertrie::tests::leftjoin {
                     expected_results = {
                             {1}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}
                     };
+					expected_distinct_results = {
+                            {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}
+                    };
                 }
                 SECTION("lj2", "simple left join, project both variables") {
                     result_labels.push_back('a');
@@ -82,6 +86,7 @@ namespace hypertrie::tests::leftjoin {
                             {7, default_key_part},
                             {8, default_key_part}
                     };
+					expected_distinct_results = expected_results;
                 }
             }
             // ab,[bc]->abc
@@ -102,6 +107,7 @@ namespace hypertrie::tests::leftjoin {
                         {1, 6, default_key_part},
                         {2, 4, 6}
                 };
+                expected_distinct_results = expected_results;
             }
             SECTION("mlj_sl", "multiple not nested left joins on the same label") {
                 //a,[ab],[ac]->abc
@@ -133,6 +139,7 @@ namespace hypertrie::tests::leftjoin {
                             {7, default_key_part, default_key_part},
                             {8, default_key_part, default_key_part}
                     };
+                    expected_distinct_results = expected_results;
                 }
                 //a,[ab],[ac],[ad]->abcd
                 SECTION("mlj_sl3", "three optional operands") {
@@ -169,6 +176,7 @@ namespace hypertrie::tests::leftjoin {
                             {7, default_key_part, default_key_part, default_key_part},
                             {8, default_key_part, default_key_part, 30}
                     };
+                    expected_distinct_results = expected_results;
                 }
             }
             SECTION("nlj_dl", "nested left joins on different labels") {
@@ -201,6 +209,7 @@ namespace hypertrie::tests::leftjoin {
                             {7, default_key_part, default_key_part},
                             {8, default_key_part, default_key_part}
                     };
+                    expected_distinct_results = expected_results;
                 }
                 // a,[ab,[bc,[cd]]]->abcd
                 SECTION("nlj_dl2", "two nested levels") {
@@ -238,6 +247,7 @@ namespace hypertrie::tests::leftjoin {
                             {8, default_key_part, default_key_part, default_key_part}
                     };
                 }
+                expected_distinct_results = expected_results;
             }
             SECTION("nlj_sl", "nested left joins on the same label") {
                 //a,[ab,[ac]]->abc
@@ -267,7 +277,9 @@ namespace hypertrie::tests::leftjoin {
                             {5, default_key_part, default_key_part},
                             {6, default_key_part, default_key_part},
                             {7, default_key_part, default_key_part},
-                            {8, default_key_part, default_key_part}};
+                            {8, default_key_part, default_key_part}
+					};
+                    expected_distinct_results = expected_results;
                 }
                 //a,[ab,[ac,[ad]]]->abcd
                 SECTION("nlj_sl2", "two nested levels") {
@@ -304,6 +316,7 @@ namespace hypertrie::tests::leftjoin {
                             {7, default_key_part, default_key_part, default_key_part},
                             {8, default_key_part, default_key_part, default_key_part}
                     };
+                    expected_distinct_results = expected_results;
                 }
             }
             // ab,[ac],[bd]->abcd
@@ -330,6 +343,7 @@ namespace hypertrie::tests::leftjoin {
                         {1, 6, 8, default_key_part},
                         {2, 4, default_key_part, 25}
                 };
+                expected_distinct_results = expected_results;
             }
 		}
         SECTION("wwd", "weakly well-defined queries") {
@@ -361,6 +375,7 @@ namespace hypertrie::tests::leftjoin {
                         {7, default_key_part},
                         {8, default_key_part}
                 };
+                expected_distinct_results = expected_results;
 		    }
             // ab,[bc],[cd]->abcd
             SECTION("lj_cart", "if the second operand does not yield result -> cartesian") {
@@ -387,6 +402,7 @@ namespace hypertrie::tests::leftjoin {
                         {1, 6, 4, 25},
                         {2, 4, 6, default_key_part}
                 };
+                expected_distinct_results = expected_results;
             }
             // [ab],[ac]->abc
             SECTION("lj_all_opt", "left join with only optional operands") {
@@ -408,6 +424,7 @@ namespace hypertrie::tests::leftjoin {
                         {1, 6, 8},
                         {2, 4, default_key_part},
                 };
+                expected_distinct_results = expected_results;
             }
             // [ab,bd],[bc]->abc
             SECTION("lj_all_opt_elim", "left join without left operand followed by left join, the first left join does not yield results") {
@@ -432,6 +449,7 @@ namespace hypertrie::tests::leftjoin {
                         {default_key_part, 4, 6},
                         {default_key_part, 3, 5}
                 };
+                expected_distinct_results = expected_results;
             }
             // a,[ab,[bc],[cd]]->abcd
             SECTION("lj_nlj_lj", "nested left join followed by left join") {
@@ -469,6 +487,7 @@ namespace hypertrie::tests::leftjoin {
                         {7, default_key_part, default_key_part, default_key_part},
                         {8, default_key_part, default_key_part, default_key_part}
                 };
+                expected_distinct_results = expected_results;
             }
             // a,[ab,ac],[bd,ce] -> abcde
             SECTION("wwd_2", "two wwd edges") {
@@ -508,6 +527,7 @@ namespace hypertrie::tests::leftjoin {
                     expected_results.push_back({i, 4, 5, 25, 30});
                     expected_results.push_back({i, 3, 5, 25, 30});
 				}
+                expected_distinct_results = expected_results;
             }
         }
 		SECTION("no-wwd", "not weakly well-defined") {
@@ -528,6 +548,7 @@ namespace hypertrie::tests::leftjoin {
                         {1, 3, 5},
                         {2, 4, 6}
                 };
+                expected_distinct_results = expected_results;
             }
 		}
 		// prepare the einstein summation
@@ -544,6 +565,18 @@ namespace hypertrie::tests::leftjoin {
         REQUIRE(actual_results.size() == expected_results.size());
 		// check that the contents of the result are equal to the contents of the expected result
         REQUIRE_THAT(actual_results, Catch::Matchers::UnorderedEquals(expected_results));
+        auto einsum_distinct = Einsum<bool>(subscript, operands);
+        // save the keys of the summation in a vector
+        std::vector<std::vector<default_bool_Hypertrie_t::key_part_type>> actual_distinct_results{};
+        for(const auto& entry : einsum_distinct)
+            for(std::size_t i = 0; i < entry.value; i++)
+                actual_distinct_results.push_back(entry.key);
+        // the subscript will be printed in case of failure
+        CAPTURE(subscript->to_string());
+        // check first that the size of the results is equal to the size of the expected results
+        REQUIRE(actual_distinct_results.size() == expected_distinct_results.size());
+        // check that the contents of the result are equal to the contents of the expected result
+        REQUIRE_THAT(actual_distinct_results, Catch::Matchers::UnorderedEquals(expected_distinct_results));
 	}
 
 }

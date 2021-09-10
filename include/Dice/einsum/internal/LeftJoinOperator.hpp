@@ -103,8 +103,8 @@ namespace einsum::internal {
 			}
             if (is_result_label)
                 this->entry->key[label_pos_in_result] = current_key_part;
-			if (this->entry->value == 0 and generate_optional_value)
-				this->entry->value = 1;
+			if (this->entry->value == value_type(0))
+				this->entry->value = value_type(1);
 			// this operand already has a result -> we do not need to generate an optional value anymore
 			generate_optional_value = false;
 

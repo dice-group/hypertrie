@@ -177,6 +177,7 @@ namespace einsum::internal {
         tsl::hopscotch_map<Label, std::vector<OperandPos>> non_optional_operands_of_label{};
 		// Left Join
         tsl::hopscotch_map<OperandPos, tsl::hopscotch_set<OperandPos>> dependent_operands;
+        tsl::hopscotch_map<OperandPos, tsl::hopscotch_set<OperandPos>> weakly_dependent_operands;
 		// All
 		std::vector<OperandPos> non_optional_operands{};
 		// All
@@ -237,6 +238,17 @@ namespace einsum::internal {
                         .first->second;
 			}
 		}
+
+        const tsl::hopscotch_set<OperandPos>& getWeaklyDependentOperands(OperandPos op_pos) {
+            auto iterator = weakly_dependent_operands.find(op_pos);
+            if (iterator != weakly_dependent_operands.end())
+                return iterator->second;
+            else {
+                return weakly_dependent_operands.insert(
+                                {op_pos, directed_dependency_graph.getTransitiveNeighborsUnlabelled(op_pos)})
+                        .first->second;
+            }
+        }
 
         const std::vector<std::vector<OperandPos>>& getSubOperatorDependencies() {
 			return sub_op_dependencies;
@@ -572,7 +584,7 @@ namespace einsum::internal {
 					return Type::LeftJoin;
                 // label that participates in join and left-join -> JoinSelection
                 for(auto& c_label : ind_strong_comp.component_labels)
-					if(ind_strong_comp.outgoing_labels.find(c_label) != ind_strong_comp.outgoing_labels.end() and not left_join)
+					if(ind_strong_comp.outgoing_labels.find(c_label) != ind_strong_comp.outgoing_labels.end())
 					    return Type::JoinSelection;
 
 				// there is no label that participates in join and left-join -> Join first
@@ -644,8 +656,7 @@ namespace einsum::internal {
 					last_operand_of_label[label] = orig_op_pos;
                 }
 				// find weak dependencies. for cartesian.
-				// if an operand participates in strong dependencies, propagate them to the current operand
-				if(!strong_dependency) {
+				if(not strong_dependency) {
 					for (int8_t d = depth; d >= 0; d--) {
 						boost::container::flat_set<OperandPos> operands_at_depth{};
 						for (const auto &label_entry : label_depth_operand) {
@@ -655,7 +666,8 @@ namespace einsum::internal {
 						}
 						if (operands_at_depth.empty())
 							continue;
-						auto last_pos_of_depth = raw_subscript.poss_in_operands[*operands_at_depth.rbegin()];// set is ordered, take its last value
+                        // set is ordered, take its last value
+						auto last_pos_of_depth = raw_subscript.poss_in_operands[*operands_at_depth.rbegin()];
 						// check if the the operand and last_pos_of_depth participates in strong dependencies
 						auto last_op_of_depth_incoming_labels = operand_directed_dependency_graph.getIncomingLabels(last_pos_of_depth);
 						if(not last_op_of_depth_incoming_labels.empty()) {

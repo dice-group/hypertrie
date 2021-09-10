@@ -101,7 +101,7 @@ namespace einsum::internal::util {
                 auto out_edges_iterators = boost::out_edges(*vertex_iter, graph);
                 for(auto out_edge_iter = out_edges_iterators.first; out_edge_iter != out_edges_iterators.second; out_edge_iter++) {
 					if(target == boost::target(*out_edge_iter, graph))
-						incoming_labels.template emplace_back(graph[*out_edge_iter].label);
+						incoming_labels.emplace_back(graph[*out_edge_iter].label);
 				}
 			}
 			return incoming_labels;

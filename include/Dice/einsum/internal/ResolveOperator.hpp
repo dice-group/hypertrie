@@ -69,7 +69,7 @@ namespace einsum::internal {
 			this->entry = &entry;
 			assert(operands.size() == 1); // only one operand must be left to be resolved
 			operand_iter = std::move(operands[0].cbegin());
-//			assert(operand_iter);
+			assert(operand_iter);
             this->entry->clear(default_key_part);
             this->entry->value = value_type(1);
 			ended_ = not operand_iter;

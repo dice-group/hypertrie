@@ -103,7 +103,7 @@ TEST_CASE("TODO: OffsetAllocator -- create uncompressed node", "[NodeStorage]") 
 
 
 template<size_t N>
-void MetallAllocator_creat_compressed_nodes_in_LevelStorage() {
+void MetallAllocator_create_compressed_nodes_in_LevelStorage() {
 	using LevelNodeStorage_tt = LevelNodeStorage_t<N>;
 	using map_key_type = typename LevelNodeStorage_tt::map_key_type;
 
@@ -152,16 +152,16 @@ void MetallAllocator_creat_compressed_nodes_in_LevelStorage() {
 }
 
 TEST_CASE("MetallAllocator -- create compressed node depth 2", "[NodeStorage]") {
-	MetallAllocator_creat_compressed_nodes_in_LevelStorage<2>();
+	MetallAllocator_create_compressed_nodes_in_LevelStorage<2>();
 }
 
 TEST_CASE("MetallAllocator -- create compressed node depth 3", "[NodeStorage]") {
-	MetallAllocator_creat_compressed_nodes_in_LevelStorage<3>();
+	MetallAllocator_create_compressed_nodes_in_LevelStorage<3>();
 }
 
 
 template<size_t N>
-void MetallAllocator_creat_uncompressed_nodes_in_LevelStorage() {
+void MetallAllocator_create_uncompressed_nodes_in_LevelStorage() {
 	using LevelNodeStorage_tt = LevelNodeStorage_LSB_false_t<N>;
 	using map_key_type = typename LevelNodeStorage_tt::map_key_type;
 
@@ -248,14 +248,14 @@ void MetallAllocator_creat_uncompressed_nodes_in_LevelStorage() {
 
 
 TEST_CASE("MetallAllocator -- create uncompressed node depth 3", "[NodeStorage]") {
-	MetallAllocator_creat_uncompressed_nodes_in_LevelStorage<3>();
+	MetallAllocator_create_uncompressed_nodes_in_LevelStorage<3>();
 }
 TEST_CASE("MetallAllocator -- create uncompressed node depth 2", "[NodeStorage]") {
-	MetallAllocator_creat_uncompressed_nodes_in_LevelStorage<2>();
+	MetallAllocator_create_uncompressed_nodes_in_LevelStorage<2>();
 }
 
 TEST_CASE("MetallAllocator -- create uncompressed node depth 1", "[NodeStorage]") {
-	MetallAllocator_creat_uncompressed_nodes_in_LevelStorage<1>();
+	MetallAllocator_create_uncompressed_nodes_in_LevelStorage<1>();
 }
 
 
@@ -369,8 +369,9 @@ TEST_CASE("NodeStorage deleteNode with OffsetAllocator", "[NodeStorage]") {
 	REQUIRE((container.empty()));
 }
 
-TEST_CASE("NodeStorage deleteNode with metall", "[NodeStorage]") {
-	using NodeStorage_t = NodeStorage<1, metall_tri_LSB_false>;
+template <size_t N>
+void MetallAllocator_delete_nodes_in_NodeStorage(){
+	using NodeStorage_t = NodeStorage<N, metall_tri_LSB_false>;
 	std::string path = "tmp";
 	std::string name = "NodeStorage_with_metall_delete";
 	auto hash = make_compressed(TensorHash(42));
@@ -381,7 +382,7 @@ TEST_CASE("NodeStorage deleteNode with metall", "[NodeStorage]") {
 	{
 		m::Context con(path);
 		auto store = con.construct<NodeStorage_t>(name, con.allocator);
-		NodeStorage_t::RawKey<1> key{0};
+		typename NodeStorage_t::template RawKey<1> key{0};
 		bool value = true;
 		size_t ref_count = 0;
 		store->newCompressedNode(key, value, ref_count, hash);
@@ -391,8 +392,8 @@ TEST_CASE("NodeStorage deleteNode with metall", "[NodeStorage]") {
 	{
 		m::Context con(path);
 		auto store = con.find<NodeStorage_t>(name);
-		store->deleteNode<1>(hash);
-		auto container = store->getCompressedNode<1>(hash);
+		store->template deleteNode<N>(hash);
+		auto container = store->template getCompressedNode<N>(hash);
 		REQUIRE((container.empty()));
 	}
 
@@ -401,6 +402,10 @@ TEST_CASE("NodeStorage deleteNode with metall", "[NodeStorage]") {
 		m::Context con(path);
 		con.destroy<NodeStorage_t>(name);
 	}
+}
+
+TEST_CASE("NodeStorage depth 1 deleteNode with metall", "[NodeStorage]") {
+	MetallAllocator_delete_nodes_in_NodeStorage<1>();
 }
 
 #endif//HYPERTRIE_TESTNODESTORAGE_HPP

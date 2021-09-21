@@ -382,10 +382,18 @@ void MetallAllocator_delete_nodes_in_NodeStorage(){
 	{
 		m::Context con(path);
 		auto store = con.construct<NodeStorage_t>(name, con.allocator);
-		typename NodeStorage_t::template RawKey<1> key{0};
+		//N>1 => key = {0, 0, 0}
+		typename NodeStorage_t::template RawKey<N> key{0};
+
 		bool value = true;
 		size_t ref_count = 0;
-		store->newCompressedNode(key, value, ref_count, hash);
+		if constexpr (N == 1) {
+			store->newCompressedNode(key, value, ref_count, hash);
+		}
+        //why did this compile with N>1?
+		else if constexpr(N == 2) {
+            store->newCompressedNode(key, value, ref_count, hash);
+		}
 	}
 
 	//delete data
@@ -406,6 +414,10 @@ void MetallAllocator_delete_nodes_in_NodeStorage(){
 
 TEST_CASE("NodeStorage depth 1 deleteNode with metall", "[NodeStorage]") {
 	MetallAllocator_delete_nodes_in_NodeStorage<1>();
+}
+
+TEST_CASE("NodeStorage depth 2 deleteNode with metall", "[NodeStorage]") {
+    MetallAllocator_delete_nodes_in_NodeStorage<2>();
 }
 
 #endif//HYPERTRIE_TESTNODESTORAGE_HPP

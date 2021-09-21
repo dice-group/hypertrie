@@ -210,6 +210,11 @@ namespace hypertrie::internal::raw {
 				construct(alloc, ptr, key, ref_count);
 				return ptr;
 			}
+			static auto create(allocator_type const &alloc, size_t ref_count) {
+				auto ptr = allocate(alloc, 1);
+				construct(alloc, ptr, ref_count);
+				return ptr;
+			}
 			static void erase(allocator_type const &alloc, pointer to_erase) {
 				destroy(alloc, to_erase);
 				deallocate(alloc, to_erase, 1);
@@ -297,6 +302,25 @@ namespace hypertrie::internal::raw {
 			return CompressedNodeContainer<depth, tri>{hash, LevelNodeStorage<depth, tri>::template deref<NodeCompression::compressed>(it)};
 		}
 
+		template<size_t depth>
+		CompressedNodeContainer<depth, tri> newUncompressedNode(size_t ref_count, TensorHash hash) {
+			auto &node_storage = getNodeStorage<depth, NodeCompression::uncompressed>();
+			auto [it, success] = node_storage.insert({hash, Allocation_CompressedNode<depth>::create(alloc_, ref_count)});
+			assert(success);
+			return CompressedNodeContainer<depth, tri>{hash, LevelNodeStorage<depth, tri>::template deref<NodeCompression::compressed>(it)};
+		}
+
+		template<size_t depth>
+		using UncompressedNodePtr = typename NodePtr<depth, tri>::uncompressed_ptr_type ;
+
+
+
+				template<size_t depth>
+		UncompressedNodePtr<depth> deepCopyUncompressedNode(UncompressedNodePtr<depth> node) {
+			auto &node_storage = getNodeStorage<depth, NodeCompression::uncompressed>();
+			auto copied_node = Allocation_CompressedNode<depth>::create(alloc_, *node);
+			return copied_node;
+		}
 
 		/**
 		 * creates a new node with the value changed. The old node is NOT deleted if keep_old is true and must eventually be deleted afterwards.
@@ -308,7 +332,8 @@ namespace hypertrie::internal::raw {
 			assert(nc.hash() != new_hash);
 
 			auto [it, success] = [&]() {
-				if constexpr (keep_old) return nodes.insert({new_hash, new Node<depth, compression, tri>{*nc.template specific_node<compression>()}});
+				if constexpr (keep_old) return nodes.insert({new_hash,
+															 Allocation_Node<depth,SpecificNodeContainer<depth, compression, tri>>::create(alloc_, *nc.template specific_node<compression>())});
 				else
 					return nodes.insert({new_hash, nc.template specific_node<compression>()});// if the old is not kept it is moved
 			}();

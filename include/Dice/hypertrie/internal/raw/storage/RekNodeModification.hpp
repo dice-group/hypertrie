@@ -34,8 +34,7 @@ namespace hypertrie::internal::raw {
 		static const constexpr long INC_COUNT_DIFF_BEFORE = -1;
 		static const constexpr long DEC_COUNT_DIFF_BEFORE = 1;
 
-		template<size_t depth>
-		using NodeStorage_t = NodeStorage<depth, tri>;
+		using NodeStorage_t = NodeStorage<node_storage_depth, tri>;
 
 		template<size_t depth>
 		using Modification_t = NodeModificationPlan<depth, tri>;
@@ -61,8 +60,16 @@ namespace hypertrie::internal::raw {
 		using Entry = typename re<depth>::RawEntry;
 
 
+		template<size_t depth, NodeCompression compression>
+		using SpecificNodePtr = typename NodePtr<depth, tri>::template specific_ptr_type<depth, compression>;
+		template<size_t depth>
+		using UncompressedNodePtr = typename NodePtr<depth, tri>::uncompressed_ptr_type;
+		template<size_t depth>
+		using CompressedNodePtr = typename NodePtr<depth, tri>::compressed_ptr_type;
+
+
 	public:
-		NodeStorage_t<node_storage_depth> &node_storage;
+		NodeStorage_t &node_storage;
 
 		NodeContainer<update_depth, tri> &nodec;
 
@@ -71,8 +78,7 @@ namespace hypertrie::internal::raw {
 		RefChanges ref_changes{};
 
 		template<size_t updates_depth>
-		auto getRefChanges()
-				-> LevelRefChanges<updates_depth> & {
+		LevelRefChanges<updates_depth> &getRefChanges() {
 			return ref_changes.template get<updates_depth>();
 		}
 
@@ -109,7 +115,7 @@ namespace hypertrie::internal::raw {
 		}
 
 
-		RekNodeModification(NodeStorage_t<node_storage_depth> &nodeStorage, NodeContainer<update_depth, tri> &nodec)
+		RekNodeModification(NodeStorage_t &nodeStorage, NodeContainer<update_depth, tri> &nodec)
 			: node_storage(nodeStorage), nodec{nodec} {}
 
 		void apply_decrement_ref_count(const size_t decrement = 1) {
@@ -339,7 +345,7 @@ namespace hypertrie::internal::raw {
 		}
 
 		template<size_t depth>
-		void updateChildrenCountDiff(UncompressedNode<depth, tri> * const node, const long &children_count_diff){
+		void updateChildrenCountDiff(UncompressedNodePtr<depth> const node, const long &children_count_diff){
 			if constexpr (depth > 1){
 				for (size_t pos : iter::range(depth)) {
 					for (const auto &[_, child_hash] : node->edges(pos)) {
@@ -355,7 +361,9 @@ namespace hypertrie::internal::raw {
 		}
 
 		template<size_t depth, NodeCompression compression>
-		void removeUnreferencedNode(const TensorHash hash, Node<depth, compression, tri> *node = nullptr, long children_count_diff = 0){
+		void removeUnreferencedNode(const TensorHash hash,
+									SpecificNodePtr<depth, compression> node = nullptr,
+									long children_count_diff = 0){
 			if constexpr(compression == NodeCompression::uncompressed)
 				if (children_count_diff != 0)
 					this->template updateChildrenCountDiff<depth>(node, children_count_diff);
@@ -502,9 +510,7 @@ namespace hypertrie::internal::raw {
 			assert(storage.find(update.hashAfter()) == storage.end());
 
 			// create node and insert it into the storage
-			UncompressedNode<depth, tri> *const node = new UncompressedNode<depth, tri>{(size_t) after_count_diff};
-			storage.insert({update.hashAfter(), node});
-
+			UncompressedNodePtr<depth> node = node_storage.template newUncompressedNode<tri>((size_t) after_count_diff).node();
 			if constexpr (depth > 1)
 				node->size_ = update.entries().size();
 
@@ -562,7 +568,7 @@ namespace hypertrie::internal::raw {
 			assert(storage.find(update.hashBefore()) != storage.end());
 			assert(storage.find(update.hashAfter()) == storage.end());
 
-			CompressedNode<depth, tri> const *const node_before = storage[update.hashBefore()];
+			const CompressedNodePtr<depth> node_before = storage[update.hashBefore()];
 
 			update.modOp() = ModificationOperations::NEW_UNCOMPRESSED_NODE;
 			update.addEntry(node_before->key(), node_before->value());
@@ -579,13 +585,13 @@ namespace hypertrie::internal::raw {
 
 				// move or copy the node from old_hash to new_hash
 				auto &storage = node_storage.template getNodeStorage<depth, NodeCompression::uncompressed>();
-				auto node_it = storage.find(update.hashBefore());
+				UncompressedNodePtr<depth> node_it = storage.find(update.hashBefore());
 				assert(node_it != storage.end());
-				UncompressedNode<depth, tri> *node = node_it->second;
+				UncompressedNodePtr<depth> node = node_it->second;
 				if constexpr (reuse_node_before) {// node before ref_count is zero -> maybe reused
 					storage.erase(node_it);
 				} else {
-					node = new UncompressedNode<depth, tri>{*node};
+					node = node_storage.template deepCopyUncompressedNode<depth>(node);
 					node->ref_count() = 0;
 				}
 				assert(storage.find(update.hashAfter()) == storage.end());

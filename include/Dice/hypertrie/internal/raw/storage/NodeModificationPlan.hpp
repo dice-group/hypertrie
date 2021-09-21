@@ -5,16 +5,13 @@
 #include "Dice/hypertrie/internal/raw/node/TensorHash.hpp"
 #include "Dice/hypertrie/internal/raw/storage/Entry.hpp"
 
-//from
-//#include "Dice/hypertrie/internal/util/RobinHoodHash.hpp"
-//to
 #include <Dice/hash/DiceHash.hpp>
 
 
 namespace hypertrie::internal::raw {
 
 
-	enum struct ModificationOperations : unsigned int {
+	enum struct ModificationOperations : uint8_t {
 		NONE = 0,
 		CHANGE_VALUE,
 		NEW_COMPRESSED_NODE,

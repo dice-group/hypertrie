@@ -37,7 +37,8 @@ namespace tests::Dice::hypertrie::allocator_awareness{
 			auto node = manager.construct<Node_t>(name.c_str())(0, allocator);
 			auto &edges_0 = node->edges(0);
 			edges_0[5] = TensorHash{5};
-			std::cout << edges_0.size() << std::endl;
+			//std::cout << edges_0.size() << std::endl;
+			REQUIRE(edges_0.size() == 1);
 		}
 
 		// test read
@@ -46,7 +47,8 @@ namespace tests::Dice::hypertrie::allocator_awareness{
 			auto node = manager.find<Node_t>(name.c_str()).first;
 			auto &edges_0 = node->edges(0);
 			edges_0[5] = TensorHash{5};
-			std::cout << edges_0.size() << std::endl;
+			//std::cout << edges_0.size() << std::endl;
+			REQUIRE(edges_0.size() == 1);
 		}
 
 		//destroy
@@ -71,7 +73,8 @@ namespace tests::Dice::hypertrie::allocator_awareness{
 			auto node = manager.construct<Node_t>(name.c_str())(0, allocator);
 			auto &edges = node->edges();
 			edges.insert(5);
-			std::cout << edges.size() << std::endl;
+			//std::cout << edges.size() << std::endl;
+			REQUIRE(edges.size() == 1);
 		}
 
 		// test read
@@ -80,7 +83,8 @@ namespace tests::Dice::hypertrie::allocator_awareness{
 			auto node = manager.find<Node_t>(name.c_str()).first;
 			auto &edges = node->edges();
 			edges.insert(5);
-			std::cout << edges.size() << std::endl;
+			//std::cout << edges.size() << std::endl;
+			REQUIRE(edges.size() == 1);
 		}
 
 		//destroy

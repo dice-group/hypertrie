@@ -257,7 +257,7 @@ TEST_CASE("Signed: negative values counting down work fine", "[TupleWithAllocato
 TEST_CASE("Signed: reinterpret_cast counting up", "[TupleWithAllocator]") { Signed_reinterpret_cast_Test<0, 3, 0, 2>(create_signed_check<0, 1, 2>(), false); }
 TEST_CASE("Signed: reinterpret_cast counting up from negative", "[TupleWithAllocator]") { Signed_reinterpret_cast_Test<-1, 3, -1, 2>(create_signed_check<-1, 0, 1, 2>(), false); }
 TEST_CASE("Signed: reinterpret_cast counting down", "[TupleWithAllocator]") { Signed_reinterpret_cast_Test<3, 0, 3, 1>(create_signed_check<1, 2, 3>(), false); }
-TEST_CASE("Signed: reinterpret_cast counting down into negative", "[TupleWithAllocator]") { Signed_reinterpret_cast_Test<3, -2, 3, -1>(create_signed_check<-1, 0, 1, 2, 3>(), true); }
+TEST_CASE("Signed: reinterpret_cast counting down into negative", "[TupleWithAllocator]") { Signed_reinterpret_cast_Test<3, -2, 3, -1>(create_signed_check<-1, 0, 1, 2, 3>(), false); }
 
 
 #endif//HYPERTRIE_TESTINTEGRALTEMPLATEDTUPLEALLOC_HPP

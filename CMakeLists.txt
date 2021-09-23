@@ -28,7 +28,7 @@ include(FetchContent)
 FetchContent_Declare(
         cppitertools
         GIT_REPOSITORY https://github.com/ryanhaining/cppitertools.git
-        GIT_TAG v2.1
+        GIT_TAG b2b98e60438f1ed6b04b77cdb6cc5d5516af301b
         GIT_SHALLOW TRUE)
 
 FetchContent_Declare(
@@ -58,63 +58,65 @@ find_package(dice-hash REQUIRED)
 SET(Boost_USE_STATIC_LIBS ON)
 find_package(Boost REQUIRED COMPONENTS)
 
-add_library(hypertrie INTERFACE)
-add_library(hypertrie::hypertrie ALIAS hypertrie)
+#add_library(hypertrie INTERFACE)
+#add_library(hypertrie::hypertrie ALIAS hypertrie)
 
-target_include_directories(hypertrie INTERFACE
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-        $<INSTALL_INTERFACE:${hypertrie_INSTALL_CMAKE_DIR}>
-        ${Boost_INCLUDE_DIRS}
-        )
+add_subdirectory(libs)
+add_subdirectory(tests)
+#target_include_directories(hypertrie INTERFACE
+#        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+#        $<INSTALL_INTERFACE:${hypertrie_INSTALL_CMAKE_DIR}>
+#        ${Boost_INCLUDE_DIRS}
+#        )
+#
+#
+#target_link_libraries(hypertrie INTERFACE
+#        cppitertools::cppitertools
+#        fmt::fmt
+#        Boost::Boost
+#        Threads::Threads
+#        tsl::hopscotch_map
+#        tsl::sparse_map
+#        robin_hood::robin_hood
+#        dice-hash::dice-hash
+#        )
 
-
-target_link_libraries(hypertrie INTERFACE
-        cppitertools::cppitertools
-        fmt::fmt
-        Boost::Boost
-        Threads::Threads
-        tsl::hopscotch_map
-        tsl::sparse_map
-        robin_hood::robin_hood
-        dice-hash::dice-hash
-        )
-
-if (HYPERTRIE_ENABLE_TOOLS)
-add_executable(ids2hypertrie tools/IDs2Hypertrie.cpp)
-
-target_link_libraries(ids2hypertrie
-        hypertrie)
-endif()
-
-# testing
-option(hypertrie_BUILD_TESTS "Build test programs" OFF)
-if (hypertrie_BUILD_TESTS)
-#    set_property(GLOBAL PROPERTY CTEST_TARGETS_ADDED 1)
-    enable_testing()
-    add_subdirectory(tests)
-endif ()
-
-# Make package findable
-configure_file(cmake/dummy-config.cmake.in hypertrie-config.cmake @ONLY)
-
-# Enable version checks in find_package
-include(CMakePackageConfigHelpers)
-write_basic_package_version_file(hypertrie-config-version.cmake COMPATIBILITY SameMajorVersion)
-
-# install and export target
-install(TARGETS hypertrie EXPORT hypertrie-targets)
-
-# hacky hack to make it build with itertools without exposing them
-target_include_directories(hypertrie INTERFACE
-        $<INSTALL_INTERFACE:${cppitertools_INSTALL_INCLUDE_DIR}/cppitertools>)
-
-install(EXPORT hypertrie-targets
-        FILE hypertrie-config.cmake
-        NAMESPACE Dice::
-        DESTINATION ${hypertrie_INSTALL_CMAKE_DIR}
-        )
-
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/hypertrie-config-version.cmake DESTINATION ${hypertrie_INSTALL_CMAKE_DIR})
-install(DIRECTORY include/ DESTINATION ${hypertrie_INSTALL_INCLUDE_DIR})
-
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/hypertrie-config-version.cmake DESTINATION ${hypertrie_INSTALL_CMAKE_DIR})
+#if (HYPERTRIE_ENABLE_TOOLS)
+#add_executable(ids2hypertrie tools/IDs2Hypertrie.cpp)
+#
+#target_link_libraries(ids2hypertrie
+#        hypertrie)
+#endif()
+#
+## testing
+#option(hypertrie_BUILD_TESTS "Build test programs" OFF)
+#if (hypertrie_BUILD_TESTS)
+##    set_property(GLOBAL PROPERTY CTEST_TARGETS_ADDED 1)
+#    enable_testing()
+#    add_subdirectory(tests)
+#endif ()
+#
+## Make package findable
+#configure_file(cmake/dummy-config.cmake.in hypertrie-config.cmake @ONLY)
+#
+## Enable version checks in find_package
+#include(CMakePackageConfigHelpers)
+#write_basic_package_version_file(hypertrie-config-version.cmake COMPATIBILITY SameMajorVersion)
+#
+## install and export target
+#install(TARGETS hypertrie EXPORT hypertrie-targets)
+#
+## hacky hack to make it build with itertools without exposing them
+#target_include_directories(hypertrie INTERFACE
+#        $<INSTALL_INTERFACE:${cppitertools_INSTALL_INCLUDE_DIR}/cppitertools>)
+#
+#install(EXPORT hypertrie-targets
+#        FILE hypertrie-config.cmake
+#        NAMESPACE Dice::
+#        DESTINATION ${hypertrie_INSTALL_CMAKE_DIR}
+#        )
+#
+#install(FILES ${CMAKE_CURRENT_BINARY_DIR}/hypertrie-config-version.cmake DESTINATION ${hypertrie_INSTALL_CMAKE_DIR})
+#install(DIRECTORY include/ DESTINATION ${hypertrie_INSTALL_INCLUDE_DIR})
+#
+#install(FILES ${CMAKE_CURRENT_BINARY_DIR}/hypertrie-config-version.cmake DESTINATION ${hypertrie_INSTALL_CMAKE_DIR})

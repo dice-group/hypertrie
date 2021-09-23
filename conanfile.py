@@ -15,11 +15,11 @@ class Hypertrie(ConanFile):
     settings = "build_type", "compiler", "os", "arch"
     requires = (
         "boost/1.75.0",
-        "fmt/7.1.3",
+        "fmt/8.0.1",
         "tsl-hopscotch-map/2.3.0",
         #"tsl-sparse-map/0.6.2",
         "robin-hood-hashing/3.9.1",
-        "dice-hash/0.1.0@dice-group/stable"
+        "dice-hash/0.2.0@dice-group/stable"
     )
     generators = "cmake", "cmake_find_package", "cmake_paths"
     exports = "LICENSE.txt"

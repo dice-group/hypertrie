@@ -23,6 +23,14 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(Catch2)
 
+# We are slowly migrating to DocTest. For some time we will use both test frameworks
+FetchContent_Declare(
+        DocTest
+        GIT_REPOSITORY "https://github.com/onqtam/doctest"
+        GIT_TAG  "2.4.6"
+)
+FetchContent_MakeAvailable(DocTest)
+
 add_executable(tests_hypertrie_internal node_based/NodeBasedTests.cpp)
 #set_target_properties(tests_hypertrie_internal PROPERTIES LINKER_LANGUAGE CXX)
 add_executable(tests_einsum TestEinsum.cpp)
@@ -53,6 +61,12 @@ if (hypertrie_LIBTORCH_PATH)
     # define C++ preprocess flag to include the tests depending on pytorch
     add_compile_definitions(HYPERTRIE_ENABLE_LIBTORCH)
 endif ()
+
+add_executable(tests_raw_diagonal node_based/TestRawDiagonal.cpp)
+target_link_libraries(tests_raw_diagonal
+        doctest
+        hypertrie::hypertrie
+        )
 
 # detect the tests
 include(CTest)

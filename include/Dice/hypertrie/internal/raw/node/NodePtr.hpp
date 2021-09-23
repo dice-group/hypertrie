@@ -60,6 +60,10 @@ namespace hypertrie::internal::raw {
 			raw = node_ptr.raw;
 			return *this;
 		}
+
+		bool operator==(const NodePtr &other) const{
+			return raw == other.raw;
+		}
 	};
 }// namespace hypertrie::internal::raw
 

@@ -386,6 +386,16 @@ namespace hypertrie::internal::raw {
 		Node(size_t ref_count /*= 0*/, const allocator_type &alloc /*= Allocator()*/)
 			: ReferenceCounted(ref_count), WithEdges<depth, tri_t>(alloc) {}
 
+		Node(const allocator_type &alloc, const Node &other)
+			: ReferenceCounted(other.ref_count), WithEdges<depth, tri_t>(alloc) {
+			for(size_t pos : iter::range(depth))
+				for(const auto&entry : other)
+					if constexpr (tri::is_bool_valued)
+						this->edges(pos).insert(*entry);
+					else
+						this->edges(pos)[entry.first] = entry.second;
+		}
+
 		Node(const RawKey &key, [[maybe_unused]] value_type value, const RawKey &second_key,
 			 [[maybe_unused]] value_type second_value, size_t ref_count = 0)
 			: ReferenceCounted(ref_count),

@@ -17,12 +17,11 @@ namespace hypertrie::internal::raw {
 
 	template<size_t max_depth,
 			 HypertrieInternalTrait tri_t = Hypertrie_internal_t<>,
-			 typename Allocator = std::allocator<size_t>,
 			 typename = typename std::enable_if_t<(max_depth >= 1)>>
 	class NodeContext {
 	public:
 		using tri = tri_t;
-		using allocator_type = Allocator;
+		using allocator_type = typename tri::allocator_type;
 		/// public definitions
 		using key_part_type = typename tri::key_part_type;
 		using value_type = typename tri::value_type;
@@ -39,12 +38,12 @@ namespace hypertrie::internal::raw {
 		template<size_t depth>
 		using DiagonalPositions = typename tri::template DiagonalPositions<depth>;
 
-		using NodeStorage_t = NodeStorage<max_depth, tri, allocator_type>;
+		using NodeStorage_t = NodeStorage<max_depth, tri>;
 
 	public:
 		NodeStorage_t storage;
 
-		NodeContext(const Allocator& alloc // = Allocator()
+		NodeContext(const allocator_type& alloc // = Allocator()
 		) : storage(alloc){}
 
 		/**
@@ -275,6 +274,7 @@ namespace hypertrie::internal::raw {
 		}
 
 	public:
+		// TODO: needs rewrite
 		template<size_t depth, size_t fixed_keyparts, size_t result_depth = depth - fixed_keyparts, typename ccn = std::nullptr_t >
 		auto diagonal_slice(const NodeContainer<depth, tri> &nodec,
 							const DiagonalPositions<depth> &diagonal_positions, const key_part_type &key_part,
@@ -324,7 +324,6 @@ namespace hypertrie::internal::raw {
 
 						// when this point is reached, the compressed node is a match
 						if constexpr (result_depth > 0) {// return key/value
-							CompressedNodeContainer<result_depth, tri> nc;
 							if constexpr (tri::is_bool_valued and tri::is_lsb_unused and (result_depth == 1)) {
 
 								size_t read_pos = 0;
@@ -332,20 +331,19 @@ namespace hypertrie::internal::raw {
 								size_t local_offset = 0;
 								while (result_pos < result_depth) {
 									if (not diagonal_positions[read_pos]) {
-										CompressedNodeContainer<result_depth, tri> nc;
-										nc.hash() = TaggedTensorHash<tri>(nodec.compressed_node()->key()[read_pos - local_offset]);
-										return {nc, true};
+										return IterationNodeContainer<result_depth,tri>::make_managed_tri_alloc(TaggedTensorHash<tri>(nodec.compressed_node()->key()[read_pos - local_offset]));
 									} else if (local_offset < offset)// see comment in general case about local_offset
 										local_offset++;
 									++read_pos;
 								}
 
 								assert(false);
-								return {};
+								return IterationNodeContainer<result_depth,tri>{};
 
 							} else {
+								CompressedNodeContainer<result_depth, typename tri::with_std_allocator> nc;
 								if (contextless_compressed_result == nullptr)
-									nc.node() = new CompressedNode<result_depth, tri>();
+									nc.node() = new CompressedNode<result_depth, typename tri::with_std_allocator>();
 								else
 									nc.node() = contextless_compressed_result;
 								size_t read_pos = 0;
@@ -367,7 +365,10 @@ namespace hypertrie::internal::raw {
 								if constexpr (not tri::is_bool_valued)
 									nc.compressed_node()->value() = nodec.compressed_node()->value();
 								nc.hash() = TensorHash().addFirstEntry(nc.compressed_node()->key(), nc.compressed_node()->value());
-								return {nc, contextless_compressed_result != nullptr};
+								if (contextless_compressed_result == nullptr)
+									return IterationNodeContainer<result_depth,tri>::make_unmanaged_std_alloc(nc.hash(), nc.value());
+								else
+									return IterationNodeContainer<result_depth,tri>::make_managed_std_alloc(nc);
 							}
 						} else {// return just the mapped value
 							if constexpr (tri::is_bool_valued)

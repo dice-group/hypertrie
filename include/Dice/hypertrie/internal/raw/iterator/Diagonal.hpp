@@ -34,9 +34,10 @@ namespace hypertrie::internal::raw {
 	private:
 		using child_iterator = typename UncompressedNode<depth, tri>::ChildrenType::const_iterator;
 
+		using IterationNodeContainer_t = IterationNodeContainer<result_depth, tri>;
 		using IterValue = std::conditional_t<
 				(result_depth > 0),
-				IterationNodeContainer<result_depth, tri>,
+				IterationNodeContainer_t,
 				value_type>;
 
 	private:
@@ -47,7 +48,7 @@ namespace hypertrie::internal::raw {
 
 		child_iterator iter_;
 		child_iterator end_;
-		CompressedNode<(result_depth>0)?result_depth :1, tri> internal_compressed_node;
+		CompressedNode<(result_depth>0)?result_depth :1, typename tri::with_std_alloctor> internal_compressed_node;
 		IterValue value_;
 
 	public:
@@ -97,11 +98,10 @@ namespace hypertrie::internal::raw {
 							else
 								value_ = iter_->second;
 						} else {
-							TensorHash next_result_hash;
+							TensorHash next_result_hash{};
 							if constexpr (result_depth == 1 and tri::is_lsb_unused) {
 								if (iter_->second.isCompressed()){
-									value_.nodec.hash() = iter_->second;
-									value_.is_managed = true;
+									value_ = IterationNodeContainer_t::make_managed_tri_alloc(iter_->second);
 									return *this;
 								} else {
 									next_result_hash = iter_->second.hash();
@@ -109,8 +109,8 @@ namespace hypertrie::internal::raw {
 							} else {
 								next_result_hash = iter_->second;
 							}
-							NodeContainer<result_depth, tri> child_node = node_context_->storage.template getNode<result_depth>(next_result_hash);
-							value_ = {child_node,true};
+							NodeContainer<result_depth, tri> child_node_container = node_context_->storage.template getNode<result_depth>(next_result_hash);
+							value_ = IterationNodeContainer_t::make_managed_tri_alloc(child_node_container);
 						}
 					}
 				}
@@ -148,7 +148,7 @@ namespace hypertrie::internal::raw {
 				if constexpr(result_depth == 0)
 					return value_ != value_type{};
 				else
-					return not value_.nodec.empty();
+					return not value_.empty();
 			} else {
 				static_assert(depth == 2);
 				if (iter_->second.isCompressed()){
@@ -167,7 +167,7 @@ namespace hypertrie::internal::raw {
 			if constexpr(result_depth == 0)
 				return value_ != value_type{};
 			else
-				return not value_.nodec.empty();
+				return not value_.empty();
 		}
 
 
@@ -201,11 +201,11 @@ namespace hypertrie::internal::raw {
 						else
 							value_ = iter_->second;
 					} else {
-						TensorHash next_result_hash;
+						TensorHash next_result_hash{};
 						if constexpr (result_depth == 1 and tri::is_lsb_unused) {
 							if (iter_->second.isCompressed()){
-								value_.nodec.hash() = iter_->second;
-								value_.is_managed = true;
+								auto identifier = iter_->second;
+								value_ = IterationNodeContainer_t::make_managed_tri_alloc(identifier);
 								return *this;
 							} else {
 								next_result_hash = iter_->second.hash();
@@ -213,8 +213,8 @@ namespace hypertrie::internal::raw {
 						} else {
 							next_result_hash = iter_->second;
 						}
-						NodeContainer<result_depth, tri> child_node = node_context_->storage.template getNode<result_depth>(next_result_hash);
-						value_ = {child_node, true};
+						NodeContainer<result_depth, tri> child_node_container = node_context_->storage.template getNode<result_depth>(next_result_hash);
+						value_ = IterationNodeContainer_t::make_managed_tri_alloc(child_node_container);
 					}
 				}
 			}
@@ -267,16 +267,19 @@ namespace hypertrie::internal::raw {
 		using DiagonalPositions = typename tri::template DiagonalPositions<depth>;
 
 	private:
+		using IterationNodeContainer_t = IterationNodeContainer<result_depth, tri>;
+
 		using IterValue = std::conditional_t<
 				(result_depth > 0),
-				IterationNodeContainer<result_depth, tri>,
+				IterationNodeContainer_t,
 				value_type>;
 
 	private:
 		CompressedNodeContainer<depth, tri> *nodec_;
 		DiagonalPositions diag_poss_;
 
-		CompressedNode<(result_depth > 0) ? result_depth : 1, tri> internal_compressed_node;
+		// TODO: changed to with_std_allocator
+		CompressedNode<(result_depth>0)?result_depth :1, typename tri::with_std_allocator> internal_compressed_node;
 		std::pair<key_part_type, IterValue> value_;
 		bool ended_ = true;
 		bool contains;
@@ -298,18 +301,18 @@ namespace hypertrie::internal::raw {
 			if constexpr (diag_depth == 1) {
 				contains = true;
 				if constexpr (result_depth > 0) {
-					value_.second.is_managed = true;
 					size_t res_pos = 0;
 					for (auto pos : iter::range(depth))
 						if (pos != any_diag_pos) {
 							if constexpr (tri::is_bool_valued and tri::is_lsb_unused and result_depth == 1) {
-								reinterpret_cast<CompressedNodeContainer<1, tri> *>(&value_.second.nodec)->hash() = TaggedTensorHash<tri>(nodec_->compressed_node()->key()[pos]);
+								auto identifier = TaggedTensorHash<tri>(nodec_->compressed_node()->key()[pos]);
+								value_.second = IterationNodeContainer_t::make_managed_tri_alloc(identifier);
 								return;
 							}
 							internal_compressed_node.key()[res_pos++] = nodec_->compressed_node()->key()[pos];
 						}
-					value_.second.nodec.hash() = TensorHash().addFirstEntry(internal_compressed_node.key(), internal_compressed_node.value());
-					value_.second.nodec.compressed_node() = &internal_compressed_node;
+					auto identifier = TensorHash().addFirstEntry(internal_compressed_node.key(), internal_compressed_node.value());
+					value_.second = IterationNodeContainer_t::make_managed_std_alloc(identifier, std::addressof(internal_compressed_node));
 					if constexpr (not tri::is_bool_valued)
 						internal_compressed_node.value() = nodec_->compressed_node()->value();
 				} else {
@@ -331,7 +334,7 @@ namespace hypertrie::internal::raw {
 						} else {
 							if constexpr (result_depth != 0) {
 								if constexpr (tri::is_bool_valued and tri::is_lsb_unused and result_depth == 1) {
-									reinterpret_cast<CompressedNodeContainer<1, tri> *>(&value_.second.nodec)->hash() = TaggedTensorHash<tri>(key[pos]);
+									value_.second.identifier() = TaggedTensorHash<tri>(key[pos]);
 								} else {
 									internal_compressed_node.key()[res_pos++] = key[pos];
 								}
@@ -342,10 +345,9 @@ namespace hypertrie::internal::raw {
 						internal_compressed_node.value() = nodec_->compressed_node()->value();
 
 					if constexpr (result_depth > 0) {
-						value_.second.is_managed = true;
 						if constexpr (not(tri::is_bool_valued and tri::is_lsb_unused and result_depth == 1)) {
-							value_.second.nodec.hash() = TensorHash().addFirstEntry(internal_compressed_node.key(), internal_compressed_node.value());
-							value_.second.nodec.compressed_node() = &internal_compressed_node;
+							auto identifier = TensorHash().addFirstEntry(internal_compressed_node.key(), internal_compressed_node.value());
+							value_.second = IterationNodeContainer_t::make_managed_std_alloc(identifier, std::addressof(internal_compressed_node));
 						}
 					} else {
 						value_.second = nodec_->compressed_node()->value();

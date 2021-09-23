@@ -362,7 +362,7 @@ namespace hypertrie::internal::raw {
 
 		template<size_t depth, NodeCompression compression>
 		void removeUnreferencedNode(const TensorHash hash,
-									SpecificNodePtr<depth, compression> node = nullptr,
+									SpecificNodePtr<depth, compression> node = {},
 									long children_count_diff = 0){
 			if constexpr(compression == NodeCompression::uncompressed)
 				if (children_count_diff != 0)
@@ -585,7 +585,7 @@ namespace hypertrie::internal::raw {
 
 				// move or copy the node from old_hash to new_hash
 				auto &storage = node_storage.template getNodeStorage<depth, NodeCompression::uncompressed>();
-				UncompressedNodePtr<depth> node_it = storage.find(update.hashBefore());
+				auto node_it = storage.find(update.hashBefore());
 				assert(node_it != storage.end());
 				UncompressedNodePtr<depth> node = node_it->second;
 				if constexpr (reuse_node_before) {// node before ref_count is zero -> maybe reused

@@ -164,6 +164,15 @@ namespace hypertrie::internal::raw {
 		constexpr static bool is_tsl_map = std::is_same_v<map_type<int, int>,
 														  container::tsl_sparse_map<int, int, allocator_type>>;
 
+		template<typename other_allocator>
+		using change_allocator = Hypertrie_internal_t<Hypertrie_t<key_part_type,
+			  value_type ,
+			  other_allocator,
+			  tr::template map_type_arg,
+			  tr::template set_type_arg,
+			  is_lsb_unused>>;
+		using with_std_allocator = change_allocator<std::allocator<std::byte>>;
+
 		/**
 		 * Generates a subkey by removing a key_part at the given position
 		 * @tparam depth length of the key

@@ -318,6 +318,7 @@ namespace hypertrie::internal::raw {
 				template<size_t depth>
 		UncompressedNodePtr<depth> deepCopyUncompressedNode(UncompressedNodePtr<depth> node) {
 			auto &node_storage = getNodeStorage<depth, NodeCompression::uncompressed>();
+			// TODO: go on here
 			auto copied_node = Allocation_CompressedNode<depth>::create(alloc_, *node);
 			return copied_node;
 		}

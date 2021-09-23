@@ -88,7 +88,7 @@ namespace hypertrie::internal::raw {
 		}
 
 		template<NodeCompression compression>
-		[[nodiscard]] auto specific() const noexcept { return static_cast<SpecificNodeContainer<depth, compression, tri_t>>(*this); }
+		[[nodiscard]] auto specific() const noexcept { return SpecificNodeContainer<depth, compression, tri_t>{this->hash(), this->template specific_node<compression>()};  }
 
 		[[nodiscard]] auto compressed() const noexcept { return specific<NodeCompression::compressed>(); }
 
@@ -111,7 +111,7 @@ namespace hypertrie::internal::raw {
 		 * Check if the the NodePtr is empty.
 		 * TODO: might not always work
 		 */
-		[[nodiscard]] bool null() const noexcept { return node() == nullptr; }
+		[[nodiscard]] bool null() const noexcept { return node() == NodePtr_t{}; }
 
 		/**
 		 * Get the reference Count of the contained Node.

@@ -29,6 +29,11 @@ namespace hypertrie {
 		template<typename key>
 		using set_type = set_type_t<key, allocator_type>;
 
+		template<typename key, typename value, typename allocator_type>
+		using map_type_arg = map_type_t<key, value, allocator_type>;
+		template<typename key, typename allocator_type>
+		using set_type_arg = set_type_t<key, allocator_type>;
+
 		using SliceKey = ::hypertrie::SliceKey<key_part_type>;
 		using Key = ::hypertrie::Key<key_part_type>;
 

@@ -72,7 +72,14 @@ namespace hypertrie::internal {
 
 
 	template<class T>
-	concept HypertrieTrait = internal::hypertrie_trait::is_instance<T, Hypertrie_t>::value;
+	concept HypertrieTrait = internal::hypertrie_trait::is_instance<T, Hypertrie_t>::value && requires(T t){
+		typename T::key_part_type;
+		typename T::value_type;
+		typename T::allocator_type;
+		{T::is_bool_valued} -> std::convertible_to<bool>;
+		{T::key_part_tagging_bit} -> std::convertible_to<ssize_t>;
+		{T::taggable_key_part} -> std::convertible_to<bool>;
+	};
 };// namespace hypertrie::internal
 
 #endif//HYPERTRIE_HYPERTRIE_TRAIT_HPP

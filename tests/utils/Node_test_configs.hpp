@@ -16,6 +16,14 @@ namespace hypertrie::tests {
 	template<size_t depth>
 	using bool_cfg = Node_test_config<depth, ::hypertrie::default_bool_Hypertrie_trait>;
 
+	template<size_t depth>
+	using tagged_bool_cfg = Node_test_config<depth, ::hypertrie::tagged_bool_Hypertrie_trait>;
+
+	template<size_t depth>
+	using long_cfg = Node_test_config<depth, ::hypertrie::default_long_Hypertrie_trait>;
+
+	template<size_t depth>
+	using double_cfg = Node_test_config<depth, ::hypertrie::default_double_Hypertrie_trait>;
 }// namespace hypertrie::tests
 
 #endif//HYPERTRIE_NODE_TEST_CONFIGS_HPP

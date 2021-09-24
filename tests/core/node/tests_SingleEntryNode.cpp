@@ -41,14 +41,16 @@ namespace hypertrie::tests::core::node {
 				}();
 
 				REQUIRE(node.key() == key);
-				if constexpr (not std::is_same_v<value_type, bool>)
-					REQUIRE(node.value() == value);
+				REQUIRE(node.value() == value);
 				REQUIRE(node.size() == 1);
 			}
 		}
 
 
-		DOCTEST_TEST_CASE_TEMPLATE("create node", T, bool_cfg<1>, bool_cfg<2>, bool_cfg<3>, bool_cfg<4>, bool_cfg<5>) {
+		DOCTEST_TEST_CASE_TEMPLATE("create node", T, bool_cfg<1>, bool_cfg<2>, bool_cfg<3>, bool_cfg<4>, bool_cfg<5>,
+								   tagged_bool_cfg<2>, tagged_bool_cfg<3>, tagged_bool_cfg<4>, tagged_bool_cfg<5>,
+								   long_cfg<1>, long_cfg<2>, long_cfg<3>, long_cfg<4>, long_cfg<5>,
+								   double_cfg<1>, double_cfg<2>, double_cfg<3>, double_cfg<4>, double_cfg<5>) {
 			createCompressedNode<T::depth, typename T::tri>();
 		}
 	}

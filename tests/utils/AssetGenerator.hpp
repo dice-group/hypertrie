@@ -50,10 +50,10 @@ namespace hypertrie::tests::utils {
 		using RawKey = ::hypertrie::internal::raw::RawKey<depth, tri>;
 
 	protected:
-		value_type value_min;
-		value_type value_max;
-		key_part_type key_part_min;
-		key_part_type key_part_max;
+		value_type value_min_;
+		value_type value_max_;
+		key_part_type key_part_min_;
+		key_part_type key_part_max_;
 
 
 		using dist_value_type = std::conditional_t<(std::is_same_v<value_type, bool>), unsigned char, value_type>;
@@ -66,30 +66,33 @@ namespace hypertrie::tests::utils {
 							  key_part_type key_part_max = std::numeric_limits<key_part_type>::max(),
 							  value_type valueMin = std::numeric_limits<value_type>::min(),
 							  value_type valueMax = std::numeric_limits<value_type>::max())
-			: value_min(valueMin), value_max(valueMax),
-			  key_part_min(key_part_min), key_part_max(key_part_max),
-			  key_part_dist{key_part_min, key_part_max}, value_dist{value_min, value_max} {}
+			: value_min_(valueMin), value_max_(valueMax),
+			  key_part_min_(key_part_min), key_part_max_(key_part_max),
+			  key_part_dist{key_part_min, key_part_max}, value_dist{value_min_, value_max_} {}
 
 		value_type getValueMin() const {
-			return value_min;
+			return value_min_;
 		}
 		void setValueMinMax(value_type value_min, value_type value_max) {
-			this->value_min = value_min;
-			this->value_max = value_max;
+			this->value_min_ = value_min;
+			this->value_max_ = value_max;
 			value_dist = uniform_dist<dist_value_type>{value_min, value_max};
 		}
 
 		void setKeyPartMinMax(key_part_type key_part_min, key_part_type key_part_max) {
-			this->key_part_min = key_part_min;
-			this->key_part_max = key_part_max;
+			this->key_part_min_ = key_part_min;
+			this->key_part_max_ = key_part_max;
 			key_part_dist = uniform_dist<key_part_type>{key_part_min, key_part_max};
 		}
 
 		key_part_type key_part() {
+			auto key_part_ = key_part_dist(rand);
 			// if the least significant bit is the tagging bit, we shift the value by 1.
-			if (tri::key_part_tagging_bit == 0) {
-				return key_part_dist(rand) << 1;
-			} else
+			if (tri::key_part_tagging_bit == 0)
+				return key_part_ << 1;
+			else if (tri::key_part_tagging_bit == 0)
+				return key_part_ & reinterpret_cast<key_part_type>(~(1UL << tri::key_part_tagging_bit));
+			else
 				return key_part_dist(rand);
 		}
 

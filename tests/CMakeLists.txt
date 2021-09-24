@@ -22,10 +22,19 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(DocTest)
 
+add_library(tests-utils INTERFACE)
+target_include_directories(tests-utils INTERFACE
+        utils)
+target_link_libraries(tests-utils INTERFACE
+        hypertrie-core)
+
 add_executable(tests_SingleEntryNode core/node/tests_SingleEntryNode.cpp)
 target_link_libraries(tests_SingleEntryNode
         doctest
         hypertrie-core
+        hypertrie-core-fmt
+        tests-utils
+        fmt::fmt
         )
 
 #set(hypertrie_LIBTORCH_PATH "" CACHE PATH "The installation directory of pytorch.")

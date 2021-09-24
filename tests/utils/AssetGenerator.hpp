@@ -1,12 +1,12 @@
 #ifndef HYPERTRIE_ASSETGENERATOR_HPP
 #define HYPERTRIE_ASSETGENERATOR_HPP
 
-#include <random>
 #include <algorithm>
+#include <random>
 #include <set>
 
-#include <Dice/hypertrie/internal/util/RawKey.hpp>
-#include <Dice/hypertrie/internal/util/Key.hpp>
+#include <Dice/hypertrie/Key.hpp>
+#include <Dice/hypertrie/internal/raw/RawKey.hpp>
 
 namespace hypertrie::tests::utils {
 
@@ -20,8 +20,7 @@ namespace hypertrie::tests::utils {
 
 	class AssetGenerator {
 	protected:
-		std::mt19937_64 rand = std::mt19937_64{42};
-
+		std::mt19937_64 rand{42};
 
 
 	public:
@@ -34,19 +33,23 @@ namespace hypertrie::tests::utils {
 		uniform_dist<long> dist;
 
 	public:
-		explicit LongGenerator(long max ) : dist{0, max} {}
-		LongGenerator(long min, long max ) : dist{min, max} {}
+		explicit LongGenerator(long max) : dist{0, max} {}
+		LongGenerator(long min, long max) : dist{min, max} {}
 
-		auto operator()(){
+		auto operator()() {
 			return dist(rand);
 		}
 	};
 
-	template<size_t depth, typename key_part_type, typename value_type,
-			 size_t unused_lsb_bits = 0>
+	template<size_t depth, internal::raw::HypertrieCoreTrait tri_t>
 	class RawGenerator : public AssetGenerator {
+	public:
+		using tri = tri_t;
+		using key_part_type = typename tri::key_part_type;
+		using value_type = typename tri::value_type;
+		using RawKey = ::hypertrie::internal::raw::RawKey<depth, tri>;
+
 	protected:
-		using RawKey = hypertrie::internal::RawKey<depth, key_part_type>;
 		value_type value_min;
 		value_type value_max;
 		key_part_type key_part_min;
@@ -59,10 +62,10 @@ namespace hypertrie::tests::utils {
 		uniform_dist<dist_value_type> value_dist;
 
 	public:
-		RawGenerator(key_part_type key_part_min = std::numeric_limits<key_part_type>::min(),
-					 key_part_type key_part_max = std::numeric_limits<key_part_type>::max(),
-					 value_type valueMin = std::numeric_limits<value_type>::min(),
-					 value_type valueMax = std::numeric_limits<value_type>::max())
+		explicit RawGenerator(key_part_type key_part_min = std::numeric_limits<key_part_type>::min(),
+							  key_part_type key_part_max = std::numeric_limits<key_part_type>::max(),
+							  value_type valueMin = std::numeric_limits<value_type>::min(),
+							  value_type valueMax = std::numeric_limits<value_type>::max())
 			: value_min(valueMin), value_max(valueMax),
 			  key_part_min(key_part_min), key_part_max(key_part_max),
 			  key_part_dist{key_part_min, key_part_max}, value_dist{value_min, value_max} {}
@@ -82,17 +85,21 @@ namespace hypertrie::tests::utils {
 			key_part_dist = uniform_dist<key_part_type>{key_part_min, key_part_max};
 		}
 
-		auto key_part() {
-			return key_part_dist(rand) << unused_lsb_bits;
+		key_part_type key_part() {
+			// if the least significant bit is the tagging bit, we shift the value by 1.
+			if (tri::key_part_tagging_bit == 0) {
+				return key_part_dist(rand) << 1;
+			} else
+				return key_part_dist(rand);
 		}
 
-		auto key() {
+		RawKey key() {
 			RawKey key_{};
 			std::generate(key_.begin(), key_.end(), [&]() { return key_part(); });
 			return key_;
 		}
 
-		auto value() {
+		value_type value() {
 			if constexpr (std::is_same_v<key_part_type, bool>) return true;
 			value_type value_;
 			do {
@@ -101,11 +108,11 @@ namespace hypertrie::tests::utils {
 			return value_;
 		}
 
-		auto entry() {
+		std::pair<RawKey, value_type> entry() {
 			return std::pair{key(), value()};
 		}
 
-		auto keys(size_t size) {
+		std::set<RawKey> keys(size_t size) {
 			std::set<RawKey> key_set;
 			while (key_set.size() < size) {
 				key_set.insert(this->key());
@@ -118,7 +125,7 @@ namespace hypertrie::tests::utils {
 		 * @param size
 		 * @return
 		 */
-		auto entries(size_t size) {
+		std::map<RawKey, value_type> entries(size_t size) {
 			std::map<RawKey, value_type> entry_map;
 			while (entry_map.size() < size) {
 				auto next_entry = this->entry();
@@ -130,18 +137,23 @@ namespace hypertrie::tests::utils {
 		}
 	};
 
-	template<typename key_part_type, typename value_type, size_t unused_lsb_bits = 0>
-	class EntryGenerator : public RawGenerator<1, key_part_type, value_type, unused_lsb_bits> {
-		using super = RawGenerator<1, key_part_type, value_type, unused_lsb_bits>;
+	template<internal::raw::HypertrieCoreTrait tri_t>
+	class EntryGenerator : public RawGenerator<1, tri_t> {
+		using tri = tri_t;
+		using super = RawGenerator<1, tri>;
+		using key_part_type = typename tri::key_part_type;
+		using value_type = typename tri::value_type;
+		using RawKey = typename super::RawKey;
 
-		using Key = hypertrie::Key<key_part_type>;
+
+		using Key = hypertrie::Key<tri>;
 
 	public:
-		EntryGenerator(key_part_type min = std::numeric_limits<key_part_type>::min(),
-					   key_part_type max = std::numeric_limits<key_part_type>::max(),
-					   value_type valueMin = std::numeric_limits<value_type>::min(),
-					   value_type valueMax = std::numeric_limits<value_type>::max())
-			: RawGenerator<1, key_part_type, value_type, unused_lsb_bits>(min, max, valueMin, valueMax) {}
+		explicit EntryGenerator(key_part_type min = std::numeric_limits<key_part_type>::min(),
+								key_part_type max = std::numeric_limits<key_part_type>::max(),
+								value_type valueMin = std::numeric_limits<value_type>::min(),
+								value_type valueMax = std::numeric_limits<value_type>::max())
+			: RawGenerator<1, tri>(min, max, valueMin, valueMax) {}
 
 		auto key(const size_t depth = 1) {
 			Key key_(depth);
@@ -172,6 +184,6 @@ namespace hypertrie::tests::utils {
 			return entry_map;
 		}
 	};
-}
+}// namespace hypertrie::tests::utils
 
-#endif //HYPERTRIE_ASSETGENERATOR_HPP
+#endif//HYPERTRIE_ASSETGENERATOR_HPP

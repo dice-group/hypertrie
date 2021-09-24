@@ -36,7 +36,8 @@ namespace hypertrie::internal::raw {
 		/// internal definitions
 
 		constexpr static bool is_bool_valued = tr::is_bool_valued;
-		constexpr static const bool is_lsb_unused = tr::lsb_unused;
+		static constexpr const ssize_t key_part_tagging_bit = tr::key_part_tagging_bit;
+		static constexpr const bool taggable_key_part = tr::taggable_key_part;
 
 		template<typename other_allocator>
 		using change_allocator = Hypertrie_core_t<Hypertrie_t<key_part_type,
@@ -44,7 +45,7 @@ namespace hypertrie::internal::raw {
 															  other_allocator,
 															  tr::template map_type_arg,
 															  tr::template set_type_arg,
-															  is_lsb_unused>>;
+															  key_part_tagging_bit>>;
 		using with_std_allocator = change_allocator<std::allocator<std::byte>>;
 	};
 

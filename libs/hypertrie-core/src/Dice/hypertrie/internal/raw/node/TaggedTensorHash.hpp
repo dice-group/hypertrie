@@ -28,11 +28,11 @@ namespace hypertrie::internal::raw {
 
 		TaggedTensorHash(const TensorHash &node_hash) noexcept : hash_(node_hash) {}
 
-		TaggedTensorHash(const key_part_type &key_part) noexcept : hash_(reinterpret_cast<RawTensorHash>(key_part)) {
+		explicit TaggedTensorHash(const key_part_type &key_part) noexcept : hash_(reinterpret_cast<RawTensorHash>(key_part)) {
 			hash_.bitset()[TensorHash::compression_tag_pos] = TensorHash::compressed_tag;
 		}
 
-		TaggedTensorHash &operator=(const TensorHash &node_hash) noexcept{
+		TaggedTensorHash &operator=(const TensorHash &node_hash) noexcept {
 			hash_ = node_hash;
 			return *this;
 		}
@@ -74,7 +74,7 @@ namespace hypertrie::internal::raw {
 		 * @param value value to be added
 		 * @return reference to slef
 		 */
-		inline auto addFirstEntry(const RawKey<1, key_part_type> &key, [[maybe_unused]] const bool &value) noexcept {
+		inline auto addFirstEntry(const RawKey<1, tri> &key, [[maybe_unused]] const bool &value) noexcept {
 			hash_.hash() = static_cast<key_part_type>(key[0]);
 			hash_.bitset()[TensorHash::compression_tag_pos] = TensorHash::compressed_tag;
 			return *this;
@@ -89,7 +89,7 @@ namespace hypertrie::internal::raw {
 		 * @param value value to be added
 		 * @return reference to slef
 		 */
-		inline auto addEntry(const RawKey<1, key_part_type> &key, [[maybe_unused]] const bool &value) noexcept {
+		inline auto addEntry(const RawKey<1, tri> &key, [[maybe_unused]] const bool &value) noexcept {
 			assert(value);
 			if (hash_.isCompressed()) {
 				hash_ = TensorHash::getCompressedNodeHash(getKeyPart(), true);

@@ -4,16 +4,18 @@
 
 #include <fmt/format.h>
 
+#include <itertools.hpp>
+
 #include <AssetGenerator.hpp>
 #include <Dice/hypertrie/internal/util/name_of_type.hpp>
 #include <Node_test_configs.hpp>
 
-#include <Dice/hypertrie/internal/raw/node/SingleEntryNode.hpp>
+#include <Dice/hypertrie/internal/raw/node/FullNode.hpp>
 
 
 namespace hypertrie::tests::core::node {
 
-	TEST_SUITE("SingleEntryNode") {
+	TEST_SUITE("FullNode") {
 		using namespace ::hypertrie::internal::raw;
 		using namespace ::hypertrie::internal::util;
 
@@ -21,7 +23,6 @@ namespace hypertrie::tests::core::node {
 		void create() {
 			using key_part_type = typename tri::key_part_type;
 			using value_type = typename tri::value_type;
-			using RawKey = ::hypertrie::internal::raw::RawKey<depth, tri>;
 
 			hypertrie::tests::utils::RawGenerator<depth, tri> gen{};
 
@@ -29,19 +30,11 @@ namespace hypertrie::tests::core::node {
 								depth, name_of_type<key_part_type>(), name_of_type<value_type>())
 							.c_str()) {
 
-				RawKey key = gen.key();
+				FullNode<depth, tri> node{1, std::allocator<std::byte>()};
 
-				[[maybe_unused]] value_type value = gen.value();
-
-				SingleEntryNode<depth, tri> node = [&]() {
-					if constexpr (tri::is_bool_valued) return SingleEntryNode<depth, tri>{key};
-					else
-						return SingleEntryNode<depth, tri>{key, value};
-				}();
-
-				REQUIRE(node.key() == key);
-				REQUIRE(node.value() == value);
-				REQUIRE(node.size() == 1);
+				for (size_t pos : iter::range(depth))
+					REQUIRE(node.edges(pos).size() == 0);
+				REQUIRE(node.size() == 0);
 			}
 		}
 

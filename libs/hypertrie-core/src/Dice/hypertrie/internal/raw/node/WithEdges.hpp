@@ -16,13 +16,13 @@ namespace hypertrie::internal::raw {
 		using allocator_type = typename tri::allocator_type;
 		using value_type = typename tri::value_type;
 		using key_part_type = typename tri::key_part_type;
-		using TaggedTensorHash = TaggedTensorHash<depth, tri>;
-		using TensorHash = TensorHash<depth, tri>;
+		using TaggedTensorHash_t = TaggedTensorHash<depth, tri>;
+		using TensorHash_t = TensorHash<depth, tri>;
 
 		using ChildType = std::conditional_t<(depth > 1),
-											 std::conditional_t<(depth == 2 and tri::is_lsb_unused),
-																TaggedTensorHash,
-																TensorHash>,
+											 std::conditional_t<(depth == 2 and tri::is_bool_valued and tri::taggable_key_part),
+																TaggedTensorHash_t,
+																TensorHash_t>,
 											 value_type>;
 		using collection_alloc = std::conditional_t<((depth == 1) and tri::is_bool_valued),
 													typename std::allocator_traits<allocator_type>::template rebind_alloc<key_part_type>,

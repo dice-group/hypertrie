@@ -37,6 +37,15 @@ target_link_libraries(tests_SingleEntryNode
         fmt::fmt
         )
 
+add_executable(tests_FullNode core/node/tests_FullNode.cpp)
+target_link_libraries(tests_FullNode
+        doctest
+        hypertrie-core
+        hypertrie-core-fmt
+        tests-utils
+        fmt::fmt
+        )
+
 #set(hypertrie_LIBTORCH_PATH "" CACHE PATH "The installation directory of pytorch.")
 #if (hypertrie_LIBTORCH_PATH)
 #    # add path

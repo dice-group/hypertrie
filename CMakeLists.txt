@@ -1,9 +1,52 @@
 cmake_minimum_required(VERSION 3.13)
 project(hypertrie VERSION 0.6.0)
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/version.hpp.in ${CMAKE_CURRENT_SOURCE_DIR}/include/Dice/hypertrie/hypertrie_version.hpp)
+set(default_build_type "Release")
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    message(STATUS "Setting build type to '${default_build_type}' as none was specified.")
+    set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE
+            STRING "Choose the type of build." FORCE)
+    # Set the possible values of build type for cmake-gui
+    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
+            "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
+endif()
 
+
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -Wextra -g -O0")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -march=native")
+set(THREADS_PREFER_PTHREAD_FLAG)
+
+
+include(CheckIPOSupported)
+check_ipo_supported()
+if (CMAKE_BUILD_TYPE MATCHES "Release")
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE) # LTO
+    add_link_options($<$<CONFIG:RELEASE>:-s>) #strip binaries
+endif ()
+
+### conan cmake
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR})
+list(APPEND CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR})
+
+if(NOT EXISTS "${CMAKE_BINARY_DIR}/conan.cmake")
+    message(STATUS "Downloading conan.cmake from https://github.com/conan-io/cmake-conan")
+    file(DOWNLOAD "https://raw.githubusercontent.com/conan-io/cmake-conan/v0.16.1/conan.cmake"
+            "${CMAKE_BINARY_DIR}/conan.cmake"
+            EXPECTED_HASH SHA256=396e16d0f5eabdc6a14afddbcfff62a54a7ee75c6da23f32f7a31bc85db23484
+            TLS_VERIFY ON)
+endif()
+
+include(${CMAKE_BINARY_DIR}/conan.cmake)
+conan_cmake_autodetect(settings)
+
+
+conan_cmake_run(CONANFILE conanfile.py
+        GENERATORS cmake_find_package
+        BASIC_SETUP CMAKE_TARGETS
+        BUILD missing)
 
 include(${CMAKE_BINARY_DIR}/conan_paths.cmake)
 
@@ -12,17 +55,6 @@ if (NOT EXISTS ${CMAKE_BINARY_DIR}/CMakeCache.txt)
         set(CMAKE_BUILD_TYPE "Release" CACHE STRING "" FORCE)
     endif ()
 endif ()
-
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -Wextra -g -O0")
-
-set(THREADS_PREFER_PTHREAD_FLAG)
-find_package(Threads REQUIRED)
-
-
-# installation directories
-#todo: use absolute paths here with some decent prefix like ${CMAKE_BINARY_DIR}
-set(hypertrie_INSTALL_INCLUDE_DIR "include" CACHE STRING "The installation include directory")
-set(hypertrie_INSTALL_CMAKE_DIR "share/hypertrie/cmake" CACHE STRING "The installation cmake directory")
 
 include(FetchContent)
 FetchContent_Declare(
@@ -60,6 +92,7 @@ find_package(Boost REQUIRED COMPONENTS)
 
 #add_library(hypertrie INTERFACE)
 #add_library(hypertrie::hypertrie ALIAS hypertrie)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/version.hpp.in ${CMAKE_CURRENT_SOURCE_DIR}/include/Dice/hypertrie/hypertrie_version.hpp)
 
 add_subdirectory(libs)
 add_subdirectory(tests)

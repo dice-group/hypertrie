@@ -41,6 +41,56 @@ namespace hypertrie::internal::raw {
 		[[nodiscard]] inline size_t size() const noexcept { return size_; }
 	};
 
+	template<HypertrieCoreTrait tri_t>
+	struct FullNode<1UL, tri_t> : public ReferenceCounted, public WithEdges<1UL, tri_t> {
+		using tri = tri_t;
+		using RawKey_t = RawKey<1UL, tri_t>;
+		using key_part_type = typename tri::key_part_type;
+		using value_type = typename tri::value_type;
+		using allocator_type = typename tri::allocator_type;
+		using WithEdges_t = WithEdges<1UL, tri_t>;
+		using map_alloc = typename WithEdges_t::collection_alloc;
+
+		// use a set to for value_type bool, otherwise a map
+		using EdgesType = typename WithEdges<1UL, tri_t>::ChildrenType;
+
+
+		FullNode(size_t ref_count, const allocator_type &alloc) noexcept
+			: ReferenceCounted(ref_count), WithEdges<1UL, tri_t>(alloc) {}
+
+		FullNode(const allocator_type &alloc, const FullNode &other) noexcept
+			: ReferenceCounted(other.ref_count), WithEdges<1UL, tri_t>(alloc) {
+			for (size_t pos : iter::range(1UL))
+				for (const auto &entry : other)
+					if constexpr (tri::is_bool_valued)
+						this->edges(pos).insert(*entry);
+					else
+						this->edges(pos)[entry.first] = entry.second;
+		}
+
+		FullNode(const RawKey_t &key,
+				 [[maybe_unused]] value_type value,
+				 const RawKey_t &second_key,
+				 [[maybe_unused]] value_type second_value,
+				 size_t ref_count = 0) noexcept
+			: ReferenceCounted(ref_count),
+			  WithEdges<1UL, tri_t>([&]() {
+				  if constexpr (std::is_same_v<value_type, bool>)
+					  return EdgesType{{{key[0]},
+										{second_key[0]}}};
+				  else
+					  return EdgesType{{{key[0], value},
+										{second_key[0], second_value}}};
+			  }()) {}
+
+		void change_value(const RawKey_t &key,
+						  [[maybe_unused]] value_type old_value,
+						  value_type new_value) noexcept {
+			if constexpr (not tri::is_bool_valued)
+				this->edges(0)[key[0]] = new_value;
+		}
+		[[nodiscard]] inline size_t size() const noexcept { return this->edges().size(); }
+	};
 }// namespace hypertrie::internal::raw
 
 #endif//HYPERTRIE_FULLNODE_HPP

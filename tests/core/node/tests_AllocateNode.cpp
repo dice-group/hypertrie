@@ -10,9 +10,10 @@
 #include <Dice/hypertrie/internal/util/name_of_type.hpp>
 #include <Node_test_configs.hpp>
 
-#include <Dice/hypertrie/internal/raw/node/SingleEntryNode.hpp>
 #include <Dice/hypertrie/internal/raw/node/AllocateNode.hpp>
 #include <Dice/hypertrie/internal/raw/node/NodeStorage.hpp>
+#include <Dice/hypertrie/internal/raw/node/SingleEntryNode.hpp>
+#include <Dice/hypertrie/internal/raw/node/SpecificNodeStorage.hpp>
 
 
 namespace hypertrie::tests::core::node {
@@ -27,15 +28,19 @@ namespace hypertrie::tests::core::node {
 			using value_type = typename tri::value_type;
 			using TensorHash_t = TensorHash<depth, tri>;
 
-				  hypertrie::tests::utils::RawGenerator<depth, tri> gen{};
+			hypertrie::tests::utils::RawGenerator<depth, tri> gen{};
 
 			SUBCASE(fmt::format("depth = {}, key_part_type = {}, value_type = {}",
 								depth, name_of_type<key_part_type>(), name_of_type<value_type>())
 							.c_str()) {
-				NodeStorage<depth, tri, SingleEntryNode> node_storage{std::allocator<std::byte>()};
+				SpecificNodeStorage<depth, tri, SingleEntryNode> node_storage{std::allocator<std::byte>()};
 				auto node_ptr = node_storage.node_lifecycle().new_();
 				node_storage.nodes()[TensorHash_t{42}] = node_ptr;
 			}
+		}
+
+		TEST_CASE("storage") {
+			NodeStorage<5, tagged_bool_cfg<5>::tri> x{std::allocator<std::byte>()};
 		}
 
 

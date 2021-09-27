@@ -30,7 +30,7 @@ namespace hypertrie::tests::core::node {
 								depth, name_of_type<key_part_type>(), name_of_type<value_type>())
 							.c_str()) {
 
-				SUBCASE("Create empty node") {
+				SUBCASE("construct empty node") {
 					FullNode<depth, tri> node{1, std::allocator<std::byte>()};
 
 					for (size_t pos : iter::range(depth))
@@ -61,16 +61,47 @@ namespace hypertrie::tests::core::node {
 						}
 					}
 				}
+
+				if constexpr (depth == 1) {
+					SUBCASE("Create height 1 node with two entries") {
+						auto key_0 = gen.key();
+						auto key_1 = gen.key();
+						auto value_0 = gen.value();
+						auto value_1 = gen.value();
+
+						// initialize node with two entries
+						FullNode<1, tri> node_init_list{{{key_0, value_0}, {key_1, value_1}}, 1, std::allocator<std::byte>()};
+						// alternative initialization for boolean valued node
+						if constexpr (tri::is_bool_valued) {
+							FullNode<1, tri> node_init_list_same{{key_0, key_1}, 1, std::allocator<std::byte>()};
+							REQUIRE(node_init_list == node_init_list_same);
+						}
+
+						// populate node manually
+						FullNode<1, tri> node_manual{1, std::allocator<std::byte>()};
+						// insert first entry
+						if constexpr (tri::is_bool_valued)
+							node_manual.edges(0).insert(key_0[0]);
+						else
+							node_manual.edges(0).insert({key_0[0], value_0});
+
+						// check if it was inserted correctly
+						if (std::tie(key_0, value_0) != std::tie(key_1, value_1))
+							REQUIRE(node_init_list != node_manual);
+						else
+							REQUIRE(node_init_list == node_manual);
+
+						// insert second entry
+						if constexpr (tri::is_bool_valued)
+							node_manual.edges(0).insert(key_1[0]);
+						else
+							node_manual.edges(0).insert({key_1[0], value_1});
+
+						// check if node_init_list is equivalent to manual insertion
+						REQUIRE(node_init_list == node_manual);
+					}
+				}
 			}
-		}
-
-		DOCTEST_TEST_CASE("write data") {
-		}
-
-		DOCTEST_TEST_CASE("copy node") {
-		}
-
-		DOCTEST_TEST_CASE("two-entry constructor") {
 		}
 
 

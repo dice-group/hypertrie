@@ -81,31 +81,50 @@ namespace hypertrie::internal::raw {
 		FullNode(size_t ref_count, const allocator_type &alloc) noexcept
 			: ReferenceCounted(ref_count), WithEdges<1UL, tri_t>(alloc) {}
 
-		// TODO: should work automatically?
-		//		FullNode(const FullNode &other) noexcept
-		//			: ReferenceCounted(other.ref_count), WithEdges<1UL, tri_t>(other) {
-		//			for (size_t pos : iter::range(1UL))
-		//				for (const auto &entry : other)
-		//					if constexpr (tri::is_bool_valued)
-		//						this->edges(pos).insert(*entry);
-		//					else
-		//						this->edges(pos)[entry.first] = entry.second;
-		//		}
+	private:
+		template<class T>
+		void init(std::initializer_list<T> elements) noexcept {
+			this->edges().reserve(elements.size());
+			for (auto &e : elements)
+				if constexpr (std::is_same_v<std::decay_t<T>, RawKey_t>)
+					insert_or_assign(e);
+				else
+					insert_or_assign(e.first, e.second);
+		}
 
-		FullNode(const RawKey_t &key,
-				 [[maybe_unused]] value_type value,
-				 const RawKey_t &second_key,
-				 [[maybe_unused]] value_type second_value,
-				 size_t ref_count = 0) noexcept
-			: ReferenceCounted(ref_count),
-			  WithEdges<1UL, tri_t>([&]() {
-				  if constexpr (std::is_same_v<value_type, bool>)
-					  return EdgesType{{{key[0]},
-										{second_key[0]}}};
-				  else
-					  return EdgesType{{{key[0], value},
-										{second_key[0], second_value}}};
-			  }()) {}
+	public:
+		FullNode(std::initializer_list<RawKey_t> keys,
+				 size_t ref_count,
+				 const allocator_type &alloc) noexcept
+			: FullNode(ref_count, alloc) {
+			init(std::move(keys));
+		}
+
+		FullNode(std::initializer_list<std::pair<RawKey_t, value_type>> entries,
+				 size_t ref_count,
+				 const allocator_type &alloc) noexcept
+			: FullNode(ref_count, alloc) {
+			init(std::move(entries));
+		}
+
+		inline void insert_or_assign(const RawKey_t &key, value_type value = value_type{1}) noexcept {
+			insert_or_assign(key[0], value);
+		}
+
+		inline void insert_or_assign(key_part_type key_part, value_type value = value_type{1}) noexcept {
+			if constexpr (tri::is_bool_valued)
+				this->edges().insert(key_part);
+			else
+				this->edges().insert_or_assign(key_part, value);
+		}
+
+		inline void erase(const RawKey_t &key) noexcept {
+			erase(key[0]);
+		}
+
+		inline void erase(key_part_type key_part) noexcept {
+			this->edges().erase(key_part);
+		}
 
 		void change_value(const RawKey_t &key,
 						  [[maybe_unused]] value_type old_value,

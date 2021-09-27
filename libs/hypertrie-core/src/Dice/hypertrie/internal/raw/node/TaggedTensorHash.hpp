@@ -26,7 +26,7 @@ namespace hypertrie::internal::raw {
 
 		TaggedTensorHash() noexcept = default;
 
-		TaggedTensorHash(const TensorHash &node_hash) noexcept : hash_(node_hash) {}
+		explicit TaggedTensorHash(const TensorHash &node_hash) noexcept : hash_(node_hash) {}
 
 		explicit TaggedTensorHash(const key_part_type &key_part) noexcept : hash_(reinterpret_cast<RawTensorHash>(key_part)) {
 			hash_.bitset()[TensorHash::compression_tag_pos] = TensorHash::compressed_tag;

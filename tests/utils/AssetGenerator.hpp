@@ -88,9 +88,9 @@ namespace hypertrie::tests::utils {
 		key_part_type key_part() {
 			auto key_part_ = key_part_dist(rand);
 			// if the least significant bit is the tagging bit, we shift the value by 1.
-			if (tri::key_part_tagging_bit == 0)
+			if constexpr (tri::key_part_tagging_bit == 0)
 				return key_part_ << 1;
-			else if (tri::key_part_tagging_bit == 0)
+			else if constexpr (tri::key_part_tagging_bit > 0)
 				return key_part_ & reinterpret_cast<key_part_type>(~(1UL << tri::key_part_tagging_bit));
 			else
 				return key_part_dist(rand);

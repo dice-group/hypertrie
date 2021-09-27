@@ -39,6 +39,29 @@ namespace hypertrie::internal::raw {
 		}
 
 		[[nodiscard]] inline size_t size() const noexcept { return size_; }
+
+		auto operator==(const FullNode &other) const noexcept {
+			// stored sizes are unequal
+			if (this->size() != other.size())
+				return false;
+
+
+			auto min_size = std::numeric_limits<size_t>::max();
+			pos_type min_pos = 0;
+			// check if the other node maps by each position exactly the same amount of children
+			// + find position with the least children
+			for (pos_type pos : iter::range(depth)) {
+				const auto size_at_pos = this->edges(pos).size();
+				if (size_at_pos != other.edges(pos).size())
+					return false;
+				if (size_at_pos < min_size) {
+					min_size = size_at_pos;
+					min_pos = pos;
+				}
+			}
+			// check if children for that position are equal
+			return this->edges(min_pos) == other.edges(min_pos);
+		}
 	};
 
 	template<HypertrieCoreTrait tri_t>
@@ -58,15 +81,16 @@ namespace hypertrie::internal::raw {
 		FullNode(size_t ref_count, const allocator_type &alloc) noexcept
 			: ReferenceCounted(ref_count), WithEdges<1UL, tri_t>(alloc) {}
 
-		FullNode(const allocator_type &alloc, const FullNode &other) noexcept
-			: ReferenceCounted(other.ref_count), WithEdges<1UL, tri_t>(alloc) {
-			for (size_t pos : iter::range(1UL))
-				for (const auto &entry : other)
-					if constexpr (tri::is_bool_valued)
-						this->edges(pos).insert(*entry);
-					else
-						this->edges(pos)[entry.first] = entry.second;
-		}
+		// TODO: should work automatically?
+		//		FullNode(const FullNode &other) noexcept
+		//			: ReferenceCounted(other.ref_count), WithEdges<1UL, tri_t>(other) {
+		//			for (size_t pos : iter::range(1UL))
+		//				for (const auto &entry : other)
+		//					if constexpr (tri::is_bool_valued)
+		//						this->edges(pos).insert(*entry);
+		//					else
+		//						this->edges(pos)[entry.first] = entry.second;
+		//		}
 
 		FullNode(const RawKey_t &key,
 				 [[maybe_unused]] value_type value,
@@ -90,6 +114,15 @@ namespace hypertrie::internal::raw {
 				this->edges(0)[key[0]] = new_value;
 		}
 		[[nodiscard]] inline size_t size() const noexcept { return this->edges().size(); }
+
+		auto operator==(const FullNode &other) const noexcept {
+			// stored sizes are unequal
+			if (this->size() != other.size())
+				return false;
+
+			// check if children for that position are equal
+			return this->edges() == other.edges();
+		}
 	};
 }// namespace hypertrie::internal::raw
 

@@ -30,12 +30,47 @@ namespace hypertrie::tests::core::node {
 								depth, name_of_type<key_part_type>(), name_of_type<value_type>())
 							.c_str()) {
 
-				FullNode<depth, tri> node{1, std::allocator<std::byte>()};
+				SUBCASE("Create empty node") {
+					FullNode<depth, tri> node{1, std::allocator<std::byte>()};
 
-				for (size_t pos : iter::range(depth))
-					REQUIRE(node.edges(pos).size() == 0);
-				REQUIRE(node.size() == 0);
+					for (size_t pos : iter::range(depth))
+						REQUIRE(node.edges(pos).size() == 0);
+					REQUIRE(node.size() == 0);
+
+					SUBCASE("add entry") {
+						auto [raw_key, value] = gen.entry();
+						for (size_t pos : iter::range(depth)) {
+							if constexpr (depth == 1) {
+								if constexpr (tri::is_bool_valued) {
+									node.edges(0).insert(raw_key[pos]);
+								} else {
+									node.edges(0)[raw_key[pos]] = value;
+								}
+							} else {
+								if constexpr (depth == 2 and tri::taggable_key_part) {// this implies boolean-valued
+									node.edges(pos)[raw_key[pos]] = TaggedTensorHash<depth - 1, tri>(raw_key.subkey(pos)[0]);
+								} else {
+									node.edges(pos)[raw_key[pos]] = TensorHash<depth - 1, tri>().addFirstEntry(raw_key.subkey(pos), value);
+								}
+							}
+						}
+
+						SUBCASE("copy node") {
+							FullNode<depth, tri> copied_node{node};
+							REQUIRE(node == copied_node);
+						}
+					}
+				}
 			}
+		}
+
+		DOCTEST_TEST_CASE("write data") {
+		}
+
+		DOCTEST_TEST_CASE("copy node") {
+		}
+
+		DOCTEST_TEST_CASE("two-entry constructor") {
 		}
 
 

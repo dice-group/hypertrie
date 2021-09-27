@@ -21,6 +21,14 @@ namespace hypertrie::internal::raw {
 
 		SingleEntryNode(const RawKey &key, value_type value, size_t ref_count = 0) noexcept
 			: ReferenceCounted(ref_count), SingleEntry<depth, tri_t>(key), Valued<tri_t>(value) {}
+
+		auto operator<=>(const SingleEntryNode &other) const noexcept {
+			return std::tie(this->key(), this->value()) <=> std::tie(other.key(), other.value());
+		}
+
+		auto operator==(const SingleEntryNode &other) const noexcept {
+			return std::tie(this->key(), this->value()) == std::tie(other.key(), other.value());
+		}
 	};
 
 	template<size_t depth, HypertrieCoreTrait_bool_valued tri_t>
@@ -35,6 +43,14 @@ namespace hypertrie::internal::raw {
 			: ReferenceCounted(ref_count), SingleEntry<depth, tri_t>(key) {}
 
 		[[nodiscard]] constexpr bool value() const noexcept { return true; }
+
+		auto operator<=>(const SingleEntryNode &other) const noexcept {
+			return this->key() <=> other.key();
+		}
+
+		auto operator==(const SingleEntryNode &other) const noexcept {
+			return this->key() == other.key();
+		}
 	};
 
 }// namespace hypertrie::internal::raw

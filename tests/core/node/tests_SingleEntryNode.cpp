@@ -42,6 +42,11 @@ namespace hypertrie::tests::core::node {
 				REQUIRE(node.key() == key);
 				REQUIRE(node.value() == value);
 				REQUIRE(node.size() == 1);
+
+				SUBCASE("copy") {
+					SingleEntryNode<depth, tri> another_node{node};
+					REQUIRE(another_node == node);
+				}
 			}
 		}
 

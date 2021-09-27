@@ -2,6 +2,7 @@
 #define HYPERTRIE_STDSET_HPP
 
 #include <set>
+#include <vector>
 #include <fmt/format.h>
 
 namespace hypertrie::internal::container {

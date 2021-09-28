@@ -19,8 +19,8 @@ namespace hypertrie::internal::raw {
 
 		SingleEntry() = default;
 
-		SingleEntry(const RawKey &key, value_type value, size_t ref_count = 0) noexcept
-			: ReferenceCounted(ref_count), SingleEntry<depth, tri_t>(key), Valued<tri_t>(value) {}
+		SingleEntry(const RawKey &key, value_type value) noexcept
+			: SingleKey<depth, tri_t>(key), Valued<tri_t>(value) {}
 
 		auto operator<=>(const SingleEntry &other) const noexcept {
 			return std::tie(this->key(), this->value()) <=> std::tie(other.key(), other.value());
@@ -39,8 +39,8 @@ namespace hypertrie::internal::raw {
 
 		SingleEntry() noexcept = default;
 
-		explicit SingleEntry(const RawKey &key, size_t ref_count = 0) noexcept
-			: SingleKey<depth, tri_t>(key, ref_count) {}
+		explicit SingleEntry(const RawKey &key) noexcept
+			: SingleKey<depth, tri_t>(key) {}
 
 		[[nodiscard]] constexpr bool value() const noexcept { return true; }
 

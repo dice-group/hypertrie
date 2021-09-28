@@ -62,6 +62,7 @@ namespace hypertrie::internal::raw {
 		/*
 		 * Constructors
 		 */
+		TensorHash() = default;
 
 		explicit TensorHash(const size_t &hash) noexcept : hash_(hash) {}
 

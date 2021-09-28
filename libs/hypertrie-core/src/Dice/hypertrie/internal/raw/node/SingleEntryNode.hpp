@@ -20,7 +20,7 @@ namespace hypertrie::internal::raw {
 		SingleEntryNode() noexcept = default;
 
 		SingleEntryNode(const RawKey &key, value_type value, size_t ref_count = 0) noexcept
-			: ReferenceCounted(ref_count), SingleKey<depth, tri_t>(key), Valued<tri_t>(value) {}
+			: ReferenceCounted(ref_count), SingleEntry<depth, tri_t>(key, value) {}
 
 		auto operator<=>(const SingleEntryNode &other) const noexcept {
 			return static_cast<SingleEntry<depth, tri_t> const &>(*this) <=> static_cast<SingleEntry<depth, tri_t> const &>(other);
@@ -40,7 +40,7 @@ namespace hypertrie::internal::raw {
 		SingleEntryNode() noexcept = default;
 
 		explicit SingleEntryNode(const RawKey &key, size_t ref_count = 0) noexcept
-			: ReferenceCounted(ref_count), SingleKey<depth, tri_t>(key) {}
+			: ReferenceCounted(ref_count), SingleEntry<depth, tri_t>(key) {}
 
 		auto operator<=>(const SingleEntryNode &other) const noexcept {
 			return static_cast<SingleEntry<depth, tri_t> const &>(*this) <=> static_cast<SingleEntry<depth, tri_t> const &>(other);

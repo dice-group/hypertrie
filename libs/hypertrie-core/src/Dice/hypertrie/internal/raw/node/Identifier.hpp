@@ -6,7 +6,7 @@
 namespace hypertrie::internal::raw {
 
 	template<size_t depth, HypertrieCoreTrait tri>
-	using Identifier = std::conditional_t<(tri::is_bool_valued and tri::taggable_key_part),
+	using Identifier = std::conditional_t<(depth == 1 and tri::taggable_key_part),
 										  Hash_or_InplaceNode<depth, tri>,
 										  TensorHash<depth, tri>>;
 

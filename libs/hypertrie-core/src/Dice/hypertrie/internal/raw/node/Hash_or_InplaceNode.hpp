@@ -30,7 +30,7 @@ namespace hypertrie::internal::raw {
 
 		explicit Hash_or_InplaceNode(const key_part_type &key_part) noexcept : hash_(reinterpret_cast<RawTensorHash>(key_part)) {
 			// set sen bit
-			hash_ = hash_ | (size_t(1) << TensorHash_t::tag_pos);
+			hash_.hash() |= (size_t(1) << TensorHash_t::tag_pos);
 		}
 
 		Hash_or_InplaceNode &operator=(const TensorHash_t &node_hash) noexcept {
@@ -77,7 +77,7 @@ namespace hypertrie::internal::raw {
 		 */
 		inline auto addFirstEntry(const RawKey<1, tri> &key, [[maybe_unused]] const bool &value) noexcept {
 			hash_ = reinterpret_cast<RawTensorHash>(key[0]);
-			hash_ = hash_ | (1UL << TensorHash_t::tag_pos);
+			hash_.hash() |= (1UL << TensorHash_t::tag_pos);
 			return *this;
 		}
 

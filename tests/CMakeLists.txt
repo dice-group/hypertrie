@@ -55,6 +55,14 @@ target_link_libraries(tests_AllocateNode
         fmt::fmt
         )
 
+
+# fmt
+add_executable(tests_fmt_definitions fmt/tests_fmt_definitions.cpp)
+target_link_libraries(tests_fmt_definitions
+        doctest
+        fmt-definitions
+        )
+
 #set(hypertrie_LIBTORCH_PATH "" CACHE PATH "The installation directory of pytorch.")
 #if (hypertrie_LIBTORCH_PATH)
 #    # add path

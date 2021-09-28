@@ -3,6 +3,7 @@
 
 #include <Dice/hypertrie/internal/raw/Hypertrie_core_trait.hpp>
 #include <Dice/hypertrie/internal/raw/node/SpecificNodeStorage.hpp>
+#include <Dice/hypertrie/internal/raw/node/AllocateNode.hpp>
 #include <Dice/hypertrie/internal/raw/node/TensorHash.hpp>
 
 namespace hypertrie::internal::raw {

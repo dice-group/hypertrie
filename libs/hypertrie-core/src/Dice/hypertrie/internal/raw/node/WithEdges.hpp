@@ -3,7 +3,7 @@
 
 #include <Dice/hypertrie/internal/raw/Hypertrie_core_trait.hpp>
 #include <Dice/hypertrie/internal/raw/RawDiagonalPositions.hpp>
-#include <Dice/hypertrie/internal/raw/node/TaggedTensorHash.hpp>
+#include <Dice/hypertrie/internal/raw/node/Identifier.hpp>
 #include <range.hpp>
 
 #include <Dice/hypertrie/internal/commons/PosType.hpp>
@@ -18,15 +18,13 @@ namespace hypertrie::internal::raw {
 		using key_part_type = typename tri::key_part_type;
 
 		using ChildType = std::conditional_t<(depth > 1),
-											 std::conditional_t<(depth == 2 and tri::is_bool_valued and tri::taggable_key_part),
-																TaggedTensorHash<depth - 1, tri>,
-																TensorHash<depth - 1, tri>>,
+											 Identifier<depth - 1, tri>,
 											 value_type>;
 		using collection_alloc = std::conditional_t<((depth == 1) and tri::is_bool_valued),
 													typename std::allocator_traits<allocator_type>::template rebind_alloc<key_part_type>,
 													typename std::allocator_traits<allocator_type>::template rebind_alloc<std::pair<typename tri::key_part_type, ChildType>>>;
 
-		// allocator might need to be casted to specific type for set/map
+		// allocator might need to be cast to specific type for set/map
 		using ChildrenType = std::conditional_t<((depth == 1) and tri::is_bool_valued),
 												typename tri::template set_type<key_part_type>,
 												typename tri::template map_type<typename tri::key_part_type, ChildType>>;

@@ -1,53 +1,58 @@
-#ifndef HYPERTRIE_SINGLEENTRY_HPP
-#define HYPERTRIE_SINGLEENTRY_HPP
+#ifndef HYPERTRIE_ENTRY_HPP
+#define HYPERTRIE_ENTRY_HPP
+
+#include <cstddef>
 
 #include <Dice/hypertrie/internal/raw/Hypertrie_core_trait.hpp>
-#include <Dice/hypertrie/internal/raw/RawKey.hpp>
+#include <Dice/hypertrie/internal/raw/node/ReferenceCounted.hpp>
+#include <Dice/hypertrie/internal/raw/node/SingleKey.hpp>
+#include <Dice/hypertrie/internal/raw/node/Valued.hpp>
 
 namespace hypertrie::internal::raw {
 
-	/**
- * A super class to provide a single key in a Node.
- * @tparam depth depth of the key
- * @tparam tri HypertrieInternalTrait that defines node parameters
- */
-	template<size_t depth, HypertrieCoreTrait tri>
-	struct SingleEntry {
-		using RawKey = RawKey<depth, tri>;
-
-	protected:
-		RawKey key_;
-
+	template<size_t depth, HypertrieCoreTrait tri_t>
+	class SingleEntry : public SingleKey<depth, tri_t>, public Valued<tri_t> {
 	public:
-		/**
-		 * Default constructor fills the key with 0, 0.0, true (value initialization)
-		 */
-		SingleEntry() noexcept : key_{} {}
+		using tri = tri_t;
+		using RawKey = RawKey<depth, tri_t>;
+		using value_type = typename tri::value_type;
 
-		/**
-		 * Uses the provided RawKey as key.
-		 * @param key
-		 */
-		explicit SingleEntry(RawKey key) noexcept : key_(key) {}
+		SingleEntry() = default;
 
-		/**
-		 * Modifiable reference to key.
-		 * @return
-		 */
-		RawKey &key() noexcept { return this->key_; }
+		SingleEntry(const RawKey &key, value_type value, size_t ref_count = 0) noexcept
+			: ReferenceCounted(ref_count), SingleEntry<depth, tri_t>(key), Valued<tri_t>(value) {}
 
-		/**
-		 * Constant reference to key.
-		 * @return
-		 */
-		const RawKey &key() const noexcept { return this->key_; }
+		auto operator<=>(const SingleEntry &other) const noexcept {
+			return std::tie(this->key(), this->value()) <=> std::tie(other.key(), other.value());
+		}
 
-		/**
-		 * Size of this node (It is always 1).
-		 * @return
-		 */
-		[[nodiscard]] constexpr size_t size() const noexcept { return 1; }
+		auto operator==(const SingleEntry &other) const noexcept {
+			return std::tie(this->key(), this->value()) == std::tie(other.key(), other.value());
+		}
+	};
+
+	template<size_t depth, HypertrieCoreTrait_bool_valued tri_t>
+	class SingleEntry<depth, tri_t> : public SingleKey<depth, tri_t> {
+	public:
+		using tri = tri_t;
+		using RawKey = RawKey<depth, tri_t>;
+
+		SingleEntry() noexcept = default;
+
+		explicit SingleEntry(const RawKey &key, size_t ref_count = 0) noexcept
+			: SingleKey<depth, tri_t>(key, ref_count) {}
+
+		[[nodiscard]] constexpr bool value() const noexcept { return true; }
+
+		auto operator<=>(const SingleEntry &other) const noexcept {
+			return this->key() <=> other.key();
+		}
+
+		auto operator==(const SingleEntry &other) const noexcept {
+			return this->key() == other.key();
+		}
 	};
 
 }// namespace hypertrie::internal::raw
-#endif//HYPERTRIE_SINGLEENTRY_HPP
+
+#endif//HYPERTRIE_ENTRY_HPP

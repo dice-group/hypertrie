@@ -11,23 +11,23 @@
 namespace hypertrie::internal::raw {
 
 	template<size_t depth, HypertrieCoreTrait tri_t>
-	class SingleEntryNode : public ReferenceCounted, public SingleEntry<depth, tri_t>, public Valued<tri_t> {
+	class SingleEntryNode : public ReferenceCounted, public SingleEntry<depth, tri_t> {
 	public:
 		using tri = tri_t;
 		using RawKey = RawKey<depth, tri_t>;
 		using value_type = typename tri::value_type;
 
-		SingleEntryNode() = default;
+		SingleEntryNode() noexcept = default;
 
 		SingleEntryNode(const RawKey &key, value_type value, size_t ref_count = 0) noexcept
-			: ReferenceCounted(ref_count), SingleEntry<depth, tri_t>(key), Valued<tri_t>(value) {}
+			: ReferenceCounted(ref_count), SingleKey<depth, tri_t>(key), Valued<tri_t>(value) {}
 
 		auto operator<=>(const SingleEntryNode &other) const noexcept {
-			return std::tie(this->key(), this->value()) <=> std::tie(other.key(), other.value());
+			return static_cast<SingleEntry<depth, tri_t> const &>(*this) <=> static_cast<SingleEntry<depth, tri_t> const &>(other);
 		}
 
 		auto operator==(const SingleEntryNode &other) const noexcept {
-			return std::tie(this->key(), this->value()) == std::tie(other.key(), other.value());
+			return static_cast<SingleEntry<depth, tri_t> const &>(*this) == static_cast<SingleEntry<depth, tri_t> const &>(other);
 		}
 	};
 
@@ -40,16 +40,14 @@ namespace hypertrie::internal::raw {
 		SingleEntryNode() noexcept = default;
 
 		explicit SingleEntryNode(const RawKey &key, size_t ref_count = 0) noexcept
-			: ReferenceCounted(ref_count), SingleEntry<depth, tri_t>(key) {}
-
-		[[nodiscard]] constexpr bool value() const noexcept { return true; }
+			: ReferenceCounted(ref_count), SingleKey<depth, tri_t>(key) {}
 
 		auto operator<=>(const SingleEntryNode &other) const noexcept {
-			return this->key() <=> other.key();
+			return static_cast<SingleEntry<depth, tri_t> const &>(*this) <=> static_cast<SingleEntry<depth, tri_t> const &>(other);
 		}
 
 		auto operator==(const SingleEntryNode &other) const noexcept {
-			return this->key() == other.key();
+			return static_cast<SingleEntry<depth, tri_t> const &>(*this) == static_cast<SingleEntry<depth, tri_t> const &>(other);
 		}
 	};
 

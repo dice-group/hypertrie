@@ -16,51 +16,52 @@ namespace hypertrie::internal::raw {
 	 * @tparam tri
 	 */
 	template<size_t depth, HypertrieCoreTrait tri_t>
-	class TaggedTensorHash {
+	class Hash_or_InplaceNode {
 	public:
 		using tri = tri_t;
-		using TensorHash = TensorHash<depth, tri>;
+		using TensorHash_t = TensorHash<depth, tri>;
 		using key_part_type = typename tri::key_part_type;
 
-		TensorHash hash_;
+		TensorHash_t hash_;
 
-		TaggedTensorHash() noexcept = default;
+		Hash_or_InplaceNode() noexcept = default;
 
-		explicit TaggedTensorHash(const TensorHash &node_hash) noexcept : hash_(node_hash) {}
+		explicit Hash_or_InplaceNode(const TensorHash_t &node_hash) noexcept : hash_(node_hash) {}
 
-		explicit TaggedTensorHash(const key_part_type &key_part) noexcept : hash_(reinterpret_cast<RawTensorHash>(key_part)) {
-			hash_.bitset()[TensorHash::compression_tag_pos] = TensorHash::compressed_tag;
+		explicit Hash_or_InplaceNode(const key_part_type &key_part) noexcept : hash_(reinterpret_cast<RawTensorHash>(key_part)) {
+			// set sen bit
+			hash_ = hash_ | (size_t(1) << TensorHash_t::tag_pos);
 		}
 
-		TaggedTensorHash &operator=(const TensorHash &node_hash) noexcept {
+		Hash_or_InplaceNode &operator=(const TensorHash_t &node_hash) noexcept {
 			hash_ = node_hash;
 			return *this;
 		}
 
 	public:
 		/**
-		 * Checks if hash is tagged as representing a compressed node.
+		 * Checks if hash is tagged as representing a single entry node.
 		 * @return
 		 */
-		[[nodiscard]] inline bool isCompressed() const noexcept {
-			return bitset()[TensorHash::compression_tag_pos];
+		[[nodiscard]] inline bool is_sen() const noexcept {
+			return bool(hash_ & (size_t(1) << TensorHash_t::tag_pos));
 		}
 
 		[[nodiscard]] inline key_part_type getKeyPart() const noexcept {
 			TensorHash hash_copy = hash_;
-			hash_copy.bitset()[TensorHash::compression_tag_pos] = TensorHash::uncompressed_tag;
+			hash_copy = hash_copy & ~(size_t(1) << TensorHash_t::tag_pos);
 			return reinterpret_cast<key_part_type>(hash_copy.hash());
 		}
 
 		/**
-		 * Checks if hash is tagged as representing an uncompressed node.
+		 * Checks if hash is tagged as representing a full node.
 		 * @return
 		 */
-		[[nodiscard]] inline bool isUncompressed() const noexcept {
-			return not bitset()[TensorHash::compression_tag_pos];
+		[[nodiscard]] inline bool is_fn() const noexcept {
+			return not is_sen();
 		}
 
-		[[nodiscard]] inline const TensorHash &getTaggedNodeHash() const noexcept {
+		[[nodiscard]] inline const TensorHash_t &getTaggedNodeHash() const noexcept {
 			return this->hash_;
 		}
 
@@ -75,8 +76,8 @@ namespace hypertrie::internal::raw {
 		 * @return reference to slef
 		 */
 		inline auto addFirstEntry(const RawKey<1, tri> &key, [[maybe_unused]] const bool &value) noexcept {
-			hash_.hash() = static_cast<key_part_type>(key[0]);
-			hash_.bitset()[TensorHash::compression_tag_pos] = TensorHash::compressed_tag;
+			hash_ = reinterpret_cast<RawTensorHash>(key[0]);
+			hash_ = hash_ | (1UL << TensorHash_t::tag_pos);
 			return *this;
 		}
 
@@ -91,18 +92,18 @@ namespace hypertrie::internal::raw {
 		 */
 		inline auto addEntry(const RawKey<1, tri> &key, [[maybe_unused]] const bool &value) noexcept {
 			assert(value);
-			if (hash_.isCompressed()) {
-				hash_ = TensorHash::getCompressedNodeHash(getKeyPart(), true);
+			if (hash_.is_sen()) {
+				hash_ = TensorHash_t::getCompressedNodeHash(getKeyPart(), true);
 			}
 			hash_.addEntry(key, value);
 			return *this;
 		}
 
-		bool operator<(const TaggedTensorHash &other) const noexcept {
+		bool operator<(const Hash_or_InplaceNode &other) const noexcept {
 			return this->hash_ < other.hash_;
 		}
 
-		bool operator==(const TaggedTensorHash &other) const noexcept {
+		bool operator==(const Hash_or_InplaceNode &other) const noexcept {
 			return this->hash_ == other.hash_;
 		}
 
@@ -123,7 +124,7 @@ namespace hypertrie::internal::raw {
 			return bool(this->hash_);
 		}
 
-		explicit operator TensorHash() const noexcept {
+		explicit operator TensorHash_t() const noexcept {
 			return this->hash_;
 		}
 
@@ -134,14 +135,6 @@ namespace hypertrie::internal::raw {
 		[[nodiscard]] const RawTensorHash &hash() const noexcept {
 			return this->hash_.hash();
 		}
-
-		/**
-		 * The union bitset of the internally used hash.
-		 * @return
-		 */
-		[[nodiscard]] const auto &bitset() const noexcept {
-			return this->hash_.bitset();
-		}
 	};
 
 }// namespace hypertrie::internal::raw
@@ -149,8 +142,8 @@ namespace hypertrie::internal::raw {
 namespace std {
 
 	template<size_t depth, ::hypertrie::internal::raw::HypertrieCoreTrait tri>
-	struct hash<::hypertrie::internal::raw::TaggedTensorHash<depth, tri>> {
-		size_t operator()(const ::hypertrie::internal::raw::TaggedTensorHash<depth, tri> &hash) const noexcept {
+	struct hash<::hypertrie::internal::raw::Hash_or_InplaceNode<depth, tri>> {
+		size_t operator()(const ::hypertrie::internal::raw::Hash_or_InplaceNode<depth, tri> &hash) const noexcept {
 			return hash.hash();
 		}
 	};
@@ -158,8 +151,8 @@ namespace std {
 
 namespace Dice::hash {
 	template<typename Policy, size_t depth, ::hypertrie::internal::raw::HypertrieCoreTrait tri>
-	struct dice_hash_overload<Policy, ::hypertrie::internal::raw::TaggedTensorHash<depth, tri>> {
-		static std::size_t dice_hash(::hypertrie::internal::raw::TaggedTensorHash<depth, tri> const &hash) noexcept {
+	struct dice_hash_overload<Policy, ::hypertrie::internal::raw::Hash_or_InplaceNode<depth, tri>> {
+		static std::size_t dice_hash(::hypertrie::internal::raw::Hash_or_InplaceNode<depth, tri> const &hash) noexcept {
 			return hash.hash();
 		}
 	};

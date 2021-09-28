@@ -48,7 +48,7 @@ namespace hypertrie::tests::core::node {
 								}
 							} else {
 								if constexpr (depth == 2 and tri::taggable_key_part) {// this implies boolean-valued
-									node.edges(pos)[raw_key[pos]] = TaggedTensorHash<depth - 1, tri>(raw_key.subkey(pos)[0]);
+									node.edges(pos)[raw_key[pos]] = Hash_or_InplaceNode<depth - 1, tri>(raw_key.subkey(pos)[0]);
 								} else {
 									node.edges(pos)[raw_key[pos]] = TensorHash<depth - 1, tri>().addFirstEntry(raw_key.subkey(pos), value);
 								}

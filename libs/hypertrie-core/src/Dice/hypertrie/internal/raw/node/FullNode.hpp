@@ -5,7 +5,7 @@
 
 #include <Dice/hypertrie/internal/raw/Hypertrie_core_trait.hpp>
 #include <Dice/hypertrie/internal/raw/node/ReferenceCounted.hpp>
-#include <Dice/hypertrie/internal/raw/node/SingleEntry.hpp>
+#include <Dice/hypertrie/internal/raw/node/SingleKey.hpp>
 #include <Dice/hypertrie/internal/raw/node/Valued.hpp>
 #include <Dice/hypertrie/internal/raw/node/WithEdges.hpp>
 
@@ -33,8 +33,8 @@ namespace hypertrie::internal::raw {
 			if constexpr (not tri::is_bool_valued)
 				for (const size_t pos : iter::range(depth)) {
 					auto sub_key = key.subkey(pos);
-					TensorHash<depth, tri> &hash = this->edges(pos)[key[pos]];
-					hash.changeValue(sub_key, old_value, new_value);
+					Identifier<depth, tri> &identifier = this->edges(pos)[key[pos]];
+					identifier.changeValue(sub_key, old_value, new_value);
 				}
 		}
 

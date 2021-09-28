@@ -4,6 +4,7 @@
 
 #include <Dice/hypertrie/internal/raw/Hypertrie_core_trait.hpp>
 #include <Dice/hypertrie/internal/raw/node/FullNode.hpp>
+#include <Dice/hypertrie/internal/raw/node/NodeContainer.hpp>
 #include <Dice/hypertrie/internal/raw/node/SingleEntryNode.hpp>
 #include <Dice/hypertrie/internal/raw/node/SpecificNodeStorage.hpp>
 
@@ -34,6 +35,9 @@ namespace hypertrie::internal::raw {
 				(is_full<node_type>()),
 				FullNodeStorage_t<depth>,
 				SingleEntryNodeStorage_t<depth>>;
+
+		template<size_t depth, template<size_t, typename> typename node_type>
+		using SpecificNodePtr = typename SpecificNodes<depth, node_type>::node_pointer_type;
 		using SingleEntryNodes = util::IntegralTemplatedTuple<SingleEntryNodeStorage_t, (tri::is_bool_valued) ? 1 : 2, max_depth, allocator_type const &>;
 		using FullNodes = util::IntegralTemplatedTuple<FullNodeStorage_t, 1, max_depth, allocator_type const &>;
 
@@ -58,6 +62,33 @@ namespace hypertrie::internal::raw {
 				return full_nodes.template get<depth>();
 			else
 				return single_entry_nodes.template get<depth>();
+		}
+
+		template<size_t depth, template<size_t, typename> typename node_type>
+		SpecificNodePtr<depth, node_type> lookup(typename NodeContainer<depth, tri>::Identifier identifier) noexcept {
+			auto &nodes_ = nodes<depth, node_type>();
+			auto found = nodes_.find(identifier);
+			if (found != nodes_.end()) {
+				return found->second;
+			} else {
+				return {};
+			}
+		}
+
+		template<size_t depth>
+		NodeContainer<depth, tri> lookup(typename NodeContainer<depth, tri>::Identifier identifier) {
+			if (identifier.empty())
+				return {};
+			else if (identifier.is_fn()) {
+				auto fn_ptr = lookup<depth, FullNode>(identifier);
+				if (fn_ptr != nullptr)
+					return FNContainer<depth, tri>{identifier, fn_ptr};
+			} else {// identifier.is_sen()
+				auto sen_ptr = lookup<depth, SingleEntryNode>(identifier);
+				if (sen_ptr != nullptr)
+					return FNContainer<depth, tri>{identifier, sen_ptr};
+			}
+			return {};
 		}
 	};
 }// namespace hypertrie::internal::raw

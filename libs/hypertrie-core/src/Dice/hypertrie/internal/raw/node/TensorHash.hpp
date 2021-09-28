@@ -6,6 +6,9 @@
 
 #include "Dice/hypertrie/internal/raw/RawKey.hpp"
 
+#include "Dice/hypertrie/internal/raw/node/SingleEntry.hpp"
+#include "Dice/hypertrie/internal/raw/node/SingleEntryNode.hpp"
+
 #include <Dice/hash/DiceHash.hpp>
 
 namespace hypertrie::internal::raw {
@@ -38,37 +41,28 @@ namespace hypertrie::internal::raw {
 		using EntryHash = Dice::hash::DiceHash<std::tuple<RawKey, value_type>>;
 
 		/**
-		 * Bit representation of the hash.
-		 */
-		using NodeHashBitSet = std::bitset<sizeof(RawTensorHash) * 8>;
-
-		/**
 		 * hash value
 		 */
 		RawTensorHash hash_;
 
 	public:
 		/**
-		 * Position of the tag in bitset()
+		 * Position of the tag
 		 */
-		static const constexpr size_t compression_tag_pos = 0;
+		static const constexpr size_t tag_pos = 63UL;
 		/**
 		 * Tag value if the hash represents an uncompressed node.
 		 */
-		static const constexpr bool uncompressed_tag = false;
+		static const constexpr bool full_node_tag = false;
 		/**
 		 * Tag value if the hash represents a compressed node.
 		 */
-		static const constexpr bool compressed_tag = true;
+		static const constexpr bool single_entry_node_tag = true;
 
 		/*
 		 * Constructors
 		 */
 
-		/**
-		 * all zero hash.
-		 */
-		TensorHash() noexcept = default;
 		explicit TensorHash(const size_t &hash) noexcept : hash_(hash) {}
 
 		/*
@@ -90,30 +84,18 @@ namespace hypertrie::internal::raw {
 		}
 
 		/**
-		 * Bit representation of the hash.
+		 * Checks if hash is tagged as representing a single entry node.
 		 */
-		[[nodiscard]] const auto &bitset() const noexcept {
-			return reinterpret_cast<const NodeHashBitSet &>(this->hash_);
-		}
-		/**
-		 * Bit representation of the hash.
-		 */
-		[[nodiscard]] auto &bitset() noexcept {
-			return reinterpret_cast<NodeHashBitSet &>(this->hash_);
+		 // TODO: rename this
+		[[nodiscard]] inline bool is_sen() const noexcept {
+			return bool(this->hash_ & (1UL << tag_pos));
 		}
 
 		/**
-		 * Checks if hash is tagged as representing a compressed node.
+		 * Checks if hash is tagged as representing a full node.
 		 */
-		[[nodiscard]] inline bool isCompressed() const noexcept {
-			return bitset()[compression_tag_pos];
-		}
-
-		/**
-		 * Checks if hash is tagged as representing an uncompressed node.
-		 */
-		[[nodiscard]] inline bool isUncompressed() const noexcept {
-			return not bitset()[compression_tag_pos];
+		[[nodiscard]] inline bool is_fn() const noexcept {
+			return bool(~this->hash_ & (1UL << tag_pos));
 		}
 
 		/*
@@ -131,9 +113,10 @@ namespace hypertrie::internal::raw {
 		 */
 		inline auto
 		changeValue(RawKey const &key, value_type const &old_value, value_type const &new_value) noexcept {
-			const bool tag = bitset()[compression_tag_pos];
+			const bool tag = hash_ & (1UL << tag_pos);
 			hash_ = hash_ xor EntryHash()({key, old_value}) xor EntryHash()({key, new_value});
-			bitset()[compression_tag_pos] = tag;
+			hash_ = hash_ & ~(1UL << tag_pos);
+			hash_ = hash_ | (size_t(tag) << tag_pos);
 			return *this;
 		}
 
@@ -149,7 +132,7 @@ namespace hypertrie::internal::raw {
 		 */
 		inline auto addFirstEntry(RawKey const &key, value_type const &value) noexcept {
 			hash_ = hash_ xor EntryHash()({key, value});
-			bitset()[compression_tag_pos] = compressed_tag;
+			hash_ = hash_ | (1UL << tag_pos);
 			return *this;
 		}
 
@@ -164,7 +147,7 @@ namespace hypertrie::internal::raw {
 		 */
 		inline auto addEntry(RawKey const &key, value_type const &value) noexcept {
 			hash_ = hash_ xor EntryHash()({key, value});
-			bitset()[compression_tag_pos] = uncompressed_tag;
+			hash_ = hash_ & ~(1UL << tag_pos);
 			return *this;
 		}
 
@@ -175,14 +158,17 @@ namespace hypertrie::internal::raw {
 		 * @tparam value_type type of the value
 		 * @param key key to be removed
 		 * @param value value to be removed
-		 * @param make_compressed if the node should be compressed afterwards
+		 * @param becomes_sen if the node should be SEN afterwards
 		 * @return reference to self
 		 */
 		inline auto
-		removeEntry(RawKey const &key, value_type const &value, bool make_compressed) noexcept {
-			assert(isUncompressed());
+		removeEntry(RawKey const &key, value_type const &value, bool becomes_sen) noexcept {
+			assert(is_fn());
 			hash_ = hash_ xor EntryHash()({key, value});
-			bitset()[compression_tag_pos] = make_compressed;
+			if (becomes_sen)
+				hash_ = hash_ | (1UL << tag_pos);
+			else
+				hash_ = hash_ & ~(1UL << tag_pos);
 			return *this;
 		}
 

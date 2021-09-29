@@ -64,6 +64,15 @@ target_link_libraries(tests_RawHypertrieContext
         fmt::fmt
         )
 
+add_executable(tests_Identifier core/node/tests_Identifier.cpp)
+target_link_libraries(tests_Identifier
+        doctest
+        hypertrie-core
+        hypertrie-core-fmt
+        tests-utils
+        fmt::fmt
+        )
+
 
 # fmt
 add_executable(tests_fmt_definitions fmt/tests_fmt_definitions.cpp)

@@ -39,7 +39,7 @@ namespace hypertrie::internal::raw {
 
 		SingleEntry() noexcept = default;
 
-		explicit SingleEntry(const RawKey &key) noexcept
+		explicit SingleEntry(const RawKey &key, [[maybe_unused]] bool value = true) noexcept
 			: SingleKey<depth, tri_t>(key) {}
 
 		[[nodiscard]] constexpr bool value() const noexcept { return true; }

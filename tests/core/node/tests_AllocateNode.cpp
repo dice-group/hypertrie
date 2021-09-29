@@ -26,7 +26,7 @@ namespace hypertrie::tests::core::node {
 		void create() {
 			using key_part_type = typename tri::key_part_type;
 			using value_type = typename tri::value_type;
-			using TensorHash_t = TensorHash<depth, tri>;
+			using Identifier_t = Identifier<depth, tri>;
 
 			hypertrie::tests::utils::RawGenerator<depth, tri> gen{};
 
@@ -35,7 +35,7 @@ namespace hypertrie::tests::core::node {
 							.c_str()) {
 				SpecificNodeStorage<depth, tri, SingleEntryNode> node_storage{std::allocator<std::byte>()};
 				auto node_ptr = node_storage.node_lifecycle().new_();
-				node_storage.nodes()[TensorHash_t{42}] = node_ptr;
+				node_storage.nodes()[Identifier_t{}] = node_ptr;
 			}
 		}
 

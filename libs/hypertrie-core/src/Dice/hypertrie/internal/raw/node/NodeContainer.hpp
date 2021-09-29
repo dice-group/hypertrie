@@ -3,7 +3,6 @@
 
 #include "Dice/hypertrie/internal/raw/node/FullNode.hpp"
 #include "Dice/hypertrie/internal/raw/node/SingleEntryNode.hpp"
-#include "Dice/hypertrie/internal/raw/node/TensorHash.hpp"
 #include "Dice/hypertrie/internal/raw/node/Identifier.hpp"
 #include "Dice/hypertrie/internal/util/UnsafeCast.hpp"
 

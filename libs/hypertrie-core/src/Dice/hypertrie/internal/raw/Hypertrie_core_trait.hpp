@@ -76,6 +76,9 @@ namespace hypertrie::internal::raw {
 
 	template<class T>
 	concept HypertrieCoreTrait_bool_valued = HypertrieCoreTrait<T> and T::is_bool_valued;
+
+	template<class T>
+	concept HypertrieCoreTrait_bool_valued_and_taggable_key_part = HypertrieCoreTrait_bool_valued<T> and T::taggable_key_part;
 };// namespace hypertrie::internal::raw
 
 #endif//HYPERTRIE_HYPERTRIE_CORE_TRAIT_HPP

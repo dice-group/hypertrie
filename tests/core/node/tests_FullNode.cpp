@@ -47,11 +47,7 @@ namespace hypertrie::tests::core::node {
 									node.edges(0)[raw_key[pos]] = value;
 								}
 							} else {
-								if constexpr (depth == 2 and tri::taggable_key_part) {// this implies boolean-valued
-									node.edges(pos)[raw_key[pos]] = Identifier<depth - 1, tri>(raw_key.subkey(pos)[0]);
-								} else {
-									node.edges(pos)[raw_key[pos]] = Identifier<depth - 1, tri>().addFirstEntry(raw_key.subkey(pos), value);
-								}
+								node.edges(pos)[raw_key[pos]] = Identifier<depth - 1, tri>(SingleEntry<depth -1, tri>{raw_key.subkey(pos), value});
 							}
 						}
 

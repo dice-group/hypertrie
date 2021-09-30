@@ -7,6 +7,8 @@
 #include <Dice/hypertrie/internal/raw/fmt_RawDiagonalPositions.hpp>
 #include <Dice/hypertrie/internal/raw/fmt_RawKey.hpp>
 #include <Dice/hypertrie/internal/raw/node/fmt_AllocateNode.hpp>
+#include <Dice/hypertrie/internal/container/fmt_StdSet.hpp>
+#include <Dice/hypertrie/internal/container/fmt_StdMap.hpp>
 
 #include <string>
 #include <fmt/core.h>
@@ -57,5 +59,24 @@ namespace hypertrie::tests::fmt {
 							  "allocator = std::allocator, map = tsl::sparse_map, set = tsl::sparse_set, "
 							  "key_part_tagging_bit = -1>)>");
 		}
+
+		/** PROBLEM: std_set is only an alias for a special std::set. So std::set is also defined!
+		 * Also it wasn't able to deduce the Allocator as a second template parameter (std_set rebinds).
+		 */
+		TEST_CASE("std_set") {
+			::hypertrie::internal::container::std_set<std::string> set = {"Hello", "World"};
+			std::string result = ::fmt::format("{}", set);
+			REQUIRE(result == "{Hello, World}");
+		}
+
+		/** PROBLEM: std_map is only an alias for a special std::map. So std::map is also defined!
+		 * Also it wasn't able to deduce the Allocator as a second template parameter (std_map rebinds).
+		 */
+		TEST_CASE("std_map") {
+			::hypertrie::internal::container::std_map<int, std::string> map = {{0, "Hello"}, {1, "World"}};
+			std::string result = ::fmt::format("{}", map);
+			REQUIRE(result == "{(0, Hello), (1, World)}");
+		}
+
 	}
 }

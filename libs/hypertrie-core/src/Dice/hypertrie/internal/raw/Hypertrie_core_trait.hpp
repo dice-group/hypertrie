@@ -38,15 +38,6 @@ namespace hypertrie::internal::raw {
 		constexpr static bool is_bool_valued = tr::is_bool_valued;
 		static constexpr const ssize_t key_part_tagging_bit = tr::key_part_tagging_bit;
 		static constexpr const bool taggable_key_part = tr::taggable_key_part;
-
-		template<typename other_allocator>
-		using change_allocator = Hypertrie_core_t<Hypertrie_t<key_part_type,
-															  value_type,
-															  other_allocator,
-															  tr::template map_type_arg,
-															  tr::template set_type_arg,
-															  key_part_tagging_bit>>;
-		using with_std_allocator = change_allocator<std::allocator<std::byte>>;
 	};
 
 	namespace internal::hypertrie_internal_trait {
@@ -68,7 +59,6 @@ namespace hypertrie::internal::raw {
 		typename T::allocator_type;
 		typename T::key_part_type;
 		typename T::value_type;
-		typename T::with_std_allocator;
 		{ T::is_bool_valued } -> std::convertible_to<bool>;
 		{ T::key_part_tagging_bit } -> std::convertible_to<ssize_t>;
 		{ T::taggable_key_part } -> std::convertible_to<bool>;
@@ -79,6 +69,24 @@ namespace hypertrie::internal::raw {
 
 	template<class T>
 	concept HypertrieCoreTrait_bool_valued_and_taggable_key_part = HypertrieCoreTrait_bool_valued<T> and T::taggable_key_part;
+
+
+	namespace detail {
+		template<typename NewAllocator,
+				 typename key_part_type_o,
+				 typename value_type_o,
+				 typename Allocator_o,
+				 template<typename, typename, typename> class map_type_o,
+				 template<typename, typename> class set_type_o,
+				 ssize_t key_part_tagging_bit_v_o>
+		constexpr auto inject_allocator_type(Hypertrie_core_t<Hypertrie_t<key_part_type_o, value_type_o, Allocator_o, map_type_o, set_type_o, key_part_tagging_bit_v_o>>) {
+			return Hypertrie_core_t<Hypertrie_t<key_part_type_o, value_type_o, NewAllocator, map_type_o, set_type_o, key_part_tagging_bit_v_o>>{};
+		}
+	}// namespace detail
+
+	template<HypertrieCoreTrait tri>
+	using tri_with_stl_alloc = decltype(detail::inject_allocator_type<std::allocator<std::byte>>(tri{}));
+
 };// namespace hypertrie::internal::raw
 
 #endif//HYPERTRIE_HYPERTRIE_CORE_TRAIT_HPP

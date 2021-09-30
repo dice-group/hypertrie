@@ -2,7 +2,7 @@
 #define HYPERTRIE_HYPERTRIE_TRAITS_TOSTRING_HPP
 
 #include "Dice/hypertrie/internal/Hypertrie_trait.hpp"
-
+#include "Dice/hypertrie/internal/util/name_of_type.hpp"
 #include <string>
 
 namespace hypertrie::internal {
@@ -12,12 +12,13 @@ namespace hypertrie::internal {
 		using key_part_type = typename hypertrie_trait::key_part_type;
 		using value_type = typename hypertrie_trait::value_type;
 		return std::string("<") +
-			   "key_part = " + nameOfType<key_part_type>() +
-			   ", value = " + nameOfType<value_type>() +
-			   ", allocator = " + nameOfType<typename hypertrie_trait::allocator_type>() +
-			   ", map = " + nameOfType<typename hypertrie_trait::template map_type<key_part_type, value_type>>() +
-			   ", set = " + nameOfType<typename hypertrie_trait::template set_type<key_part_type>>() +
-			   ", lsb_unused = " + hypertrie_trait::lsb_unused +
+			   "key_part = " + util::name_of_type<key_part_type>() +
+			   ", value = " + util::name_of_type<value_type>() +
+			   ", allocator = " + util::name_of_type<typename hypertrie_trait::allocator_type>() +
+			   ", map = " + util::name_of_type<typename hypertrie_trait::template map_type<key_part_type, value_type>>() +
+			   ", set = " + util::name_of_type<typename hypertrie_trait::template set_type<key_part_type>>() +
+			   ", key_part_tagging_bit = " + std::to_string(hypertrie_trait::key_part_tagging_bit) +
+			   ", taggable_key_part = " + std::to_string(hypertrie_trait::taggable_key_part) +
 			   " >";
 	}
 }// namespace hypertrie::internal

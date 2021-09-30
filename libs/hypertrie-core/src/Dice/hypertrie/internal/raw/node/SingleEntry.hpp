@@ -14,12 +14,12 @@ namespace hypertrie::internal::raw {
 	class SingleEntry : public SingleKey<depth, tri_t>, public Valued<tri_t> {
 	public:
 		using tri = tri_t;
-		using RawKey = RawKey<depth, tri_t>;
+		using RawKey_t = RawKey<depth, tri_t>;
 		using value_type = typename tri::value_type;
 
 		SingleEntry() = default;
 
-		SingleEntry(const RawKey &key, value_type value) noexcept
+		SingleEntry(const RawKey_t &key, value_type value) noexcept
 			: SingleKey<depth, tri_t>(key), Valued<tri_t>(value) {}
 
 		auto operator<=>(const SingleEntry &other) const noexcept {
@@ -35,11 +35,11 @@ namespace hypertrie::internal::raw {
 	class SingleEntry<depth, tri_t> : public SingleKey<depth, tri_t> {
 	public:
 		using tri = tri_t;
-		using RawKey = RawKey<depth, tri_t>;
+		using RawKey_t = RawKey<depth, tri_t>;
 
 		SingleEntry() noexcept = default;
 
-		explicit SingleEntry(const RawKey &key, [[maybe_unused]] bool value = true) noexcept
+		explicit SingleEntry(const RawKey_t &key, [[maybe_unused]] bool value = true) noexcept
 			: SingleKey<depth, tri_t>(key) {}
 
 		[[nodiscard]] constexpr bool value() const noexcept { return true; }

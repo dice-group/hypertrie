@@ -28,14 +28,13 @@ namespace hypertrie::internal::raw {
 	class Identifier_impl {
 	public:
 		using tri = tri_t;
-		using RawKey = RawKey<depth, tri>;
 		using value_type = typename tri::value_type;
 
 	protected:
 		template<typename Entry>
 		static constexpr bool is_entry_type =
 				std::is_same_v<Entry, SingleEntry<depth, tri>> or
-				std::is_same_v<Entry, SingleEntry<depth, typename tri::with_std_allocator>>;
+				std::is_same_v<Entry, SingleEntry<depth, tri_with_stl_alloc<tri>>>;
 
 
 		/**
@@ -99,7 +98,6 @@ namespace hypertrie::internal::raw {
 		explicit Identifier_impl(size_t hash) noexcept : hash_{hash} {}
 
 	public:
-
 		Identifier_impl() = default;
 		/*
 		 * Constructs a single entry node.
@@ -156,7 +154,11 @@ namespace hypertrie::internal::raw {
 		inline auto changeValue(Entry const &old_entry, value_type const &new_value) noexcept requires is_entry_type<Entry> {
 			bool is_sen_ = is_sen();
 
-			hash_ = hash_and_combine(old_entry, hash_and_combine({old_entry.key(), new_value}, hash_));
+			using Entry_stl_t = SingleEntry<depth, tri_with_stl_alloc<tri>>;
+
+			Entry_stl_t new_entry{old_entry.key(), new_value};
+
+			hash_ = hash_and_combine<Entry>(old_entry, hash_and_combine<Entry_stl_t>(new_entry, hash_));
 			if (is_sen_)
 				hash_ = tag_as_sen(hash_);
 			else
@@ -215,7 +217,7 @@ namespace hypertrie::internal::raw {
 		 * @see empty()
 		 */
 		explicit operator bool() const noexcept {
-			return empty();
+			return not empty();
 		}
 
 		explicit operator size_t() const noexcept {
@@ -253,7 +255,6 @@ namespace hypertrie::internal::raw {
 
 		using tri = tri_t;
 		static constexpr size_t depth = 1UL;
-		using RawKey = RawKey<depth, tri>;
 		using value_type = typename tri::value_type;
 
 	protected:
@@ -278,7 +279,7 @@ namespace hypertrie::internal::raw {
 			} else {
 				size_t hash = Identifier_impl_t::seed_;
 				for (const auto &entry : entries)
-					hash = hash_and_combine(entry, hash);
+					hash = Identifier_impl_t::hash_and_combine(entry, hash);
 				return Identifier_impl_t::tag_as_fn(hash);
 			}
 		}
@@ -316,10 +317,10 @@ namespace hypertrie::internal::raw {
 			assert(false);// The value of Boolean-valued entries cannot be changed.
 		}
 
-		inline SingleEntry<depth, typename tri::with_std_allocator> get_entry() const noexcept {
+		inline SingleEntry<depth, tri_with_stl_alloc<tri>> get_entry() const noexcept {
 			assert(this->is_sen());
-			auto key_part = reinterpret_cast<typename tri::key_part_type const>(this->tag_as_fn(this->hash_));
-			return {key_part};
+			auto key_part = reinterpret_cast<typename tri::key_part_type>(this->tag_as_fn(this->hash_));
+			return SingleEntry<depth, tri_with_stl_alloc<tri>>(RawKey<depth, tri_with_stl_alloc<tri>>{{key_part}});
 		}
 
 		/**
@@ -331,9 +332,9 @@ namespace hypertrie::internal::raw {
 		inline auto addEntry(Entry const &entry) noexcept requires is_entry_type<Entry> {
 			assert(not this->empty());
 			if (this->is_sen()) {
-				this->hash_ = this->tag_as_fn(this->template hash_and_combine(this->get_entry(), hash_and_combine(entry, Identifier_impl_t::seed_)));
+				this->hash_ = this->tag_as_fn(Identifier_impl_t::hash_and_combine(this->get_entry(), Identifier_impl_t::hash_and_combine(entry, Identifier_impl_t::seed_)));
 			} else {
-				this->hash_ = this->tag_as_fn(this->template hash_and_combine(entry, Identifier_impl_t::seed_));
+				this->hash_ = this->tag_as_fn(Identifier_impl_t::hash_and_combine(entry, this->hash_));
 			}
 			return *this;
 		}
@@ -347,7 +348,7 @@ namespace hypertrie::internal::raw {
 		inline auto
 		removeEntry(Entry const &entry) noexcept requires is_entry_type<Entry> {
 			assert(this->is_fn());
-			this->hash_ = this->tag_as_sen(hash_and_combine(entry, this->hash_));
+			this->hash_ = this->tag_as_fn(Identifier_impl_t::hash_and_combine(entry, this->hash_));
 			return *this;
 		}
 	};

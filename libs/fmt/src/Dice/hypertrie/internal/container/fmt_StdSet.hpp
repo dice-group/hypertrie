@@ -9,13 +9,7 @@ namespace fmt {
 	struct formatter<::hypertrie::internal::container::std_set<Key>> : public hypertrie::internal::util::SimpleParsing {
 		template <typename FormatContext>
 		auto format(::hypertrie::internal::container::std_set<Key> const& set, FormatContext &ctx) {
-			auto out = format_to(ctx.out(), "{{");
-			if(set.size() != 0) {
-				auto iter = set.begin(), end = set.end();
-				out = format_to(out, "{}", *(iter++));
-				std::for_each(iter, end, [&out](auto val){out = format_to(out, ", {}", val);});
-			}
-			return format_to(out, "}}");
+			return ::hypertrie::internal::util::format_set(set, ctx.out());
 		}
 	};
 }

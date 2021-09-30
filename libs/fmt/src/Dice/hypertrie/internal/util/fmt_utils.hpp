@@ -59,5 +59,33 @@ namespace hypertrie::internal::util {
 		return ::fmt::format_to(out, "]");
 	}
 
+	template <typename Set, typename OutIter>
+	auto format_set(Set const& set, OutIter out) {
+		out = format_to(out, "{{");
+		if(set.size() != 0) {
+			auto set_iter = set.begin(), set_end = set.end();
+			out = format_to(out, "{}", *(set_iter++));
+			std::for_each(set_iter, set_end, [&out](auto val){out = format_to(out, ", {}", val);});
+		}
+		return format_to(out, "}}");
+	}
+
+	template <typename Map, typename OutIter>
+	auto format_map(Map const& map, OutIter out) {
+		out = format_to(out, "{{");
+		if(map.size() != 0) {
+			auto map_iter = map.begin(), map_end = map.end();
+			{
+				auto const &[key, value] = *(map_iter++);
+				out = format_to(out, "({}, {})", key, value);
+			}
+			std::for_each(map_iter, map_end, [&out](auto val){
+			  auto const &[key, value] = val;
+			  out = format_to(out, ", ({}, {})", key, value);
+			});
+		}
+		return format_to(out, "}}");
+	}
+
 }// namespace hypertrie::internal::util
 #endif//HYPERTRIE_FMT_UTILS_HPP

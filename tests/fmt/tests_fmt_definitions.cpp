@@ -9,6 +9,8 @@
 #include <Dice/hypertrie/internal/raw/node/fmt_AllocateNode.hpp>
 #include <Dice/hypertrie/internal/container/fmt_StdSet.hpp>
 #include <Dice/hypertrie/internal/container/fmt_StdMap.hpp>
+#include <Dice/hypertrie/internal/container/fmt_TslSet.hpp>
+#include <Dice/hypertrie/internal/container/fmt_TslMap.hpp>
 
 #include <string>
 #include <fmt/core.h>
@@ -74,6 +76,24 @@ namespace hypertrie::tests::fmt {
 		 */
 		TEST_CASE("std_map") {
 			::hypertrie::internal::container::std_map<int, std::string> map = {{0, "Hello"}, {1, "World"}};
+			std::string result = ::fmt::format("{}", map);
+			REQUIRE(result == "{(0, Hello), (1, World)}");
+		}
+
+		/** PROBLEM: tsl_sparse_set is only an alias for a special tsl::sparse_set. So tsl::sparse_set is also defined!
+		 * Also it wasn't able to deduce the Allocator as a second template parameter (tsl::sparse_set rebinds).
+		 */
+		TEST_CASE("tsl_sparse_set") {
+			::hypertrie::internal::container::tsl_sparse_set<std::string> set = {"Hello", "World"};
+			std::string result = ::fmt::format("{}", set);
+			REQUIRE(result == "{World, Hello}");
+		}
+
+		/** PROBLEM: tsl_sparse_map is only an alias for a special tsl::sparse_map. So tsl::sparse_map is also defined!
+		 * Also it wasn't able to deduce the Allocator as a second template parameter (tsl_sparse_map rebinds).
+		 */
+		TEST_CASE("tsl_sparse_map") {
+			::hypertrie::internal::container::tsl_sparse_map<int, std::string> map = {{0, "Hello"}, {1, "World"}};
 			std::string result = ::fmt::format("{}", map);
 			REQUIRE(result == "{(0, Hello), (1, World)}");
 		}

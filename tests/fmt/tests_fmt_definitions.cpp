@@ -7,10 +7,8 @@
 #include <Dice/hypertrie/internal/raw/fmt_RawDiagonalPositions.hpp>
 #include <Dice/hypertrie/internal/raw/fmt_RawKey.hpp>
 #include <Dice/hypertrie/internal/raw/node/fmt_AllocateNode.hpp>
-#include <Dice/hypertrie/internal/container/fmt_StdSet.hpp>
-#include <Dice/hypertrie/internal/container/fmt_StdMap.hpp>
-#include <Dice/hypertrie/internal/container/fmt_TslSet.hpp>
-#include <Dice/hypertrie/internal/container/fmt_TslMap.hpp>
+#include <Dice/hypertrie/internal/container/fmt_AllContainer.hpp>
+#include <Dice/hypertrie/fmt_Key.hpp>
 
 #include <string>
 #include <fmt/core.h>
@@ -62,7 +60,7 @@ namespace hypertrie::tests::fmt {
 							  "key_part_tagging_bit = -1>)>");
 		}
 
-		/** PROBLEM: std_set is only an alias for a special std::set. So std::set is also defined!
+		/** TODO: std_set is only an alias for a special std::set. So std::set is also defined!
 		 * Also it wasn't able to deduce the Allocator as a second template parameter (std_set rebinds).
 		 */
 		TEST_CASE("std_set") {
@@ -71,7 +69,7 @@ namespace hypertrie::tests::fmt {
 			REQUIRE(result == "{Hello, World}");
 		}
 
-		/** PROBLEM: std_map is only an alias for a special std::map. So std::map is also defined!
+		/** TODO: std_map is only an alias for a special std::map. So std::map is also defined!
 		 * Also it wasn't able to deduce the Allocator as a second template parameter (std_map rebinds).
 		 */
 		TEST_CASE("std_map") {
@@ -80,7 +78,7 @@ namespace hypertrie::tests::fmt {
 			REQUIRE(result == "{(0, Hello), (1, World)}");
 		}
 
-		/** PROBLEM: tsl_sparse_set is only an alias for a special tsl::sparse_set. So tsl::sparse_set is also defined!
+		/** TODO: tsl_sparse_set is only an alias for a special tsl::sparse_set. So tsl::sparse_set is also defined!
 		 * Also it wasn't able to deduce the Allocator as a second template parameter (tsl::sparse_set rebinds).
 		 */
 		TEST_CASE("tsl_sparse_set") {
@@ -89,13 +87,31 @@ namespace hypertrie::tests::fmt {
 			REQUIRE(result == "{World, Hello}");
 		}
 
-		/** PROBLEM: tsl_sparse_map is only an alias for a special tsl::sparse_map. So tsl::sparse_map is also defined!
+		/** TODO: tsl_sparse_map is only an alias for a special tsl::sparse_map. So tsl::sparse_map is also defined!
 		 * Also it wasn't able to deduce the Allocator as a second template parameter (tsl_sparse_map rebinds).
 		 */
 		TEST_CASE("tsl_sparse_map") {
 			::hypertrie::internal::container::tsl_sparse_map<int, std::string> map = {{0, "Hello"}, {1, "World"}};
 			std::string result = ::fmt::format("{}", map);
 			REQUIRE(result == "{(0, Hello), (1, World)}");
+		}
+
+		TEST_CASE("Key") {
+			Key<default_bool_Hypertrie_trait> key {{0,1,2}};
+			std::string result = ::fmt::format("{}", key);
+			REQUIRE(result == "<trait = hypertrie::internal::Hypertrie_t "
+							  "(<key_part = unsigned long, value = bool, allocator = std::allocator, "
+							  "map = tsl::sparse_map, set = tsl::sparse_set, key_part_tagging_bit = -1>)>: "
+							  "{0, 1, 2}");
+		}
+
+		TEST_CASE("SliceKey") {
+			SliceKey<default_bool_Hypertrie_trait> key {{0,std::nullopt,2}};
+			std::string result = ::fmt::format("{}", key);
+			REQUIRE(result == "<trait = hypertrie::internal::Hypertrie_t "
+							  "(<key_part = unsigned long, value = bool, allocator = std::allocator, "
+							  "map = tsl::sparse_map, set = tsl::sparse_set, key_part_tagging_bit = -1>)>: "
+							  "{0, -, 2}");
 		}
 
 	}

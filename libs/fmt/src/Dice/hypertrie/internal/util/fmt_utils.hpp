@@ -6,11 +6,13 @@
 #include <array>
 #include <bitset>
 #include <optional>
+#include <vector>
 
+// TODO: refactor and make the parameter format consistent!
 namespace hypertrie::internal::util {
 	// only allow "{}" and "{:}" in the formatting string for our own types
 	struct SimpleParsing {
-		constexpr auto parse(fmt::format_parse_context &ctx) {
+		static constexpr auto parse(fmt::format_parse_context &ctx) {
 			auto it = ctx.begin();
 			if (it != ctx.end() && *it != '}') {
 				throw fmt::format_error("invalid format");
@@ -42,6 +44,27 @@ namespace hypertrie::internal::util {
 			out = ::fmt::format_to(out, ", {}", arr[i]);
 		}
 		return ::fmt::format_to(out, "]");
+	}
+
+	template <typename OuterItter, typename Container>
+	auto format_container_optional(OuterItter out, Container const& container, std::string fallback = "-") {
+		out = ::fmt::format_to(out, "{{");
+		if(!container.empty()) {
+			auto iter = container.begin(), end = container.end();
+			if (*iter) {
+				out = ::fmt::format_to(out, "{}", **iter);
+			} else {
+				out = ::fmt::format_to(out, "{}", fallback);
+			}
+			for_each(++iter, end, [&out, &fallback](auto opt_val){
+				if (opt_val) {
+					out = ::fmt::format_to(out, ", {}", *opt_val);
+				} else {
+					out = ::fmt::format_to(out, ", {}", fallback);
+				}
+			});
+		}
+		return ::fmt::format_to(out, "}}");
 	}
 
 	template <typename OutItter, typename T, size_t depth>
@@ -85,6 +108,22 @@ namespace hypertrie::internal::util {
 			});
 		}
 		return format_to(out, "}}");
+	}
+
+	template <typename T, typename OutIter>
+	auto format_vector(std::vector<T> const& vec, OutIter out) {
+		out = format_to(out, "{{");
+		if(!vec.empty()) {
+			auto iter = vec.begin(), end = vec.end();
+			out = format_to(out, "{}", *(iter++));
+			std::for_each(iter, end, [&out](auto val){out = format_to(out, ", {}", val);});
+		}
+		return format_to(out, "}}");
+	}
+
+	template <typename T, typename OutIter>
+	auto format_vector(std::vector<std::optional<T>> const& vec, OutIter out) {
+		return format_container_optional(out, vec);
 	}
 
 }// namespace hypertrie::internal::util

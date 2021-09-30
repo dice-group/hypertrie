@@ -27,7 +27,11 @@ namespace hypertrie::tests::core::node {
 		}
 
 		TEST_CASE("storage") {
-			RawHypertrieContext<5, tagged_bool_cfg<5>::tri> x{std::allocator<std::byte>()};
+			using tri = typename tagged_bool_cfg<5>::tri;
+			RawHypertrieContext<5, tri> x{std::allocator<std::byte>()};
+			NodeContainer<5, tri> nc{};
+			std::vector<SingleEntry<5, tri_with_stl_alloc<tri>>> entries;
+			x.insert(nc, entries);
 
 //			update_node_in_context<5, tagged_bool_cfg<5>::tri>;
 		}

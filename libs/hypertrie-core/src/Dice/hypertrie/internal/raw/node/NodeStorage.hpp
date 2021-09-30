@@ -65,8 +65,8 @@ namespace hypertrie::internal::raw {
 		}
 
 		template<size_t depth, template<size_t, typename> typename node_type>
-		SpecificNodePtr<depth, node_type> lookup(typename NodeContainer<depth, tri>::Identifier identifier) noexcept {
-			auto &nodes_ = nodes<depth, node_type>();
+		SpecificNodePtr<depth, node_type> lookup(Identifier<depth, tri> identifier) noexcept {
+			auto &nodes_ = nodes<depth, node_type>().nodes();
 			auto found = nodes_.find(identifier);
 			if (found != nodes_.end()) {
 				return found->second;
@@ -76,7 +76,29 @@ namespace hypertrie::internal::raw {
 		}
 
 		template<size_t depth>
-		NodeContainer<depth, tri> lookup(typename NodeContainer<depth, tri>::Identifier identifier) {
+		void update_sen(Identifier<depth, tri> identifier,
+						SingleEntryNode<depth, tri_with_stl_alloc<tri>> &sen,
+						ssize_t delta_ref_count) noexcept {
+			auto &nodes_ = this->template nodes<depth, SingleEntryNode>().nodes();
+			auto &node_lifecycle_ = this->template nodes<depth, SingleEntryNode>().node_lifecycle();
+			if (delta_ref_count != 0) {
+				auto found = nodes_.find(identifier);
+				if (found != nodes_.end()) {
+					auto &node_ptr = found->second;
+					assert(ssize_t(sen.ref_count()) + delta_ref_count >= 0);
+					node_ptr->ref_count() += delta_ref_count;
+					sen = *(node_ptr);
+					if (sen.ref_count() == 0UL)
+						nodes_.erase(found);
+				} else {
+					assert(delta_ref_count > 0);
+					nodes_.insert(found, {identifier, node_lifecycle_.new_(sen, delta_ref_count)});
+				}
+			}
+		}
+
+		template<size_t depth>
+		NodeContainer<depth, tri> lookup(Identifier<depth, tri> identifier) {
 			if (identifier.empty())
 				return {};
 			else if (identifier.is_fn()) {
@@ -86,7 +108,7 @@ namespace hypertrie::internal::raw {
 			} else {// identifier.is_sen()
 				auto sen_ptr = lookup<depth, SingleEntryNode>(identifier);
 				if (sen_ptr != nullptr)
-					return FNContainer<depth, tri>{identifier, sen_ptr};
+					return SENContainer<depth, tri>{identifier, sen_ptr};
 			}
 			return {};
 		}

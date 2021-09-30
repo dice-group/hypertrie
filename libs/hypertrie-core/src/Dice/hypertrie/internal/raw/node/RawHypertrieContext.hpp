@@ -18,6 +18,12 @@ namespace hypertrie::internal::raw {
 		NodeStorage<max_depth, tri_t> node_storage_;
 
 		explicit RawHypertrieContext(const typename tri::allocator_type &alloc) : node_storage_(alloc) {}
+
+		template<size_t depth>
+		void insert(NodeContainer<depth, tri> &nodec,
+					std::vector<SingleEntry<depth, tri_with_stl_alloc<tri>>> entries){
+			update_node_in_context<max_depth,tri>::exec(node_storage_, nodec, entries);
+		}
 	};
 
 	template<size_t max_depth, HypertrieCoreTrait_bool_valued tri_t>
@@ -28,29 +34,23 @@ namespace hypertrie::internal::raw {
 		template<size_t depth>
 		static void exec(NodeStorage<max_depth, tri> &node_storage,
 						 NodeContainer<depth, tri> &nodec,
-						 std::vector<SingleEntry<depth, tri>> entries) {
+						 std::vector<SingleEntry<depth, tri_with_stl_alloc<tri>>> entries) {
 			ContextLevelChanges<depth, tri> changes;
-			using Entry = SingleEntry<depth, tri>;
+//			using Entry = SingleEntry<depth, tri>;
 
 			if (entries.empty())
 				return;
 
 
 			if (nodec.empty()) {
-				if (entries.size() == 1)
-					nodec.identifier() = changes.add_single_entry_node(entries);
-				else
-					nodec.identifier() = changes.add_full_node(entries);
-			} else if (nodec.is_fn()) {
-				nodec.identifier() = changes.update_full_node(nodec, entries);
-			} else {// nodec.is_sen()
-				changes.remove_single_entry_node(nodec);
-				nodec.identifier() = changes.add_full_node(nodec, entries);
+				nodec.identifier() = changes.add_node(entries);
+			} else {
+				nodec.identifier() = changes.insert_into_node(nodec.identifier(), entries);
 			}
 
 			apply<depth>(node_storage, nodec, changes);
 
-			if (not(depth == 1 and tri::taggable_key_part))
+			if constexpr (not(depth == 1 and tri::taggable_key_part))
 				nodec = node_storage.template lookup<depth>(nodec.identifier());
 			else
 				nodec.void_node_ptr() = {};
@@ -60,6 +60,13 @@ namespace hypertrie::internal::raw {
 		static void apply(NodeStorage<max_depth, tri> &node_storage,
 						  NodeContainer<depth, tri> &nodec,
 						  ContextLevelChanges<depth, tri> &changes) {
+//			ContextLevelChanges<depth -1, tri> next_level_changes;
+
+			for(auto it = changes.SEN_new_ones.begin(); it != changes.SEN_new_ones.end(); ++it) {
+				auto id_after = it->first;
+				auto &change = it->second;
+				node_storage.template update_sen<depth>(id_after, change.entry, change.ref_count_delta);
+			}
 		}
 	};
 

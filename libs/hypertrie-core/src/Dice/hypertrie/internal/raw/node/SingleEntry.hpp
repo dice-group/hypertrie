@@ -17,7 +17,15 @@ namespace hypertrie::internal::raw {
 		using RawKey_t = RawKey<depth, tri_t>;
 		using value_type = typename tri::value_type;
 
+
+		template<typename Entry>
+		static constexpr bool is_single_entry =
+				std::is_same_v<Entry, SingleEntry<depth, typename Entry::tri>>;
+
 		SingleEntry() = default;
+
+		template<typename Entry>
+		SingleEntry(Entry const& entry) noexcept requires is_single_entry<Entry> : SingleKey<depth, tri_t>(entry.key()), Valued<tri_t>(entry.value()){}
 
 		SingleEntry(const RawKey_t &key, value_type value) noexcept
 			: SingleKey<depth, tri_t>(key), Valued<tri_t>(value) {}
@@ -37,7 +45,15 @@ namespace hypertrie::internal::raw {
 		using tri = tri_t;
 		using RawKey_t = RawKey<depth, tri_t>;
 
-		SingleEntry() noexcept = default;
+		template<typename Entry>
+		static constexpr bool is_single_entry =
+				std::is_same_v<Entry, SingleEntry<depth, typename Entry::tri>>;
+
+		SingleEntry() = default;
+
+		template<typename Entry>
+		SingleEntry(Entry const& entry) noexcept requires is_single_entry<Entry> : SingleKey<depth, tri_t>(entry.key()){}
+
 
 		explicit SingleEntry(const RawKey_t &key, [[maybe_unused]] bool value = true) noexcept
 			: SingleKey<depth, tri_t>(key) {}
@@ -52,6 +68,7 @@ namespace hypertrie::internal::raw {
 			return this->key() == other.key();
 		}
 	};
+
 
 }// namespace hypertrie::internal::raw
 

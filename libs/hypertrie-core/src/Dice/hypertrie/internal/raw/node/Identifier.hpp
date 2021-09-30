@@ -33,8 +33,8 @@ namespace hypertrie::internal::raw {
 	protected:
 		template<typename Entry>
 		static constexpr bool is_entry_type =
-				std::is_same_v<Entry, SingleEntry<depth, tri>> or
-				std::is_same_v<Entry, SingleEntry<depth, tri_with_stl_alloc<tri>>>;
+				std::is_same_v<std::decay_t<Entry>, SingleEntry<depth, tri>> or
+				std::is_same_v<std::decay_t<Entry>, SingleEntry<depth, tri_with_stl_alloc<tri>>>;
 
 
 		/**
@@ -46,10 +46,10 @@ namespace hypertrie::internal::raw {
 		/**
 		 * Position of the tag
 		 */
-		static const constexpr size_t tag_pos = (tri::taggable_key_part) ? tri::key_part_tagging_bit : 63UL;
+		static constexpr const size_t tag_pos = (tri::taggable_key_part) ? tri::key_part_tagging_bit : 63UL;
 
-		static constexpr size_t seed_ = size_t(0)           // put the seed here
-										& ~(1UL << tag_pos);// the tagging bit is set to 0
+		static constexpr const size_t seed_ = size_t(0)           // put the seed here
+											  & ~(1UL << tag_pos);// the tagging bit is set to 0
 		/**
 		 * Tag value if the hash represents an uncompressed node.
 		 */
@@ -68,7 +68,7 @@ namespace hypertrie::internal::raw {
 		}
 
 		/**
-		 * Hashes the given entry and combines it with an invertible funtion with the seed.
+		 * Hashes the given entry and combines it with an invertible function with the seed.
 		 * This function is self-inverse, i.e., Applying this function twice is the identity function:
 		 * `seed == hash_and_combine(entry, hash_and_combine(entry, seed)`
 		 * If no seed is provided, the default seed is used.
@@ -78,18 +78,22 @@ namespace hypertrie::internal::raw {
 		 */
 		template<typename Entry>
 		static inline size_t hash_and_combine(Entry const &entry, size_t seed = seed_) noexcept requires is_entry_type<Entry> {
-			using EntryHash = Dice::hash::DiceHash<Entry>;
+			using EntryHash = Dice::hash::DiceHashwyhash<Entry>;
 			return EntryHash::hash_invertible_combine({seed, EntryHash()(entry)});
 		}
 
-		template<typename Entry>
-		static inline size_t hash_and_combine(std::initializer_list<Entry> entries) noexcept requires is_entry_type<Entry> {
-			if (entries.size() == 0)
+
+		template<typename Iterable>
+		static inline size_t hash_and_combine(Iterable entries) noexcept {
+			if (entries.begin() == entries.end())
 				return seed_;
 			size_t hash = seed_;
-			for (const auto &entry : entries)
+			size_t n = 0;
+			for (const auto &entry : entries) {
 				hash = hash_and_combine(entry, hash);
-			if (entries.size() == 1)
+				n++;
+			}
+			if (n == 1UL)
 				return tag_as_sen(hash);
 			else
 				return tag_as_fn(hash);
@@ -103,13 +107,13 @@ namespace hypertrie::internal::raw {
 		 * Constructs a single entry node.
 		 */
 		template<typename Entry>
-		explicit Identifier_impl(Entry const &entry) noexcept requires is_entry_type<Entry> : hash_{hash_and_combine(entry)} {}
+		explicit Identifier_impl(Entry const &entry) noexcept requires is_entry_type<Entry> : hash_{tag_as_sen(hash_and_combine(entry))} {}
 		/**
 		 * Constructs any node.
 		 * @param entries MUST NOT contain duplicates. This is not checked. The user is responsible to eliminate duplicates.
 		 */
-		template<typename Entry>
-		Identifier_impl(std::initializer_list<Entry> entries) noexcept requires is_entry_type<Entry> : hash_(hash_and_combine(entries)) {}
+		template<typename Iterable>
+		Identifier_impl(Iterable entries) noexcept : hash_(hash_and_combine(entries)) {}
 		/**
 		 * The internally used value.
 		 */
@@ -163,6 +167,17 @@ namespace hypertrie::internal::raw {
 				hash_ = tag_as_sen(hash_);
 			else
 				hash_ = tag_as_fn(hash_);
+			return *this;
+		}
+
+		inline auto combine(Identifier_impl const &other) noexcept {
+			if (this->empty())
+				hash_ = other.hash_;
+			else if (not other.empty()) {
+				using Hash = Dice::hash::DiceHashwyhash<size_t>;
+
+				hash_= tag_as_fn(Hash::hash_invertible_combine({seed_, hash_, other.hash_}));
+			}
 			return *this;
 		}
 
@@ -245,6 +260,10 @@ namespace hypertrie::internal::raw {
 		 * Constructs any node.
 		 * @param entries MUST NOT contain duplicates. This is not checked. The user is responsible to eliminate duplicates.
 		 */
+		template< typename Iterable>
+		Identifier(Iterable entries) noexcept  : Identifier_impl_t{entries} {}
+
+
 		template<typename Entry>
 		Identifier(std::initializer_list<Entry> entries) noexcept requires is_entry_type<Entry> : Identifier_impl_t{entries} {}
 	};
@@ -296,8 +315,12 @@ namespace hypertrie::internal::raw {
 		 * Constructs any node.
 		 * @param entries MUST NOT contain duplicates. This is not checked. The user is responsible to eliminate duplicates.
 		 */
+		template< typename Iterable>
+		Identifier(Iterable entries) noexcept : Identifier_impl_t{hash_and_combine(entries)} {}
+
 		template<typename Entry>
 		Identifier(std::initializer_list<Entry> entries) noexcept requires is_entry_type<Entry> : Identifier_impl_t{hash_and_combine(entries)} {}
+
 
 		/*
 		 * Methods
@@ -363,4 +386,13 @@ namespace Dice::hash {
 		}
 	};
 }// namespace Dice::hash
+
+namespace std {
+	template<size_t depth, ::hypertrie::internal::raw::HypertrieCoreTrait tri>
+	struct hash<::hypertrie::internal::raw::Identifier<depth, tri>> {
+		size_t operator()(const ::hypertrie::internal::raw::Identifier<depth, tri> &identifier) const noexcept {
+			return identifier.hash();
+		}
+	};
+}// namespace std
 #endif//HYPERTRIE_IDENTIFIER_HPP

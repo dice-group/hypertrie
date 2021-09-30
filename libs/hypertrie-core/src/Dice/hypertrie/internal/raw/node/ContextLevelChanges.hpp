@@ -12,9 +12,8 @@ namespace hypertrie::internal::raw {
 	class ContextLevelChanges {
 	public:
 		using tri = tri_t;
-		using Entry = SingleEntry<depth, typename tri_t::with_std_allocator>;
-		using NodeContainer_t = NodeContainer<depth, tri>;
-		using Identifier = typename NodeContainer_t::Identifier;
+		using Entry = SingleEntry<depth, tri_with_stl_alloc<tri>>;
+		using Identifier_t = Identifier<depth, tri>;
 
 		struct SEN_Change {
 			ssize_t ref_count_delta = 0;
@@ -23,56 +22,85 @@ namespace hypertrie::internal::raw {
 
 		struct FN_New {
 			FNContainer<depth, tri> after;
+			Identifier_t sen_node_before;
 			std::vector<Entry> entries;
-			ssize_t ref_count_delta;
-		};
-
-		struct FN_Insert : public FN_New {
-			FNContainer<depth, tri> before;
 		};
 
 		struct FN_Change {
-			std::optional<FN_New> new_fn;
-			tsl::sparse_map<Identifier, std::vector<Entry>> entries;
+			// id_after -> entries
+			tsl::sparse_map<Identifier_t, std::vector<Entry>> entries;
 		};
 
 
-	private:
 		/**
 		 * For single entry nodes:
 		 * id_after -> (ref_count_delta, entry)
 		 */
-		tsl::sparse_map<Identifier, SEN_Change> SEN_changes;
+		tsl::sparse_map<Identifier_t, SEN_Change> SEN_new_ones;
 		/**
-		 * For full nodes:
-		 * id_after ->
+		 * inserting into full nodes:
+		 * id_before -> (id_after -> entries)
 		 */
-		tsl::sparse_map<Identifier, FN_Change> FN_changes;
+		tsl::sparse_map<Identifier_t, FN_Change> FN_changes;
+		/**
+		 * creating new full nodes
+		 *
+		 */
+		tsl::sparse_map<Identifier_t, FN_New> FN_new_ones;
 
-	public:
-		Identifier add_node(std::vector<Entry> entries) {
+		/**
+		 * id -> delta
+		 */
+		tsl::sparse_map<Identifier_t, ssize_t> fn_deltas;
+
+		/**
+		 * done full nodes
+		 */
+		tsl::sparse_set<Identifier_t> done_fns;
+
+		Identifier_t add_node(std::vector<Entry> entries, ssize_t n = 1) noexcept {
 			if (entries.size() == 1) {
-				auto id_after = Identifier{}.addFirstEntry(entries[0].key(), entries[0].value());
-				auto &change = SEN_changes[id_after];
-				change.ref_count_delta = 1;
+				Identifier_t id_after{entries[0]};
+				auto &change = SEN_new_ones[id_after];
+				change.ref_count_delta += n;
 				if constexpr (not(tri::is_bool_valued and tri::taggable_key_part))
 					change.entry = entries[0];
-				// TODO: go on here
+				return id_after;
 			} else {
-				Identifier id_after{};
-				id_after.addFirstEntry(entries[0].key(), entries[0].value());
-				for (size_t i : iter::range(1, entries.size()))
-					id_after.addEntry(entries[i].key(), entries[i].value());
-				auto &change = FN_changes[id_after];
-				if (change.new_fn.has_value()) {
-					change.new_fn.value().ref_count_delta++;
-				} else {
-					change.new_fn = FN_New{.after = {id_after, {}}, .entries = entries};
-				}
+				Identifier_t id_after{entries};
+				if (auto found = fn_deltas.find(id_after); found != fn_deltas.end())
+					found.value() += n;
+				else
+					fn_deltas.insert(found, {id_after, n});
+
+				FN_New new_fn{};
+				new_fn.entries = entries;
+				FN_new_ones.insert({id_after, new_fn});
+				return id_after;
 			}
 		}
 
-		// TODO: go on here
+		Identifier_t insert_into_node(Identifier_t id_before, std::vector<Entry> entries, ssize_t n = 1) noexcept {
+			auto id_after = Identifier_t{entries}.combine(id_before);
+
+			if (id_before.is_sen()) {
+				// decrement refcount delta of node before
+				SEN_new_ones[id_before].ref_count_delta -= n;
+
+				// new node must be created
+				auto &change = FN_new_ones[id_after];
+				change.entries = entries;
+				change.after.identifier() = id_after;
+				change.sen_node_before = id_before;
+			} else {
+				fn_deltas[id_before] -= n;
+				fn_deltas[id_after] += n;
+				auto &changes = FN_changes[id_before];
+				if (auto found = changes.entries.find(id_after); found != changes.entries.end())
+					found.value() = entries;
+			}
+			return id_after;
+		}
 	};
 }// namespace hypertrie::internal::raw
 

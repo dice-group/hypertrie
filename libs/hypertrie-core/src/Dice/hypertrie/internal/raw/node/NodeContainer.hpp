@@ -2,8 +2,8 @@
 #define HYPERTRIE_NODECONTAINER_HPP
 
 #include "Dice/hypertrie/internal/raw/node/FullNode.hpp"
-#include "Dice/hypertrie/internal/raw/node/SingleEntryNode.hpp"
 #include "Dice/hypertrie/internal/raw/node/Identifier.hpp"
+#include "Dice/hypertrie/internal/raw/node/SingleEntryNode.hpp"
 #include "Dice/hypertrie/internal/util/UnsafeCast.hpp"
 
 namespace hypertrie::internal::raw {
@@ -24,6 +24,7 @@ namespace hypertrie::internal::raw {
 		size_t node_ptr_;
 
 	public:
+		RawNodeContainer() = default;
 		RawNodeContainer(size_t identifier, VoidNodePtr void_node_ptr) noexcept
 			: node_identifier_(identifier),
 			  node_ptr_(util::unsafe_cast<size_t>(void_node_ptr)) {}
@@ -50,7 +51,13 @@ namespace hypertrie::internal::raw {
 		using allocator_type = typename tri::allocator_type;
 
 		using Identifier_t = Identifier<depth, tri>;
-		using VoidNodePtr = typename RawNodeContainer_t::void_ptr_type;
+		using VoidNodePtr = typename RawNodeContainer_t::VoidNodePtr;
+
+	protected:
+		NodeContainer(size_t identifier, VoidNodePtr void_node_ptr) noexcept
+			: RawNodeContainer_t(identifier, void_node_ptr) {}
+
+	public:
 		NodeContainer() = default;
 
 		NodeContainer(const Identifier_t &identifier, VoidNodePtr node_ptr) noexcept
@@ -98,13 +105,14 @@ namespace hypertrie::internal::raw {
 		using allocator_type = typename tri::allocator_type;
 
 		using Identifier_t = typename NodeContainer_t::Identifier_t;
-		using Node = node_type_t<depth, size_t>;
+		using Node = node_type_t<depth, tri>;
 		using NodePtr = typename tri::template allocator_pointer<Node>;
 		using VoidNodePtr = typename NodeContainer_t::VoidNodePtr;
 
+		SpecificNodeContainer() = default;
+
 		SpecificNodeContainer(Identifier_t identifier, NodePtr node_ptr) noexcept
-			: RawNodeContainer_t{(size_t) identifier,
-								 util::unsafe_cast<size_t>(node_ptr)} {}
+			: NodeContainer_t{(size_t) identifier, node_ptr} {}
 
 		[[nodiscard]] constexpr NodePtr &node_ptr() noexcept { return util::unsafe_cast<NodePtr>(this->node_ptr_); }
 		[[nodiscard]] constexpr const NodePtr &node_ptr() const noexcept { return util::unsafe_cast<NodePtr const>(this->node_ptr_); }

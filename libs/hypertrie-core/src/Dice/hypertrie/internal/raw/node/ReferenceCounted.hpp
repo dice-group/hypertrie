@@ -15,7 +15,7 @@ namespace hypertrie::internal::raw {
 		/**
 		 * Default constructor. ref_count is set to 0.
 		 */
-		ReferenceCounted() noexcept = default;
+		ReferenceCounted() = default;
 
 		/**
 		 * ref_count is set to the given value.

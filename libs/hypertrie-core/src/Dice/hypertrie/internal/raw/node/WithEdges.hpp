@@ -61,6 +61,8 @@ namespace hypertrie::internal::raw {
 		}
 
 	public:
+		WithEdges() = default;
+
 		explicit WithEdges(const allocator_type &alloc) : edges_(init(alloc)) {}
 
 		explicit WithEdges(EdgesType edges) noexcept : edges_(std::move(edges)) {}

@@ -81,23 +81,29 @@ namespace hypertrie::internal::raw {
 
 		Identifier_t insert_into_node(Identifier_t id_before, std::vector<Entry> entries, ssize_t n = 1) noexcept {
 			auto id_after = Identifier_t{entries}.combine(id_before);
-
+			fn_deltas[id_after] += n;
 			if (id_before.is_sen()) {
-				// decrement refcount delta of node before
-				SEN_new_ones[id_before].ref_count_delta -= n;
+				if constexpr (depth == 1 and HypertrieCoreTrait_bool_valued_and_taggable_key_part<tri>) {
+					auto &change = FN_new_ones[id_after];
+					change.entries = entries;
+					change.entries.push_back(id_before.get_entry());
+				} else {
+					// decrement refcount delta of node before
+					SEN_new_ones[id_before].ref_count_delta -= n;
 
-				// new node must be created
-				auto &change = FN_new_ones[id_after];
-				change.entries = entries;
-				change.after.identifier() = id_after;
-				change.sen_node_before = id_before;
+					// new node must be created
+					auto &change = FN_new_ones[id_after];
+					change.entries = entries;
+					change.after.identifier() = id_after;
+					change.sen_node_before = id_before;
+				}
 			} else {
 				fn_deltas[id_before] -= n;
-				fn_deltas[id_after] += n;
 				auto &changes = FN_changes[id_before];
 				if (auto found = changes.find(id_after); found != changes.end())
 					found.value() = entries;
 			}
+
 			return id_after;
 		}
 

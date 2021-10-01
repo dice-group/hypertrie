@@ -39,6 +39,7 @@ namespace hypertrie::internal::raw {
 		}
 
 		[[nodiscard]] inline size_t size() const noexcept { return size_; }
+		[[nodiscard]] inline size_t &size()  noexcept { return size_; }
 
 		auto operator==(const FullNode &other) const noexcept {
 			// stored sizes are unequal
@@ -77,6 +78,7 @@ namespace hypertrie::internal::raw {
 		// use a set to for value_type bool, otherwise a map
 		using EdgesType = typename WithEdges<1UL, tri_t>::ChildrenType;
 
+		FullNode() = default;
 
 		FullNode(size_t ref_count, const allocator_type &alloc) noexcept
 			: ReferenceCounted(ref_count), WithEdges<1UL, tri_t>(alloc) {}

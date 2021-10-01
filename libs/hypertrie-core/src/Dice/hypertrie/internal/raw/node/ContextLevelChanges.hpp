@@ -4,6 +4,10 @@
 #include <Dice/hypertrie/internal/raw/Hypertrie_core_trait.hpp>
 #include <Dice/hypertrie/internal/raw/node/NodeContainer.hpp>
 
+#include <Dice/hypertrie/internal/raw/node/SpecificNodeStorage.hpp>
+
+#include <boost/container/flat_map.hpp>
+#include <boost/container/flat_set.hpp>
 #include <tsl/sparse_map.h>
 
 namespace hypertrie::internal::raw {
@@ -26,12 +30,6 @@ namespace hypertrie::internal::raw {
 			std::vector<Entry> entries;
 		};
 
-		struct FN_Change {
-			// id_after -> entries
-			tsl::sparse_map<Identifier_t, std::vector<Entry>> entries;
-		};
-
-
 		/**
 		 * For single entry nodes:
 		 * id_after -> (ref_count_delta, entry)
@@ -40,8 +38,9 @@ namespace hypertrie::internal::raw {
 		/**
 		 * inserting into full nodes:
 		 * id_before -> (id_after -> entries)
+		 * id_before and id_after identify both full nodes.
 		 */
-		tsl::sparse_map<Identifier_t, FN_Change> FN_changes;
+		tsl::sparse_map<Identifier_t, tsl::sparse_map<Identifier_t, std::vector<Entry>>> FN_changes;
 		/**
 		 * creating new full nodes
 		 *
@@ -96,10 +95,29 @@ namespace hypertrie::internal::raw {
 				fn_deltas[id_before] -= n;
 				fn_deltas[id_after] += n;
 				auto &changes = FN_changes[id_before];
-				if (auto found = changes.entries.find(id_after); found != changes.entries.end())
+				if (auto found = changes.find(id_after); found != changes.end())
 					found.value() = entries;
 			}
 			return id_after;
+		}
+
+		/**
+		 * for FN:
+		 * id_before -> {id_after}
+		 */
+		boost::container::flat_map<Identifier_t, boost::container::flat_set<Identifier_t>> moveables_fns;
+
+		void calc_moveables(SpecificNodeStorage<depth, tri, FullNode> &specific_full_node_storage) noexcept {
+			auto &nodes_ = specific_full_node_storage.nodes();
+			for (const auto &[id_before, changes] : FN_changes) {
+				if (ssize_t(nodes_[id_before]->ref_count()) + fn_deltas[id_before] == 0) {
+					for (const auto &[id_after, _] : changes) {
+						if (not nodes_.contains(id_after)) {
+							moveables_fns[id_before].insert(id_after);
+						}
+					}
+				}
+			}
 		}
 	};
 }// namespace hypertrie::internal::raw

@@ -75,8 +75,16 @@ namespace hypertrie::internal::raw {
 			}
 		}
 
+		/**
+		 * If a sen for identifier is stored already, the delta_ref_count is updated and sen populated.
+		 * Otherwise, a new node with the content from sen is created.
+		 * @tparam depth
+		 * @param identifier
+		 * @param sen
+		 * @param delta_ref_count
+		 */
 		template<size_t depth>
-		void update_sen(Identifier<depth, tri> identifier,
+		void update_or_create_sen(Identifier<depth, tri> identifier,
 						SingleEntry<depth, tri_with_stl_alloc<tri>> &sen,
 						ssize_t delta_ref_count) noexcept {
 			auto &nodes_ = this->template nodes<depth, SingleEntryNode>().nodes();

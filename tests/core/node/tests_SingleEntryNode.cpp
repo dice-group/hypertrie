@@ -33,11 +33,7 @@ namespace hypertrie::tests::core::node {
 
 				[[maybe_unused]] value_type value = gen.value();
 
-				SingleEntryNode<depth, tri> node = [&]() {
-					if constexpr (tri::is_bool_valued) return SingleEntryNode<depth, tri>{key};
-					else
-						return SingleEntryNode<depth, tri>{key, value};
-				}();
+				SingleEntryNode<depth, tri> node{key, value};
 
 				REQUIRE(node.key() == key);
 				REQUIRE(node.value() == value);

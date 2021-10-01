@@ -84,7 +84,7 @@ namespace hypertrie::internal::raw {
 
 
 		template<typename Iterable>
-		static inline size_t hash_and_combine(Iterable entries) noexcept {
+		static inline size_t hash_and_combine(Iterable entries) noexcept requires std::ranges::range<Iterable> and is_entry_type<std::ranges::range_value_t<Iterable>> {
 			if (entries.begin() == entries.end())
 				return seed_;
 			size_t hash = seed_;
@@ -113,7 +113,8 @@ namespace hypertrie::internal::raw {
 		 * @param entries MUST NOT contain duplicates. This is not checked. The user is responsible to eliminate duplicates.
 		 */
 		template<typename Iterable>
-		Identifier_impl(Iterable entries) noexcept : hash_(hash_and_combine(entries)) {}
+		Identifier_impl(Iterable entries) noexcept requires std::ranges::range<Iterable> : hash_(hash_and_combine(entries)) {}
+
 		/**
 		 * The internally used value.
 		 */
@@ -176,7 +177,7 @@ namespace hypertrie::internal::raw {
 			else if (not other.empty()) {
 				using Hash = Dice::hash::DiceHashwyhash<size_t>;
 
-				hash_= tag_as_fn(Hash::hash_invertible_combine({seed_, hash_, other.hash_}));
+				hash_ = tag_as_fn(Hash::hash_invertible_combine({seed_, hash_, other.hash_}));
 			}
 			return *this;
 		}
@@ -260,12 +261,14 @@ namespace hypertrie::internal::raw {
 		 * Constructs any node.
 		 * @param entries MUST NOT contain duplicates. This is not checked. The user is responsible to eliminate duplicates.
 		 */
-		template< typename Iterable>
-		Identifier(Iterable entries) noexcept  : Identifier_impl_t{entries} {}
+		template<typename Iterable>
+		Identifier(Iterable entries) noexcept requires std::ranges::range<Iterable> : Identifier_impl_t{entries} {}
 
 
 		template<typename Entry>
 		Identifier(std::initializer_list<Entry> entries) noexcept requires is_entry_type<Entry> : Identifier_impl_t{entries} {}
+
+		Identifier(Identifier_impl_t const &impl) noexcept  : Identifier_impl_t{impl} {}
 	};
 
 	template<HypertrieCoreTrait_bool_valued_and_taggable_key_part tri_t>
@@ -315,8 +318,8 @@ namespace hypertrie::internal::raw {
 		 * Constructs any node.
 		 * @param entries MUST NOT contain duplicates. This is not checked. The user is responsible to eliminate duplicates.
 		 */
-		template< typename Iterable>
-		Identifier(Iterable entries) noexcept : Identifier_impl_t{hash_and_combine(entries)} {}
+		template<typename Iterable>
+		Identifier(Iterable entries) noexcept requires std::ranges::range<Iterable> : Identifier_impl_t{hash_and_combine(entries)} {}
 
 		template<typename Entry>
 		Identifier(std::initializer_list<Entry> entries) noexcept requires is_entry_type<Entry> : Identifier_impl_t{hash_and_combine(entries)} {}

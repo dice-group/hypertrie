@@ -13,6 +13,7 @@
 
 #include <Dice/hypertrie/internal/Hypertrie_traits_tostring.hpp>
 #include <Dice/hypertrie/internal/raw/node/Identifier.hpp>
+#include <Dice/hypertrie/internal/raw/node/NodeContainer.hpp>
 
 namespace hypertrie::tests::core::node {
 

@@ -77,7 +77,7 @@ namespace hypertrie::internal::raw {
 
 		template<size_t depth>
 		void update_sen(Identifier<depth, tri> identifier,
-						SingleEntryNode<depth, tri_with_stl_alloc<tri>> &sen,
+						SingleEntry<depth, tri_with_stl_alloc<tri>> &sen,
 						ssize_t delta_ref_count) noexcept {
 			auto &nodes_ = this->template nodes<depth, SingleEntryNode>().nodes();
 			auto &node_lifecycle_ = this->template nodes<depth, SingleEntryNode>().node_lifecycle();
@@ -85,10 +85,10 @@ namespace hypertrie::internal::raw {
 				auto found = nodes_.find(identifier);
 				if (found != nodes_.end()) {
 					auto &node_ptr = found->second;
-					assert(ssize_t(sen.ref_count()) + delta_ref_count >= 0);
+					assert(ssize_t(node_ptr->ref_count()) + delta_ref_count >= 0);
 					node_ptr->ref_count() += delta_ref_count;
-					sen = *(node_ptr);
-					if (sen.ref_count() == 0UL)
+					sen = (SingleEntry<depth, tri> &)*(node_ptr);
+					if (node_ptr->ref_count() == 0UL)
 						nodes_.erase(found);
 				} else {
 					assert(delta_ref_count > 0);

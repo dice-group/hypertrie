@@ -21,8 +21,8 @@ namespace hypertrie::internal::raw {
 
 		template<size_t depth>
 		void insert(NodeContainer<depth, tri> &nodec,
-					std::vector<SingleEntry<depth, tri_with_stl_alloc<tri>>> entries){
-			update_node_in_context<max_depth,tri>::exec(node_storage_, nodec, entries);
+					std::vector<SingleEntry<depth, tri_with_stl_alloc<tri>>> entries) {
+			update_node_in_context<max_depth, tri>::exec(node_storage_, nodec, entries);
 		}
 	};
 
@@ -36,7 +36,7 @@ namespace hypertrie::internal::raw {
 						 NodeContainer<depth, tri> &nodec,
 						 std::vector<SingleEntry<depth, tri_with_stl_alloc<tri>>> entries) {
 			ContextLevelChanges<depth, tri> changes;
-//			using Entry = SingleEntry<depth, tri>;
+			//			using Entry = SingleEntry<depth, tri>;
 
 			if (entries.empty())
 				return;
@@ -48,7 +48,7 @@ namespace hypertrie::internal::raw {
 				nodec.identifier() = changes.insert_into_node(nodec.identifier(), entries);
 			}
 
-			apply<depth>(node_storage, nodec, changes);
+			apply<depth>(node_storage, changes);
 
 			if constexpr (not(depth == 1 and tri::taggable_key_part))
 				nodec = node_storage.template lookup<depth>(nodec.identifier());
@@ -58,13 +58,12 @@ namespace hypertrie::internal::raw {
 
 		template<size_t depth>
 		static void apply(NodeStorage<max_depth, tri> &node_storage,
-						  NodeContainer<depth, tri> &nodec,
 						  ContextLevelChanges<depth, tri> &changes) {
-//			ContextLevelChanges<depth -1, tri> next_level_changes;
+			//			ContextLevelChanges<depth -1, tri> next_level_changes;
 
-			for(auto it = changes.SEN_new_ones.begin(); it != changes.SEN_new_ones.end(); ++it) {
+			for (auto it = changes.SEN_new_ones.begin(); it != changes.SEN_new_ones.end(); ++it) {
 				auto id_after = it->first;
-				auto &change = it->second;
+				auto &change = it.template value();
 				node_storage.template update_sen<depth>(id_after, change.entry, change.ref_count_delta);
 			}
 		}

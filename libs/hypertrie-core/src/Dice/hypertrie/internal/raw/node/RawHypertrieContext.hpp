@@ -66,14 +66,15 @@ namespace hypertrie::internal::raw {
 			auto &full_nodes_lifecycle = full_nodes_storage_.node_lifecycle();
 			lv_changes.calc_moveables(full_nodes_storage_);
 
-			// create, delete or update ref_count for Single Entry Nodes
-			for (auto it = lv_changes.SEN_new_ones.begin(); it != lv_changes.SEN_new_ones.end(); ++it) {
-				Identifier_t id_after = it->first;
-				auto &change = it.value();
-				// if a new node is created, this update change.entry accordingly.
-				// change.entry might be used for creating FullNodes that were formed by inserting entries into a SingleEntryNode
-				node_storage.template update_or_create_sen<depth>(id_after, change.entry, change.ref_count_delta);
-			}
+			if constexpr (not(depth == 1 and HypertrieCoreTrait_bool_valued_and_taggable_key_part<tri>))
+				// create, delete or update ref_count for Single Entry Nodes
+				for (auto it = lv_changes.SEN_new_ones.begin(); it != lv_changes.SEN_new_ones.end(); ++it) {
+					Identifier_t id_after = it->first;
+					auto &change = it.value();
+					// if a new node is created, this update change.entry accordingly.
+					// change.entry might be used for creating FullNodes that were formed by inserting entries into a SingleEntryNode
+					node_storage.template update_or_create_sen<depth>(id_after, change.entry, change.ref_count_delta);
+				}
 
 			// insert entries into existing full nodes
 			// here, only full nodes that will be deleted and can potentially be reused are considered.
@@ -83,90 +84,90 @@ namespace hypertrie::internal::raw {
 
 				std::optional<Identifier_t> last_id_after;
 
+				// find an id_after which is not yet done (= in done_fns)
 				for (const auto &id_after : ids_after)
 					if (not lv_changes.done_fns.contains(id_after)) {
 						last_id_after = id_after;
 						break;
 					}
 
-				// TODO: look up only if needed
-				auto node_before = full_nodes_.find(id_before).value();
+				// lookup node_before and detach it from its SpecificNodeStorage
+				auto node_before_it = full_nodes_.find(id_before);
+				auto node_before = node_before_it.value();
+				full_nodes_.erase(node_before_it);
 
+				// the node_before is gone after we reused only once.
+				// So we need to process all other changes which require node_before first
 				for (const auto &[id_after, entries] : changes) {
 					if (last_id_after.has_value() and id_after == last_id_after.value())
 						continue;
 					if (lv_changes.done_fns.contains(id_after))
 						continue;
 
-					{
-						if (not ids_after.contains(id_after)) {// we know it exists already, and we only need to update the ref_count
-							full_nodes_.find(id_after).value()->ref_count() += lv_changes.fn_deltas[id_after];
-						} else {// we know that it does not already exist (and thus do not need to check that
+					if (not ids_after.contains(id_after)) {// we know it exists already, and we only need to update the ref_count
+						full_nodes_.find(id_after).value()->ref_count() += lv_changes.fn_deltas[id_after];
+					} else {// we know that it does not already exist (and thus do not need to check that
 
-							auto copied_node = full_nodes_lifecycle.new_(*node_before);
-							copied_node->ref_count() += lv_changes.fn_deltas[id_after];
+						auto copied_node = full_nodes_lifecycle.new_(*node_before);
+						copied_node->ref_count() = lv_changes.fn_deltas[id_after];
 
-							assert(not full_nodes_.contains(id_after));
-							full_nodes_.insert({id_after, copied_node});
-
-							if constexpr (depth == 1) {
-								for (const auto &entry : entries)
-									copied_node->insert_or_assign(entry.key(), entry.value());
-							} else {
-								copied_node->size() += entries.size();
-								for (const size_t pos : iter::range(depth)) {
-									tsl::sparse_map<typename tri::key_part_type, std::vector<SingleEntry<depth - 1, tri_with_stl_alloc<tri>>>> children_inserted_keys{};
-
-									// populate children_inserted_keys
-									for (const auto &entry : entries)
-										children_inserted_keys[entry.key()[pos]].emplace_back(entry.key().subkey(pos), entry.value());
-
-									for (auto &[key_part, child_inserted_entries] : children_inserted_keys) {
-										assert(child_inserted_entries.size() > 0);
-										auto [key_part_exists, iter] = copied_node->find(pos, key_part);
-
-										if (key_part_exists) {
-											iter.value() = next_level_changes.insert_into_node(iter->second, child_inserted_entries);
-										} else {
-											if constexpr (depth == 2 and HypertrieCoreTrait_bool_valued_and_taggable_key_part<tri>) {
-												iter.value() = next_level_changes.add_node(child_inserted_entries);
-											} else {
-												if (child_inserted_entries.size() == 1)
-													iter.value() = Identifier<depth - 1, tri>{child_inserted_entries[0]};
-												else
-													iter.value() = next_level_changes.insert_into_node(iter->second, child_inserted_entries);
-											}
-										}
-									}
-								}
-							}
-						}
+						insert_into_full_node<depth>(next_level_changes, full_nodes_, id_after, copied_node, std::move(entries));
 					}
 					// entries
 
 					lv_changes.done_fns.insert(id_after);
 				}
 
-				// reuse
+				// reuse (or delete) node_before
 				if (last_id_after.has_value()) {
-					// TODO: move id_before node and insert entries
+
+					auto id_after = last_id_after.value();
+					assert(ssize_t(node_before->ref_count()) + lv_changes.fn_deltas[id_before] == 0);
+					node_before->ref_count() = lv_changes.fn_deltas[id_after];
+
+					auto entries = std::move(changes[id_after]);
+
+					insert_into_full_node<depth>(next_level_changes, full_nodes_, id_after, node_before, std::move(entries));
 					lv_changes.done_fns.insert(last_id_after.value());
 				} else {// or delete
-						// TODO: remove id_before
+					full_nodes_lifecycle.delete_(node_before);
 				}
 				lv_changes.done_fns.insert(id_before);
 			}
 
 			for (const auto &[id_before, changes] : lv_changes.FN_changes) {
-				for (const auto &[id_after, entries] : lv_changes.FN_changes) {
+
+				// lookup node_before and remove it
+				auto node_before = full_nodes_.find(id_before).value();
+				assert(full_nodes_.find(id_before) != full_nodes_.end());
+
+				for (const auto &[id_after, entries] : changes) {
 					if (lv_changes.done_fns.contains(id_after))
 						continue;
-					// TODO: update node after with id_before, id_after, entries
-					//					node_storage.tempalte update_fn<depth>(id_before, id_after, entries)
+
+					if (auto found = full_nodes_.find(id_after); found != full_nodes_.end()) {// node already exists: we only need to update the ref_count
+						found.value()->ref_count() += lv_changes.fn_deltas[id_after];
+					} else {// node doesn't exist so far: we copy the node before and insert the new entries
+
+						auto copied_node = full_nodes_lifecycle.new_(*node_before);
+						copied_node->ref_count() = lv_changes.fn_deltas[id_after];
+
+						insert_into_full_node<depth, true>(next_level_changes, full_nodes_, id_after, copied_node, std::move(entries));
+					}
+
+					lv_changes.done_fns.insert(id_after);
 				}
 
 				if (not lv_changes.done_fns.contains(id_before)) {
-					// TODO: update or delete id_before
+					// update the ref_count of node_before
+					assert(ssize_t(node_before->ref_count()) + lv_changes.fn_deltas[id_before] >= 0);
+					node_before->ref_count() += lv_changes.fn_deltas[id_before];
+
+					// if the ref_count reaches 0, remove the node
+					if (node_before->ref_count() == 0) {
+						full_nodes_.erase(id_before);
+						full_nodes_lifecycle.delete_(node_before);
+					}
 				}
 			}
 
@@ -180,10 +181,57 @@ namespace hypertrie::internal::raw {
 					if (id_before.is_sen()) {
 						change.entries.push_back({lv_changes.SEN_new_ones[id_before].entry});
 					}
-					// TODO: new node with
-					//  Identifier: id_after
-					//  entries: change.entries
+
+					auto new_node = full_nodes_lifecycle.new_with_alloc(lv_changes.fn_deltas[id_after]);
+					insert_into_full_node(next_level_changes, full_nodes_, id_after, new_node, std::move(change.entries));
 					lv_changes.done_fns.insert(id_after);
+				}
+			}
+
+			if constexpr (depth > 1) {
+				apply(node_storage, next_level_changes);
+			}
+		}
+		template<size_t depth, bool node_is_empty = false>
+		static void insert_into_full_node(ContextLevelChanges<depth - 1, tri> &next_level_changes,
+										  typename SpecificNodeStorage<depth, tri, FullNode>::Map_t &full_nodes_,
+										  Identifier<depth, tri> id_after,
+										  typename FNContainer<depth, tri>::NodePtr copied_node,
+										  std::vector<SingleEntry<depth, tri_with_stl_alloc<tri>>> entries) {
+			assert(not full_nodes_.contains(id_after));
+			full_nodes_.insert({id_after, copied_node});
+			// TODO: this does not yet cover value changes (for non-boolean-valued hypertries) yet, I think ...
+			if constexpr (depth == 1) {
+				for (const auto &entry : entries)
+					copied_node->insert_or_assign(entry.key(), entry.value());
+			} else {
+				copied_node->size() += entries.size();
+				for (const size_t pos : iter::range(depth)) {
+					tsl::sparse_map<typename tri::key_part_type, std::vector<SingleEntry<depth - 1, tri_with_stl_alloc<tri>>>> children_inserted_keys{};
+
+					// populate children_inserted_keys
+					for (const auto &entry : entries)
+						children_inserted_keys[entry.key()[pos]].emplace_back(entry.key().subkey(pos), entry.value());
+
+					for (auto &[key_part, child_inserted_entries] : children_inserted_keys) {
+						assert(child_inserted_entries.size() > 0);
+						if constexpr (not node_is_empty) {
+							auto [key_part_exists, iter] = copied_node->find(pos, key_part);
+							if (key_part_exists) {
+								iter.value() = next_level_changes.insert_into_node(iter->second, child_inserted_entries);
+								continue;
+							}
+						}
+
+						auto &edges = copied_node->edges(pos);
+						if constexpr (depth == 2 and HypertrieCoreTrait_bool_valued_and_taggable_key_part<tri>) {
+							if (child_inserted_entries.size() == 1) {
+								edges[key_part] = Identifier<depth - 1, tri>{child_inserted_entries[0]};
+								continue;
+							}
+						}
+						edges[key_part] = next_level_changes.add_node(child_inserted_entries);
+					}
 				}
 			}
 		}

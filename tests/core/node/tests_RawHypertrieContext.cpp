@@ -21,19 +21,77 @@ namespace hypertrie::tests::core::node {
 
 		template<size_t depth, HypertrieCoreTrait tri>
 		void create() {
-//			using key_part_type = typename tri::key_part_type;
-//			using value_type = typename tri::value_type;
-
+			//			using key_part_type = typename tri::key_part_type;
+			//			using value_type = typename tri::value_type;
 		}
 
 		TEST_CASE("storage") {
-			using tri = typename tagged_bool_cfg<5>::tri;
-			RawHypertrieContext<5, tri> x{std::allocator<std::byte>()};
-			NodeContainer<5, tri> nc{};
-			std::vector<SingleEntry<5, tri_with_stl_alloc<tri>>> entries;
-			x.insert(nc, entries);
+			using tri = typename tagged_bool_cfg<2>::tri;
+			constexpr size_t depth = tagged_bool_cfg<2>::depth;
+			hypertrie::tests::utils::RawGenerator<depth, tri> gen{0, 3};
 
-//			update_node_in_context<5, tagged_bool_cfg<5>::tri>;
+			RawHypertrieContext<depth, tri> x{std::allocator<std::byte>()};
+			NodeContainer<depth, tri> nc{};
+			SUBCASE("insert nothing") {
+				std::vector<SingleEntry<depth, tri_with_stl_alloc<tri>>> entries;
+				x.insert(nc, entries);
+			}
+
+			SUBCASE("insert one") {
+				std::vector<SingleEntry<depth, tri_with_stl_alloc<tri>>> entries = [&]() {
+					std::vector<SingleEntry<depth, tri_with_stl_alloc<tri>>> entries;
+					for (auto &&entry : gen.entries(1))
+						entries.emplace_back(entry.first, entry.second);
+					return entries;
+				}();
+				x.insert(nc, entries);
+			}
+
+			SUBCASE("insert two") {
+				std::vector<SingleEntry<depth, tri_with_stl_alloc<tri>>> entries = [&]() {
+					std::vector<SingleEntry<depth, tri_with_stl_alloc<tri>>> entries;
+					for (auto &&entry : gen.entries(2))
+						entries.emplace_back(entry.first, entry.second);
+					return entries;
+				}();
+				x.insert(nc, entries);
+			}
+
+			SUBCASE("insert 10") {
+				std::vector<SingleEntry<depth, tri_with_stl_alloc<tri>>> entries = [&]() {
+					std::vector<SingleEntry<depth, tri_with_stl_alloc<tri>>> entries;
+					for (auto &&entry : gen.entries(10))
+						entries.emplace_back(entry.first, entry.second);
+					return entries;
+				}();
+				x.insert(nc, entries);
+			}
+
+			SUBCASE("insert 1 + 9") {
+				std::vector<SingleEntry<depth, tri_with_stl_alloc<tri>>> entries = [&]() {
+					std::vector<SingleEntry<depth, tri_with_stl_alloc<tri>>> entries;
+					for (auto &&entry : gen.entries(10))
+						entries.emplace_back(entry.first, entry.second);
+					return entries;
+				}();
+				auto entries_1 = decltype(entries){entries[0]};
+				auto entries_2_10 = decltype(entries){entries.begin() + 1, entries.end()};
+				x.insert(nc, entries_1);
+				x.insert(nc, entries_2_10);
+			}
+
+			SUBCASE("insert 5 + 5") {
+				std::vector<SingleEntry<depth, tri_with_stl_alloc<tri>>> entries = [&]() {
+					std::vector<SingleEntry<depth, tri_with_stl_alloc<tri>>> entries;
+					for (auto &&entry : gen.entries(10))
+						entries.emplace_back(entry.first, entry.second);
+					return entries;
+				}();
+				auto entries_1_5 = decltype(entries){entries.begin(), entries.begin() + 5};
+				auto entries_6_10 = decltype(entries){entries.begin() + 5, entries.end()};
+				x.insert(nc, entries_1_5);
+				x.insert(nc, entries_6_10);
+			}
 		}
 
 

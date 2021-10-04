@@ -127,6 +127,11 @@ namespace hypertrie::internal::raw {
 			}
 		}
 	};
+
+	template<HypertrieCoreTrait tri>
+	class ContextLevelChanges<0, tri> {
+		// is instantiated for simplicity but must never be used (therefore, has no members or methods).
+	};
 }// namespace hypertrie::internal::raw
 
 #endif//HYPERTRIE_CONTEXTLEVELCHANGES_HPP

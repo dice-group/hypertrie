@@ -95,7 +95,7 @@ namespace hypertrie::internal::raw {
 					auto &node_ptr = found->second;
 					assert(ssize_t(node_ptr->ref_count()) + delta_ref_count >= 0);
 					node_ptr->ref_count() += delta_ref_count;
-					sen = (SingleEntry<depth, tri> &)*(node_ptr);
+					sen = SingleEntry<depth, tri_with_stl_alloc<tri>>{node_ptr->key(), node_ptr->value()};
 					if (node_ptr->ref_count() == 0UL)
 						nodes_.erase(found);
 				} else {

@@ -23,6 +23,8 @@ namespace hypertrie::internal::raw {
 
 		size_t node_ptr_;
 
+		RawNodeContainer(size_t node_identifier, size_t node_ptr) noexcept : node_identifier_(node_identifier), node_ptr_(node_ptr) {}
+
 	public:
 		RawNodeContainer() = default;
 		RawNodeContainer(size_t identifier, VoidNodePtr void_node_ptr) noexcept
@@ -56,6 +58,8 @@ namespace hypertrie::internal::raw {
 	protected:
 		NodeContainer(size_t identifier, VoidNodePtr void_node_ptr) noexcept
 			: RawNodeContainer_t(identifier, void_node_ptr) {}
+
+		NodeContainer(size_t node_identifier, size_t node_ptr) noexcept : RawNodeContainer_t(node_identifier, node_ptr) {}
 
 	public:
 		NodeContainer() = default;
@@ -109,6 +113,12 @@ namespace hypertrie::internal::raw {
 		using NodePtr = typename tri::template allocator_pointer<Node>;
 		using VoidNodePtr = typename NodeContainer_t::VoidNodePtr;
 
+		friend NodeContainer<depth, tri>;
+
+	protected:
+		SpecificNodeContainer(size_t node_identifier, size_t node_ptr) noexcept : NodeContainer_t(node_identifier, node_ptr) {}
+
+	public:
 		SpecificNodeContainer() = default;
 
 		SpecificNodeContainer(Identifier_t identifier, NodePtr node_ptr) noexcept

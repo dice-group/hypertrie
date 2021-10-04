@@ -32,6 +32,7 @@ namespace hypertrie::internal::raw {
 				nodec = node_storage.template lookup<depth>(nodec.identifier());
 			else
 				nodec.void_node_ptr() = {};
+			assert(not nodec.identifier().empty());
 		}
 
 		template<size_t depth>
@@ -107,7 +108,7 @@ namespace hypertrie::internal::raw {
 					auto entries = std::move(changes[id_after]);
 
 					insert_into_full_node<depth>(next_level_changes, full_nodes_, id_after, node_before, std::move(entries));
-					lv_changes.done_fns.insert(last_id_after.value());
+					lv_changes.done_fns.insert(id_after);
 				} else {// or delete
 					full_nodes_lifecycle.delete_(node_before);
 				}
@@ -115,8 +116,9 @@ namespace hypertrie::internal::raw {
 			}
 
 			for (const auto &[id_before, changes] : lv_changes.FN_changes) {
-
-				// lookup node_before and remove it
+				if (lv_changes.done_fns.contains(id_before))
+					continue;
+				// lookup node_before
 				auto node_before = full_nodes_.find(id_before).value();
 				assert(full_nodes_.find(id_before) != full_nodes_.end());
 
@@ -160,9 +162,14 @@ namespace hypertrie::internal::raw {
 					if (id_before.is_sen()) {
 						change.entries.push_back({lv_changes.SEN_new_ones[id_before].entry});
 					}
-
-					auto new_node = full_nodes_lifecycle.new_with_alloc(lv_changes.fn_deltas[id_after]);
-					insert_into_full_node(next_level_changes, full_nodes_, id_after, new_node, std::move(change.entries));
+					auto fn_node_ptr = node_storage.template lookup<depth, FullNode>(id_after);
+					if (fn_node_ptr) {
+						assert(ssize_t(fn_node_ptr->ref_count()) + lv_changes.fn_deltas[id_after] > 0);
+						fn_node_ptr->ref_count() += lv_changes.fn_deltas[id_after];
+					} else {
+						auto new_node = full_nodes_lifecycle.new_with_alloc(lv_changes.fn_deltas[id_after]);
+						insert_into_full_node(next_level_changes, full_nodes_, id_after, new_node, std::move(change.entries));
+					}
 					lv_changes.done_fns.insert(id_after);
 				}
 			}

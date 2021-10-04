@@ -62,19 +62,20 @@ namespace hypertrie::internal::raw {
 				Identifier_t id_after{entries[0]};
 				auto &change = SEN_new_ones[id_after];
 				change.ref_count_delta += n;
-				if constexpr (not(tri::is_bool_valued and tri::taggable_key_part))
+				if constexpr (not(depth == 1 and HypertrieCoreTrait_bool_valued_and_taggable_key_part<tri>))
 					change.entry = entries[0];
 				return id_after;
 			} else {
 				Identifier_t id_after{entries};
 				if (auto found = fn_deltas.find(id_after); found != fn_deltas.end())
 					found.value() += n;
-				else
+				else {
 					fn_deltas.insert(found, {id_after, n});
 
-				FN_New new_fn{};
-				new_fn.entries = entries;
-				FN_new_ones.insert({id_after, new_fn});
+					FN_New new_fn{};
+					new_fn.entries = entries;
+					FN_new_ones.insert({id_after, new_fn});
+				}
 				return id_after;
 			}
 		}
@@ -100,8 +101,8 @@ namespace hypertrie::internal::raw {
 			} else {
 				fn_deltas[id_before] -= n;
 				auto &changes = FN_changes[id_before];
-				if (auto found = changes.find(id_after); found != changes.end())
-					found.value() = entries;
+				if (auto found = changes.find(id_after); found == changes.end())
+					changes[id_after] = entries;
 			}
 
 			return id_after;

@@ -122,6 +122,41 @@ namespace hypertrie::internal::raw {
 			return min_pos;
 		}
 
+		[[nodiscard]] size_t min_card_pos() const noexcept {
+			pos_type min_pos = 0;
+			auto min_card = std::numeric_limits<size_t>::max();
+			for (const pos_type pos : iter::range(depth)) {
+				const size_t current_card = edges(pos).size();
+				if (current_card < min_card) {
+					min_card = current_card;
+					min_pos = pos;
+				}
+			}
+			return min_pos;
+		}
+
+
+		template<size_t fixed_positions>
+		[[nodiscard]] pos_type min_fixed_keypart_i(const RawSliceKey<fixed_positions, tri> &raw_slicekey) const noexcept {
+			static_assert(fixed_positions > 0);
+			pos_type min_fixed_keypart_pos;
+			auto min_card = std::numeric_limits<size_t>::max();
+			auto fixed_poss_it = raw_slicekey.begin();
+			size_t j = 0;
+			for (pos_type i : iter::range(depth)) {
+				if (i == raw_slicekey[j].pos) {
+					if (auto current_card = edges(i).size(); current_card < min_card) {
+						min_card = current_card;
+						min_fixed_keypart_pos = raw_slicekey[j].pos;
+					}
+					j++;
+				}
+				if (j == fixed_positions)
+					break;
+			}
+			return min_fixed_keypart_pos;
+		}
+
 		[[nodiscard]] std::vector<size_t> getCards(const std::vector<pos_type> &positions) const {
 			std::vector<size_t> cards(positions.size());
 			for (auto i : iter::range(positions.size())) {

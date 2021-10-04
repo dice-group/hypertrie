@@ -1,33 +1,13 @@
-#ifndef HYPERTRIE_NODECONTEXT_HPP
-#define HYPERTRIE_NODECONTEXT_HPP
+#ifndef HYPERTRIE_INSERT_IMPL_RAWNODECONTEXT_HPP
+#define HYPERTRIE_INSERT_IMPL_RAWNODECONTEXT_HPP
 
-#include <Dice/hypertrie/internal/raw/node/ContextLevelChanges.hpp>
 #include <Dice/hypertrie/internal/raw/node/NodeStorage.hpp>
-
+#include <Dice/hypertrie/internal/raw/node_context/ContextLevelChanges.hpp>
 
 namespace hypertrie::internal::raw {
 
 	template<size_t max_depth, HypertrieCoreTrait_bool_valued tri_t>
-	struct update_node_in_context;
-
-
-	template<size_t max_depth, HypertrieCoreTrait_bool_valued tri_t>
-	struct RawHypertrieContext {
-		using tri = tri_t;
-
-		NodeStorage<max_depth, tri_t> node_storage_;
-
-		explicit RawHypertrieContext(const typename tri::allocator_type &alloc) : node_storage_(alloc) {}
-
-		template<size_t depth>
-		void insert(NodeContainer<depth, tri> &nodec,
-					std::vector<SingleEntry<depth, tri_with_stl_alloc<tri>>> entries) {
-			update_node_in_context<max_depth, tri>::exec(node_storage_, nodec, entries);
-		}
-	};
-
-	template<size_t max_depth, HypertrieCoreTrait_bool_valued tri_t>
-	struct update_node_in_context {
+	struct insert_impl_RawNodeContext {
 		using tri = tri_t;
 
 		template<size_t depth>
@@ -35,7 +15,6 @@ namespace hypertrie::internal::raw {
 						 NodeContainer<depth, tri> &nodec,
 						 std::vector<SingleEntry<depth, tri_with_stl_alloc<tri>>> entries) {
 			ContextLevelChanges<depth, tri> changes;
-			//			using Entry = SingleEntry<depth, tri>;
 
 			if (entries.empty())
 				return;
@@ -236,8 +215,5 @@ namespace hypertrie::internal::raw {
 			}
 		}
 	};
-
-
 }// namespace hypertrie::internal::raw
-
-#endif//HYPERTRIE_NODECONTEXT_HPP
+#endif//HYPERTRIE_INSERT_IMPL_RAWNODECONTEXT_HPP

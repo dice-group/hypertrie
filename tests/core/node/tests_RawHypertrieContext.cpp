@@ -10,7 +10,7 @@
 #include <Dice/hypertrie/internal/util/name_of_type.hpp>
 #include <Node_test_configs.hpp>
 
-#include <Dice/hypertrie/internal/raw/node/RawHypertrieContext.hpp>
+#include <Dice/hypertrie/internal/raw/node_context/RawHypertrieContext.hpp>
 
 
 namespace hypertrie::tests::core::node {

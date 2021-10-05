@@ -21,9 +21,9 @@ namespace hypertrie::internal::raw {
 
 
 			if (nodec.empty()) {
-				nodec.identifier() = changes.add_node(entries);
+				nodec.identifier() = changes.add_node(std::move(entries));
 			} else {
-				nodec.identifier() = changes.insert_into_node(nodec.identifier(), entries);
+				nodec.identifier() = changes.insert_into_node(nodec.identifier(), std::move(entries));
 			}
 
 			apply<depth>(node_storage, changes);

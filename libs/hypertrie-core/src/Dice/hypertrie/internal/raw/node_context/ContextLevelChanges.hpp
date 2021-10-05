@@ -9,6 +9,7 @@
 #include <boost/container/flat_map.hpp>
 #include <boost/container/flat_set.hpp>
 #include <tsl/sparse_map.h>
+#include <tsl/sparse_set.h>
 
 namespace hypertrie::internal::raw {
 
@@ -73,14 +74,14 @@ namespace hypertrie::internal::raw {
 					fn_deltas.insert(found, {id_after, n});
 
 					FN_New new_fn{};
-					new_fn.entries = entries;
+					new_fn.entries = std::move(entries);
 					FN_new_ones.insert({id_after, new_fn});
 				}
 				return id_after;
 			}
 		}
 
-		Identifier_t insert_into_node(Identifier_t id_before, std::vector<Entry> entries, ssize_t n = 1) noexcept {
+		Identifier_t insert_into_node(Identifier_t id_before, std::vector<Entry> const &entries, ssize_t n = 1) noexcept {
 			auto id_after = Identifier_t{entries}.combine(id_before);
 			fn_deltas[id_after] += n;
 			if (id_before.is_sen()) {

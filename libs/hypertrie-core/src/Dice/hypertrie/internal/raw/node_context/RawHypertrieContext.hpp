@@ -57,7 +57,7 @@ namespace hypertrie::internal::raw {
 		 */
 		template<size_t depth>
 		void insert(NodeContainer<depth, tri> &nodec,
-					std::vector<SingleEntry<depth, tri_with_stl_alloc<tri>>> entries) {
+					const std::vector<SingleEntry<depth, tri_with_stl_alloc<tri>>> &entries) {
 			insert_impl_RawNodeContext<max_depth, tri>::exec(node_storage_, nodec, entries);
 		}
 

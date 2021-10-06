@@ -13,7 +13,7 @@
 
 namespace hypertrie::internal::raw {
 
-	template<size_t max_depth, HypertrieCoreTrait_bool_valued tri_t>
+	template<size_t max_depth, HypertrieCoreTrait tri_t>
 	class NodeStorage {
 	public:
 		using tri = tri_t;
@@ -38,7 +38,7 @@ namespace hypertrie::internal::raw {
 
 		template<size_t depth, template<size_t, typename> typename node_type>
 		using SpecificNodePtr = typename SpecificNodes<depth, node_type>::node_pointer_type;
-		using SingleEntryNodes = util::IntegralTemplatedTuple<SingleEntryNodeStorage_t, (tri::is_bool_valued) ? 1 : 2, max_depth, allocator_type const &>;
+		using SingleEntryNodes = util::IntegralTemplatedTuple<SingleEntryNodeStorage_t, (HypertrieCoreTrait_bool_valued_and_taggable_key_part<tri>) ? 2 : 1, max_depth, allocator_type const &>;
 		using FullNodes = util::IntegralTemplatedTuple<FullNodeStorage_t, 1, max_depth, allocator_type const &>;
 
 	private:

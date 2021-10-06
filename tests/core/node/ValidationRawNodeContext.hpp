@@ -28,7 +28,7 @@ namespace hypertrie::tests::core::node {
 	public:
 		template<size_t depth>
 		ValidationRawNodeContext(const typename tri::allocator_type &alloc,
-								 EntriesType<depth> const &entries) noexcept : RawHypertrieContext<depth, tri>(alloc) {
+								 EntriesType<depth> const &entries) noexcept : RawHypertrieContext<max_depth, tri>(alloc) {
 			if constexpr (depth == 1 and HypertrieCoreTrait_bool_valued_and_taggable_key_part<tri>)
 				if (entries.size() == 1)
 					return;
@@ -42,16 +42,18 @@ namespace hypertrie::tests::core::node {
 			if (entries.size() == 1) {// SEN
 				if constexpr (depth == 1 and HypertrieCoreTrait_bool_valued_and_taggable_key_part<tri>)
 					FAIL("There must be no depth-1 SEN. They are stored in the identifier.");
-				SingleEntryNode<depth, tri_with_stl_alloc<tri>> new_node{entries[0]};
+				else {
+					SingleEntryNode<depth, tri_with_stl_alloc<tri>> new_node{entries[0]};
 
-				auto existing_node = this->node_storage_.template lookup<depth, SingleEntryNode>(id);
-				if (existing_node) {
-					REQUIRE(SingleEntryNode<depth, tri_with_stl_alloc<tri>>{*existing_node} == new_node);
-					existing_node->ref_count() += 1;
-				} else {
-					this->node_storage_.template nodes<depth, SingleEntryNode>().nodes().insert(
-							{id,
-							 this->node_storage_.template nodes<depth, SingleEntryNode>().node_lifecycle().new_(new_node)});
+					auto existing_node = this->node_storage_.template lookup<depth, SingleEntryNode>(id);
+					if (existing_node) {
+						REQUIRE(SingleEntryNode<depth, tri_with_stl_alloc<tri>>{*existing_node} == new_node);
+						existing_node->ref_count() += 1;
+					} else {
+						this->node_storage_.template nodes<depth, SingleEntryNode>().nodes().insert(
+								{id,
+								 this->node_storage_.template nodes<depth, SingleEntryNode>().node_lifecycle().new_(new_node)});
+					}
 				}
 			} else {                                                                                                     // FN
 				auto new_node = this->node_storage_.template nodes<depth, FullNode>().node_lifecycle().new_with_alloc(1);//ref_count = 1
@@ -106,13 +108,15 @@ namespace hypertrie::tests::core::node {
 				}
 
 
-				const auto &this_SENs = this->node_storage_.template nodes<depth, SingleEntryNode>().nodes();
-				const auto &other_SENs = other.node_storage_.template nodes<depth, SingleEntryNode>().nodes();
-				REQUIRE(this_SENs.size() == other_SENs.size());
+				if constexpr (not(depth == 1 and HypertrieCoreTrait_bool_valued_and_taggable_key_part<tri>)) {
+					const auto &this_SENs = this->node_storage_.template nodes<depth, SingleEntryNode>().nodes();
+					const auto &other_SENs = other.node_storage_.template nodes<depth, SingleEntryNode>().nodes();
+					REQUIRE(this_SENs.size() == other_SENs.size());
 
-				for (const auto &[id, node] : this_SENs) {
-					REQUIRE(other_SENs.contains(id));
-					REQUIRE(*node == *(other_SENs.find(id)->second));
+					for (const auto &[id, node] : this_SENs) {
+						REQUIRE(other_SENs.contains(id));
+						REQUIRE(*node == *(other_SENs.find(id)->second));
+					}
 				}
 			});
 			return true;

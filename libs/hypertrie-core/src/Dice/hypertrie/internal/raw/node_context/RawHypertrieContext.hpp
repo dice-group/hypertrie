@@ -39,7 +39,7 @@ namespace hypertrie::internal::raw {
 		}
 	};
 
-	template<size_t max_depth, HypertrieCoreTrait_bool_valued tri_t>
+	template<size_t max_depth, HypertrieCoreTrait tri_t>
 	struct RawHypertrieContext {
 		using tri = tri_t;
 		using value_type = typename tri::value_type;

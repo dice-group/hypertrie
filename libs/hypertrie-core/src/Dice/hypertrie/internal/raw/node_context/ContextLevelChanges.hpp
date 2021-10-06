@@ -71,7 +71,7 @@ namespace hypertrie::internal::raw {
 				if (auto found = fn_deltas.find(id_after); found != fn_deltas.end())
 					found.value() += n;
 				else {
-					fn_deltas.insert(found, {id_after, n});
+					fn_deltas.insert({id_after, n});
 
 					FN_New new_fn{};
 					new_fn.entries = std::move(entries);

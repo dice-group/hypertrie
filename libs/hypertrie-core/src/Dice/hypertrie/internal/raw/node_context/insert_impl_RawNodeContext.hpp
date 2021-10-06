@@ -28,11 +28,20 @@ namespace hypertrie::internal::raw {
 
 			apply<depth>(node_storage, changes);
 
-			if constexpr (not(depth == 1 and tri::taggable_key_part))
-				nodec = node_storage.template lookup<depth>(nodec.identifier());
-			else
-				nodec.void_node_ptr() = {};
 			assert(not nodec.identifier().empty());
+			if constexpr (not(depth == 1 and HypertrieCoreTrait_bool_valued_and_taggable_key_part<tri>)) {
+				nodec = node_storage.template lookup<depth>(nodec.identifier());
+				assert(not nodec.identifier().empty());
+			} else {
+				if (nodec.identifier().is_sen()) {
+					nodec.void_node_ptr() = {};
+					return;
+				} else {
+					nodec = FNContainer<depth, tri>{nodec.identifier(),
+													node_storage.template lookup<depth, FullNode>(nodec.identifier())};
+					assert(not nodec.identifier().empty());
+				}
+			}
 		}
 
 		template<size_t depth>

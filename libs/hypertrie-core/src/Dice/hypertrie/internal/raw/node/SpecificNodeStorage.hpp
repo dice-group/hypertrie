@@ -24,13 +24,14 @@ namespace hypertrie::internal::raw {
 		Map_t nodes_;
 
 	public:
-		SpecificNodeStorage(const typename tri::allocator_type &alloc)
+		SpecificNodeStorage(const typename tri::allocator_type &alloc) noexcept
 			: allocate_node_(alloc),
 			  nodes_(alloc) {}
 
-		virtual ~SpecificNodeStorage() {
+		~SpecificNodeStorage() {
 			for (auto &[hash, node] : this->nodes())
 				node_lifecycle().delete_(node);
+			this->nodes() = {};
 		}
 
 		const AllocateNode_t &node_lifecycle() const noexcept {

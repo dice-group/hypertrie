@@ -15,9 +15,9 @@ namespace fmt {
 				if constexpr (depth == 1 and ::hypertrie::internal::raw::HypertrieCoreTrait_bool_valued_and_taggable_key_part<tri>)
 					return format_to(ctx.out(), "<key_part:{}", id.get_entry().key()[0]);
 				else
-					return format_to(ctx.out(), "sen_{}", id.hash() & ~(1UL << ::hypertrie::internal::raw::Identifier<depth, tri>::tag_pos));
+					return format_to(ctx.out(), "sen_{:X}", id.hash() & ~(1UL << ::hypertrie::internal::raw::Identifier<depth, tri>::tag_pos)& 0xFFFFUL) ;
 			} else {
-				return format_to(ctx.out(), "fn_{}", id.hash() & ~(1UL << ::hypertrie::internal::raw::Identifier<depth, tri>::tag_pos));
+				return format_to(ctx.out(), "fn_{:X}", id.hash() & ~(1UL << ::hypertrie::internal::raw::Identifier<depth, tri>::tag_pos)& 0xFFFFUL);
 			}
 		}
 	};

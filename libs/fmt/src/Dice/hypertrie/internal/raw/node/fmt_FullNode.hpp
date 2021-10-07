@@ -10,7 +10,7 @@ namespace fmt {
 	struct formatter<::hypertrie::internal::raw::FullNode<depth, tri_t>> : hypertrie::internal::util::SimpleParsing {
 		template<typename FormatContext>
 		auto format(::hypertrie::internal::raw::FullNode<depth, tri_t> const &fn, FormatContext &ctx) {
-			format_to(ctx.out(), "{{ [size={},ref_count={}] ", fn.size(), fn.ref_count());
+			format_to(ctx.out(), "{{ [size={},ref_count={}]\n", fn.size(), fn.ref_count());
 			for (const auto &pos : iter::range(depth)) {
 				format_to(ctx.out(), "{}: {}\n", pos, fn.edges(pos));
 			}

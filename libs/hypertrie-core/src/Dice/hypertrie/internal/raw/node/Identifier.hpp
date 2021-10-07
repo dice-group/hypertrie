@@ -50,6 +50,7 @@ namespace hypertrie::internal::raw {
 		size_t hash_ = seed_;
 
 
+	public:
 		/**
 		 * Position of the tag
 		 */
@@ -57,6 +58,7 @@ namespace hypertrie::internal::raw {
 
 		static constexpr const size_t seed_ = size_t(0)           // put the seed here
 											  & ~(1UL << tag_pos);// the tagging bit is set to 0
+	protected:
 		/**
 		 * Tag value if the hash represents an uncompressed node.
 		 */

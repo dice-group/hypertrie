@@ -6,7 +6,7 @@
 
 namespace hypertrie::internal::raw {
 
-	template<size_t max_depth, HypertrieCoreTrait_bool_valued tri_t>
+	template<size_t max_depth, HypertrieCoreTrait tri_t>
 	struct insert_impl_RawNodeContext {
 		using tri = tri_t;
 

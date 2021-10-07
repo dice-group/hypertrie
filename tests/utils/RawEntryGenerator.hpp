@@ -39,19 +39,32 @@ namespace hypertrie::tests::utils {
 			  key_part_min_(key_part_min), key_part_max_(key_part_max),
 			  key_part_dist{key_part_min, key_part_max}, value_dist{value_min_, value_max_} {}
 
-		value_type getValueMin() const {
-			return value_min_;
-		}
 		void setValueMinMax(value_type value_min, value_type value_max) {
 			this->value_min_ = value_min;
 			this->value_max_ = value_max;
 			value_dist = uniform_dist<dist_value_type>{value_min, value_max};
+		}
+		void wind(size_t times) {
+			this->rand.discard(times);
 		}
 
 		void setKeyPartMinMax(key_part_type key_part_min, key_part_type key_part_max) {
 			this->key_part_min_ = key_part_min;
 			this->key_part_max_ = key_part_max;
 			key_part_dist = uniform_dist<key_part_type>{key_part_min, key_part_max};
+		}
+
+		const value_type &getValueMin() const {
+			return value_min_;
+		}
+		const value_type &getValueMax() const {
+			return value_max_;
+		}
+		const key_part_type &getKeyPartMin() const {
+			return key_part_min_;
+		}
+		const key_part_type &getKeyPartMax() const {
+			return key_part_max_;
 		}
 
 		key_part_type key_part() {
@@ -81,23 +94,23 @@ namespace hypertrie::tests::utils {
 		}
 
 		SingleEntry_t entry() {
-			return std::pair{key(), value()};
+			return {key(), value()};
 		}
 
 		std::vector<SingleEntry_t> entries(size_t size) {
-			std::vector<SingleEntry_t> entries_(size);
+			std::vector<SingleEntry_t> entries_;
+			entries_.reserve(size);
 			tsl::sparse_set<RawKey_t, Dice::hash::DiceHashMartinus<RawKey_t>> seen;
-			size_t pos = 0;
 			size_t stall = 0;
-			while (pos < size) {
+			while (entries_.size() < size) {
 				static RawKey_t key;
 				key = this->key();
 				if (not seen.contains(key)) {
-					entries_[pos++] = SingleEntry_t{key, value()};
+					entries_.emplace_back(key, value());
 					seen.insert(key);
 					stall = 0;
 				}
-				if (stall++ == 4)
+				if (stall++ == 10)
 					break;
 			}
 			return entries_;

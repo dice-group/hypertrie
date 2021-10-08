@@ -19,11 +19,10 @@ namespace hypertrie::internal::raw {
 			if (entries.empty())
 				return;
 
-
 			if (nodec.empty()) {
 				nodec.identifier() = changes.add_node(std::move(entries));
 			} else {
-				nodec.identifier() = changes.insert_into_node(nodec.identifier(), std::move(entries));
+				nodec.identifier() = changes.insert_into_node(nodec.identifier(), std::move(entries), true);
 			}
 
 			apply<depth>(node_storage, changes);
@@ -124,7 +123,7 @@ namespace hypertrie::internal::raw {
 
 					auto entries = std::move(changes[id_after]);
 
-					insert_into_full_node<depth>(next_level_changes, full_nodes_, id_after, node_before, std::move(entries));
+					insert_into_full_node<depth, false, true>(next_level_changes, full_nodes_, id_after, node_before, std::move(entries));
 					lv_changes.done_fns.insert(id_after);
 				} else {// or delete
 					full_nodes_lifecycle.delete_(node_before);
@@ -136,8 +135,8 @@ namespace hypertrie::internal::raw {
 				if (lv_changes.done_fns.contains(id_before))
 					continue;
 				// lookup node_before
-				auto node_before = full_nodes_.find(id_before).value();
 				assert(full_nodes_.find(id_before) != full_nodes_.end());
+				auto node_before = full_nodes_.find(id_before).value();
 
 				for (const auto &[id_after, entries] : changes) {
 					assert(id_before != id_after);
@@ -176,8 +175,18 @@ namespace hypertrie::internal::raw {
 					Identifier_t id_before = change.sen_node_before;
 
 
-					if (id_before.is_sen()) {
-						change.entries.push_back({lv_changes.SEN_new_ones[id_before].entry});
+					if constexpr (not (depth == 1 and HypertrieCoreTrait_bool_valued_and_taggable_key_part<tri>)) {
+						auto &se_nodes_ =  node_storage.template nodes<depth, SingleEntryNode>().nodes();
+						if (id_before.is_sen()) {
+							if (auto found = lv_changes.SEN_new_ones.find(id_before); found != lv_changes.SEN_new_ones.end()) {
+								assert(found->second.entry != decltype(found->second.entry){});
+								change.entries.emplace_back(found->second.entry);
+							} else {
+								assert(se_nodes_.contains(id_before));
+								auto &sen_node_before = se_nodes_[id_before];
+								change.entries.emplace_back(*sen_node_before);
+							}
+						}
 					}
 					auto fn_node_ptr = node_storage.template lookup<depth, FullNode>(id_after);
 					if (fn_node_ptr) {
@@ -196,7 +205,7 @@ namespace hypertrie::internal::raw {
 				apply(node_storage, next_level_changes);
 			}
 		}
-		template<size_t depth, bool node_is_empty = false>
+		template<size_t depth, bool node_is_empty = false, bool reused_node = false>
 		static void insert_into_full_node(ContextLevelChanges<depth - 1, tri> &next_level_changes,
 										  typename SpecificNodeStorage<depth, tri, FullNode>::Map_t &full_nodes_,
 										  Identifier<depth, tri> id_after,
@@ -222,7 +231,7 @@ namespace hypertrie::internal::raw {
 						if constexpr (not node_is_empty) {
 							auto [key_part_exists, iter] = copied_node->find(pos, key_part);
 							if (key_part_exists) {
-								iter.value() = next_level_changes.insert_into_node(iter->second, child_inserted_entries);
+								iter.value() = next_level_changes.insert_into_node(iter->second, child_inserted_entries, reused_node);
 								continue;
 							}
 						}

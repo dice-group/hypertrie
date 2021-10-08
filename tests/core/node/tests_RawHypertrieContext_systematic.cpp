@@ -36,7 +36,7 @@ namespace hypertrie::tests::core::node {
 
 			using key_part_type = typename tri::key_part_type;
 
-			static constexpr key_part_type max_key_part = key_part_type(1 + no_key_parts);
+			static constexpr key_part_type max_key_part = key_part_type(no_key_parts);
 
 
 			SUBCASE("{}"_format(tri{}).c_str()) {
@@ -92,23 +92,23 @@ namespace hypertrie::tests::core::node {
 			}
 		}
 
-		TEST_CASE_TEMPLATE("write and read depth 2", T,
-						   bool_cfg<2>,
-						   tagged_bool_cfg<2>,
-						   long_cfg<2>,
-						   double_cfg<2>
-						   //								   						   bool_cfg<1>, bool_cfg<2>, bool_cfg<3>,bool_cfg<4>, bool_cfg<5>
-						   //									  						   tagged_bool_cfg<1>, tagged_bool_cfg<2>, tagged_bool_cfg<3>, tagged_bool_cfg<4>, tagged_bool_cfg<5>,
-						   //									  						   long_cfg<1>, long_cfg<2>, long_cfg<3>, long_cfg<4>, long_cfg<5>,
-						   //									  						   double_cfg<1>, double_cfg<2>, double_cfg<3>, double_cfg<4>, double_cfg<5>
-						   //
-		) {
-			write_and_read2<T::depth, typename T::tri, 3, 1, 2>();
-		}
+//		TEST_CASE_TEMPLATE("write and read depth 2", T,
+//						   bool_cfg<2>,
+//						   tagged_bool_cfg<2>,
+//						   long_cfg<2>,
+//						   double_cfg<2>
+//						   //								   						   bool_cfg<1>, bool_cfg<2>, bool_cfg<3>,bool_cfg<4>, bool_cfg<5>
+//						   //									  						   tagged_bool_cfg<1>, tagged_bool_cfg<2>, tagged_bool_cfg<3>, tagged_bool_cfg<4>, tagged_bool_cfg<5>,
+//						   //									  						   long_cfg<1>, long_cfg<2>, long_cfg<3>, long_cfg<4>, long_cfg<5>,
+//						   //									  						   double_cfg<1>, double_cfg<2>, double_cfg<3>, double_cfg<4>, double_cfg<5>
+//						   //
+//		) {
+//			write_and_read2<T::depth, typename T::tri, 3, 1, 2>();
+//		}
 
 		TEST_CASE_TEMPLATE("write and read depth 3", T,
-						   bool_cfg<3>
-//						   tagged_bool_cfg<2>,
+//						   bool_cfg<3>,
+						   tagged_bool_cfg<3>
 //						   long_cfg<2>,
 //						   double_cfg<2>
 						   //								   						   bool_cfg<1>, bool_cfg<2>, bool_cfg<3>,bool_cfg<4>, bool_cfg<5>
@@ -117,7 +117,8 @@ namespace hypertrie::tests::core::node {
 						   //									  						   double_cfg<1>, double_cfg<2>, double_cfg<3>, double_cfg<4>, double_cfg<5>
 						   //
 		) {
-			write_and_read2<T::depth, typename T::tri, 3, 2, 2>();
+			write_and_read2<T::depth, typename T::tri, 2, 2, 3>();
+			// TODO: find that bug
 		}
 	}
 };// namespace hypertrie::tests::core::node

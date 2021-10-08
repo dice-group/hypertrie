@@ -29,7 +29,7 @@ namespace hypertrie::internal::raw {
 			return std::tie(this->key(), this->value()) <=> std::tie(other.key(), other.value());
 		}
 
-		auto operator==(const SingleEntry &other) const noexcept {
+		bool operator==(const SingleEntry &other) const noexcept {
 			return std::tie(this->key(), this->value()) == std::tie(other.key(), other.value());
 		}
 	};
@@ -55,7 +55,7 @@ namespace hypertrie::internal::raw {
 			return this->key() <=> other.key();
 		}
 
-		auto operator==(const SingleEntry &other) const noexcept {
+		bool operator==(const SingleEntry &other) const noexcept {
 			return this->key() == other.key();
 		}
 	};

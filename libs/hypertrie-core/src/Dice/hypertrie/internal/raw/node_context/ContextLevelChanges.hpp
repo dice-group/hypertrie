@@ -82,9 +82,9 @@ namespace hypertrie::internal::raw {
 			}
 		}
 
-		Identifier_t insert_into_node(Identifier_t id_before, std::vector<Entry> const &entries, ssize_t n = 1) noexcept {
+		Identifier_t insert_into_node(Identifier_t id_before, std::vector<Entry> const &entries, bool decrement_before = false) noexcept {
 			auto id_after = Identifier_t{entries}.combine(id_before);
-			fn_deltas[id_after] += n;
+			fn_deltas[id_after] += 1;
 			if (id_before.is_sen()) {
 				if constexpr (depth == 1 and HypertrieCoreTrait_bool_valued_and_taggable_key_part<tri>) {
 					auto &change = FN_new_ones[id_after];
@@ -92,7 +92,8 @@ namespace hypertrie::internal::raw {
 					change.entries.push_back(id_before.get_entry());
 				} else {
 					// decrement refcount delta of node before
-					SEN_new_ones[id_before].ref_count_delta -= n;
+					if (decrement_before)
+						SEN_new_ones[id_before].ref_count_delta -= 1;
 
 					// new node must be created
 					auto &change = FN_new_ones[id_after];
@@ -101,9 +102,8 @@ namespace hypertrie::internal::raw {
 					change.sen_node_before = id_before;
 				}
 			} else {
-				if (id_before.hash() == 2882433060577774610UL)
-					fmt::print("problematic_id_before{}\n", id_before);
-				fn_deltas[id_before] -= n;
+				if (decrement_before)
+					fn_deltas[id_before] -= 1;
 				auto &changes = FN_changes[id_before];
 				if (auto found = changes.find(id_after); found == changes.end()) {
 					changes[id_after] = entries;

@@ -32,7 +32,6 @@ namespace hypertrie::tests::core::node {
 			using key_part_type = typename tri::key_part_type;
 			using value_type = typename tri::value_type;
 			using SingleEntry_t = SingleEntry<depth, tri_with_stl_alloc<tri>>;
-			using RawKey_t = RawKey<depth, tri>;
 			constexpr auto count = 2;
 
 			std::vector<SingleEntry_t> all_entries{SingleEntry_t{{4, 3, 1}, true},
@@ -73,7 +72,6 @@ namespace hypertrie::tests::core::node {
 			using key_part_type = typename tri::key_part_type;
 			using value_type = typename tri::value_type;
 			using SingleEntry_t = SingleEntry<depth, tri_with_stl_alloc<tri>>;
-			using RawKey_t = RawKey<depth, tri>;
 			constexpr auto count = 2;
 
 			std::vector<SingleEntry_t> all_entries{SingleEntry_t{{2, 1, 1}, true},
@@ -111,10 +109,7 @@ namespace hypertrie::tests::core::node {
 			using T = bool_cfg<4>;
 			constexpr auto depth = T::depth;
 			using tri = typename T::tri;
-			using key_part_type = typename tri::key_part_type;
-			using value_type = typename tri::value_type;
 			using SingleEntry_t = SingleEntry<depth, tri_with_stl_alloc<tri>>;
-			using RawKey_t = RawKey<depth, tri>;
 			constexpr auto count = 2;
 
 			std::vector<SingleEntry_t> all_entries{SingleEntry_t{{2, 3, 3, 1}, true},
@@ -151,10 +146,7 @@ namespace hypertrie::tests::core::node {
 			using T = bool_cfg<3>;
 			constexpr auto depth = T::depth;
 			using tri = typename T::tri;
-			using key_part_type = typename tri::key_part_type;
-			using value_type = typename tri::value_type;
 			using SingleEntry_t = SingleEntry<depth, tri_with_stl_alloc<tri>>;
-			using RawKey_t = RawKey<depth, tri>;
 			constexpr auto count = 2;
 
 			std::vector<SingleEntry_t> all_entries{SingleEntry_t{{2, 3, 2}, true},
@@ -191,10 +183,7 @@ namespace hypertrie::tests::core::node {
 			using T = bool_cfg<3>;
 			constexpr auto depth = T::depth;
 			using tri = typename T::tri;
-			using key_part_type = typename tri::key_part_type;
-			using value_type = typename tri::value_type;
 			using SingleEntry_t = SingleEntry<depth, tri_with_stl_alloc<tri>>;
-			using RawKey_t = RawKey<depth, tri>;
 			constexpr auto count = 2;
 
 			std::vector<SingleEntry_t> all_entries{SingleEntry_t{{3, 3, 4}, true},
@@ -238,10 +227,7 @@ namespace hypertrie::tests::core::node {
 			using T = bool_cfg<3>;
 			constexpr auto depth = T::depth;
 			using tri = typename T::tri;
-			using key_part_type = typename tri::key_part_type;
-			using value_type = typename tri::value_type;
 			using SingleEntry_t = SingleEntry<depth, tri_with_stl_alloc<tri>>;
-			using RawKey_t = RawKey<depth, tri>;
 			constexpr auto count = 2;
 
 			std::vector<SingleEntry_t> all_entries{SingleEntry_t{{{3, 2, 2}}, true},

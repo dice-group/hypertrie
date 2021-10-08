@@ -203,7 +203,7 @@ namespace hypertrie::internal::raw {
 			if (this->empty())
 				hash_ = other.hash_;
 			else if (not other.empty()) {
-				using Hash = Dice::hash::DiceHashwyhash<size_t>;
+				using Hash = Dice::hash::DiceHashMartinus<size_t>;
 
 				if constexpr (in_place_node) {
 					auto left_hash = (is_sen()) ? hash_and_combine(get_entry()) : hash_;

@@ -67,6 +67,7 @@ namespace hypertrie::internal::raw {
 					change.entry = entries[0];
 				return id_after;
 			} else {
+				assert (entries.size() > 1);
 				Identifier_t id_after{entries};
 				if (auto found = fn_deltas.find(id_after); found != fn_deltas.end())
 					found.value() += n;
@@ -100,10 +101,13 @@ namespace hypertrie::internal::raw {
 					change.sen_node_before = id_before;
 				}
 			} else {
+				if (id_before.hash() == 2882433060577774610UL)
+					fmt::print("problematic_id_before{}\n", id_before);
 				fn_deltas[id_before] -= n;
 				auto &changes = FN_changes[id_before];
-				if (auto found = changes.find(id_after); found == changes.end())
+				if (auto found = changes.find(id_after); found == changes.end()) {
 					changes[id_after] = entries;
+				}
 			}
 
 			return id_after;
@@ -118,7 +122,7 @@ namespace hypertrie::internal::raw {
 		void calc_moveables(SpecificNodeStorage<depth, tri, FullNode> &specific_full_node_storage) noexcept {
 			auto &nodes_ = specific_full_node_storage.nodes();
 			for (const auto &[id_before, changes] : FN_changes) {
-				if (ssize_t(nodes_[id_before]->ref_count()) + fn_deltas[id_before] == 0) {
+				if (ssize_t(nodes_[id_before]->ref_count()) + fn_deltas[id_before] <= 0) {
 					for (const auto &[id_after, _] : changes) {
 						if (not nodes_.contains(id_after)) {
 							moveables_fns[id_before].insert(id_after);

@@ -45,6 +45,12 @@ namespace hypertrie::internal::raw {
 		}
 
 		template<size_t depth>
+		static inline void update_ref_count(size_t &node_ref_count, Identifier<depth, tri> node_id, tsl::sparse_map<Identifier<depth, tri>, ssize_t> &fn_deltas){
+			auto new_ref_count = ssize_t(node_ref_count) + fn_deltas[node_id];
+			node_ref_count = (new_ref_count > 0) ? size_t(new_ref_count) : 0UL;
+		}
+
+		template<size_t depth>
 		static void apply(NodeStorage<max_depth, tri> &node_storage,
 						  ContextLevelChanges<depth, tri> &lv_changes) {
 			ContextLevelChanges<depth - 1, tri> next_level_changes;
@@ -88,6 +94,7 @@ namespace hypertrie::internal::raw {
 				// the node_before is gone after we reused only once.
 				// So we need to process all other changes which require node_before first
 				for (const auto &[id_after, entries] : changes) {
+					assert(id_before != id_after);
 					if (last_id_after.has_value() and id_after == last_id_after.value())
 						continue;
 					if (lv_changes.done_fns.contains(id_after))
@@ -111,7 +118,8 @@ namespace hypertrie::internal::raw {
 				if (last_id_after.has_value()) {
 
 					auto id_after = last_id_after.value();
-					assert(ssize_t(node_before->ref_count()) + lv_changes.fn_deltas[id_before] == 0);
+					assert(id_before != id_after);
+					assert(ssize_t(node_before->ref_count()) + lv_changes.fn_deltas[id_before] <= 0);
 					node_before->ref_count() = lv_changes.fn_deltas[id_after];
 
 					auto entries = std::move(changes[id_after]);
@@ -132,8 +140,10 @@ namespace hypertrie::internal::raw {
 				assert(full_nodes_.find(id_before) != full_nodes_.end());
 
 				for (const auto &[id_after, entries] : changes) {
+					assert(id_before != id_after);
 					if (lv_changes.done_fns.contains(id_after))
 						continue;
+					assert(not entries.empty());
 
 					if (auto found = full_nodes_.find(id_after); found != full_nodes_.end()) {// node already exists: we only need to update the ref_count
 						found.value()->ref_count() += lv_changes.fn_deltas[id_after];
@@ -142,23 +152,21 @@ namespace hypertrie::internal::raw {
 						auto copied_node = full_nodes_lifecycle.new_(*node_before);
 						copied_node->ref_count() = lv_changes.fn_deltas[id_after];
 
-						insert_into_full_node<depth, true>(next_level_changes, full_nodes_, id_after, copied_node, std::move(entries));
+						insert_into_full_node<depth>(next_level_changes, full_nodes_, id_after, copied_node, std::move(entries));
 					}
 
 					lv_changes.done_fns.insert(id_after);
 				}
 
-				if (not lv_changes.done_fns.contains(id_before)) {
-					// update the ref_count of node_before
-					assert(ssize_t(node_before->ref_count()) + lv_changes.fn_deltas[id_before] >= 0);
-					node_before->ref_count() += lv_changes.fn_deltas[id_before];
+				// update the ref_count of node_before
+				update_ref_count(node_before->ref_count(), id_before, lv_changes.fn_deltas);
 
-					// if the ref_count reaches 0, remove the node
-					if (node_before->ref_count() == 0) {
-						full_nodes_.erase(id_before);
-						full_nodes_lifecycle.delete_(node_before);
-					}
+				// if the ref_count reaches 0, remove the node
+				if (node_before->ref_count() == 0) {
+					full_nodes_.erase(id_before);
+					full_nodes_lifecycle.delete_(node_before);
 				}
+				lv_changes.done_fns.insert(id_before);
 			}
 
 			for (auto it = lv_changes.FN_new_ones.begin(); it != lv_changes.FN_new_ones.end(); ++it) {
@@ -177,11 +185,12 @@ namespace hypertrie::internal::raw {
 						fn_node_ptr->ref_count() += lv_changes.fn_deltas[id_after];
 					} else {
 						auto new_node = full_nodes_lifecycle.new_with_alloc(lv_changes.fn_deltas[id_after]);
-						insert_into_full_node(next_level_changes, full_nodes_, id_after, new_node, std::move(change.entries));
+						insert_into_full_node<depth, true>(next_level_changes, full_nodes_, id_after, new_node, std::move(change.entries));
 					}
 					lv_changes.done_fns.insert(id_after);
 				}
 			}
+			assert(lv_changes.done_fns.size() == lv_changes.fn_deltas.size());
 
 			if constexpr (depth > 1) {
 				apply(node_storage, next_level_changes);
@@ -195,7 +204,7 @@ namespace hypertrie::internal::raw {
 										  std::vector<SingleEntry<depth, tri_with_stl_alloc<tri>>> entries) {
 			assert(not full_nodes_.contains(id_after));
 			full_nodes_.insert({id_after, copied_node});
-			// TODO: this does not yet cover value changes (for non-boolean-valued hypertries) yet, I think ...
+			// TODO: this does not cover value changes (for non-boolean-valued hypertries) yet, I think ...
 			if constexpr (depth == 1) {
 				for (const auto &entry : entries)
 					copied_node->insert_or_assign(entry.key(), entry.value());

@@ -1,8 +1,4 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
-
-#include <doctest/doctest.h>
-
-
 #include <doctest/doctest.h>
 
 #include <fmt/format.h>
@@ -44,11 +40,11 @@ namespace hypertrie::tests::core::node {
 
 					for (size_t count : iter::chain(iter::range(1, 10), iter::range(10, 30, 5), iter::range(300, 301))) {
 						SUBCASE("insert {} entries "_format(count).c_str()) {
-							auto runs = (count != 300) ? 50 : 5;
+							auto runs = (count != 300) ? 500 : 5;
 							for (const auto i : iter::range(runs)) {
 								SUBCASE("{}"_format(i).c_str()) {
 									// TODO: reconsider -- bad for high count and low depth
-									gen.setKeyPartMinMax(key_part_type(1), key_part_type(1 + std::ceil(std::pow(count, 2.0 / depth))));
+									gen.setKeyPartMinMax(key_part_type(1), key_part_type(1 + std::ceil(std::pow(count, 1.0 / depth))));
 									gen.setValueMinMax(value_type(1), value_type(2));
 									// std::cout << "key_part_max " << gen.getKeyPartMax() << "\n"
 									// 		     << "value_max " << gen.getValueMax() << std::endl;
@@ -72,7 +68,7 @@ namespace hypertrie::tests::core::node {
 						}
 
 						SUBCASE("insert 2x{} entries "_format(count).c_str()) {
-							auto runs = (count != 300) ? 50 : 5;
+							auto runs = (count != 300) ? 500 : 5;
 							for (const auto i : iter::range(runs)) {
 								SUBCASE("{}"_format(i).c_str()) {
 									auto total_count = 2 * count;
@@ -114,9 +110,9 @@ namespace hypertrie::tests::core::node {
 
 		TEST_CASE_TEMPLATE("write and read", T,
 						   bool_cfg<1>, bool_cfg<2>, bool_cfg<3>, bool_cfg<4>, bool_cfg<5>,
-						   tagged_bool_cfg<1>, tagged_bool_cfg<2>, tagged_bool_cfg<3>, tagged_bool_cfg<4>, tagged_bool_cfg<5>,
-						   long_cfg<1>, long_cfg<2>, long_cfg<3>, long_cfg<4>, long_cfg<5>,
-						   double_cfg<1>, double_cfg<2>, double_cfg<3>, double_cfg<4>, double_cfg<5>
+						   tagged_bool_cfg<1>, tagged_bool_cfg<2>, tagged_bool_cfg<3>, tagged_bool_cfg<4>, tagged_bool_cfg<5>//,
+//						   long_cfg<1>, long_cfg<2>, long_cfg<3>, long_cfg<4>, long_cfg<5>,
+//						   double_cfg<1>, double_cfg<2>, double_cfg<3>, double_cfg<4>, double_cfg<5>
 						   //
 		) {
 			write_and_read<T::depth, typename T::tri>();

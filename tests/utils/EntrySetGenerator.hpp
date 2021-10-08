@@ -75,7 +75,7 @@ namespace hypertrie::tests::utils {
 		using value_type = typename tri::value_type;
 		using key_part_type = typename tri::key_part_type;
 
-	private:
+	protected:
 		static inline constexpr size_t pow(size_t base, size_t exponent) {
 			size_t result = 1;
 			for (size_t e = 0; e < exponent; ++e)
@@ -130,7 +130,7 @@ namespace hypertrie::tests::utils {
 		 */
 		bool inc_entries_combination() noexcept {
 			ssize_t i;
-			for (i = 0; i < number_of_entries; ++i) {
+			for (i = 0; i < ssize_t(number_of_entries); ++i) {
 				if (inc_entry_permutation(entries_.at(i)) and (id_of(entries_.at(i)) <= max_entry_id - i)) {
 					break;
 				}
@@ -156,7 +156,7 @@ namespace hypertrie::tests::utils {
 			return entries_;
 		}
 
-		EntrySetGenerator operator++(int) noexcept {
+		EntrySetGenerator operator++(int) &noexcept {
 			SingleEntryGenerator old = *this;
 			++(*this);
 			return old;
@@ -186,6 +186,52 @@ namespace hypertrie::tests::utils {
 		operator bool() noexcept {
 			return not_ended_;
 		}
+	};
+	template<size_t depth,
+			 size_t number_of_entries,
+			 internal::raw::HypertrieCoreTrait tri_t,
+			 typename tri_t::key_part_type max_key_part = typename tri_t::key_part_type(1)>
+	class EntrySetGenerator_with_exclude : public EntrySetGenerator<depth, number_of_entries, tri_t, max_key_part> {
+		using super_t = EntrySetGenerator<depth, number_of_entries, tri_t, max_key_part>;
+		using SinlgeEntry_t = typename super_t ::SinlgeEntry_t;
+		const std::vector<SinlgeEntry_t> &excluded_entries_;
+
+	public:
+		EntrySetGenerator_with_exclude(const std::vector<SinlgeEntry_t> &excludedEntries) : excluded_entries_(excludedEntries) {}
+
+
+		EntrySetGenerator_with_exclude &operator++() noexcept {
+			do {
+				if (not this->inc_entries_combination()) {
+					this->not_ended_ = false;
+					return *this;
+				}
+			} while (std::ranges::any_of(this->entries_, [&](const auto &entry) {
+				return std::ranges::any_of(this->excluded_entries_, [&](const auto &excluded_entry) {//
+					return entry == excluded_entry;
+				});
+			}));
+			return *this;
+		}
+
+		EntrySetGenerator_with_exclude operator++(int) &noexcept {
+			EntrySetGenerator_with_exclude old = *this;
+			++(*this);
+			return old;
+		}
+
+		EntrySetGenerator_with_exclude &begin() noexcept {
+			super_t::begin();
+			if (std::ranges::any_of(this->entries_, [&](const auto &entry) {
+					return std::ranges::any_of(this->excluded_entries_, [&](const auto &excluded_entry) {//
+						return entry == excluded_entry;
+					});
+				}))
+				++(*this);
+			return *this;
+		}
+
+
 	};
 
 }// namespace hypertrie::tests::utils

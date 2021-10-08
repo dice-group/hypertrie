@@ -41,7 +41,7 @@ namespace hypertrie::tests::core::node {
 			Identifier<depth, tri> id{entries};
 			if (entries.size() == 1) {// SEN
 				if constexpr (depth == 1 and HypertrieCoreTrait_bool_valued_and_taggable_key_part<tri>)
-					FAIL("There must be no depth-1 SEN. They are stored in the identifier.");
+					CHECK_MESSAGE(false, "There must be no depth-1 SEN. They are stored in the identifier.");
 				else {
 					SingleEntryNode<depth, tri_with_stl_alloc<tri>> new_node{entries[0]};
 
@@ -83,13 +83,13 @@ namespace hypertrie::tests::core::node {
 				}
 				auto existing_node = this->node_storage_.template lookup<depth, FullNode>(id);
 				if (existing_node) {
-					REQUIRE(*new_node == *existing_node);
+					CHECK(*new_node == *existing_node);
 					existing_node->ref_count() += 1;
 					this->node_storage_.template nodes<depth, FullNode>().node_lifecycle().delete_(new_node);
 				} else {
 					this->node_storage_.template nodes<depth, FullNode>().nodes()[id] = new_node;
 					auto x = this->node_storage_.template nodes<depth, FullNode>().nodes().find(id);
-					REQUIRE(x != this->node_storage_.template nodes<depth, FullNode>().nodes().end());
+					CHECK(x != this->node_storage_.template nodes<depth, FullNode>().nodes().end());
 				}
 			}
 		}
@@ -101,21 +101,23 @@ namespace hypertrie::tests::core::node {
 				const auto &this_FNs = this->node_storage_.template nodes<depth, FullNode>().nodes();
 				const auto &other_FNs = other.node_storage_.template nodes<depth, FullNode>().nodes();
 
-				REQUIRE(this_FNs.size() == other_FNs.size());
+				CHECK(this_FNs.size() == other_FNs.size());
 				for (const auto &[id, node] : this_FNs) {
-					REQUIRE(other_FNs.contains(id));
-					REQUIRE(*node == *(other_FNs.find(id)->second));
+					CHECK(other_FNs.contains(id));
+					if (other_FNs.contains(id))
+						CHECK(*node == *(other_FNs.find(id)->second));
 				}
 
 
 				if constexpr (not(depth == 1 and HypertrieCoreTrait_bool_valued_and_taggable_key_part<tri>)) {
 					const auto &this_SENs = this->node_storage_.template nodes<depth, SingleEntryNode>().nodes();
 					const auto &other_SENs = other.node_storage_.template nodes<depth, SingleEntryNode>().nodes();
-					REQUIRE(this_SENs.size() == other_SENs.size());
+					CHECK(this_SENs.size() == other_SENs.size());
 
 					for (const auto &[id, node] : this_SENs) {
-						REQUIRE(other_SENs.contains(id));
-						REQUIRE(*node == *(other_SENs.find(id)->second));
+						CHECK(other_SENs.contains(id));
+						if (other_SENs.contains(id))
+							CHECK(*node == *(other_SENs.find(id)->second));
 					}
 				}
 			});

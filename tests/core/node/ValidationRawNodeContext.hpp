@@ -43,7 +43,7 @@ namespace hypertrie::tests::core::node {
 				if constexpr (depth == 1 and HypertrieCoreTrait_bool_valued_and_taggable_key_part<tri>)
 					CHECK_MESSAGE(false, "There must be no depth-1 SEN. They are stored in the identifier.");
 				else {
-					SingleEntryNode<depth, tri_with_stl_alloc<tri>> new_node{entries[0]};
+					SingleEntryNode<depth, tri_with_stl_alloc<tri>> new_node{entries[0], 1};
 
 					auto existing_node = this->node_storage_.template lookup<depth, SingleEntryNode>(id);
 					if (existing_node) {
@@ -55,38 +55,40 @@ namespace hypertrie::tests::core::node {
 								 this->node_storage_.template nodes<depth, SingleEntryNode>().node_lifecycle().new_(new_node)});
 					}
 				}
-			} else {                                                                                                     // FN
-				auto new_node = this->node_storage_.template nodes<depth, FullNode>().node_lifecycle().new_with_alloc(1);//ref_count = 1
+			} else {
 
-				// populate node
-				if constexpr (depth == 1) {
-					for (const auto &entry : entries)
-						new_node->insert_or_assign(entry.key(), entry.value());
-				} else {
-					new_node->size() = entries.size();
-					for (pos_type pos : iter::range(depth)) {
-						tsl::sparse_map<key_part_type, EntriesType<depth - 1>> childs_entries;
-						for (const auto &entry : entries)
-							childs_entries[entry.key()[pos]].emplace_back(entry.key().subkey(pos), entry.value());
-
-						for (const auto &[key_part, child_entries] : childs_entries) {
-							Identifier<depth - 1, tri> child_id{child_entries};
-							new_node->edges(pos)[key_part] = child_id;
-							if constexpr (depth > 1)
-								if constexpr (depth == 2 and HypertrieCoreTrait_bool_valued_and_taggable_key_part<tri>)
-									if (child_entries.size() == 1)
-										continue;
-							// recursively populate subnode
-							init<depth - 1>(child_entries);
-						}
-					}
-				}
 				auto existing_node = this->node_storage_.template lookup<depth, FullNode>(id);
 				if (existing_node) {
-					CHECK(*new_node == *existing_node);
+					// CHECK(*new_node == *existing_node); // TODO: validate, that the nodes are actually equal (checking for cache collisions
 					existing_node->ref_count() += 1;
-					this->node_storage_.template nodes<depth, FullNode>().node_lifecycle().delete_(new_node);
 				} else {
+					// FN
+					auto new_node = this->node_storage_.template nodes<depth, FullNode>().node_lifecycle().new_with_alloc(1);//ref_count = 1
+
+					// populate node
+					if constexpr (depth == 1) {
+						for (const auto &entry : entries)
+							new_node->insert_or_assign(entry.key(), entry.value());
+					} else {
+						new_node->size() = entries.size();
+						for (pos_type pos : iter::range(depth)) {
+							tsl::sparse_map<key_part_type, EntriesType<depth - 1>> childs_entries;
+							for (const auto &entry : entries)
+								childs_entries[entry.key()[pos]].emplace_back(entry.key().subkey(pos), entry.value());
+
+							for (const auto &[key_part, child_entries] : childs_entries) {
+								Identifier<depth - 1, tri> child_id{child_entries};
+								new_node->edges(pos)[key_part] = child_id;
+								if constexpr (depth > 1)
+									if constexpr (depth == 2 and HypertrieCoreTrait_bool_valued_and_taggable_key_part<tri>)
+										if (child_entries.size() == 1)
+											continue;
+								// recursively populate subnode
+								init<depth - 1>(child_entries);
+							}
+						}
+					}
+
 					this->node_storage_.template nodes<depth, FullNode>().nodes()[id] = new_node;
 					auto x = this->node_storage_.template nodes<depth, FullNode>().nodes().find(id);
 					CHECK(x != this->node_storage_.template nodes<depth, FullNode>().nodes().end());
@@ -104,7 +106,7 @@ namespace hypertrie::tests::core::node {
 				CHECK(this_FNs.size() == other_FNs.size());
 				for (const auto &[id, node] : this_FNs) {
 					CHECK(other_FNs.contains(id));
-					if (other_FNs.contains(id)){
+					if (other_FNs.contains(id)) {
 						auto other_node = other_FNs.find(id).value();
 						CHECK(*node == *other_node);
 						CHECK(node->ref_count() == other_node->ref_count());

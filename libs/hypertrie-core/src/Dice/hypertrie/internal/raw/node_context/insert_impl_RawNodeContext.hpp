@@ -207,12 +207,17 @@ namespace hypertrie::internal::raw {
 			}
 
 			/**
-			 * Increment the ref_count of nodes that are children of a node and an altered copy of that node.
+			 * Adjust the ref_count of nodes that are children of a node and an altered copy of that node.
+			 * Or of nodes that are children of removed nodes.
 			 */
 			for (const Identifier_t &id : lv_changes.fn_incs) {
 				if (not lv_changes.done_fns.contains(id)) {
 					assert(full_nodes_.contains(id));
-					full_nodes_[id]->ref_count() += lv_changes.fn_deltas[id];
+					auto node = full_nodes_[id];
+					assert(ssize_t(node->ref_count()) + lv_changes.fn_deltas[id] >= 0);
+					node->ref_count() += lv_changes.fn_deltas[id];
+					if (node->ref_count() == 0)
+						remove_full_node<depth>(next_level_changes, full_nodes_, full_nodes_lifecycle, id, node);
 					lv_changes.done_fns.insert(id);
 				}
 			}

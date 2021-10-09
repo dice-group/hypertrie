@@ -6,8 +6,6 @@
 
 #include <Dice/hypertrie/internal/raw/node/SpecificNodeStorage.hpp>
 
-#include <boost/container/flat_map.hpp>
-#include <boost/container/flat_set.hpp>
 #include <tsl/sparse_map.h>
 #include <tsl/sparse_set.h>
 
@@ -131,7 +129,7 @@ namespace hypertrie::internal::raw {
 		 * for FN:
 		 * id_before -> {id_after}
 		 */
-		boost::container::flat_map<Identifier_t, boost::container::flat_set<Identifier_t>> moveables_fns;
+		tsl::sparse_map<Identifier_t, tsl::sparse_set<Identifier_t>> moveables_fns;
 
 		void calc_moveables(SpecificNodeStorage<depth, tri, FullNode> &specific_full_node_storage) noexcept {
 			auto &nodes_ = specific_full_node_storage.nodes();

@@ -103,10 +103,10 @@ namespace hypertrie::tests::utils {
 		static inline bool inc_entry_permutation(SinlgeEntry_t &entry) noexcept {
 
 			for (size_t i = 0; i < depth; ++i) {
-				if (++entry.key().at(i) <= max_key_part)
+				if (++entry.key()[i] <= max_key_part)
 					return true;
 				else
-					entry.key().at(i) = min_key_part;
+					entry.key()[i] = min_key_part;
 			}
 			return false;
 		}
@@ -118,7 +118,7 @@ namespace hypertrie::tests::utils {
 			for (size_t i = 0; i < depth; ++i) {
 				if (i > 0)
 					factor *= (max_key_part - min_key_part + 1);
-				id += (entry.key().at(i) - min_key_part) * pow(max_key_part - min_key_part + 1, i);
+				id += (entry.key()[i] - min_key_part) * pow(max_key_part - min_key_part + 1, i);
 			}
 			return id;
 		}
@@ -131,7 +131,7 @@ namespace hypertrie::tests::utils {
 		bool inc_entries_combination() noexcept {
 			ssize_t i;
 			for (i = 0; i < ssize_t(number_of_entries); ++i) {
-				if (inc_entry_permutation(entries_.at(i)) and (id_of(entries_.at(i)) <= max_entry_id - i)) {
+				if (inc_entry_permutation(entries_[i]) and (id_of(entries_[i]) <= max_entry_id - i)) {
 					break;
 				}
 			}
@@ -139,8 +139,8 @@ namespace hypertrie::tests::utils {
 			if (i == number_of_entries)
 				return false;
 			for (ssize_t j = 0; j < i; ++j) {
-				entries_.at(i - (j + 1)) = entries_.at(i - j);
-				inc_entry_permutation(entries_.at(i - (j + 1)));
+				entries_[i - (j + 1)] = entries_[i - j];
+				inc_entry_permutation(entries_[i - (j + 1)]);
 			}
 			return true;
 		}
@@ -169,10 +169,10 @@ namespace hypertrie::tests::utils {
 
 			for (size_t i = 0; i < number_of_entries; ++i) {
 				if (i == 0)
-					entries_.at(number_of_entries - 1) = SinlgeEntry_t{key, value_type(1)};
+					entries_[number_of_entries - 1] = SinlgeEntry_t{key, value_type(1)};
 				else {
-					entries_.at(number_of_entries - 1 - i) = entries_.at(number_of_entries - i - 1 + 1);
-					inc_entry_permutation(entries_.at(number_of_entries - 1 - i));
+					entries_[number_of_entries - 1 - i] = entries_[number_of_entries - i - 1 + 1];
+					inc_entry_permutation(entries_[number_of_entries - 1 - i]);
 				}
 			}
 			not_ended_ = true;
@@ -230,8 +230,6 @@ namespace hypertrie::tests::utils {
 				++(*this);
 			return *this;
 		}
-
-
 	};
 
 }// namespace hypertrie::tests::utils

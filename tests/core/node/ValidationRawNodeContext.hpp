@@ -104,8 +104,11 @@ namespace hypertrie::tests::core::node {
 				CHECK(this_FNs.size() == other_FNs.size());
 				for (const auto &[id, node] : this_FNs) {
 					CHECK(other_FNs.contains(id));
-					if (other_FNs.contains(id))
-						CHECK(*node == *(other_FNs.find(id)->second));
+					if (other_FNs.contains(id)){
+						auto other_node = other_FNs.find(id).value();
+						CHECK(*node == *other_node);
+						CHECK(node->ref_count() == other_node->ref_count());
+					}
 				}
 
 
@@ -116,8 +119,11 @@ namespace hypertrie::tests::core::node {
 
 					for (const auto &[id, node] : this_SENs) {
 						CHECK(other_SENs.contains(id));
-						if (other_SENs.contains(id))
-							CHECK(*node == *(other_SENs.find(id)->second));
+						if (other_SENs.contains(id)) {
+							auto other_node = other_SENs.find(id).value();
+							CHECK(*node == *other_node);
+							CHECK(node->ref_count() == other_node->ref_count());
+						}
 					}
 				}
 			});

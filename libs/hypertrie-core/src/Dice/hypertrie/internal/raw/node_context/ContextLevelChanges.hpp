@@ -54,9 +54,23 @@ namespace hypertrie::internal::raw {
 		tsl::sparse_map<Identifier_t, ssize_t> fn_deltas{};
 
 		/**
+		 * Full nodes which are simply incremented.
+		 */
+		tsl::sparse_set<Identifier_t> fn_incs{};
+
+		/**
 		 * done full nodes
 		 */
 		tsl::sparse_set<Identifier_t> done_fns{};
+
+		void inc_ref(Identifier_t id, ssize_t n = 1) noexcept {
+			if (id.is_fn()) {
+				fn_deltas[id] += n;
+				fn_incs.insert(id);
+			} else {
+				SEN_new_ones[id].ref_count_delta += n;
+			}
+		}
 
 		Identifier_t add_node(std::vector<Entry> entries, ssize_t n = 1) noexcept {
 			if (entries.size() == 1) {
@@ -67,7 +81,7 @@ namespace hypertrie::internal::raw {
 					change.entry = entries[0];
 				return id_after;
 			} else {
-				assert (entries.size() > 1);
+				assert(entries.size() > 1);
 				Identifier_t id_after{entries};
 				if (auto found = fn_deltas.find(id_after); found != fn_deltas.end()) {
 					found.value() += n;
@@ -105,7 +119,7 @@ namespace hypertrie::internal::raw {
 				if (decrement_before)
 					fn_deltas[id_before] -= 1;
 				auto &changes = FN_changes[id_before];
-				if ( not changes.contains(id_after)) {
+				if (not changes.contains(id_after)) {
 					changes[id_after] = entries;
 				}
 			}

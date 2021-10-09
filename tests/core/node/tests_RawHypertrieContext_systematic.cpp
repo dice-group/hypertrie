@@ -65,7 +65,9 @@ namespace hypertrie::tests::core::node {
 
 												context.insert(nc, entries_1);
 												std::cout << fmt::format("result identifier: {}", nc.identifier()) << std::endl;
+												// std::cout << fmt::format("Actual:\n {}", context) << std::endl;
 												ValidationRawNodeContext<depth, tri> validation_context{std::allocator<std::byte>(), all_entries};
+												// std::cout << fmt::format("Verification:\n {}", (RawHypertrieContext<depth, tri>&)validation_context) << std::endl;
 												CHECK(context == validation_context);
 											}
 										}
@@ -108,7 +110,7 @@ namespace hypertrie::tests::core::node {
 
 		TEST_CASE_TEMPLATE("write and read depth 3", T,
 //						   bool_cfg<3>,
-						   tagged_bool_cfg<3>
+						   tagged_bool_cfg<4>
 //						   long_cfg<2>,
 //						   double_cfg<2>
 						   //								   						   bool_cfg<1>, bool_cfg<2>, bool_cfg<3>,bool_cfg<4>, bool_cfg<5>
@@ -117,7 +119,7 @@ namespace hypertrie::tests::core::node {
 						   //									  						   double_cfg<1>, double_cfg<2>, double_cfg<3>, double_cfg<4>, double_cfg<5>
 						   //
 		) {
-			write_and_read2<T::depth, typename T::tri, 2, 2, 3>();
+			write_and_read2<T::depth, typename T::tri, 2, 1, 2>();
 			// TODO: find that bug
 		}
 	}

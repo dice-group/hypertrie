@@ -52,7 +52,7 @@ namespace hypertrie::internal::raw {
 		template<size_t depth>
 		static void apply(NodeStorage<max_depth, tri> &node_storage,
 						  ContextLevelChanges<depth, tri> &lv_changes) {
-			ContextLevelChanges<depth - 1, tri> next_level_changes;
+			ContextLevelChanges<depth - 1, tri> next_level_changes{};
 			using Identifier_t = Identifier<depth, tri>;
 
 			auto &full_nodes_storage_ = node_storage.template nodes<depth, FullNode>();
@@ -64,6 +64,7 @@ namespace hypertrie::internal::raw {
 				// create, delete or update ref_count for Single Entry Nodes
 				for (auto it = lv_changes.SEN_new_ones.begin(); it != lv_changes.SEN_new_ones.end(); ++it) {
 					Identifier_t id_after = it->first;
+					assert(id_after.is_sen());
 					auto &change = it.value();
 					// if a new node is created, this update change.entry accordingly.
 					// change.entry might be used for creating FullNodes that were formed by inserting entries into a SingleEntryNode
@@ -79,11 +80,12 @@ namespace hypertrie::internal::raw {
 				std::optional<Identifier_t> last_id_after;
 
 				// find an id_after which is not yet done (= in done_fns)
-				for (const auto &id_after : ids_after)
+				for (const auto &id_after : ids_after) {
 					if (not lv_changes.done_fns.contains(id_after)) {
 						last_id_after = id_after;
 						break;
 					}
+				}
 
 				// lookup node_before and detach it from its SpecificNodeStorage
 				auto node_before_it = full_nodes_.find(id_before);
@@ -132,7 +134,7 @@ namespace hypertrie::internal::raw {
 			}
 
 			for (const auto &[id_before, changes] : lv_changes.FN_changes) {
-				if (lv_changes.done_fns.contains(id_before))
+				if (lv_changes.moveables_fns.contains(id_before))
 					continue;
 				// lookup node_before
 				assert(full_nodes_.find(id_before) != full_nodes_.end());
@@ -157,15 +159,17 @@ namespace hypertrie::internal::raw {
 					lv_changes.done_fns.insert(id_after);
 				}
 
-				// update the ref_count of node_before
-				update_ref_count(node_before->ref_count(), id_before, lv_changes.fn_deltas);
+				if (not lv_changes.done_fns.contains(id_before)) {
+					// update the ref_count of node_before
+					update_ref_count(node_before->ref_count(), id_before, lv_changes.fn_deltas);
 
-				// if the ref_count reaches 0, remove the node
-				if (node_before->ref_count() == 0) {
-					full_nodes_.erase(id_before);
-					full_nodes_lifecycle.delete_(node_before);
+					// if the ref_count reaches 0, remove the node
+					if (node_before->ref_count() == 0) {
+						full_nodes_.erase(id_before);
+						full_nodes_lifecycle.delete_(node_before);
+					}
+					lv_changes.done_fns.insert(id_before);
 				}
-				lv_changes.done_fns.insert(id_before);
 			}
 
 			for (auto it = lv_changes.FN_new_ones.begin(); it != lv_changes.FN_new_ones.end(); ++it) {
@@ -174,7 +178,7 @@ namespace hypertrie::internal::raw {
 					typename ContextLevelChanges<depth, tri>::FN_New &change = it.value();
 					Identifier_t id_before = change.sen_node_before;
 
-
+					assert(id_before.empty() or id_before.is_sen());
 					if constexpr (not (depth == 1 and HypertrieCoreTrait_bool_valued_and_taggable_key_part<tri>)) {
 						auto &se_nodes_ =  node_storage.template nodes<depth, SingleEntryNode>().nodes();
 						if (id_before.is_sen()) {

@@ -14,7 +14,7 @@ namespace hypertrie::internal::raw {
 		using allocator_type = typename tri::allocator_type;
 		using AllocateNode_t = AllocateNode<depth, tri, node_type_t>;
 
-		using key_type = Identifier<depth, tri>;
+		using key_type = RawIdentifier<depth, tri>;
 		using node_type = node_type_t<depth, tri>;
 		using node_pointer_type = typename tri::template allocator_pointer<node_type>;
 		using Map_t = typename tri::template map_type<key_type, node_pointer_type>;

@@ -100,6 +100,14 @@ target_link_libraries(tests_Identifier
         fmt::fmt
         )
 
+add_executable(tests_HypertrieContext hypertrie/tests_HypertrieContext.cpp)
+target_link_libraries(tests_HypertrieContext
+        doctest
+        hypertrie
+        tests-utils
+        fmt::fmt
+        )
+
 
 # fmt
 add_executable(tests_fmt_definitions fmt/tests_fmt_definitions.cpp)

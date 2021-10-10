@@ -37,9 +37,6 @@ namespace hypertrie::tests::core::node {
 
 			using key_part_type = typename tri::key_part_type;
 
-			using value_type = typename tri::value_type;
-
-
 			utils::RawEntryGenerator<depth, tri> gen{};
 
 			static constexpr size_t batch = 1'000'000UL;

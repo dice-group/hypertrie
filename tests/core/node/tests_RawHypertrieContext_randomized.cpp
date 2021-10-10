@@ -55,7 +55,7 @@ namespace hypertrie::tests::core::node {
 									NodeContainer<depth, tri> nc{};
 									context.insert(nc, entries);
 
-									std::cout << fmt::format("result identifier: {}", nc.identifier()) << std::endl;
+									std::cout << fmt::format("result identifier: {}", nc.raw_identifier()) << std::endl;
 									// std::cout << fmt::format("{}", context) << std::endl;
 									// std::cout << fmt::format("{{ {} }}", fmt::join(entries, ", \n")) << std::endl;
 									ValidationRawNodeContext<5, tri> validation_context{std::allocator<std::byte>(), entries};
@@ -91,7 +91,7 @@ namespace hypertrie::tests::core::node {
 									REQUIRE(validation_context_0 == context);
 									for (const auto &entry : entries_0)
 										REQUIRE(context.get(nc, entry.key()) == entry.value());
-									std::cout << fmt::format("result identifier 0: {}", nc.identifier()) << std::endl;
+									std::cout << fmt::format("result identifier 0: {}", nc.raw_identifier()) << std::endl;
 
 
 									context.insert(nc, entries_1);
@@ -99,7 +99,7 @@ namespace hypertrie::tests::core::node {
 									REQUIRE(validation_context == context);
 									for (const auto &entry : all_entries)
 										REQUIRE(context.get(nc, entry.key()) == entry.value());
-									std::cout << fmt::format("result identifier 1: {}", nc.identifier()) << std::endl;
+									std::cout << fmt::format("result identifier 1: {}", nc.raw_identifier()) << std::endl;
 								}
 							}
 						}

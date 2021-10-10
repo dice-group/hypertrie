@@ -11,28 +11,50 @@ namespace hypertrie::internal::raw {
 	 * Parent type to NodeContainer, SpecificNodeContainer (and its aliases CompressedNodeContainer and UncompressedNodeContainer).
 	 * This class defines the memory layout for the inheriting classes. Inheriting classes must not add any further fields.
 	 */
-	template<typename allocator_type_t>
+	template<HypertrieCoreTrait tri_t>
 	struct RawNodeContainer {
-		using allocator_type = typename std::allocator_traits<allocator_type_t>::template rebind_alloc<void>;
+		using tri = tri_t;
+		using allocator_type = typename std::allocator_traits<typename tri::allocator_type>::template rebind_alloc<void>;
 
 		using VoidNodePtr = typename std::allocator_traits<allocator_type>::void_pointer;
+		using Identifier_t = Identifier<tri>;
 		static_assert(sizeof(VoidNodePtr) <= sizeof(size_t), "The void node pointer type must fit into a size_t");
+		static_assert(sizeof(Identifier<tri>) <= sizeof(size_t), "The Identifier type must fit into a size_t");
+
 
 	protected:
-		size_t node_identifier_ = 0;
+		Identifier<tri> node_identifier_{};
 
-		size_t node_ptr_;
+		size_t node_ptr_{};
 
-		RawNodeContainer(size_t node_identifier, size_t node_ptr) noexcept : node_identifier_(node_identifier), node_ptr_(node_ptr) {}
+		RawNodeContainer(Identifier<tri> node_identifier, size_t node_ptr) noexcept : node_identifier_(node_identifier), node_ptr_(node_ptr) {}
 
 	public:
 		RawNodeContainer() = default;
-		RawNodeContainer(size_t identifier, VoidNodePtr void_node_ptr) noexcept
+		RawNodeContainer(Identifier<tri> identifier, VoidNodePtr void_node_ptr) noexcept
 			: node_identifier_(identifier),
 			  node_ptr_(util::unsafe_cast<size_t>(void_node_ptr)) {}
 
 		[[nodiscard]] VoidNodePtr &void_node_ptr() noexcept { return util::unsafe_cast<VoidNodePtr>(node_ptr_); }
 		[[nodiscard]] const VoidNodePtr &void_node_ptr() const noexcept { return util::unsafe_cast<VoidNodePtr const>(node_ptr_); }
+
+		/**
+		 * Check if the NodeRepr (NodeHash/TaggedNodeHash) is empty.
+		 */
+		[[nodiscard]] bool empty() const noexcept { return node_identifier_.empty(); }
+
+		[[nodiscard]] Identifier<tri> identifier() const noexcept { return node_identifier_; }
+
+		[[nodiscard]] Identifier<tri> &identifier() noexcept { return node_identifier_; }
+
+		[[nodiscard]] bool is_sen() const noexcept { return this->identifier().is_sen(); }
+
+		[[nodiscard]] bool is_fn() const noexcept { return this->identifier().is_fn(); }
+
+		/**
+		 * Check if the the NodePtr is null.
+		 */
+		[[nodiscard]] bool is_null_ptr() const noexcept { return this->void_node_ptr() == VoidNodePtr{}; }
 	};
 
 	template<size_t depth,
@@ -47,25 +69,26 @@ namespace hypertrie::internal::raw {
 	 */
 	template<size_t depth,
 			 HypertrieCoreTrait tri_t>
-	struct NodeContainer : public RawNodeContainer<typename tri_t::allocator_type> {
-		using RawNodeContainer_t = RawNodeContainer<typename tri_t::allocator_type>;
+	struct NodeContainer : public RawNodeContainer<tri_t> {
 		using tri = tri_t;
+		using RawNodeContainer_t = RawNodeContainer<tri>;
 		using allocator_type = typename tri::allocator_type;
 
-		using Identifier_t = Identifier<depth, tri>;
+		using Identifier_t = typename RawNodeContainer_t::Identifier_t;
+		using RawIdentifier_t = RawIdentifier<depth, tri>;
 		using VoidNodePtr = typename RawNodeContainer_t::VoidNodePtr;
 
 	protected:
-		NodeContainer(size_t identifier, VoidNodePtr void_node_ptr) noexcept
+		NodeContainer(Identifier<tri> identifier, VoidNodePtr void_node_ptr) noexcept
 			: RawNodeContainer_t(identifier, void_node_ptr) {}
 
-		NodeContainer(size_t node_identifier, size_t node_ptr) noexcept : RawNodeContainer_t(node_identifier, node_ptr) {}
+		NodeContainer(Identifier<tri> node_identifier, size_t node_ptr) noexcept : RawNodeContainer_t(node_identifier, node_ptr) {}
 
 	public:
 		NodeContainer() = default;
 
-		NodeContainer(const Identifier_t &identifier, VoidNodePtr node_ptr) noexcept
-			: RawNodeContainer_t{(size_t) identifier,
+		NodeContainer(const RawIdentifier_t &identifier, VoidNodePtr node_ptr) noexcept
+			: RawNodeContainer_t{identifier,
 								 util::unsafe_cast<size_t>(node_ptr)} {}
 
 		template<template<size_t, typename> typename node_type>
@@ -82,23 +105,11 @@ namespace hypertrie::internal::raw {
 		template<template<size_t, typename> typename node_type>
 		[[nodiscard]] auto specific() const noexcept { return SpecificNodeContainer<depth, tri_t, node_type>{this->node_identifier_, this->node_ptr_}; }
 
-		[[nodiscard]] Identifier_t identifier() const noexcept { return util::unsafe_cast<Identifier_t const>(this->node_identifier_); }
+		[[nodiscard]] RawIdentifier_t raw_identifier() const noexcept { return util::unsafe_cast<RawIdentifier_t const>(this->node_identifier_); }
 
-		[[nodiscard]] Identifier_t &identifier() noexcept { return util::unsafe_cast<Identifier_t>(this->node_identifier_); }
+		[[nodiscard]] RawIdentifier_t &raw_identifier() noexcept { return util::unsafe_cast<RawIdentifier_t>(this->node_identifier_); }
 
-		[[nodiscard]] bool is_sen() const noexcept { return identifier().is_sen(); }
-
-		[[nodiscard]] bool is_fn() const noexcept { return identifier().is_fn(); }
-
-		/**
-		 * Check if the NodeRepr (NodeHash/TaggedNodeHash) is empty.
-		 */
-		[[nodiscard]] bool empty() const noexcept { return identifier().empty(); }
-
-		/**
-		 * Check if the the NodePtr is null.
-		 */
-		[[nodiscard]] bool is_null_ptr() const noexcept { return this->void_node_ptr() == VoidNodePtr{}; }
+		//		operator RawNodeContainer_t () const noexcept { return {this->identifier(), this->void_node_ptr()}; }
 	};
 
 	template<size_t depth, HypertrieCoreTrait tri_t, template<size_t, typename> typename node_type_t>
@@ -109,6 +120,7 @@ namespace hypertrie::internal::raw {
 		using allocator_type = typename tri::allocator_type;
 
 		using Identifier_t = typename NodeContainer_t::Identifier_t;
+		using RawIdentifier_t = typename NodeContainer_t::RawIdentifier_t;
 		using Node = node_type_t<depth, tri>;
 		using NodePtr = typename tri::template allocator_pointer<Node>;
 		using VoidNodePtr = typename NodeContainer_t::VoidNodePtr;
@@ -116,28 +128,19 @@ namespace hypertrie::internal::raw {
 		friend NodeContainer<depth, tri>;
 
 	protected:
-		SpecificNodeContainer(size_t node_identifier, size_t node_ptr) noexcept : NodeContainer_t(node_identifier, node_ptr) {}
+		SpecificNodeContainer(Identifier<tri> node_identifier, size_t node_ptr) noexcept : NodeContainer_t(node_identifier, node_ptr) {}
 
 	public:
 		SpecificNodeContainer() = default;
 
-		SpecificNodeContainer(Identifier_t identifier, NodePtr node_ptr) noexcept
-			: NodeContainer_t{(size_t) identifier, node_ptr} {}
+		explicit SpecificNodeContainer(Identifier_t identifier, NodePtr node_ptr = {}) noexcept
+			: NodeContainer_t{identifier, node_ptr} {}
 
 		[[nodiscard]] constexpr NodePtr &node_ptr() noexcept { return util::unsafe_cast<NodePtr>(this->node_ptr_); }
 		[[nodiscard]] constexpr const NodePtr &node_ptr() const noexcept { return util::unsafe_cast<NodePtr const>(this->node_ptr_); }
 
-		[[nodiscard]] VoidNodePtr &void_node_ptr() noexcept { return (VoidNodePtr) node_ptr(); }
-		[[nodiscard]] const VoidNodePtr &void_node_ptr() const noexcept { return (VoidNodePtr) node_ptr(); }
-
-		//		inline auto getChildHashOrValue(size_t pos, typename tri_t::key_part_type key_part) {
-		//			static_assert(compression == NodeCompression::uncompressed, "Function getChildHashOrValue is only applicable for uncompressed nodes.");
-		//
-		//			assert(pos < depth);
-		//			return this->uncompressed_node()->child(pos, key_part);
-		//		}
-
-		explicit operator NodeContainer_t() const noexcept { return {this->identifier(), this->void_node_ptr()}; }
+		operator NodeContainer_t() const noexcept { return {this->identifier(), this->void_node_ptr()}; }
+		//		operator RawNodeContainer_t () const noexcept { return {this->identifier(), this->void_node_ptr()}; }
 	};
 
 	template<size_t depth, HypertrieCoreTrait tri>

@@ -13,7 +13,88 @@ namespace Dice::hash {
 	};
 }// namespace Dice::hash
 
+
 namespace hypertrie::internal::raw {
+
+	template<size_t depth, HypertrieCoreTrait tri_t>
+	class RawIdentifier;
+
+
+	template<HypertrieCoreTrait tri_t>
+	class Identifier {
+	public:
+		using tri = tri_t;
+		using value_type = typename tri::value_type;
+
+	protected:
+		/**
+		 * hash value
+		 */
+		size_t hash_ = seed_;
+
+
+	public:
+		/**
+		 * Position of the tag
+		 */
+		static constexpr const size_t tag_pos = (tri::taggable_key_part) ? tri::key_part_tagging_bit : 63UL;
+
+		/**
+		 * Seed. If the hash is equal to the seed it represents an empty node
+		 */
+		static constexpr const size_t seed_ = size_t(0)           // default seed can be changed here
+											  & ~(1UL << tag_pos);// the tagging bit is set to 0
+
+		explicit Identifier(size_t hash) : hash_(hash) {}
+
+
+	public:
+		Identifier() = default;
+
+		/**
+		 * internal representation
+		 */
+		[[nodiscard]] const size_t &hash() const noexcept { return this->hash_; }
+
+		/**
+		 * internal representation
+		 */
+		[[nodiscard]] size_t &hash() noexcept { return this->hash_; }
+
+		/**
+		 * If this identifies a single entry node.
+		 */
+		[[nodiscard]] inline bool is_sen() const noexcept {
+			return not empty() and bool(this->hash_ & (1UL << tag_pos));
+		}
+
+		/**
+		 * If this identifies a full node.
+		 */
+		[[nodiscard]] inline bool is_fn() const noexcept {
+			return not empty() and bool(~this->hash_ & (1UL << tag_pos));
+		}
+
+		bool operator<(const Identifier &other) const noexcept { return this->hash_ < other.hash_; }
+
+		bool operator==(const Identifier &other) const noexcept { return this->hash_ == other.hash_; }
+
+		/**
+		 * An identifier is emtpy if it does not represent any node.
+		 */
+		[[nodiscard]] bool empty() const noexcept { return hash_ == seed_; }
+
+		/**
+		 * An identifier is false if it does not represent any node.
+		 * @see empty()
+		 */
+		explicit operator bool() const noexcept { return not empty(); }
+
+		explicit operator size_t() const noexcept { return hash_; }
+
+//		template<size_t depth>
+//		explicit operator RawIdentifier<depth, tri>() const noexcept { return {hash_}; }
+	};
 
 
 	/**
@@ -33,7 +114,9 @@ namespace hypertrie::internal::raw {
 	  * @tparam tri_t
 	  */
 	template<size_t depth, HypertrieCoreTrait tri_t>
-	class Identifier {
+	class RawIdentifier : public Identifier<tri_t> {
+		using super_t = Identifier<tri_t>;
+
 	public:
 		using tri = tri_t;
 		using value_type = typename tri::value_type;
@@ -44,30 +127,16 @@ namespace hypertrie::internal::raw {
 
 	protected:
 		using Entry = SingleEntry<depth, tri>;
-		/**
-		 * hash value
-		 */
-		size_t hash_ = seed_;
-
 
 	public:
 		/**
 		 * Position of the tag
 		 */
-		static constexpr const size_t tag_pos = (tri::taggable_key_part) ? tri::key_part_tagging_bit : 63UL;
+		static constexpr const size_t tag_pos = super_t::tag_pos;
 
-		static constexpr const size_t seed_ = size_t(0)           // put the seed here
-											  & ~(1UL << tag_pos);// the tagging bit is set to 0
+		static constexpr const size_t seed_ = super_t::seed_;
+
 	protected:
-		/**
-		 * Tag value if the hash represents an uncompressed node.
-		 */
-		static const constexpr bool full_node_tag = false;
-		/**
-		 * Tag value if the hash represents a compressed node.
-		 */
-		static const constexpr bool single_entry_node_tag = true;
-
 		constexpr static inline size_t tag_as_sen(size_t hash) noexcept {
 			return hash | (1UL << tag_pos);
 		}
@@ -122,51 +191,28 @@ namespace hypertrie::internal::raw {
 			return tag_as_fn(hash);
 		}
 
-		explicit Identifier(size_t hash) noexcept : hash_{hash} {}
+		explicit RawIdentifier(size_t hash) noexcept : super_t{hash} {}
+		friend Identifier<tri>;
 
 	public:
-		Identifier() = default;
+		RawIdentifier() = default;
 		/*
 		 * Constructs an identifier for a single entry.
 		 */
-		explicit Identifier(Entry const &entry) noexcept : hash_{encode_single_entry(entry)} {}
+		explicit RawIdentifier(Entry const &entry) noexcept : super_t{encode_single_entry(entry)} {}
 
 		/**
-		 * Constructs an Identifier for a node represented by the entries provided.
+		 * Constructs an RawIdentifier for a node represented by the entries provided.
 		 * @param entries MUST NOT contain duplicates. This is not checked. The caller is responsible to eliminate duplicates beforehand.
 		 */
 		template<typename Iterable>
-		explicit Identifier(Iterable entries) noexcept requires std::ranges::range<Iterable> and std::is_convertible_v<std::ranges::range_value_t<Iterable>, Entry> : hash_(hash_iterable(entries)) {}
+		explicit RawIdentifier(Iterable entries) noexcept requires std::ranges::range<Iterable> and std::is_convertible_v<std::ranges::range_value_t<Iterable>, Entry> : super_t(hash_iterable(entries)) {}
 
 		/**
-		 * Constructs an Identifier for a node represented by the entries provided.
+		 * Constructs an RawIdentifier for a node represented by the entries provided.
 		 * @param entries MUST NOT contain duplicates. This is not checked. The caller is responsible to eliminate duplicates beforehand.
 		 */
-		Identifier(std::initializer_list<Entry> entries) noexcept : hash_(hash_iterable(entries)) {}
-
-		/**
-		 * internal representation
-		 */
-		[[nodiscard]] const size_t &hash() const noexcept { return this->hash_; }
-
-		/**
-		 * internal representation
-		 */
-		[[nodiscard]] size_t &hash() noexcept { return this->hash_; }
-
-		/**
-		 * If this identifies a single entry node.
-		 */
-		[[nodiscard]] inline bool is_sen() const noexcept {
-			return not empty() and bool(this->hash_ & (1UL << tag_pos));
-		}
-
-		/**
-		 * If this identifies a full node.
-		 */
-		[[nodiscard]] inline bool is_fn() const noexcept {
-			return not empty() and bool(~this->hash_ & (1UL << tag_pos));
-		}
+		RawIdentifier(std::initializer_list<Entry> entries) noexcept : super_t(hash_iterable(entries)) {}
 
 		/**
 		 * Changes the value of an entry.<br/>
@@ -177,19 +223,19 @@ namespace hypertrie::internal::raw {
 		 */
 		template<typename = void>
 		inline auto changeValue(Entry const &old_entry, value_type const &new_value) noexcept {
-			static_assert(not std::is_same_v<typename tri::value_type, bool>, "The value of an SingleEntry in an Identifier cannot be changed if it is Boolean because there is only one value allowed (true).");
+			static_assert(not std::is_same_v<typename tri::value_type, bool>, "The value of an SingleEntry in an RawIdentifier cannot be changed if it is Boolean because there is only one value allowed (true).");
 			assert(new_value != value_type{});
-			bool is_sen_ = is_sen();
+			bool is_sen_ = this->is_sen();
 
 			using Entry_stl_t = SingleEntry<depth, tri_with_stl_alloc<tri>>;
 
 			Entry_stl_t new_entry{old_entry.key(), new_value};
 
-			hash_ = hash_and_combine(old_entry, hash_and_combine(new_entry, hash_));
+			this->hash_ = hash_and_combine(old_entry, hash_and_combine(new_entry, this->hash_));
 			if (is_sen_)
-				hash_ = tag_as_sen(hash_);
+				this->hash_ = tag_as_sen(this->hash_);
 			else
-				hash_ = tag_as_fn(hash_);
+				this->hash_ = tag_as_fn(this->hash_);
 			return *this;
 		}
 
@@ -199,18 +245,18 @@ namespace hypertrie::internal::raw {
 		 * @param other the other identifier
 		 * @return reference to this
 		 */
-		inline auto combine(Identifier const &other) noexcept {
+		inline auto combine(RawIdentifier const &other) noexcept {
 			if (this->empty())
-				hash_ = other.hash_;
+				this->hash_ = other.hash_;
 			else if (not other.empty()) {
 				using Hash = Dice::hash::DiceHashMartinus<size_t>;
 
 				if constexpr (in_place_node) {
-					auto left_hash = (is_sen()) ? hash_and_combine(get_entry()) : hash_;
+					auto left_hash = (this->is_sen()) ? hash_and_combine(get_entry()) : this->hash_;
 					auto right_hash = (other.is_sen()) ? hash_and_combine(other.get_entry()) : other.hash_;
-					hash_ = tag_as_fn(Hash::hash_invertible_combine({seed_, left_hash, right_hash}));
+					this->hash_ = tag_as_fn(Hash::hash_invertible_combine({seed_, left_hash, right_hash}));
 				} else {
-					hash_ = tag_as_fn(Hash::hash_invertible_combine({seed_, hash_, other.hash_}));
+					this->hash_ = tag_as_fn(Hash::hash_invertible_combine({seed_, this->hash_, other.hash_}));
 				}
 			}
 			return *this;
@@ -234,61 +280,50 @@ namespace hypertrie::internal::raw {
 		 * @return reference to this
 		 */
 		inline auto addEntry(Entry const &entry) noexcept {
-			if (empty())
-				hash_ = encode_single_entry(entry);
-			else if (is_sen()) {
+			if (this->empty())
+				this->hash_ = encode_single_entry(entry);
+			else if (this->is_sen()) {
 				if constexpr (in_place_node)
-					hash_ = tag_as_fn(hash_and_combine(this->get_entry(), hash_and_combine(entry, seed_)));
+					this->hash_ = tag_as_fn(hash_and_combine(this->get_entry(), hash_and_combine(entry, seed_)));
 				else
-					hash_ = tag_as_fn(hash_and_combine(entry, hash_));
+					this->hash_ = tag_as_fn(hash_and_combine(entry, this->hash_));
 			} else {
-				hash_ = tag_as_fn(hash_and_combine(entry, hash_));
+				this->hash_ = tag_as_fn(hash_and_combine(entry, this->hash_));
 			}
 			return *this;
 		}
 
 		/**
-		 * Removes an entry. Identifier MUST identify a full node before. There is no (way to) check if the entry is actually contained. The user has to ensure this.
+		 * Removes an entry. RawIdentifier MUST identify a full node before. There is no (way to) check if the entry is actually contained. The user has to ensure this.
 		 * @tparam entry the entry to be removed
-		 * @param becomes_sen set to 1 if Identifier identifies exactly 2 entries before applying. MUST be false if in_place_node
+		 * @param becomes_sen set to 1 if RawIdentifier identifies exactly 2 entries before applying. MUST be false if in_place_node
 		 * @return reference to self
 		 */
 		inline auto removeEntry(Entry const &entry, bool becomes_sen = false) noexcept {
-			assert(is_fn());
+			assert(this->is_fn());
 			if constexpr (in_place_node)
 				assert(not becomes_sen);
-			hash_ = hash_and_combine(entry, hash_);
+			this->hash_ = hash_and_combine(entry, this->hash_);
 			if (becomes_sen)
-				hash_ = tag_as_sen(hash_);
+				this->hash_ = tag_as_sen(this->hash_);
 			else
-				hash_ = tag_as_fn(hash_);
+				this->hash_ = tag_as_fn(this->hash_);
 			return *this;
 		}
 
 
-		bool operator<(const Identifier &other) const noexcept { return this->hash_ < other.hash_; }
+		bool operator<(const RawIdentifier &other) const noexcept { return this->hash_ < other.hash_; }
 
-		bool operator==(const Identifier &other) const noexcept { return this->hash_ == other.hash_; }
-
-		/**
-		 * An identifier is emtpy if it does not represent any node.
-		 */
-		[[nodiscard]] bool empty() const noexcept { return hash_ == seed_; }
-
-		/**
-		 * An identifier is false if it does not represent any node.
-		 * @see empty()
-		 */
-		explicit operator bool() const noexcept { return not empty(); }
-
-		explicit operator size_t() const noexcept { return hash_; }
+		bool operator==(const RawIdentifier &other) const noexcept { return this->hash_ == other.hash_; }
 	};
+
 }// namespace hypertrie::internal::raw
+
 
 namespace Dice::hash {
 	template<typename Policy, size_t depth, ::hypertrie::internal::raw::HypertrieCoreTrait tri>
-	struct dice_hash_overload<Policy, ::hypertrie::internal::raw::Identifier<depth, tri>> {
-		static std::size_t dice_hash(::hypertrie::internal::raw::Identifier<depth, tri> const &identifier) noexcept {
+	struct dice_hash_overload<Policy, ::hypertrie::internal::raw::RawIdentifier<depth, tri>> {
+		static std::size_t dice_hash(::hypertrie::internal::raw::RawIdentifier<depth, tri> const &identifier) noexcept {
 			return identifier.hash();
 		}
 	};
@@ -296,8 +331,26 @@ namespace Dice::hash {
 
 namespace std {
 	template<size_t depth, ::hypertrie::internal::raw::HypertrieCoreTrait tri>
-	struct hash<::hypertrie::internal::raw::Identifier<depth, tri>> {
-		size_t operator()(const ::hypertrie::internal::raw::Identifier<depth, tri> &identifier) const noexcept {
+	struct hash<::hypertrie::internal::raw::RawIdentifier<depth, tri>> {
+		size_t operator()(const ::hypertrie::internal::raw::RawIdentifier<depth, tri> &identifier) const noexcept {
+			return identifier.hash();
+		}
+	};
+}// namespace std
+
+namespace Dice::hash {
+	template<typename Policy, ::hypertrie::internal::raw::HypertrieCoreTrait tri>
+	struct dice_hash_overload<Policy, ::hypertrie::internal::raw::Identifier<tri>> {
+		static std::size_t dice_hash(::hypertrie::internal::raw::Identifier<tri> const &identifier) noexcept {
+			return identifier.hash();
+		}
+	};
+}// namespace Dice::hash
+
+namespace std {
+	template<::hypertrie::internal::raw::HypertrieCoreTrait tri>
+	struct hash<::hypertrie::internal::raw::Identifier<tri>> {
+		size_t operator()(const ::hypertrie::internal::raw::Identifier<tri> &identifier) const noexcept {
 			return identifier.hash();
 		}
 	};

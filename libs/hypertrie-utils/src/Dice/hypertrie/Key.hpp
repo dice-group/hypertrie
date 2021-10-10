@@ -12,13 +12,8 @@ namespace hypertrie {
 
 	template<::hypertrie::internal::HypertrieTrait tr>
 	class SliceKey : public ::std::vector<::std::optional<typename tr::key_part_type>> {
-		size_t get_fixed_depth() {
-			size_t fixed_depth = 0;
-			for (auto opt_key_part : (*this)) {
-				if (opt_key_part.has_value())
-					++fixed_depth;
-			}
-			return fixed_depth;
+		[[nodiscard]] size_t get_fixed_depth() const noexcept {
+			return this->size() - std::ranges::count(*this, std::nullopt);
 		}
 	};
 }// namespace hypertrie

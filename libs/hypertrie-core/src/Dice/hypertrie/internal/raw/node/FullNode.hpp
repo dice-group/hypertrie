@@ -33,7 +33,7 @@ namespace hypertrie::internal::raw {
 			if constexpr (not tri::is_bool_valued)
 				for (const size_t pos : iter::range(depth)) {
 					auto sub_key = key.subkey(pos);
-					Identifier<depth, tri> &identifier = this->edges(pos)[key[pos]];
+					RawIdentifier<depth, tri> &identifier = this->edges(pos)[key[pos]];
 					identifier.changeValue(sub_key, old_value, new_value);
 				}
 		}

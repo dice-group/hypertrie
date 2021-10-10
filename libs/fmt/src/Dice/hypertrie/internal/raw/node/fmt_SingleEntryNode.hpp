@@ -10,7 +10,7 @@ namespace fmt {
 	struct formatter<::hypertrie::internal::raw::SingleEntryNode<depth, tri_t>> : hypertrie::internal::util::SimpleParsing {
 		template<typename FormatContext>
 		auto format(::hypertrie::internal::raw::SingleEntryNode<depth, tri_t> const &sen, FormatContext &ctx) {
-			return format_to(ctx.out(), "{{ <{}> -> {} }}", fmt::join(sen.key(), ", "), sen.value());
+			return format_to(ctx.out(), "{{ [ref_count={}] <{}> -> {} }}", sen.ref_count(), fmt::join(sen.key(), ", "), sen.value());
 		}
 	};
 }// namespace fmt

@@ -1,5 +1,4 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
-
 #include <doctest/doctest.h>
 
 #include <fmt/format.h>
@@ -7,134 +6,445 @@
 #include <itertools.hpp>
 
 #include "ValidationRawNodeContext.hpp"
-#include <AssetGenerator.hpp>
-#include <Dice/hypertrie/internal/util/name_of_type.hpp>
+#include <Dice/hypertrie/internal/util/fmt_utils.hpp>
 #include <Node_test_configs.hpp>
+#include <RawEntryGenerator.hpp>
 
 
+#include <Dice/hypertrie/internal/raw/fmt_Hypertrie_core_trait.hpp>
+#include <Dice/hypertrie/internal/raw/node/fmt_FullNode.hpp>
+#include <Dice/hypertrie/internal/raw/node/fmt_Identifier.hpp>
+#include <Dice/hypertrie/internal/raw/node/fmt_SingleEntry.hpp>
+#include <Dice/hypertrie/internal/raw/node/fmt_SingleEntryNode.hpp>
 #include <Dice/hypertrie/internal/raw/node_context/RawHypertrieContext.hpp>
-
+#include <Dice/hypertrie/internal/raw/node_context/fmt_RawHypertrieContext.hpp>
 
 namespace hypertrie::tests::core::node {
 
-	TEST_SUITE("NodeStorage") {
+	TEST_SUITE("Testing of RawNodeContext") {
 		using namespace ::hypertrie::internal::raw;
 		using namespace ::hypertrie::internal::util;
 
-		using tri = typename tagged_bool_cfg<3>::tri;
-		constexpr size_t depth = tagged_bool_cfg<3>::depth;
+		TEST_CASE("problematic entries 11") {
+			using T = bool_cfg<4>;
+			constexpr auto depth = T::depth;
+			using tri = typename T::tri;
+			using SingleEntry_t = SingleEntry<depth, tri_with_stl_alloc<tri>>;
+			constexpr auto count = 2;
 
-		std::vector<SingleEntry<3, tri_with_stl_alloc<tri>>> _2M_triples = []() {
-			hypertrie::tests::utils::RawGenerator<depth, tri> gen{1, 158};
-			std::vector<SingleEntry<depth, tri_with_stl_alloc<tri>>> entries;
-			for (auto &&entry : gen.entries(2000000))
-				entries.emplace_back(entry.first, entry.second);
-			return entries;
-		}();
-
-		auto _1M_triples_a = decltype(_2M_triples){_2M_triples.begin(), _2M_triples.begin() + 2000000 / 2};
-		auto _1M_triples_b = decltype(_2M_triples){_2M_triples.begin() + 2000000 / 2, _2M_triples.end()};
-
-		TEST_CASE("storage") {
-			using tri = typename tagged_bool_cfg<3>::tri;
-			constexpr size_t depth = tagged_bool_cfg<3>::depth;
-			hypertrie::tests::utils::RawGenerator<depth, tri> gen{1, 3};
-
-			RawHypertrieContext<depth, tri> context{std::allocator<std::byte>()};
+			std::vector<SingleEntry_t> all_entries{SingleEntry_t{{1, 1, 2, 1}, true},
+												   SingleEntry_t{{1, 1, 1, 1}, true},
+												   SingleEntry_t{{1, 1, 1, 2}, true},
+												   SingleEntry_t{{1, 2, 1, 1}, true},
+												   SingleEntry_t{{2, 1, 1, 1}, true}
+			};
+			decltype(all_entries) entries_0 = {all_entries.begin(), all_entries.begin() + count};
+			decltype(all_entries) entries_1 = {all_entries.begin() + count, all_entries.end()};
+			std::cout << fmt::format("entries_0: {{ {} }}", fmt::join(entries_0, ", \n")) << std::endl;
+			std::cout << fmt::format("entries_1: {{ {} }}", fmt::join(entries_1, ", \n")) << std::endl;
+			std::cout << fmt::format("all_entries: {{ {} }}", fmt::join(all_entries, ", \n")) << std::endl;
+			RawHypertrieContext<5, tri> context{std::allocator<std::byte>()};
 			NodeContainer<depth, tri> nc{};
-			SUBCASE("insert nothing") {
-				std::vector<SingleEntry<depth, tri_with_stl_alloc<tri>>> entries;
-				context.insert(nc, entries);
-				ValidationRawNodeContext<depth, tri> validation_context{std::allocator<std::byte>(), entries};
-				REQUIRE(validation_context == context);
-			}
+			context.insert(nc, entries_0);
+			ValidationRawNodeContext<5, tri> validation_context_0{std::allocator<std::byte>(), entries_0};
+			CHECK(validation_context_0 == context);
+			for (const auto &entry : entries_0)
+				CHECK(context.get(nc, entry.key()) == entry.value());
+			std::cout << fmt::format("result identifier 0: {}", nc.identifier()) << std::endl;
+			fmt::print("A: {}", context);
 
-			SUBCASE("insert one") {
-				std::vector<SingleEntry<depth, tri_with_stl_alloc<tri>>> entries = [&]() {
-					std::vector<SingleEntry<depth, tri_with_stl_alloc<tri>>> entries;
-					for (auto &&entry : gen.entries(1))
-						entries.emplace_back(entry.first, entry.second);
-					return entries;
-				}();
-				context.insert(nc, entries);
-				ValidationRawNodeContext<depth, tri> validation_context{std::allocator<std::byte>(), entries};
-				REQUIRE(validation_context == context);
-			}
+			context.insert(nc, entries_1);
+			fmt::print("B: {}", context);
+			ValidationRawNodeContext<5, tri> validation_context{std::allocator<std::byte>(), all_entries};
+			fmt::print("V: {}", (RawHypertrieContext<5, tri> &) validation_context);
 
-			SUBCASE("insert two") {
-				std::vector<SingleEntry<depth, tri_with_stl_alloc<tri>>> entries = [&]() {
-					std::vector<SingleEntry<depth, tri_with_stl_alloc<tri>>> entries;
-					for (auto &&entry : gen.entries(2))
-						entries.emplace_back(entry.first, entry.second);
-					return entries;
-				}();
-				context.insert(nc, entries);
-				ValidationRawNodeContext<depth, tri> validation_context{std::allocator<std::byte>(), entries};
-				REQUIRE(validation_context == context);
-			}
+			CHECK(validation_context == context);
+			for (const auto &entry : all_entries)
+				CHECK(context.get(nc, entry.key()) == entry.value());
+			std::cout << fmt::format("result identifier 1: {}", nc.identifier()) << std::endl;
+		};
 
-			SUBCASE("insert 10") {
-				std::vector<SingleEntry<depth, tri_with_stl_alloc<tri>>> entries = [&]() {
-					std::vector<SingleEntry<depth, tri_with_stl_alloc<tri>>> entries;
-					for (auto &&entry : gen.entries(10))
-						entries.emplace_back(entry.first, entry.second);
-					return entries;
-				}();
-				context.insert(nc, entries);
-				ValidationRawNodeContext<depth, tri> validation_context{std::allocator<std::byte>(), entries};
-				REQUIRE(validation_context == context);
-				for (const auto &entry : entries)
-					REQUIRE(context.get(nc, entry.key()) == entry.value());
-			}
+		TEST_CASE("problematic entries 10") {
+			using T = bool_cfg<4>;
+			constexpr auto depth = T::depth;
+			using tri = typename T::tri;
+			using SingleEntry_t = SingleEntry<depth, tri_with_stl_alloc<tri>>;
+			constexpr auto count = 2;
 
-			SUBCASE("insert 1 + 9") {
-				std::vector<SingleEntry<depth, tri_with_stl_alloc<tri>>> entries = [&]() {
-					std::vector<SingleEntry<depth, tri_with_stl_alloc<tri>>> entries;
-					for (auto &&entry : gen.entries(2))
-						entries.emplace_back(entry.first, entry.second);
-					return entries;
-				}();
-				auto entries_1 = decltype(entries){entries[0]};
-				auto entries_2_10 = decltype(entries){entries.begin() + 1, entries.end()};
-				context.insert(nc, entries_1);
-				ValidationRawNodeContext<depth, tri> validation_context{std::allocator<std::byte>(), entries_1};
-				REQUIRE(validation_context == context);
-				context.insert(nc, entries_2_10);
-				ValidationRawNodeContext<depth, tri> validation_context2{std::allocator<std::byte>(), entries};
-				REQUIRE(validation_context2 == context);
-				for (const auto &entry : entries)
-					REQUIRE(context.get(nc, entry.key()) == entry.value());
-			}
+			std::vector<SingleEntry_t> all_entries{SingleEntry_t{{1, 2, 1, 1}, true},
+												   SingleEntry_t{{1, 1, 1, 1}, true},
+												   SingleEntry_t{{1, 2, 2, 1}, true}
+			};
+			decltype(all_entries) entries_0 = {all_entries.begin(), all_entries.begin() + count};
+			decltype(all_entries) entries_1 = {all_entries.begin() + count, all_entries.end()};
+			std::cout << fmt::format("entries_0: {{ {} }}", fmt::join(entries_0, ", \n")) << std::endl;
+			std::cout << fmt::format("entries_1: {{ {} }}", fmt::join(entries_1, ", \n")) << std::endl;
+			std::cout << fmt::format("all_entries: {{ {} }}", fmt::join(all_entries, ", \n")) << std::endl;
+			RawHypertrieContext<5, tri> context{std::allocator<std::byte>()};
+			NodeContainer<depth, tri> nc{};
+			context.insert(nc, entries_0);
+			ValidationRawNodeContext<5, tri> validation_context_0{std::allocator<std::byte>(), entries_0};
+			CHECK(validation_context_0 == context);
+			for (const auto &entry : entries_0)
+				CHECK(context.get(nc, entry.key()) == entry.value());
+			std::cout << fmt::format("result identifier 0: {}", nc.identifier()) << std::endl;
+			fmt::print("A: {}", context);
 
-			SUBCASE("insert 5 + 5") {
-				std::vector<SingleEntry<depth, tri_with_stl_alloc<tri>>> entries = [&]() {
-					std::vector<SingleEntry<depth, tri_with_stl_alloc<tri>>> entries;
-					for (auto &&entry : gen.entries(10))
-						entries.emplace_back(entry.first, entry.second);
-					return entries;
-				}();
-				auto entries_1_5 = decltype(entries){entries.begin(), entries.begin() + 5};
-				auto entries_6_10 = decltype(entries){entries.begin() + 5, entries.end()};
-				context.insert(nc, entries_1_5);
-				ValidationRawNodeContext<depth, tri> validation_context{std::allocator<std::byte>(), entries_1_5};
-				REQUIRE(validation_context == context);
-				context.insert(nc, entries_6_10);
-				ValidationRawNodeContext<depth, tri> validation_context2{std::allocator<std::byte>(), entries};
-				REQUIRE(validation_context2 == context);
-				for (const auto &entry : entries)
-					REQUIRE(context.get(nc, entry.key()) == entry.value());
-			}
-			//
-			SUBCASE("insert 1M") {
-				context.insert(nc, _1M_triples_a);
-				ValidationRawNodeContext<depth, tri> validation_context{std::allocator<std::byte>(), _1M_triples_a};
-				REQUIRE(validation_context == context);
-				context.insert(nc, _1M_triples_b);
-				ValidationRawNodeContext<depth, tri> validation_context2{std::allocator<std::byte>(), _2M_triples};
-				REQUIRE(validation_context2 == context);
-				for (const auto &entry : _2M_triples)
-					REQUIRE(context.get(nc, entry.key()) == entry.value());
-			}
-		}
-	}
-}// namespace hypertrie::tests::core::node
+			context.insert(nc, entries_1);
+			fmt::print("B: {}", context);
+			ValidationRawNodeContext<5, tri> validation_context{std::allocator<std::byte>(), all_entries};
+			fmt::print("V: {}", (RawHypertrieContext<5, tri> &) validation_context);
+
+			CHECK(validation_context == context);
+			for (const auto &entry : all_entries)
+				CHECK(context.get(nc, entry.key()) == entry.value());
+			std::cout << fmt::format("result identifier 1: {}", nc.identifier()) << std::endl;
+		};
+
+		TEST_CASE("problematic entries 9") {
+			using T = bool_cfg<4>;
+			constexpr auto depth = T::depth;
+			using tri = typename T::tri;
+			using SingleEntry_t = SingleEntry<depth, tri_with_stl_alloc<tri>>;
+			constexpr auto count = 2;
+
+			std::vector<SingleEntry_t> all_entries{SingleEntry_t{{1, 1, 2, 1}, true},
+												   SingleEntry_t{{2, 1, 1, 1}, true},
+												   SingleEntry_t{{1, 1, 1, 2}, true},
+												   SingleEntry_t{{1, 2, 1, 1}, true}
+			};
+			decltype(all_entries) entries_0 = {all_entries.begin(), all_entries.begin() + count};
+			decltype(all_entries) entries_1 = {all_entries.begin() + count, all_entries.end()};
+			std::cout << fmt::format("entries_0: {{ {} }}", fmt::join(entries_0, ", \n")) << std::endl;
+			std::cout << fmt::format("entries_1: {{ {} }}", fmt::join(entries_1, ", \n")) << std::endl;
+			std::cout << fmt::format("all_entries: {{ {} }}", fmt::join(all_entries, ", \n")) << std::endl;
+			RawHypertrieContext<5, tri> context{std::allocator<std::byte>()};
+			NodeContainer<depth, tri> nc{};
+			context.insert(nc, entries_0);
+			ValidationRawNodeContext<5, tri> validation_context_0{std::allocator<std::byte>(), entries_0};
+			CHECK(validation_context_0 == context);
+			for (const auto &entry : entries_0)
+				CHECK(context.get(nc, entry.key()) == entry.value());
+			std::cout << fmt::format("result identifier 0: {}", nc.identifier()) << std::endl;
+			fmt::print("A: {}", context);
+
+			context.insert(nc, entries_1);
+			fmt::print("B: {}", context);
+			ValidationRawNodeContext<5, tri> validation_context{std::allocator<std::byte>(), all_entries};
+			fmt::print("V: {}", (RawHypertrieContext<5, tri> &) validation_context);
+
+			CHECK(validation_context == context);
+			for (const auto &entry : all_entries)
+				CHECK(context.get(nc, entry.key()) == entry.value());
+			std::cout << fmt::format("result identifier 1: {}", nc.identifier()) << std::endl;
+		};
+
+		TEST_CASE("problematic entries 8") {
+			using T = bool_cfg<4>;
+			constexpr auto depth = T::depth;
+			using tri = typename T::tri;
+			using SingleEntry_t = SingleEntry<depth, tri_with_stl_alloc<tri>>;
+			constexpr auto count = 2;
+
+			std::vector<SingleEntry_t> all_entries{SingleEntry_t{{2, 1, 1, 1}, true},
+												   SingleEntry_t{{1, 1, 1, 1}, true},
+												   SingleEntry_t{{2, 1, 1, 2}, true},
+												   SingleEntry_t{{2, 1, 2, 1}, true}
+			};
+			decltype(all_entries) entries_0 = {all_entries.begin(), all_entries.begin() + count};
+			decltype(all_entries) entries_1 = {all_entries.begin() + count, all_entries.end()};
+			std::cout << fmt::format("entries_0: {{ {} }}", fmt::join(entries_0, ", \n")) << std::endl;
+			std::cout << fmt::format("entries_1: {{ {} }}", fmt::join(entries_1, ", \n")) << std::endl;
+			std::cout << fmt::format("all_entries: {{ {} }}", fmt::join(all_entries, ", \n")) << std::endl;
+			RawHypertrieContext<5, tri> context{std::allocator<std::byte>()};
+			NodeContainer<depth, tri> nc{};
+			context.insert(nc, entries_0);
+			ValidationRawNodeContext<5, tri> validation_context_0{std::allocator<std::byte>(), entries_0};
+			CHECK(validation_context_0 == context);
+			for (const auto &entry : entries_0)
+				CHECK(context.get(nc, entry.key()) == entry.value());
+			std::cout << fmt::format("result identifier 0: {}", nc.identifier()) << std::endl;
+			fmt::print("A: {}", context);
+
+			context.insert(nc, entries_1);
+			fmt::print("B: {}", context);
+			ValidationRawNodeContext<5, tri> validation_context{std::allocator<std::byte>(), all_entries};
+			fmt::print("V: {}", (RawHypertrieContext<5, tri> &) validation_context);
+
+			CHECK(validation_context == context);
+			for (const auto &entry : all_entries)
+				CHECK(context.get(nc, entry.key()) == entry.value());
+			std::cout << fmt::format("result identifier 1: {}", nc.identifier()) << std::endl;
+		};
+
+		TEST_CASE("problematic entries 7") {
+			using T = bool_cfg<3>;
+			constexpr auto depth = T::depth;
+			using tri = typename T::tri;
+			using SingleEntry_t = SingleEntry<depth, tri_with_stl_alloc<tri>>;
+			constexpr auto count = 3;
+
+			std::vector<SingleEntry_t> all_entries{SingleEntry_t{{2, 1, 2}, true},
+												   SingleEntry_t{{2, 1, 1}, true},
+												   SingleEntry_t{{1, 1, 1}, true},
+												   SingleEntry_t{{1, 1, 2}, true},
+												   SingleEntry_t{{2, 2, 1}, true}
+			};
+			decltype(all_entries) entries_0 = {all_entries.begin(), all_entries.begin() + count};
+			decltype(all_entries) entries_1 = {all_entries.begin() + count, all_entries.end()};
+			std::cout << fmt::format("entries_0: {{ {} }}", fmt::join(entries_0, ", \n")) << std::endl;
+			std::cout << fmt::format("entries_1: {{ {} }}", fmt::join(entries_1, ", \n")) << std::endl;
+			std::cout << fmt::format("all_entries: {{ {} }}", fmt::join(all_entries, ", \n")) << std::endl;
+			RawHypertrieContext<5, tri> context{std::allocator<std::byte>()};
+			NodeContainer<depth, tri> nc{};
+			context.insert(nc, entries_0);
+			ValidationRawNodeContext<5, tri> validation_context_0{std::allocator<std::byte>(), entries_0};
+			CHECK(validation_context_0 == context);
+			for (const auto &entry : entries_0)
+				CHECK(context.get(nc, entry.key()) == entry.value());
+			std::cout << fmt::format("result identifier 0: {}", nc.identifier()) << std::endl;
+			fmt::print("A: {}", context);
+
+			context.insert(nc, entries_1);
+			fmt::print("B: {}", context);
+			ValidationRawNodeContext<5, tri> validation_context{std::allocator<std::byte>(), all_entries};
+			fmt::print("V: {}", (RawHypertrieContext<5, tri> &) validation_context);
+
+			CHECK(validation_context == context);
+			for (const auto &entry : all_entries)
+				CHECK(context.get(nc, entry.key()) == entry.value());
+			std::cout << fmt::format("result identifier 1: {}", nc.identifier()) << std::endl;
+		};
+
+		TEST_CASE("problematic entries 6") {
+			using T = bool_cfg<3>;
+			constexpr auto depth = T::depth;
+			using tri = typename T::tri;
+			using SingleEntry_t = SingleEntry<depth, tri_with_stl_alloc<tri>>;
+			constexpr auto count = 2;
+
+			std::vector<SingleEntry_t> all_entries{SingleEntry_t{{4, 3, 1}, true},
+												   SingleEntry_t{{2, 1, 1}, true},
+												   SingleEntry_t{{4, 1, 3}, true},
+												   SingleEntry_t{{1, 3, 1}, true}
+			};
+			decltype(all_entries) entries_0 = {all_entries.begin(), all_entries.begin() + count};
+			decltype(all_entries) entries_1 = {all_entries.begin() + count, all_entries.end()};
+			std::cout << fmt::format("entries_0: {{ {} }}", fmt::join(entries_0, ", \n")) << std::endl;
+			std::cout << fmt::format("entries_1: {{ {} }}", fmt::join(entries_1, ", \n")) << std::endl;
+			std::cout << fmt::format("all_entries: {{ {} }}", fmt::join(all_entries, ", \n")) << std::endl;
+			RawHypertrieContext<5, tri> context{std::allocator<std::byte>()};
+			NodeContainer<depth, tri> nc{};
+			context.insert(nc, entries_0);
+			ValidationRawNodeContext<5, tri> validation_context_0{std::allocator<std::byte>(), entries_0};
+			CHECK(validation_context_0 == context);
+			for (const auto &entry : entries_0)
+				CHECK(context.get(nc, entry.key()) == entry.value());
+			std::cout << fmt::format("result identifier 0: {}", nc.identifier()) << std::endl;
+			fmt::print("A: {}", context);
+
+			context.insert(nc, entries_1);
+			fmt::print("B: {}", context);
+			ValidationRawNodeContext<5, tri> validation_context{std::allocator<std::byte>(), all_entries};
+			fmt::print("V: {}", (RawHypertrieContext<5, tri> &) validation_context);
+
+			CHECK(validation_context == context);
+			for (const auto &entry : all_entries)
+				CHECK(context.get(nc, entry.key()) == entry.value());
+			std::cout << fmt::format("result identifier 1: {}", nc.identifier()) << std::endl;
+		};
+
+		TEST_CASE("problematic entries 5") {
+			using T = bool_cfg<3>;
+			constexpr auto depth = T::depth;
+			using tri = typename T::tri;
+			using SingleEntry_t = SingleEntry<depth, tri_with_stl_alloc<tri>>;
+			constexpr auto count = 2;
+
+			std::vector<SingleEntry_t> all_entries{SingleEntry_t{{2, 1, 1}, true},
+												   SingleEntry_t{{1, 1, 1}, true},
+												   SingleEntry_t{{1, 2, 1}, true},
+												   SingleEntry_t{{3, 1, 1}, true}
+												   };
+			decltype(all_entries) entries_0 = {all_entries.begin(), all_entries.begin() + count};
+			decltype(all_entries) entries_1 = {all_entries.begin() + count, all_entries.end()};
+			std::cout << fmt::format("entries_0: {{ {} }}", fmt::join(entries_0, ", \n")) << std::endl;
+			std::cout << fmt::format("entries_1: {{ {} }}", fmt::join(entries_1, ", \n")) << std::endl;
+			std::cout << fmt::format("all_entries: {{ {} }}", fmt::join(all_entries, ", \n")) << std::endl;
+			RawHypertrieContext<5, tri> context{std::allocator<std::byte>()};
+			NodeContainer<depth, tri> nc{};
+			context.insert(nc, entries_0);
+			ValidationRawNodeContext<5, tri> validation_context_0{std::allocator<std::byte>(), entries_0};
+			CHECK(validation_context_0 == context);
+			for (const auto &entry : entries_0)
+				CHECK(context.get(nc, entry.key()) == entry.value());
+			std::cout << fmt::format("result identifier 0: {}", nc.identifier()) << std::endl;
+			fmt::print("A: {}", context);
+
+			context.insert(nc, entries_1);
+			fmt::print("B: {}", context);
+			ValidationRawNodeContext<5, tri> validation_context{std::allocator<std::byte>(), all_entries};
+			fmt::print("V: {}", (RawHypertrieContext<5, tri> &) validation_context);
+
+			CHECK(validation_context == context);
+			for (const auto &entry : all_entries)
+				CHECK(context.get(nc, entry.key()) == entry.value());
+			std::cout << fmt::format("result identifier 1: {}", nc.identifier()) << std::endl;
+		};
+
+		TEST_CASE("problematic entries 4") {
+			using T = bool_cfg<4>;
+			constexpr auto depth = T::depth;
+			using tri = typename T::tri;
+			using SingleEntry_t = SingleEntry<depth, tri_with_stl_alloc<tri>>;
+			constexpr auto count = 2;
+
+			std::vector<SingleEntry_t> all_entries{SingleEntry_t{{2, 3, 3, 1}, true},
+												   SingleEntry_t{{1, 3, 3, 2}, true},
+												   SingleEntry_t{{2, 3, 1, 1}, true},
+												   SingleEntry_t{{3, 1, 3, 1}, true}};
+			decltype(all_entries) entries_0 = {all_entries.begin(), all_entries.begin() + count};
+			decltype(all_entries) entries_1 = {all_entries.begin() + count, all_entries.end()};
+			std::cout << fmt::format("entries_0: {{ {} }}", fmt::join(entries_0, ", \n")) << std::endl;
+			std::cout << fmt::format("entries_1: {{ {} }}", fmt::join(entries_1, ", \n")) << std::endl;
+			std::cout << fmt::format("all_entries: {{ {} }}", fmt::join(all_entries, ", \n")) << std::endl;
+			RawHypertrieContext<5, tri> context{std::allocator<std::byte>()};
+			NodeContainer<depth, tri> nc{};
+			context.insert(nc, entries_0);
+			ValidationRawNodeContext<5, tri> validation_context_0{std::allocator<std::byte>(), entries_0};
+			CHECK(validation_context_0 == context);
+			for (const auto &entry : entries_0)
+				CHECK(context.get(nc, entry.key()) == entry.value());
+			std::cout << fmt::format("result identifier 0: {}", nc.identifier()) << std::endl;
+			fmt::print("A: {}", context);
+
+			context.insert(nc, entries_1);
+			fmt::print("B: {}", context);
+			ValidationRawNodeContext<5, tri> validation_context{std::allocator<std::byte>(), all_entries};
+			fmt::print("V: {}", (RawHypertrieContext<5, tri> &) validation_context);
+
+			CHECK(validation_context == context);
+			for (const auto &entry : all_entries)
+				CHECK(context.get(nc, entry.key()) == entry.value());
+			std::cout << fmt::format("result identifier 1: {}", nc.identifier()) << std::endl;
+		};
+
+		TEST_CASE("problematic entries 3") {
+			using T = bool_cfg<3>;
+			constexpr auto depth = T::depth;
+			using tri = typename T::tri;
+			using SingleEntry_t = SingleEntry<depth, tri_with_stl_alloc<tri>>;
+			constexpr auto count = 2;
+
+			std::vector<SingleEntry_t> all_entries{SingleEntry_t{{2, 3, 2}, true},
+												   SingleEntry_t{{2, 1, 2}, true},
+												   SingleEntry_t{{3, 3, 2}, true},
+												   SingleEntry_t{{2, 2, 2}, true}};
+			decltype(all_entries) entries_0 = {all_entries.begin(), all_entries.begin() + count};
+			decltype(all_entries) entries_1 = {all_entries.begin() + count, all_entries.end()};
+			std::cout << fmt::format("entries_0: {{ {} }}", fmt::join(entries_0, ", \n")) << std::endl;
+			std::cout << fmt::format("entries_1: {{ {} }}", fmt::join(entries_1, ", \n")) << std::endl;
+			std::cout << fmt::format("all_entries: {{ {} }}", fmt::join(all_entries, ", \n")) << std::endl;
+			RawHypertrieContext<5, tri> context{std::allocator<std::byte>()};
+			NodeContainer<depth, tri> nc{};
+			context.insert(nc, entries_0);
+			ValidationRawNodeContext<5, tri> validation_context_0{std::allocator<std::byte>(), entries_0};
+			CHECK(validation_context_0 == context);
+			for (const auto &entry : entries_0)
+				CHECK(context.get(nc, entry.key()) == entry.value());
+			std::cout << fmt::format("result identifier 0: {}", nc.identifier()) << std::endl;
+			fmt::print("A: {}", context);
+
+			context.insert(nc, entries_1);
+			fmt::print("B: {}", context);
+			ValidationRawNodeContext<5, tri> validation_context{std::allocator<std::byte>(), all_entries};
+			fmt::print("V: {}", (RawHypertrieContext<5, tri> &) validation_context);
+
+			CHECK(validation_context == context);
+			for (const auto &entry : all_entries)
+				CHECK(context.get(nc, entry.key()) == entry.value());
+			std::cout << fmt::format("result identifier 1: {}", nc.identifier()) << std::endl;
+		};
+
+		TEST_CASE("problematic entries 2") {
+			using T = bool_cfg<3>;
+			constexpr auto depth = T::depth;
+			using tri = typename T::tri;
+			using SingleEntry_t = SingleEntry<depth, tri_with_stl_alloc<tri>>;
+			constexpr auto count = 2;
+
+			std::vector<SingleEntry_t> all_entries{SingleEntry_t{{3, 3, 4}, true},
+												   SingleEntry_t{{3, 3, 2}, true},
+												   SingleEntry_t{{2, 1, 2}, true},
+												   SingleEntry_t{{6, 6, 1}, true},
+												   SingleEntry_t{{2, 2, 3}, true},
+												   SingleEntry_t{{3, 4, 6}, true},
+												   SingleEntry_t{{6, 2, 2}, true},
+												   SingleEntry_t{{3, 3, 5}, true},
+												   SingleEntry_t{{4, 5, 4}, true},
+												   SingleEntry_t{{5, 5, 1}, true}};
+			decltype(all_entries) entries_0 = {all_entries.begin(), all_entries.begin() + count};
+			decltype(all_entries) entries_1 = {all_entries.begin() + count, all_entries.end()};
+			std::cout << fmt::format("entries_0: {{ {} }}", fmt::join(entries_0, ", \n")) << std::endl;
+			std::cout << fmt::format("entries_1: {{ {} }}", fmt::join(entries_1, ", \n")) << std::endl;
+			std::cout << fmt::format("all_entries: {{ {} }}", fmt::join(all_entries, ", \n")) << std::endl;
+			RawHypertrieContext<5, tri> context{std::allocator<std::byte>()};
+			NodeContainer<depth, tri> nc{};
+			context.insert(nc, entries_0);
+			ValidationRawNodeContext<5, tri> validation_context_0{std::allocator<std::byte>(), entries_0};
+			CHECK(validation_context_0 == context);
+			for (const auto &entry : entries_0)
+				CHECK(context.get(nc, entry.key()) == entry.value());
+			std::cout << fmt::format("result identifier 0: {}", nc.identifier()) << std::endl;
+			fmt::print("A: {}", context);
+
+			context.insert(nc, entries_1);
+			fmt::print("B: {}", context);
+			ValidationRawNodeContext<5, tri> validation_context{std::allocator<std::byte>(), all_entries};
+			fmt::print("V: {}", (RawHypertrieContext<5, tri> &) validation_context);
+
+			CHECK(validation_context == context);
+			for (const auto &entry : all_entries)
+				CHECK(context.get(nc, entry.key()) == entry.value());
+			std::cout << fmt::format("result identifier 1: {}", nc.identifier()) << std::endl;
+		};
+
+
+		TEST_CASE("problematic entries 1") {
+			using T = bool_cfg<3>;
+			constexpr auto depth = T::depth;
+			using tri = typename T::tri;
+			using SingleEntry_t = SingleEntry<depth, tri_with_stl_alloc<tri>>;
+			constexpr auto count = 2;
+
+			std::vector<SingleEntry_t> all_entries{SingleEntry_t{{{3, 2, 2}}, true},
+												   SingleEntry_t{{{2, 2, 2}}, true},
+												   SingleEntry_t{{{3, 4, 4}}, true},
+												   SingleEntry_t{{{2, 3, 2}}, true}};
+			decltype(all_entries) entries_0 = {all_entries.begin(), all_entries.begin() + count};
+			decltype(all_entries) entries_1 = {all_entries.begin() + count, all_entries.end()};
+			std::cout << fmt::format("entries_0: {{ {} }}", fmt::join(entries_0, ", \n")) << std::endl;
+			std::cout << fmt::format("entries_1: {{ {} }}", fmt::join(entries_1, ", \n")) << std::endl;
+			std::cout << fmt::format("all_entries: {{ {} }}", fmt::join(all_entries, ", \n")) << std::endl;
+			RawHypertrieContext<5, tri> context{std::allocator<std::byte>()};
+			NodeContainer<depth, tri> nc{};
+			context.insert(nc, entries_0);
+			ValidationRawNodeContext<5, tri> validation_context_0{std::allocator<std::byte>(), entries_0};
+			CHECK(validation_context_0 == context);
+			for (const auto &entry : entries_0)
+				CHECK(context.get(nc, entry.key()) == entry.value());
+			std::cout << fmt::format("result identifier 0: {}", nc.identifier()) << std::endl;
+			fmt::print("A: {}", context);
+
+			context.insert(nc, entries_1);
+			fmt::print("B: {}", context);
+			ValidationRawNodeContext<5, tri> validation_context{std::allocator<std::byte>(), all_entries};
+			fmt::print("V: {}", (RawHypertrieContext<5, tri> &) validation_context);
+
+			CHECK(validation_context == context);
+			for (const auto &entry : all_entries)
+				CHECK(context.get(nc, entry.key()) == entry.value());
+			std::cout << fmt::format("result identifier 1: {}", nc.identifier()) << std::endl;
+		};
+	};
+};// namespace hypertrie::tests::core::node

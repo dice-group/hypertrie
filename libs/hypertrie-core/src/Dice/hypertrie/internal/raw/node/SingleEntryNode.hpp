@@ -29,7 +29,7 @@ namespace hypertrie::internal::raw {
 			return static_cast<SingleEntry<depth, tri_t> const &>(*this) <=> static_cast<SingleEntry<depth, tri_t> const &>(other);
 		}
 
-		auto operator==(const SingleEntryNode &other) const noexcept {
+		bool operator==(const SingleEntryNode &other) const noexcept {
 			return static_cast<SingleEntry<depth, tri_t> const &>(*this) == static_cast<SingleEntry<depth, tri_t> const &>(other);
 		}
 	};
@@ -52,7 +52,7 @@ namespace hypertrie::internal::raw {
 			return static_cast<SingleEntry<depth, tri_t> const &>(*this) <=> static_cast<SingleEntry<depth, tri_t> const &>(other);
 		}
 
-		auto operator==(const SingleEntryNode &other) const noexcept {
+		bool operator==(const SingleEntryNode &other) const noexcept {
 			return static_cast<SingleEntry<depth, tri_t> const &>(*this) == static_cast<SingleEntry<depth, tri_t> const &>(other);
 		}
 	};

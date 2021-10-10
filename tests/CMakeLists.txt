@@ -59,13 +59,31 @@ add_executable(tests_RawHypertrieContext core/node/tests_RawHypertrieContext.cpp
 target_link_libraries(tests_RawHypertrieContext
         doctest
         hypertrie-core
-        hypertrie-core-fmt
+        fmt-definitions
         tests-utils
         fmt::fmt
         )
 
 add_executable(tests_RawHypertrieContext_randomized core/node/tests_RawHypertrieContext_randomized.cpp)
 target_link_libraries(tests_RawHypertrieContext_randomized
+        doctest
+        hypertrie-core
+        fmt-definitions
+        tests-utils
+        fmt::fmt
+        )
+
+add_executable(tests_RawHypertrieContext_randomized_large_data core/node/tests_RawHypertrieContext_randomized_large_data.cpp)
+target_link_libraries(tests_RawHypertrieContext_randomized_large_data
+        doctest
+        hypertrie-core
+        fmt-definitions
+        tests-utils
+        fmt::fmt
+        )
+
+add_executable(tests_RawHypertrieContext_systematic core/node/tests_RawHypertrieContext_systematic.cpp)
+target_link_libraries(tests_RawHypertrieContext_systematic
         doctest
         hypertrie-core
         fmt-definitions

@@ -6,8 +6,6 @@
 
 #include <Dice/hypertrie/internal/raw/node/SpecificNodeStorage.hpp>
 
-#include <boost/container/flat_map.hpp>
-#include <boost/container/flat_set.hpp>
 #include <tsl/sparse_map.h>
 #include <tsl/sparse_set.h>
 
@@ -35,28 +33,42 @@ namespace hypertrie::internal::raw {
 		 * For single entry nodes:
 		 * id_after -> (ref_count_delta, entry)
 		 */
-		tsl::sparse_map<Identifier_t, SEN_Change> SEN_new_ones;
+		tsl::sparse_map<Identifier_t, SEN_Change> SEN_new_ones{};
 		/**
 		 * inserting into full nodes:
 		 * id_before -> (id_after -> entries)
 		 * id_before and id_after identify both full nodes.
 		 */
-		tsl::sparse_map<Identifier_t, tsl::sparse_map<Identifier_t, std::vector<Entry>>> FN_changes;
+		tsl::sparse_map<Identifier_t, tsl::sparse_map<Identifier_t, std::vector<Entry>>> FN_changes{};
 		/**
 		 * creating new full nodes
 		 *
 		 */
-		tsl::sparse_map<Identifier_t, FN_New> FN_new_ones;
+		tsl::sparse_map<Identifier_t, FN_New> FN_new_ones{};
 
 		/**
 		 * id -> delta
 		 */
-		tsl::sparse_map<Identifier_t, ssize_t> fn_deltas;
+		tsl::sparse_map<Identifier_t, ssize_t> fn_deltas{};
+
+		/**
+		 * Full nodes which are simply incremented.
+		 */
+		tsl::sparse_set<Identifier_t> fn_incs{};
 
 		/**
 		 * done full nodes
 		 */
-		tsl::sparse_set<Identifier_t> done_fns;
+		tsl::sparse_set<Identifier_t> done_fns{};
+
+		void inc_ref(Identifier_t id, ssize_t n = 1) noexcept {
+			if (id.is_fn()) {
+				fn_deltas[id] += n;
+				fn_incs.insert(id);
+			} else {
+				SEN_new_ones[id].ref_count_delta += n;
+			}
+		}
 
 		Identifier_t add_node(std::vector<Entry> entries, ssize_t n = 1) noexcept {
 			if (entries.size() == 1) {
@@ -67,10 +79,11 @@ namespace hypertrie::internal::raw {
 					change.entry = entries[0];
 				return id_after;
 			} else {
+				assert(entries.size() > 1);
 				Identifier_t id_after{entries};
-				if (auto found = fn_deltas.find(id_after); found != fn_deltas.end())
+				if (auto found = fn_deltas.find(id_after); found != fn_deltas.end()) {
 					found.value() += n;
-				else {
+				} else {
 					fn_deltas.insert({id_after, n});
 
 					FN_New new_fn{};
@@ -81,9 +94,9 @@ namespace hypertrie::internal::raw {
 			}
 		}
 
-		Identifier_t insert_into_node(Identifier_t id_before, std::vector<Entry> const &entries, ssize_t n = 1) noexcept {
+		Identifier_t insert_into_node(Identifier_t id_before, std::vector<Entry> const &entries, bool decrement_before = false) noexcept {
 			auto id_after = Identifier_t{entries}.combine(id_before);
-			fn_deltas[id_after] += n;
+			fn_deltas[id_after] += 1;
 			if (id_before.is_sen()) {
 				if constexpr (depth == 1 and HypertrieCoreTrait_bool_valued_and_taggable_key_part<tri>) {
 					auto &change = FN_new_ones[id_after];
@@ -91,7 +104,8 @@ namespace hypertrie::internal::raw {
 					change.entries.push_back(id_before.get_entry());
 				} else {
 					// decrement refcount delta of node before
-					SEN_new_ones[id_before].ref_count_delta -= n;
+					if (decrement_before)
+						SEN_new_ones[id_before].ref_count_delta -= 1;
 
 					// new node must be created
 					auto &change = FN_new_ones[id_after];
@@ -100,10 +114,12 @@ namespace hypertrie::internal::raw {
 					change.sen_node_before = id_before;
 				}
 			} else {
-				fn_deltas[id_before] -= n;
+				if (decrement_before)
+					fn_deltas[id_before] -= 1;
 				auto &changes = FN_changes[id_before];
-				if (auto found = changes.find(id_after); found == changes.end())
+				if (not changes.contains(id_after)) {
 					changes[id_after] = entries;
+				}
 			}
 
 			return id_after;
@@ -113,12 +129,12 @@ namespace hypertrie::internal::raw {
 		 * for FN:
 		 * id_before -> {id_after}
 		 */
-		boost::container::flat_map<Identifier_t, boost::container::flat_set<Identifier_t>> moveables_fns;
+		tsl::sparse_map<Identifier_t, tsl::sparse_set<Identifier_t>> moveables_fns;
 
 		void calc_moveables(SpecificNodeStorage<depth, tri, FullNode> &specific_full_node_storage) noexcept {
 			auto &nodes_ = specific_full_node_storage.nodes();
 			for (const auto &[id_before, changes] : FN_changes) {
-				if (ssize_t(nodes_[id_before]->ref_count()) + fn_deltas[id_before] == 0) {
+				if (ssize_t(nodes_[id_before]->ref_count()) + fn_deltas[id_before] <= 0) {
 					for (const auto &[id_after, _] : changes) {
 						if (not nodes_.contains(id_after)) {
 							moveables_fns[id_before].insert(id_after);

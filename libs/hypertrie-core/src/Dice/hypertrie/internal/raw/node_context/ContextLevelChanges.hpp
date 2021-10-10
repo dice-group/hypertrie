@@ -16,7 +16,7 @@ namespace hypertrie::internal::raw {
 	public:
 		using tri = tri_t;
 		using Entry = SingleEntry<depth, tri_with_stl_alloc<tri>>;
-		using Identifier_t = Identifier<depth, tri>;
+		using RawIdentifier_t = RawIdentifier<depth, tri>;
 
 		struct SEN_Change {
 			ssize_t ref_count_delta = 0;
@@ -25,7 +25,7 @@ namespace hypertrie::internal::raw {
 
 		struct FN_New {
 			FNContainer<depth, tri> after;
-			Identifier_t sen_node_before;
+			RawIdentifier_t sen_node_before;
 			std::vector<Entry> entries;
 		};
 
@@ -33,35 +33,35 @@ namespace hypertrie::internal::raw {
 		 * For single entry nodes:
 		 * id_after -> (ref_count_delta, entry)
 		 */
-		tsl::sparse_map<Identifier_t, SEN_Change> SEN_new_ones{};
+		tsl::sparse_map<RawIdentifier_t, SEN_Change> SEN_new_ones{};
 		/**
 		 * inserting into full nodes:
 		 * id_before -> (id_after -> entries)
 		 * id_before and id_after identify both full nodes.
 		 */
-		tsl::sparse_map<Identifier_t, tsl::sparse_map<Identifier_t, std::vector<Entry>>> FN_changes{};
+		tsl::sparse_map<RawIdentifier_t, tsl::sparse_map<RawIdentifier_t, std::vector<Entry>>> FN_changes{};
 		/**
 		 * creating new full nodes
 		 *
 		 */
-		tsl::sparse_map<Identifier_t, FN_New> FN_new_ones{};
+		tsl::sparse_map<RawIdentifier_t, FN_New> FN_new_ones{};
 
 		/**
 		 * id -> delta
 		 */
-		tsl::sparse_map<Identifier_t, ssize_t> fn_deltas{};
+		tsl::sparse_map<RawIdentifier_t, ssize_t> fn_deltas{};
 
 		/**
 		 * Full nodes which are simply incremented.
 		 */
-		tsl::sparse_set<Identifier_t> fn_incs{};
+		tsl::sparse_set<RawIdentifier_t> fn_incs{};
 
 		/**
 		 * done full nodes
 		 */
-		tsl::sparse_set<Identifier_t> done_fns{};
+		tsl::sparse_set<RawIdentifier_t> done_fns{};
 
-		void inc_ref(Identifier_t id, ssize_t n = 1) noexcept {
+		void inc_ref(RawIdentifier_t id, ssize_t n = 1) noexcept {
 			if (id.is_fn()) {
 				fn_deltas[id] += n;
 				fn_incs.insert(id);
@@ -70,9 +70,9 @@ namespace hypertrie::internal::raw {
 			}
 		}
 
-		Identifier_t add_node(std::vector<Entry> entries, ssize_t n = 1) noexcept {
+		RawIdentifier_t add_node(std::vector<Entry> entries, ssize_t n = 1) noexcept {
 			if (entries.size() == 1) {
-				Identifier_t id_after{entries[0]};
+				RawIdentifier_t id_after{entries[0]};
 				auto &change = SEN_new_ones[id_after];
 				change.ref_count_delta += n;
 				if constexpr (not(depth == 1 and HypertrieCoreTrait_bool_valued_and_taggable_key_part<tri>))
@@ -80,7 +80,7 @@ namespace hypertrie::internal::raw {
 				return id_after;
 			} else {
 				assert(entries.size() > 1);
-				Identifier_t id_after{entries};
+				RawIdentifier_t id_after{entries};
 				if (auto found = fn_deltas.find(id_after); found != fn_deltas.end()) {
 					found.value() += n;
 				} else {
@@ -94,8 +94,8 @@ namespace hypertrie::internal::raw {
 			}
 		}
 
-		Identifier_t insert_into_node(Identifier_t id_before, std::vector<Entry> const &entries, bool decrement_before = false) noexcept {
-			auto id_after = Identifier_t{entries}.combine(id_before);
+		RawIdentifier_t insert_into_node(RawIdentifier_t id_before, std::vector<Entry> const &entries, bool decrement_before = false) noexcept {
+			auto id_after = RawIdentifier_t{entries}.combine(id_before);
 			fn_deltas[id_after] += 1;
 			if (id_before.is_sen()) {
 				if constexpr (depth == 1 and HypertrieCoreTrait_bool_valued_and_taggable_key_part<tri>) {
@@ -110,7 +110,7 @@ namespace hypertrie::internal::raw {
 					// new node must be created
 					auto &change = FN_new_ones[id_after];
 					change.entries = entries;
-					change.after.identifier() = id_after;
+					change.after.raw_identifier() = id_after;
 					change.sen_node_before = id_before;
 				}
 			} else {
@@ -129,7 +129,7 @@ namespace hypertrie::internal::raw {
 		 * for FN:
 		 * id_before -> {id_after}
 		 */
-		tsl::sparse_map<Identifier_t, tsl::sparse_set<Identifier_t>> moveables_fns;
+		tsl::sparse_map<RawIdentifier_t, tsl::sparse_set<RawIdentifier_t>> moveables_fns;
 
 		void calc_moveables(SpecificNodeStorage<depth, tri, FullNode> &specific_full_node_storage) noexcept {
 			auto &nodes_ = specific_full_node_storage.nodes();

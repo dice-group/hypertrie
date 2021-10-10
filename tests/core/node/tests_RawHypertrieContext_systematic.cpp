@@ -55,7 +55,7 @@ namespace hypertrie::tests::core::node {
 										context.insert(nc, entries_0);
 										ValidationRawNodeContext<depth, tri> validation_context_0{std::allocator<std::byte>(), entries_0};
 										CHECK(context == validation_context_0);
-										std::cout << fmt::format("result identifier: {}", nc.identifier()) << std::endl;
+										std::cout << fmt::format("result identifier: {}", nc.raw_identifier()) << std::endl;
 
 										utils::EntrySetGenerator_with_exclude<depth, no_entries_1, tri, max_key_part> inner_generator{entries_0};
 										for (const auto &entries_1 : inner_generator) {
@@ -64,7 +64,7 @@ namespace hypertrie::tests::core::node {
 												all_entries.insert(all_entries.end(), entries_1.begin(), entries_1.end());
 
 												context.insert(nc, entries_1);
-												std::cout << fmt::format("result identifier: {}", nc.identifier()) << std::endl;
+												std::cout << fmt::format("result identifier: {}", nc.raw_identifier()) << std::endl;
 												// std::cout << fmt::format("Actual:\n {}", context) << std::endl;
 												ValidationRawNodeContext<depth, tri> validation_context{std::allocator<std::byte>(), all_entries};
 												// std::cout << fmt::format("Verification:\n {}", (RawHypertrieContext<depth, tri>&)validation_context) << std::endl;

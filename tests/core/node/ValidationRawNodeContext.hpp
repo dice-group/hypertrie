@@ -38,7 +38,7 @@ namespace hypertrie::tests::core::node {
 
 		template<size_t depth>
 		void init(EntriesType<depth> const &entries) noexcept {
-			Identifier<depth, tri> id{entries};
+			RawIdentifier<depth, tri> id{entries};
 			if (entries.size() == 1) {// SEN
 				if constexpr (depth == 1 and HypertrieCoreTrait_bool_valued_and_taggable_key_part<tri>)
 					CHECK_MESSAGE(false, "There must be no depth-1 SEN. They are stored in the identifier.");
@@ -77,7 +77,7 @@ namespace hypertrie::tests::core::node {
 								childs_entries[entry.key()[pos]].emplace_back(entry.key().subkey(pos), entry.value());
 
 							for (const auto &[key_part, child_entries] : childs_entries) {
-								Identifier<depth - 1, tri> child_id{child_entries};
+								RawIdentifier<depth - 1, tri> child_id{child_entries};
 								new_node->edges(pos)[key_part] = child_id;
 								if constexpr (depth > 1)
 									if constexpr (depth == 2 and HypertrieCoreTrait_bool_valued_and_taggable_key_part<tri>)

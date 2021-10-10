@@ -18,7 +18,7 @@ namespace hypertrie::internal::raw {
 		using key_part_type = typename tri::key_part_type;
 
 		using ChildType = std::conditional_t<(depth > 1),
-											 Identifier<depth - 1, tri>,
+											 RawIdentifier<depth - 1, tri>,
 											 value_type>;
 		using collection_alloc = std::conditional_t<((depth == 1) and tri::is_bool_valued),
 													typename std::allocator_traits<allocator_type>::template rebind_alloc<key_part_type>,

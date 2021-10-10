@@ -47,7 +47,7 @@ namespace hypertrie::tests::core::node {
 									node.edges(0)[raw_key[pos]] = value;
 								}
 							} else {
-								node.edges(pos)[raw_key[pos]] = Identifier<depth - 1, tri>(SingleEntry<depth -1, tri>{raw_key.subkey(pos), value});
+								node.edges(pos)[raw_key[pos]] = RawIdentifier<depth - 1, tri>(SingleEntry<depth -1, tri>{raw_key.subkey(pos), value});
 							}
 						}
 

@@ -20,31 +20,31 @@ namespace hypertrie::internal::raw {
 				return;
 
 			if (nodec.empty()) {
-				nodec.identifier() = changes.add_node(std::move(entries));
+				nodec.raw_identifier() = changes.add_node(std::move(entries));
 			} else {
-				nodec.identifier() = changes.insert_into_node(nodec.identifier(), std::move(entries), true);
+				nodec.raw_identifier() = changes.insert_into_node(nodec.raw_identifier(), std::move(entries), true);
 			}
 
 			apply<depth>(node_storage, changes);
 
-			assert(not nodec.identifier().empty());
+			assert(not nodec.raw_identifier().empty());
 			if constexpr (not(depth == 1 and HypertrieCoreTrait_bool_valued_and_taggable_key_part<tri>)) {
-				nodec = node_storage.template lookup<depth>(nodec.identifier());
-				assert(not nodec.identifier().empty());
+				nodec = node_storage.template lookup<depth>(nodec.raw_identifier());
+				assert(not nodec.raw_identifier().empty());
 			} else {
-				if (nodec.identifier().is_sen()) {
+				if (nodec.raw_identifier().is_sen()) {
 					nodec.void_node_ptr() = {};
 					return;
 				} else {
-					nodec = FNContainer<depth, tri>{nodec.identifier(),
-													node_storage.template lookup<depth, FullNode>(nodec.identifier())};
-					assert(not nodec.identifier().empty());
+					nodec = FNContainer<depth, tri>{nodec.raw_identifier(),
+													node_storage.template lookup<depth, FullNode>(nodec.raw_identifier())};
+					assert(not nodec.raw_identifier().empty());
 				}
 			}
 		}
 
 		template<size_t depth>
-		static inline void update_ref_count(size_t &node_ref_count, Identifier<depth, tri> node_id, tsl::sparse_map<Identifier<depth, tri>, ssize_t> &fn_deltas) {
+		static inline void update_ref_count(size_t &node_ref_count, RawIdentifier<depth, tri> node_id, tsl::sparse_map<RawIdentifier<depth, tri>, ssize_t> &fn_deltas) {
 			auto new_ref_count = ssize_t(node_ref_count) + fn_deltas[node_id];
 			node_ref_count = (new_ref_count > 0) ? size_t(new_ref_count) : 0UL;
 		}
@@ -53,7 +53,7 @@ namespace hypertrie::internal::raw {
 		static void apply(NodeStorage<max_depth, tri> &node_storage,
 						  ContextLevelChanges<depth, tri> &lv_changes) {
 			ContextLevelChanges<depth - 1, tri> next_level_changes{};
-			using Identifier_t = Identifier<depth, tri>;
+			using RawIdentifier_t = RawIdentifier<depth, tri>;
 
 			auto &full_nodes_storage_ = node_storage.template nodes<depth, FullNode>();
 			auto &full_nodes_ = full_nodes_storage_.nodes();
@@ -63,7 +63,7 @@ namespace hypertrie::internal::raw {
 			if constexpr (not(depth == 1 and HypertrieCoreTrait_bool_valued_and_taggable_key_part<tri>))
 				// create, delete or update ref_count for Single Entry Nodes
 				for (auto it = lv_changes.SEN_new_ones.begin(); it != lv_changes.SEN_new_ones.end(); ++it) {
-					Identifier_t id_after = it->first;
+					RawIdentifier_t id_after = it->first;
 					assert(id_after.is_sen());
 					auto &change = it.value();
 					// if a new node is created, this update change.entry accordingly.
@@ -77,7 +77,7 @@ namespace hypertrie::internal::raw {
 			for (const auto &[id_before, ids_after] : lv_changes.moveables_fns) {
 				auto &changes = lv_changes.FN_changes[id_before];
 
-				std::optional<Identifier_t> last_id_after;
+				std::optional<RawIdentifier_t> last_id_after;
 
 				// find an id_after which is not yet done (= in done_fns)
 				for (const auto &id_after : ids_after) {
@@ -175,10 +175,10 @@ namespace hypertrie::internal::raw {
 			}
 
 			for (auto it = lv_changes.FN_new_ones.begin(); it != lv_changes.FN_new_ones.end(); ++it) {
-				Identifier_t id_after = it->first;
+				RawIdentifier_t id_after = it->first;
 				if (not lv_changes.done_fns.contains(id_after)) {
 					typename ContextLevelChanges<depth, tri>::FN_New &change = it.value();
-					Identifier_t id_before = change.sen_node_before;
+					RawIdentifier_t id_before = change.sen_node_before;
 
 					assert(id_before.empty() or id_before.is_sen());
 					if constexpr (not(depth == 1 and HypertrieCoreTrait_bool_valued_and_taggable_key_part<tri>)) {
@@ -215,7 +215,7 @@ namespace hypertrie::internal::raw {
 			 * Adjust the ref_count of nodes that are children of a node and an altered copy of that node.
 			 * Or of nodes that are children of removed nodes.
 			 */
-			for (const Identifier_t &id : lv_changes.fn_incs) {
+			for (const RawIdentifier_t &id : lv_changes.fn_incs) {
 				if (not lv_changes.done_fns.contains(id)) {
 					assert(full_nodes_.contains(id));
 					auto node = full_nodes_[id];
@@ -248,7 +248,7 @@ namespace hypertrie::internal::raw {
 		template<size_t depth, bool node_is_empty = false, bool reused_node = false>
 		static void insert_into_full_node(ContextLevelChanges<depth - 1, tri> &next_level_changes,
 										  typename SpecificNodeStorage<depth, tri, FullNode>::Map_t &full_nodes_,
-										  Identifier<depth, tri> id_after,
+										  RawIdentifier<depth, tri> id_after,
 										  typename FNContainer<depth, tri>::NodePtr copied_node,
 										  std::vector<SingleEntry<depth, tri_with_stl_alloc<tri>>> entries) {
 			using key_part_type = typename tri::key_part_type;
@@ -298,7 +298,7 @@ namespace hypertrie::internal::raw {
 						auto &edges = copied_node->edges(pos);
 						if constexpr (depth == 2 and HypertrieCoreTrait_bool_valued_and_taggable_key_part<tri>) {
 							if (child_inserted_entries.size() == 1) {
-								edges[key_part] = Identifier<depth - 1, tri>{child_inserted_entries[0]};
+								edges[key_part] = RawIdentifier<depth - 1, tri>{child_inserted_entries[0]};
 								continue;
 							}
 						}
@@ -312,7 +312,7 @@ namespace hypertrie::internal::raw {
 		static void remove_full_node(ContextLevelChanges<depth - 1, tri> &next_level_changes,
 									 typename SpecificNodeStorage<depth, tri, FullNode>::Map_t &full_nodes,
 									 typename SpecificNodeStorage<depth, tri, FullNode>::AllocateNode_t &full_nodes_lifecycle,
-									 Identifier<depth, tri> id,
+									 RawIdentifier<depth, tri> id,
 									 typename FNContainer<depth, tri>::NodePtr node) {
 			if constexpr (not already_detached)
 				assert(full_nodes.contains(id));

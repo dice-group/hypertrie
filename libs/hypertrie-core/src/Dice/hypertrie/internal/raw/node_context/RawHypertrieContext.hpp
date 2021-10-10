@@ -108,7 +108,7 @@ namespace hypertrie::internal::raw {
 			else if (nodec.is_sen()) {
 				SENContainer<depth, tri> sen_nodec = nodec.template specific<SingleEntryNode>();
 				if constexpr (depth == 1 and HypertrieCoreTrait_bool_valued_and_taggable_key_part<tri>) {
-					return nodec.identifier().get_entry().key()[0] == key[0];
+					return nodec.raw_identifier().get_entry().key()[0] == key[0];
 				} else {
 					if (sen_nodec.node_ptr()->key() == key) {
 						if constexpr (tri::is_bool_valued) return true;
@@ -165,7 +165,7 @@ namespace hypertrie::internal::raw {
 					auto slice = slice_opt.value();
 					if constexpr (result_depth > 0) {
 						SingleEntry<result_depth, tri_with_stl_alloc<tri>> entry{slice, sen_nodec.node_ptr()->value()};
-						Identifier<result_depth, tri_with_stl_alloc<tri>> identifier{entry};
+						RawIdentifier<result_depth, tri_with_stl_alloc<tri>> identifier{entry};
 						if constexpr (result_depth == 1 and HypertrieCoreTrait_bool_valued_and_taggable_key_part<tri>)
 							return Res::make_managed(identifier, nullptr);
 						else

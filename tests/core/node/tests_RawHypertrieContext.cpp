@@ -50,7 +50,7 @@ namespace hypertrie::tests::core::node {
 			CHECK(validation_context_0 == context);
 			for (const auto &entry : entries_0)
 				CHECK(context.get(nc, entry.key()) == entry.value());
-			std::cout << fmt::format("result identifier 0: {}", nc.identifier()) << std::endl;
+			std::cout << fmt::format("result identifier 0: {}", nc.raw_identifier()) << std::endl;
 			fmt::print("A: {}", context);
 
 			context.insert(nc, entries_1);
@@ -61,7 +61,7 @@ namespace hypertrie::tests::core::node {
 			CHECK(validation_context == context);
 			for (const auto &entry : all_entries)
 				CHECK(context.get(nc, entry.key()) == entry.value());
-			std::cout << fmt::format("result identifier 1: {}", nc.identifier()) << std::endl;
+			std::cout << fmt::format("result identifier 1: {}", nc.raw_identifier()) << std::endl;
 		};
 
 		TEST_CASE("problematic entries 10") {
@@ -87,7 +87,7 @@ namespace hypertrie::tests::core::node {
 			CHECK(validation_context_0 == context);
 			for (const auto &entry : entries_0)
 				CHECK(context.get(nc, entry.key()) == entry.value());
-			std::cout << fmt::format("result identifier 0: {}", nc.identifier()) << std::endl;
+			std::cout << fmt::format("result identifier 0: {}", nc.raw_identifier()) << std::endl;
 			fmt::print("A: {}", context);
 
 			context.insert(nc, entries_1);
@@ -98,7 +98,7 @@ namespace hypertrie::tests::core::node {
 			CHECK(validation_context == context);
 			for (const auto &entry : all_entries)
 				CHECK(context.get(nc, entry.key()) == entry.value());
-			std::cout << fmt::format("result identifier 1: {}", nc.identifier()) << std::endl;
+			std::cout << fmt::format("result identifier 1: {}", nc.raw_identifier()) << std::endl;
 		};
 
 		TEST_CASE("problematic entries 9") {
@@ -125,7 +125,7 @@ namespace hypertrie::tests::core::node {
 			CHECK(validation_context_0 == context);
 			for (const auto &entry : entries_0)
 				CHECK(context.get(nc, entry.key()) == entry.value());
-			std::cout << fmt::format("result identifier 0: {}", nc.identifier()) << std::endl;
+			std::cout << fmt::format("result identifier 0: {}", nc.raw_identifier()) << std::endl;
 			fmt::print("A: {}", context);
 
 			context.insert(nc, entries_1);
@@ -136,7 +136,7 @@ namespace hypertrie::tests::core::node {
 			CHECK(validation_context == context);
 			for (const auto &entry : all_entries)
 				CHECK(context.get(nc, entry.key()) == entry.value());
-			std::cout << fmt::format("result identifier 1: {}", nc.identifier()) << std::endl;
+			std::cout << fmt::format("result identifier 1: {}", nc.raw_identifier()) << std::endl;
 		};
 
 		TEST_CASE("problematic entries 8") {
@@ -163,7 +163,7 @@ namespace hypertrie::tests::core::node {
 			CHECK(validation_context_0 == context);
 			for (const auto &entry : entries_0)
 				CHECK(context.get(nc, entry.key()) == entry.value());
-			std::cout << fmt::format("result identifier 0: {}", nc.identifier()) << std::endl;
+			std::cout << fmt::format("result identifier 0: {}", nc.raw_identifier()) << std::endl;
 			fmt::print("A: {}", context);
 
 			context.insert(nc, entries_1);
@@ -174,7 +174,7 @@ namespace hypertrie::tests::core::node {
 			CHECK(validation_context == context);
 			for (const auto &entry : all_entries)
 				CHECK(context.get(nc, entry.key()) == entry.value());
-			std::cout << fmt::format("result identifier 1: {}", nc.identifier()) << std::endl;
+			std::cout << fmt::format("result identifier 1: {}", nc.raw_identifier()) << std::endl;
 		};
 
 		TEST_CASE("problematic entries 7") {
@@ -202,7 +202,7 @@ namespace hypertrie::tests::core::node {
 			CHECK(validation_context_0 == context);
 			for (const auto &entry : entries_0)
 				CHECK(context.get(nc, entry.key()) == entry.value());
-			std::cout << fmt::format("result identifier 0: {}", nc.identifier()) << std::endl;
+			std::cout << fmt::format("result identifier 0: {}", nc.raw_identifier()) << std::endl;
 			fmt::print("A: {}", context);
 
 			context.insert(nc, entries_1);
@@ -213,7 +213,7 @@ namespace hypertrie::tests::core::node {
 			CHECK(validation_context == context);
 			for (const auto &entry : all_entries)
 				CHECK(context.get(nc, entry.key()) == entry.value());
-			std::cout << fmt::format("result identifier 1: {}", nc.identifier()) << std::endl;
+			std::cout << fmt::format("result identifier 1: {}", nc.raw_identifier()) << std::endl;
 		};
 
 		TEST_CASE("problematic entries 6") {
@@ -240,7 +240,7 @@ namespace hypertrie::tests::core::node {
 			CHECK(validation_context_0 == context);
 			for (const auto &entry : entries_0)
 				CHECK(context.get(nc, entry.key()) == entry.value());
-			std::cout << fmt::format("result identifier 0: {}", nc.identifier()) << std::endl;
+			std::cout << fmt::format("result identifier 0: {}", nc.raw_identifier()) << std::endl;
 			fmt::print("A: {}", context);
 
 			context.insert(nc, entries_1);
@@ -251,7 +251,7 @@ namespace hypertrie::tests::core::node {
 			CHECK(validation_context == context);
 			for (const auto &entry : all_entries)
 				CHECK(context.get(nc, entry.key()) == entry.value());
-			std::cout << fmt::format("result identifier 1: {}", nc.identifier()) << std::endl;
+			std::cout << fmt::format("result identifier 1: {}", nc.raw_identifier()) << std::endl;
 		};
 
 		TEST_CASE("problematic entries 5") {
@@ -278,7 +278,7 @@ namespace hypertrie::tests::core::node {
 			CHECK(validation_context_0 == context);
 			for (const auto &entry : entries_0)
 				CHECK(context.get(nc, entry.key()) == entry.value());
-			std::cout << fmt::format("result identifier 0: {}", nc.identifier()) << std::endl;
+			std::cout << fmt::format("result identifier 0: {}", nc.raw_identifier()) << std::endl;
 			fmt::print("A: {}", context);
 
 			context.insert(nc, entries_1);
@@ -289,7 +289,7 @@ namespace hypertrie::tests::core::node {
 			CHECK(validation_context == context);
 			for (const auto &entry : all_entries)
 				CHECK(context.get(nc, entry.key()) == entry.value());
-			std::cout << fmt::format("result identifier 1: {}", nc.identifier()) << std::endl;
+			std::cout << fmt::format("result identifier 1: {}", nc.raw_identifier()) << std::endl;
 		};
 
 		TEST_CASE("problematic entries 4") {
@@ -315,7 +315,7 @@ namespace hypertrie::tests::core::node {
 			CHECK(validation_context_0 == context);
 			for (const auto &entry : entries_0)
 				CHECK(context.get(nc, entry.key()) == entry.value());
-			std::cout << fmt::format("result identifier 0: {}", nc.identifier()) << std::endl;
+			std::cout << fmt::format("result identifier 0: {}", nc.raw_identifier()) << std::endl;
 			fmt::print("A: {}", context);
 
 			context.insert(nc, entries_1);
@@ -326,7 +326,7 @@ namespace hypertrie::tests::core::node {
 			CHECK(validation_context == context);
 			for (const auto &entry : all_entries)
 				CHECK(context.get(nc, entry.key()) == entry.value());
-			std::cout << fmt::format("result identifier 1: {}", nc.identifier()) << std::endl;
+			std::cout << fmt::format("result identifier 1: {}", nc.raw_identifier()) << std::endl;
 		};
 
 		TEST_CASE("problematic entries 3") {
@@ -352,7 +352,7 @@ namespace hypertrie::tests::core::node {
 			CHECK(validation_context_0 == context);
 			for (const auto &entry : entries_0)
 				CHECK(context.get(nc, entry.key()) == entry.value());
-			std::cout << fmt::format("result identifier 0: {}", nc.identifier()) << std::endl;
+			std::cout << fmt::format("result identifier 0: {}", nc.raw_identifier()) << std::endl;
 			fmt::print("A: {}", context);
 
 			context.insert(nc, entries_1);
@@ -363,7 +363,7 @@ namespace hypertrie::tests::core::node {
 			CHECK(validation_context == context);
 			for (const auto &entry : all_entries)
 				CHECK(context.get(nc, entry.key()) == entry.value());
-			std::cout << fmt::format("result identifier 1: {}", nc.identifier()) << std::endl;
+			std::cout << fmt::format("result identifier 1: {}", nc.raw_identifier()) << std::endl;
 		};
 
 		TEST_CASE("problematic entries 2") {
@@ -395,7 +395,7 @@ namespace hypertrie::tests::core::node {
 			CHECK(validation_context_0 == context);
 			for (const auto &entry : entries_0)
 				CHECK(context.get(nc, entry.key()) == entry.value());
-			std::cout << fmt::format("result identifier 0: {}", nc.identifier()) << std::endl;
+			std::cout << fmt::format("result identifier 0: {}", nc.raw_identifier()) << std::endl;
 			fmt::print("A: {}", context);
 
 			context.insert(nc, entries_1);
@@ -406,7 +406,7 @@ namespace hypertrie::tests::core::node {
 			CHECK(validation_context == context);
 			for (const auto &entry : all_entries)
 				CHECK(context.get(nc, entry.key()) == entry.value());
-			std::cout << fmt::format("result identifier 1: {}", nc.identifier()) << std::endl;
+			std::cout << fmt::format("result identifier 1: {}", nc.raw_identifier()) << std::endl;
 		};
 
 
@@ -433,7 +433,7 @@ namespace hypertrie::tests::core::node {
 			CHECK(validation_context_0 == context);
 			for (const auto &entry : entries_0)
 				CHECK(context.get(nc, entry.key()) == entry.value());
-			std::cout << fmt::format("result identifier 0: {}", nc.identifier()) << std::endl;
+			std::cout << fmt::format("result identifier 0: {}", nc.raw_identifier()) << std::endl;
 			fmt::print("A: {}", context);
 
 			context.insert(nc, entries_1);
@@ -444,7 +444,7 @@ namespace hypertrie::tests::core::node {
 			CHECK(validation_context == context);
 			for (const auto &entry : all_entries)
 				CHECK(context.get(nc, entry.key()) == entry.value());
-			std::cout << fmt::format("result identifier 1: {}", nc.identifier()) << std::endl;
+			std::cout << fmt::format("result identifier 1: {}", nc.raw_identifier()) << std::endl;
 		};
 	};
 };// namespace hypertrie::tests::core::node

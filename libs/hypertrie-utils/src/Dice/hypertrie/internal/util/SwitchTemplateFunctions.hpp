@@ -12,8 +12,14 @@ namespace hypertrie::internal::util {
 		template<std::integral auto first, std::integral auto last>
 		struct Range {
 			using int_type = std::conditional_t < first < 0 or last<0, intmax_t, uintmax_t>;
-			static constexpr int_type min = std::min(first, last);
-			static constexpr int_type max = std::max(first, last);
+
+		private:
+			static constexpr int_type first_typed = first;
+			static constexpr int_type last_typed = last;
+
+		public:
+			static constexpr int_type min = std::min(first_typed, last_typed);
+			static constexpr int_type max = std::max(first_typed, last_typed);
 		};
 
 		template<std::integral auto i, std::integral auto max, class T, class F>
@@ -23,7 +29,7 @@ namespace hypertrie::internal::util {
 					return execute_case<i + 1, max, T, F>(value, f);
 			return f(std::integral_constant<T, i>{});
 		}
-	}// namespace detail_compiled_switch
+	}// namespace detail_switch_cases
 
 	/**
      * Generates a switch-case function at compile-time which is evaluated at runtime. The switch is a lambda like: `[&](auto i_t){ ... }`.
@@ -42,11 +48,11 @@ namespace hypertrie::internal::util {
      */
 	template<std::integral auto first, std::integral auto last, class F, class D>
 	constexpr auto switch_cases(typename detail_switch_cases::Range<first, last>::int_type condition, F cases_function,
-						 D default_function) {
+								D default_function) {
 		using namespace detail_switch_cases;
 		using range = Range<first, last>;
-
-		if (range::min <= condition and condition < range::max)
+		// TODO: I changed that from < to <= -> adjust docu
+		if (range::min <= condition and condition <= range::max)
 			return execute_case<range::min, range::max>(condition, cases_function);
 		else
 			return default_function();
@@ -67,7 +73,7 @@ namespace hypertrie::internal::util {
 	 */
 	template<std::integral auto last, class F, class D>
 	constexpr auto switch_cases(typename detail_switch_cases::Range<0, last>::int_type condition, F cases_function,
-						 D default_function) {
+								D default_function) {
 		return switch_cases<0, last>(condition, cases_function, default_function);
 	}
 
@@ -88,7 +94,7 @@ namespace hypertrie::internal::util {
 		using namespace detail_switch_cases;
 		using range = Range<first, last>;
 
-		if (range::min <= x and x < range::max)
+		if (range::min <= x and x <= range::max)
 			execute_case<range::min, range::max>(x, cases_function);
 	}
 
@@ -107,6 +113,6 @@ namespace hypertrie::internal::util {
 	constexpr void switch_cases(typename detail_switch_cases::Range<0, last>::int_type x, F cases_function) {
 		switch_cases<0, last>(x, cases_function);
 	}
-}// namespace hypertrie::internal
+}// namespace hypertrie::internal::util
 
 #endif//HYPERTRIE_SWITCHTEMPLATEFUNCTIONS_HPP

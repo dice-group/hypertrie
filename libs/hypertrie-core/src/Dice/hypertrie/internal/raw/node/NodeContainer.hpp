@@ -22,7 +22,6 @@ namespace hypertrie::internal::raw {
 		static_assert(sizeof(Identifier<tri>) <= sizeof(size_t), "The Identifier type must fit into a size_t");
 
 
-
 	protected:
 		Identifier<tri> node_identifier_{};
 
@@ -89,7 +88,7 @@ namespace hypertrie::internal::raw {
 		NodeContainer() = default;
 
 		NodeContainer(const RawIdentifier_t &identifier, VoidNodePtr node_ptr) noexcept
-			: RawNodeContainer_t{(size_t) identifier,
+			: RawNodeContainer_t{identifier,
 								 util::unsafe_cast<size_t>(node_ptr)} {}
 
 		template<template<size_t, typename> typename node_type>
@@ -106,9 +105,11 @@ namespace hypertrie::internal::raw {
 		template<template<size_t, typename> typename node_type>
 		[[nodiscard]] auto specific() const noexcept { return SpecificNodeContainer<depth, tri_t, node_type>{this->node_identifier_, this->node_ptr_}; }
 
-		[[nodiscard]] RawIdentifier_t raw_identifier() const noexcept { return RawIdentifier_t{this->node_identifier_}; }
+		[[nodiscard]] RawIdentifier_t raw_identifier() const noexcept { return util::unsafe_cast<RawIdentifier_t const>(this->node_identifier_); }
 
 		[[nodiscard]] RawIdentifier_t &raw_identifier() noexcept { return util::unsafe_cast<RawIdentifier_t>(this->node_identifier_); }
+
+		//		operator RawNodeContainer_t () const noexcept { return {this->identifier(), this->void_node_ptr()}; }
 	};
 
 	template<size_t depth, HypertrieCoreTrait tri_t, template<size_t, typename> typename node_type_t>
@@ -132,13 +133,14 @@ namespace hypertrie::internal::raw {
 	public:
 		SpecificNodeContainer() = default;
 
-		SpecificNodeContainer(Identifier_t identifier, NodePtr node_ptr) noexcept
+		explicit SpecificNodeContainer(Identifier_t identifier, NodePtr node_ptr = {}) noexcept
 			: NodeContainer_t{identifier, node_ptr} {}
 
 		[[nodiscard]] constexpr NodePtr &node_ptr() noexcept { return util::unsafe_cast<NodePtr>(this->node_ptr_); }
 		[[nodiscard]] constexpr const NodePtr &node_ptr() const noexcept { return util::unsafe_cast<NodePtr const>(this->node_ptr_); }
 
-		explicit operator NodeContainer_t() const noexcept { return {this->identifier(), this->void_node_ptr()}; }
+		operator NodeContainer_t() const noexcept { return {this->identifier(), this->void_node_ptr()}; }
+		//		operator RawNodeContainer_t () const noexcept { return {this->identifier(), this->void_node_ptr()}; }
 	};
 
 	template<size_t depth, HypertrieCoreTrait tri>

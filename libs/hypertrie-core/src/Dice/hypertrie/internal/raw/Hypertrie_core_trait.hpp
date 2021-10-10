@@ -56,6 +56,7 @@ namespace hypertrie::internal::raw {
 
 	template<class T>
 	concept HypertrieCoreTrait = internal::hypertrie_internal_trait::is_instance<T, Hypertrie_core_t>::value && requires(T t) {
+		typename T::tr;
 		typename T::allocator_type;
 		typename T::key_part_type;
 		typename T::value_type;

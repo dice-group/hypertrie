@@ -29,7 +29,7 @@ namespace hypertrie {
 		[[nodiscard]] constexpr size_t max_depth() const noexcept {
 			return max_depth_;
 		}
-		NodeContext &raw_context()  noexcept{
+		NodeContext &raw_context() noexcept {
 			return raw_context_;
 		}
 	};
@@ -38,7 +38,7 @@ namespace hypertrie {
 	class DefaultHypertrieContext {
 	public:
 		static HypertrieContext<tr> &instance() {
-			static const std::unique_ptr<HypertrieContext<tr>> instance{new HypertrieContext<tr>()};
+			static const std::unique_ptr<HypertrieContext<tr>> instance{new HypertrieContext<tr>{typename tr::allocator_type()}};
 			return *instance;
 		}
 

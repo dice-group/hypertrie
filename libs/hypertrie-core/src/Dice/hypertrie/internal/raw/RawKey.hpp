@@ -5,6 +5,7 @@
 #include <optional>
 
 #include <Dice/hash/DiceHash.hpp>
+#include <Dice/hypertrie/Key.hpp>
 #include <Dice/hypertrie/internal/commons/PosType.hpp>
 #include <Dice/hypertrie/internal/raw/Hypertrie_core_trait.hpp>
 
@@ -37,6 +38,19 @@ namespace hypertrie::internal::raw {
 		std::array<FixedValue, fixed_depth> fixed_values{};
 
 	public:
+		RawSliceKey() = default;
+
+		explicit RawSliceKey(const SliceKey<typename tri::tr> &slice_key) noexcept {
+
+			assert(slice_key.get_fixed_depth() == fixed_depth);
+			size_t pos = 0;
+			size_t key_pos = 0;
+			for (const auto &opt_key_part : slice_key) {
+				if (opt_key_part.has_value())
+					fixed_values[pos++] = {key_pos, opt_key_part.value()};
+				++key_pos;
+			}
+		}
 		auto begin() noexcept { return fixed_values.begin(); }
 
 		auto end() noexcept { return fixed_values.end(); }

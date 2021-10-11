@@ -21,6 +21,9 @@ namespace hypertrie::tests::core::node {
 			using tr = tagged_bool_Hypertrie_trait;
 			Hypertrie<tr> hypertrie{3};
 			hypertrie.set({{1, 2, 3}}, true);
+
+			auto result = hypertrie[SliceKey<tr>{{1, 2, 3}}];
+			CHECK(std::get<bool>(result) == true);
 			CHECK(hypertrie[Key<tr>{{1, 2, 3}}] == true);
 			CHECK(hypertrie[Key<tr>{{0, 0, 0}}] == false);
 		};

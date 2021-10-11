@@ -107,7 +107,7 @@ namespace hypertrie {
 								// TODO: when we switch over to a pool for SingleEntryNodes, we need to use here AllocateNode::delete_ instead of delete
 								delete sen_node_container.node_ptr();
 							},
-							[]() { assert(false);  __builtin_unreachable(); });
+							[]() { assert(false); __builtin_unreachable(); });
 				}
 		}
 
@@ -117,7 +117,7 @@ namespace hypertrie {
 			static constexpr size_t min_depth = (HypertrieCoreTrait_bool_valued_and_taggable_key_part<tri>) ? 2 : 1;
 			if constexpr (min_depth <= hypertrie_max_depth)
 				if (contextless() and not node_container_.is_null_ptr() and depth() != 0) {
-					assert(not node_container_.null());
+					assert(not node_container_.is_null_ptr());
 					switch_cases<min_depth, hypertrie_max_depth>(
 							this->depth_,
 							[&](auto depth_arg) {
@@ -125,7 +125,7 @@ namespace hypertrie {
 								assert(this->node_container_.is_sen());
 								using SENContainer_t = SENContainer<depth_arg, tri_with_stl_alloc<tri>>;
 								using SingleEntryNode_t = typename SENContainer_t::Node;
-								auto &sen_node_container = unsafe_cast<SENContainer_t &>(this->node_container_);
+								auto &sen_node_container = unsafe_cast<SENContainer_t>(this->node_container_);
 								// TODO: when we switch over to a pool for SingleEntryNodes, we need to use here AllocateNode::new_ instead of new_
 								sen_node_container.node_ptr() = new SingleEntryNode_t(*sen_node_container.node_ptr());
 							},
@@ -298,8 +298,9 @@ namespace hypertrie {
 				else
 					return const_Hypertrie(*this);
 			} else if (fixed_depth == depth()) {
-				Key key(depth());
-				std::copy_n(slice_key.begin(), depth(), key.begin());
+				Key<tr> key(depth());
+				for (size_t i = 0; i < depth(); ++i)
+					key[i] = slice_key[i].value();
 
 				return (*this)[key];
 			} else {
@@ -309,38 +310,43 @@ namespace hypertrie {
 				return switch_cases<1, hypertrie_max_depth>(
 						this->depth_,
 						[&](auto depth_arg) -> const_Hypertrie<tr> {
-							switch_cases<1, depth_arg>(
+							return switch_cases<1, depth_arg - 1>(
 									fixed_depth,
 									[&](auto slice_key_depth_arg) -> const_Hypertrie<tr> {
-										RawSliceKey<slice_key_depth_arg, tr> raw_slice_key(slice_key);
+										if constexpr (depth_arg != slice_key_depth_arg) {
+											RawSliceKey<slice_key_depth_arg, tri> raw_slice_key(slice_key);
+											//
+											auto slice = [&](const auto &nodec) -> const_Hypertrie<tr> {
+												auto slice_result = this->context()->raw_context().template slice<depth_arg>(nodec, raw_slice_key);
+												if (slice_result.empty())
+													return const_Hypertrie<tr>(depth_arg - slice_key_depth_arg);
+												else {
+													if (slice_result.uses_tri_alloc())
+														return {depth_arg - slice_key_depth_arg,
+																this->context(),
+																slice_result.get_with_tri_alloc()};
+													else
+														return {depth_arg - slice_key_depth_arg,
+																nullptr,
+																slice_result.get_with_stl_alloc()};
+												}
+											};
 
-										auto slice = [&](const auto &nodec) -> const_Hypertrie<tr> {
-											auto slice_result = this->context()->raw_context().template slice<depth>(nodec, raw_slice_key);
-											if (slice_result.empty())
-												return {depth_arg - slice_key_depth_arg};
-											else {
-												if (slice_result.is_managed())
-													return {depth_arg - slice_key_depth_arg,
-															this->context(),
-															slice_result.get_managed()};
-												else
-													return {depth_arg - slice_key_depth_arg,
-															nullptr,
-															slice_result.get_unmanaged()};
+											if (contextless()) {
+												// todo: handle context-less nodes correctly
+												auto &nodec = this->template stl_node_container<depth_arg>();
+												return slice(nodec);
+											} else {
+												auto &nodec = this->template node_container<depth_arg>();
+												return slice(nodec);
 											}
-										};
-
-										if (contextless()) {
-											auto &nodec = this->template stl_node_container<depth>();
-											return slice(nodec);
-										} else {
-											auto &nodec = this->template node_container<depth>();
-											return slice(nodec);
 										}
+										assert(false);
+										__builtin_unreachable();
 									},
-									[]() { assert(false); __builtin_unreachable(); });
+									[]() -> const_Hypertrie<tr> { assert(false); __builtin_unreachable(); });
 						},
-						[]() { assert(false); __builtin_unreachable(); });
+						[]() -> const_Hypertrie<tr> { assert(false); __builtin_unreachable(); });
 			}
 		}
 
@@ -429,7 +435,7 @@ namespace hypertrie {
 		using RawKey_t = internal::raw::RawKey<depth, tri>;
 
 		template<size_t depth>
-		using RawSliceKey = internal::raw::RawSliceKey<depth, tri>;
+		using RawSliceKey_t = internal::raw::RawSliceKey<depth, tri>;
 
 	public:
 		value_type set(const Key<tr> &key, value_type value) noexcept {

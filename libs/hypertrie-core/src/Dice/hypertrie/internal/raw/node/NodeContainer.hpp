@@ -87,7 +87,7 @@ namespace hypertrie::internal::raw {
 	public:
 		NodeContainer() = default;
 
-		NodeContainer(const RawIdentifier_t &identifier, VoidNodePtr node_ptr) noexcept
+		explicit NodeContainer(const RawIdentifier_t &identifier, VoidNodePtr node_ptr = {}) noexcept
 			: RawNodeContainer_t{identifier,
 								 util::unsafe_cast<size_t>(node_ptr)} {}
 

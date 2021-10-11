@@ -2,52 +2,13 @@
 #define HYPERTRIE_NODECONTEXT_HPP
 
 #include <Dice/hypertrie/internal/raw/node/NodeStorage.hpp>
+#include <Dice/hypertrie/internal/raw/node_context/SliceResult.hpp>
 #include <Dice/hypertrie/internal/raw/node_context/insert_impl_RawNodeContext.hpp>
 
 #include <Dice/hypertrie/internal/raw/RawKey.hpp>
 
 namespace hypertrie::internal::raw {
 
-	// TODO: move into own file
-	// TODO: modeling does not yet cover all cases, e.g. managed stl allocated
-	template<size_t result_depth, HypertrieCoreTrait tri_t>
-	struct SliceResult {
-		using tri = tri_t;
-
-		using VariantType = std::variant<NodeContainer<result_depth, tri>, NodeContainer<result_depth, tri_with_stl_alloc<tri>>>;
-
-		VariantType variant_type_;
-
-	private:
-		template<class... Args>
-		auto make_managed(Args &&...args) noexcept {
-			SliceResult slice_result;
-			slice_result.emplace<0>(std::forward<Args...>(args...));
-		}
-
-		template<class... Args>
-		auto make_unmanaged(Args &&...args) noexcept {
-			SliceResult slice_result;
-			slice_result.emplace<0>(std::forward<Args...>(args...));
-		}
-
-		NodeContainer<result_depth, tri> get_managed() const {
-			std::get<0>(variant_type_);
-		}
-
-		NodeContainer<result_depth, tri_with_stl_alloc<tri>> get_unmanaged() const {
-			std::get<1>(variant_type_);
-		}
-
-		[[nodiscard]] bool is_managed() const noexcept {
-			return variant_type_.index() == 0;
-		}
-
-		[[nodiscard]] bool empty() const noexcept {
-			assert(false);
-			return false;// TODO: implement
-		}
-	};
 
 	template<size_t max_depth, HypertrieCoreTrait tri_t>
 	struct RawHypertrieContext {
@@ -142,7 +103,7 @@ namespace hypertrie::internal::raw {
 					if (value_or_child_id.is_sen())
 						return SENContainer<depth - 1, tri>{value_or_child_id};
 					else
-						return {value_or_child_id, node_storage_.template lookup<depth - 1, FullNode>(value_or_child_id)};
+						return FNContainer<depth - 1, tri>{value_or_child_id, node_storage_.template lookup<depth - 1, FullNode>(value_or_child_id)};
 				} else if constexpr (depth > 1) {
 					if (not value_or_child_id.empty())
 						return node_storage_.template lookup(value_or_child_id);
@@ -205,9 +166,18 @@ namespace hypertrie::internal::raw {
 		auto slice(const NodeContainer<depth, tri> &nodec, RawSliceKey<fixed_keyparts, tri> raw_slice_key)
 				-> std::conditional_t<(depth > fixed_keyparts), SliceResult<depth - fixed_keyparts, tri>, value_type> {
 			using Res = SliceResult<depth - fixed_keyparts, tri>;
-			if (nodec.empty())
-				return Res::make_managed();
-			return slice_rek(nodec, raw_slice_key);
+			if constexpr (fixed_keyparts == 0)
+				return SliceResult<depth, tri>::make_with_tri_alloc(nodec);
+			else if constexpr (depth == fixed_keyparts) {
+				RawKey<depth, tri> raw_key;
+				for (size_t i = 0; i < depth; ++i)
+					raw_key[i] = raw_slice_key[i].key_part;
+				return get(nodec, raw_key);
+			} else {
+				if (nodec.empty())
+					return Res{};
+				return slice_rek(nodec, raw_slice_key);
+			}
 		}
 
 		template<size_t current_depth, size_t fixed_keyparts>
@@ -216,38 +186,35 @@ namespace hypertrie::internal::raw {
 
 			constexpr static const size_t result_depth = current_depth - fixed_keyparts;
 
-			using Res = SliceResult<result_depth, tri>;
+			using SliceResult_t = SliceResult<result_depth, tri>;
+			using stl_Entry = SingleEntry<result_depth, tri_with_stl_alloc<tri>>;
 			if (nodec.is_sen()) {
-				FNContainer<current_depth, tri> sen_nodec = nodec.template specific<SingleEntryNode>();
+				SENContainer<current_depth, tri> sen_nodec = nodec.template specific<SingleEntryNode>();
 
 				auto slice_opt = raw_slice_key.slice(sen_nodec.node_ptr()->key());
 				if (slice_opt.has_value()) {
 					auto slice = slice_opt.value();
-					if constexpr (result_depth > 0) {
-						SingleEntry<result_depth, tri_with_stl_alloc<tri>> entry{slice, sen_nodec.node_ptr()->value()};
-						RawIdentifier<result_depth, tri_with_stl_alloc<tri>> identifier{entry};
-						if constexpr (result_depth == 1 and HypertrieCoreTrait_bool_valued_and_taggable_key_part<tri>)
-							return Res::make_managed(identifier, nullptr);
-						else
-							return Res::make_unmanaged(identifier, new decltype(entry)(entry));
-					} else {
-						return sen_nodec.node_ptr()->value();
+					stl_Entry entry{slice, sen_nodec.node_ptr()->value()};
+					RawIdentifier<result_depth, tri_with_stl_alloc<tri>> identifier{entry};
+					if constexpr (result_depth == 1 and HypertrieCoreTrait_bool_valued_and_taggable_key_part<tri>)
+						return SliceResult_t::make_with_tri_alloc(identifier);
+					else {
+						NodeContainer<result_depth, tri_with_stl_alloc<tri>>(identifier, new stl_Entry(entry));
+						return SliceResult_t{};//::make_with_stl_alloc(false, identifier, new stl_Entry(entry));
 					}
 				} else {
-					return Res::make_managed();
+					return SliceResult_t{};
 				}
 			} else {
 				FNContainer<current_depth, tri> fn_nodec = nodec.template specific<FullNode>();
-				if constexpr (fixed_keyparts == 1)
-					return Res::make_managed(this->template resolve(fn_nodec, raw_slice_key[0].pos, raw_slice_key[0].key_part));
-				else {
-
-					const size_t slice_key_i = fn_nodec.node_ptr()->min_fixed_keypart_i(raw_slice_key);
-					auto child = this->template resolve(fn_nodec, raw_slice_key[slice_key_i].pos, raw_slice_key[slice_key_i].key_part);
-					if (child.empty())
-						return Res::make_managed();
-					else
-						return slice_rek<current_depth - 1, fixed_keyparts - 1>(child, raw_slice_key.subkey_i(slice_key_i));
+				const size_t slice_key_i = fn_nodec.node_ptr()->min_fixed_keypart_i(raw_slice_key);
+				auto child = this->template resolve(fn_nodec, raw_slice_key[slice_key_i].pos, raw_slice_key[slice_key_i].key_part);
+				if (child.empty()) {
+					return SliceResult_t{};
+				} else if constexpr (fixed_keyparts == 1) {
+					return SliceResult_t::make_with_tri_alloc(child);
+				} else {
+					return slice_rek<current_depth - 1, fixed_keyparts - 1>(child, raw_slice_key.subkey_i(slice_key_i));
 				}
 			}
 		}

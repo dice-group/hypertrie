@@ -87,7 +87,11 @@ namespace hypertrie::internal::raw {
 			}
 		}
 
-		key_part_type get(size_t i) const noexcept {
+		const FixedValue &operator[](size_t i) const noexcept {
+			return fixed_values[i];
+		}
+
+		FixedValue &operator[](size_t i) noexcept {
 			return fixed_values[i];
 		}
 
@@ -119,7 +123,7 @@ namespace hypertrie::internal::raw {
 				if (i == remove_ith)
 					offset = 1;
 				else
-					sub_slicekey.fixed_values[j++] = {fixed_values[i].pos - offset, fixed_values[i].key_part};
+					sub_slicekey[j++] = {fixed_values[i].pos - offset, fixed_values[i].key_part};
 			return sub_slicekey;
 		}
 	};

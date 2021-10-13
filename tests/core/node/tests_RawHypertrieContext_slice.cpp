@@ -36,8 +36,8 @@ namespace hypertrie::tests::core::node {
 
 			utils::RawEntryGenerator<depth, tri> gen{};
 
-//			static size_t count = 1;
-			static size_t count = std::pow(2, depth * 0.9);
+			static size_t count = 1;
+			// static size_t count = std::pow(2, depth * 0.9);
 
 
 			gen.setKeyPartMinMax(key_part_type(1), key_part_type(2));
@@ -88,6 +88,19 @@ namespace hypertrie::tests::core::node {
 													CHECK(context.template get(slice_instance, entry.key()) == value_type{});
 												}
 											}
+										} else {
+											auto slice_instance = slice.get_with_stl_alloc();
+											assert(expected_entries.size() == 1);
+											CHECK_MESSAGE(not slice.empty(), "If a node is not allocated with the allocator from the Trait that means that it is an slice of a SingleEntryNode. -> only one entry. ");
+											if (expected_entries.contains(entry.key())) {
+												CHECK(context.template get(slice_instance, entry.key()) == expected_entries[entry.key()]);
+											} else {
+												CHECK(context.template get(slice_instance, entry.key()) == value_type{});
+											}
+											assert(slice.is_managed() == false);
+
+											if (not slice.is_managed())
+												delete slice_instance.node_ptr();
 										}
 									}
 								}

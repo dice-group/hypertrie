@@ -136,6 +136,9 @@ namespace hypertrie::internal::raw {
 		explicit SpecificNodeContainer(Identifier_t identifier, NodePtr node_ptr = {}) noexcept
 			: NodeContainer_t{identifier, node_ptr} {}
 
+		explicit SpecificNodeContainer(RawIdentifier_t raw_identifier, NodePtr node_ptr = {}) noexcept
+			: NodeContainer_t{raw_identifier, node_ptr} {}
+
 		[[nodiscard]] constexpr NodePtr &node_ptr() noexcept { return util::unsafe_cast<NodePtr>(this->node_ptr_); }
 		[[nodiscard]] constexpr const NodePtr &node_ptr() const noexcept { return util::unsafe_cast<NodePtr const>(this->node_ptr_); }
 

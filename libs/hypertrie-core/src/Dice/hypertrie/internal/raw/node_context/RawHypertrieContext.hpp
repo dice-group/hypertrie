@@ -187,20 +187,18 @@ namespace hypertrie::internal::raw {
 			constexpr static const size_t result_depth = current_depth - fixed_keyparts;
 
 			using SliceResult_t = SliceResult<result_depth, tri>;
-			using stl_Entry = SingleEntry<result_depth, tri_with_stl_alloc<tri>>;
 			if (nodec.is_sen()) {
 				SENContainer<current_depth, tri> sen_nodec = nodec.template specific<SingleEntryNode>();
 
 				auto slice_opt = raw_slice_key.slice(sen_nodec.node_ptr()->key());
 				if (slice_opt.has_value()) {
 					auto slice = slice_opt.value();
-					stl_Entry entry{slice, sen_nodec.node_ptr()->value()};
+					SingleEntry<result_depth, tri_with_stl_alloc<tri>> entry{slice, sen_nodec.node_ptr()->value()};
 					RawIdentifier<result_depth, tri_with_stl_alloc<tri>> identifier{entry};
 					if constexpr (result_depth == 1 and HypertrieCoreTrait_bool_valued_and_taggable_key_part<tri>)
 						return SliceResult_t::make_with_tri_alloc(identifier);
 					else {
-						NodeContainer<result_depth, tri_with_stl_alloc<tri>>(identifier, new stl_Entry(entry));
-						return SliceResult_t{};//::make_with_stl_alloc(false, identifier, new stl_Entry(entry));
+						return SliceResult_t::make_with_stl_alloc(false, identifier, new SingleEntryNode<result_depth, tri_with_stl_alloc<tri>>(entry));
 					}
 				} else {
 					return SliceResult_t{};

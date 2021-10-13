@@ -39,16 +39,18 @@ namespace hypertrie::tests::core::node {
 
 			utils::RawEntryGenerator<depth, tri> gen{};
 
-			static constexpr size_t batch = 1'000'000UL;
+			static constexpr size_t batch = 10'000'000UL;
 			static constexpr size_t runs = 10UL;
 			static constexpr size_t total_count = runs * batch;
 
 
-			gen.setKeyPartMinMax(key_part_type(1), key_part_type(1 + std::ceil(std::pow(total_count, 1.0 / depth))));
+			gen.setKeyPartMinMax(key_part_type(1), key_part_type(1 + std::ceil(std::pow(total_count, 1.1 / depth))));
 			gen.setValueMinMax(true, true);
 
 
 			auto entries = gen.entries(total_count);
+
+			std::cout << "total triples" << entries.size() << std::endl;
 			std::vector<std::vector<SingleEntry_t>> entry_batches;
 			for (size_t run : iter::range(runs))
 				entry_batches.emplace_back(entries.begin() + (run * batch), entries.begin() + ((run + 1) * batch));

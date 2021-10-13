@@ -30,7 +30,7 @@ namespace hypertrie::internal::raw {
 		using tri = tri_t;
 		using key_part_type = typename tri::key_part_type;
 		struct FixedValue {
-			size_t pos;
+			pos_type pos;
 			key_part_type key_part;
 		};
 
@@ -72,7 +72,7 @@ namespace hypertrie::internal::raw {
 				size_t key_pos = 0;
 				size_t ith_fixed = 0;
 				size_t result_key_pos = 0;
-				while (key_pos < depth - fixed_depth) {
+				while (key_pos < depth) {
 					if (ith_fixed != fixed_depth and fixed_values[ith_fixed].pos == key_pos) {
 						if (fixed_values[ith_fixed].key_part != raw_key[key_pos])
 							return std::nullopt;
@@ -123,7 +123,7 @@ namespace hypertrie::internal::raw {
 				if (i == remove_ith)
 					offset = 1;
 				else
-					sub_slicekey[j++] = {fixed_values[i].pos - offset, fixed_values[i].key_part};
+					sub_slicekey[j++] = {pos_type(fixed_values[i].pos - offset), fixed_values[i].key_part};
 			return sub_slicekey;
 		}
 	};

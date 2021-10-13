@@ -16,6 +16,7 @@ namespace hypertrie::tests::utils {
 			 internal::raw::HypertrieCoreTrait tri_t,
 			 typename tri_t::key_part_type max_key_part = typename tri_t::key_part_type(1)>
 	class SingleEntryGenerator {
+	public:
 		using tri = tri_t;
 		using value_type = typename tri::value_type;
 		using key_part_type = typename tri::key_part_type;
@@ -51,7 +52,7 @@ namespace hypertrie::tests::utils {
 		SingleEntryGenerator &begin() noexcept {
 			core::node::RawKey<depth, tri> key{};
 			key.fill(min_key_part);
-			entry_ = {key, value_type(1)};
+			entry_ = SinlgeEntry_t(key, value_type(1));
 			not_ended_ = true;
 			return *this;
 		}

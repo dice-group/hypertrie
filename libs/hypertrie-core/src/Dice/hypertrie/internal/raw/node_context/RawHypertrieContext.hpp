@@ -208,7 +208,8 @@ namespace hypertrie::internal::raw {
 			} else {
 				FNContainer<current_depth, tri> fn_nodec = nodec.template specific<FullNode>();
 				const size_t slice_key_i = fn_nodec.node_ptr()->min_fixed_keypart_i(raw_slice_key);
-				auto child = this->template resolve(fn_nodec, raw_slice_key[slice_key_i].pos, raw_slice_key[slice_key_i].key_part);
+				const auto &fixed_value = raw_slice_key[slice_key_i];
+				auto child = this->template resolve(fn_nodec, (pos_type) fixed_value.pos, fixed_value.key_part);
 				if (child.empty()) {
 					return SliceResult_t{};
 				} else if constexpr (fixed_keyparts == 1) {

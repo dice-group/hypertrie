@@ -137,24 +137,23 @@ namespace hypertrie::internal::raw {
 
 
 		template<size_t fixed_positions>
-		[[nodiscard]] pos_type min_fixed_keypart_i(const RawSliceKey<fixed_positions, tri> &raw_slicekey) const noexcept {
+		[[nodiscard]] size_t min_fixed_keypart_i(const RawSliceKey<fixed_positions, tri> &raw_slicekey) const noexcept {
 			static_assert(fixed_positions > 0);
-			pos_type min_fixed_keypart_pos;
+			size_t min_i = 0;
 			auto min_card = std::numeric_limits<size_t>::max();
-			auto fixed_poss_it = raw_slicekey.begin();
-			size_t j = 0;
-			for (pos_type i : iter::range(depth)) {
-				if (i == raw_slicekey[j].pos) {
-					if (auto current_card = edges(i).size(); current_card < min_card) {
+			size_t i = 0;
+			for (pos_type pos : iter::range(depth)) {
+				if (pos == raw_slicekey[i].pos) {
+					if (auto current_card = edges(pos).size(); current_card < min_card) {
 						min_card = current_card;
-						min_fixed_keypart_pos = raw_slicekey[j].pos;
+						min_i = i;
 					}
-					j++;
+					i++;
 				}
-				if (j == fixed_positions)
+				if (i == fixed_positions)
 					break;
 			}
-			return min_fixed_keypart_pos;
+			return min_i;
 		}
 
 		[[nodiscard]] std::vector<size_t> getCards(const std::vector<pos_type> &positions) const {

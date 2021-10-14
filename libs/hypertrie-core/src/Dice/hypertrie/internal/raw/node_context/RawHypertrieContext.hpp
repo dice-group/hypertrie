@@ -165,6 +165,7 @@ namespace hypertrie::internal::raw {
 		template<size_t depth, size_t fixed_keyparts>
 		auto slice(const NodeContainer<depth, tri> &nodec, RawSliceKey<fixed_keyparts, tri> raw_slice_key)
 				-> std::conditional_t<(depth > fixed_keyparts), SliceResult<depth - fixed_keyparts, tri>, value_type> {
+			// TODO: implement for NodeContainer<depth, tri_with_stl_alloc<tri>
 			using Res = SliceResult<depth - fixed_keyparts, tri>;
 			if constexpr (fixed_keyparts == 0)
 				return SliceResult<depth, tri>::make_with_tri_alloc(nodec);

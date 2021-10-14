@@ -14,13 +14,13 @@
 namespace hypertrie::tests::utils {
 	template<size_t depth,
 			 internal::raw::HypertrieCoreTrait tri_t,
-			 typename tri_t::key_part_type max_key_part = typename tri_t::key_part_type(1)>
+			 typename tri_t::key_part_type max_key_part = typename tri_t::key_part_type(1),
+			 typename tri_t::key_part_type min_key_part = typename tri_t::key_part_type(1)>
 	class SingleEntryGenerator {
 	public:
 		using tri = tri_t;
 		using value_type = typename tri::value_type;
 		using key_part_type = typename tri::key_part_type;
-		static constexpr key_part_type min_key_part = key_part_type(1);
 
 		using SinlgeEntry_t = ::hypertrie::internal::raw::SingleEntry<depth, tri>;
 
@@ -69,7 +69,8 @@ namespace hypertrie::tests::utils {
 	template<size_t depth,
 			 size_t number_of_entries,
 			 internal::raw::HypertrieCoreTrait tri_t,
-			 typename tri_t::key_part_type max_key_part = typename tri_t::key_part_type(1)>
+			 typename tri_t::key_part_type max_key_part = typename tri_t::key_part_type(1),
+			 typename tri_t::key_part_type min_key_part = typename tri_t::key_part_type(1)>
 	class EntrySetGenerator {
 	public:
 		using tri = tri_t;
@@ -83,7 +84,6 @@ namespace hypertrie::tests::utils {
 				result *= base;
 			return result;
 		}
-		static constexpr key_part_type min_key_part = key_part_type(1);
 		static_assert(min_key_part <= max_key_part);
 		static_assert(ssize_t(pow(ssize_t(max_key_part + 1) - ssize_t(min_key_part), depth)) >= ssize_t(number_of_entries));
 

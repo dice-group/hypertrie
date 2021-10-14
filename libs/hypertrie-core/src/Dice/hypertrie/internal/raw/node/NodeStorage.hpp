@@ -106,7 +106,7 @@ namespace hypertrie::internal::raw {
 		}
 
 		template<size_t depth>
-		NodeContainer<depth, tri> lookup(RawIdentifier<depth, tri> identifier) {
+		NodeContainer<depth, tri> lookup(RawIdentifier<depth, tri> identifier) noexcept{
 			if (identifier.empty())
 				return {};
 			else if (identifier.is_fn()) {

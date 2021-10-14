@@ -218,7 +218,71 @@ namespace hypertrie::internal::raw {
 				}
 			}
 		}
+
+		template<size_t depth, size_t fixed_keyparts>
+		auto diagonal_slice(const NodeContainer<depth, tri> &nodec, const RawKeyPositions<depth> &diagonal_positions, key_part_type fixed_key_part,
+							SingleEntryNode<depth - fixed_keyparts, tri> *sen_result_cache = nullptr)
+				-> std::conditional_t<(depth > fixed_keyparts), SliceResult<depth - fixed_keyparts, tri>, value_type> {
+			// TODO: implement for NodeContainer<depth, tri_with_stl_alloc<tri>
+			using Res = SliceResult<depth - fixed_keyparts, tri>;
+			if constexpr (fixed_keyparts == 0)
+				return SliceResult<depth, tri>::make_with_tri_alloc(nodec);
+			else if constexpr (depth == fixed_keyparts) {
+				RawKey<depth, tri> raw_key;
+				for (size_t i = 0; i < depth; ++i)
+					raw_key[i] = fixed_key_part;
+				return get(nodec, raw_key);
+			} else {
+				if (nodec.empty())
+					return Res{};
+				return diagonal_slice_rek(nodec, diagonal_positions, fixed_key_part, sen_result_cache);
+			}
+		}
+
+		template<size_t current_depth, size_t fixed_keyparts>
+		auto diagonal_slice_rek(const NodeContainer<current_depth, tri> &nodec, const RawKeyPositions<current_depth> &diagonal_positions, key_part_type fixed_key_part,
+								SingleEntryNode<current_depth - fixed_keyparts, tri> *sen_result_cache = nullptr)
+				-> std::conditional_t<(current_depth > fixed_keyparts), SliceResult<current_depth - fixed_keyparts, tri>, value_type> {
+
+			constexpr static const size_t result_depth = current_depth - fixed_keyparts;
+
+			using SliceResult_t = SliceResult<result_depth, tri>;
+			if (nodec.is_sen()) {
+				SENContainer<current_depth, tri> sen_nodec = nodec.template specific<SingleEntryNode>();
+
+				auto slice_opt = diagonal_positions.slice(sen_nodec.node_ptr()->key(), fixed_key_part);
+				if (slice_opt.has_value()) {
+					auto slice = slice_opt.value();
+					SingleEntry<result_depth, tri_with_stl_alloc<tri>> entry{slice, sen_nodec.node_ptr()->value()};
+					RawIdentifier<result_depth, tri_with_stl_alloc<tri>> identifier{entry};
+					if constexpr (result_depth == 1 and HypertrieCoreTrait_bool_valued_and_taggable_key_part<tri>)
+						return SliceResult_t::make_with_tri_alloc(identifier);
+					else {
+						if (sen_result_cache != nullptr) {
+							*sen_result_cache = {entry};
+							return SliceResult_t::make_with_stl_alloc(true, identifier, sen_result_cache);
+						} else
+							return SliceResult_t::make_with_stl_alloc(false, identifier, new SingleEntryNode<result_depth, tri_with_stl_alloc<tri>>(entry));
+					}
+				} else {
+					return SliceResult_t{};
+				}
+			} else {
+				FNContainer<current_depth, tri> fn_nodec = nodec.template specific<FullNode>();
+				const size_t pos = fn_nodec.node_ptr()->min_card_pos(diagonal_positions);
+				auto child = this->template resolve(fn_nodec, (pos_type) pos, fixed_key_part);
+				if (child.empty()) {
+					return SliceResult_t{};
+				} else if constexpr (fixed_keyparts == 1) {
+					return SliceResult_t::make_with_tri_alloc(child);
+				} else {
+					return diagonal_slice_rek<current_depth - 1, fixed_keyparts - 1>(child, diagonal_positions.template sub_raw_key_positions(pos), fixed_key_part, sen_result_cache);
+				}
+			}
+		}
 	};
+
+
 }// namespace hypertrie::internal::raw
 
 #endif//HYPERTRIE_NODECONTEXT_HPP

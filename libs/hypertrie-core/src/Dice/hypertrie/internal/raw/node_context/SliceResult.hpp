@@ -3,9 +3,7 @@
 
 
 #include <Dice/hypertrie/internal/raw/node/NodeContainer.hpp>
-#include <Dice/hypertrie/internal/util/UnsafeCast.hpp>
 
-#include <bit>
 #include <utility>
 
 namespace hypertrie::internal::raw {
@@ -15,36 +13,48 @@ namespace hypertrie::internal::raw {
 		using tri = tri_t;
 
 	private:
-		NodeContainer<result_depth, tri> node_container_;
+		union {
+			NodeContainer<result_depth, tri> with_tri{};
+			SENContainer<result_depth, tri_with_stl_alloc<tri>> with_stl;
+		};
 
 		bool uses_tri_alloc_ = true;
 		bool managed_ = true;
 
-		SliceResult(const NodeContainer<result_depth, tri> &nodeContainer, bool hasTriAlloc, bool managed) noexcept
-			: node_container_(nodeContainer), uses_tri_alloc_(hasTriAlloc), managed_(managed) {}
+		explicit SliceResult(const NodeContainer<result_depth, tri> &node_container) noexcept
+			: uses_tri_alloc_(true), managed_(true) {
+			this->with_tri = node_container;
+		}
+
+		SliceResult(const SENContainer<result_depth, tri_with_stl_alloc<tri>> &node_container, bool has_tri_alloc, bool managed) noexcept
+			: uses_tri_alloc_(has_tri_alloc), managed_(managed) {
+			this->with_stl = node_container;
+		}
 
 	public:
-		SliceResult() = default;
+		SliceResult() noexcept {
+			this->with_tri = {};
+		};
 
 		template<class... Args>
 		static auto make_with_tri_alloc(Args &&...args) noexcept {
-			return SliceResult(NodeContainer<result_depth, tri>{std::forward<Args>(args)...}, true, true);
+			return SliceResult(NodeContainer<result_depth, tri>{std::forward<Args>(args)...});
 		}
 
 		template<class... Args>
 		static auto make_with_stl_alloc(bool managed, Args &&...args) noexcept {
 			return SliceResult{
-					std::bit_cast<NodeContainer<result_depth, tri>>(SENContainer<result_depth, tri_with_stl_alloc<tri>>(std::forward<Args>(args)...)),
+					SENContainer<result_depth, tri_with_stl_alloc<tri>>(std::forward<Args>(args)...),
 					false,
 					managed};
 		}
 
 		const NodeContainer<result_depth, tri> &get_with_tri_alloc() const noexcept {
-			return node_container_;
+			return this->with_tri;
 		}
 
 		const SENContainer<result_depth, tri_with_stl_alloc<tri>> &get_with_stl_alloc() const noexcept {
-			return util::unsafe_cast<SENContainer<result_depth, tri_with_stl_alloc<tri>> const>(node_container_);
+			return this->with_stl;
 		}
 
 		[[nodiscard]] bool is_managed() const noexcept {
@@ -56,7 +66,7 @@ namespace hypertrie::internal::raw {
 		}
 
 		[[nodiscard]] bool empty() const noexcept {
-			return node_container_.empty();
+			return this->with_tri.empty();
 		}
 	};
 

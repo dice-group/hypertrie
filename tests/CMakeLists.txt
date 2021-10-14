@@ -124,6 +124,7 @@ target_link_libraries(tests_RawHashDiagonal
         hypertrie
         tests-utils
         fmt::fmt
+        fmt-definitions
         )
 
 

@@ -11,31 +11,38 @@ namespace hypertrie::internal::raw {
 		static constexpr size_t bytes = (depth > 0) ? depth / 8U + 1U : 0;
 		std::array<std::byte, bytes> data_{};
 
-		void set_true(size_t pos) const noexcept {
+		void set_true(size_t pos) noexcept {
 			assert(pos < depth);
 			auto byte_id = pos / 8;
 			data_[byte_id] |= (std::byte(1) << pos % 8U);
 		}
 
+		template<size_t other_depth>
+		friend class RawKeyPositions;
+
 	public:
+		RawKeyPositions() = default;
+
+		template<typename Iterable>
+		explicit RawKeyPositions(Iterable positions) noexcept
+				requires std::ranges::range<Iterable> and std::is_convertible_v<std::ranges::range_value_t<Iterable>, uint8_t> {
+			for (const auto &pos : positions)
+				set_true(pos);
+		}
+
 		bool operator[](size_t pos) const noexcept {
 			assert(pos < depth);
 			auto byte_id = pos / 8;
-			return data_[byte_id] & (std::byte(1) << pos % 8U);
+			return bool(data_[byte_id] & (std::byte(1) << pos % 8U));
 		}
 
 		[[nodiscard]] size_t first_pos() const noexcept {
-			[[maybe_unused]] size_t pos = 0;
 			size_t byte_id = 0;
-			for (const auto &byte : data_) {
 
-				for (size_t pos_in_byte = 0; pos_in_byte < 8; ++pos_in_byte) {
-					if (byte[pos_in_byte])
-						return pos_in_byte + byte_id * 8;
-					assert(pos++ < depth);
-				}
-				byte_id++;
-			}
+			for (size_t pos = 0; pos < depth; ++pos)
+				if ((*this)[pos])
+					return pos;
+			assert(false);
 			__builtin_unreachable();
 		}
 
@@ -53,7 +60,7 @@ namespace hypertrie::internal::raw {
 		}
 
 		template<size_t fixed_depth, HypertrieCoreTrait tri>
-		std::optional<RawKey<depth - fixed_depth, tri>> slice(RawKey<depth, tri> const &raw_key, typename tri::key_part_type fixed_key_part) {
+		std::optional<RawKey<depth - fixed_depth, tri_with_stl_alloc<tri>>> slice(RawKey<depth, tri> const &raw_key, typename tri::key_part_type fixed_key_part) const noexcept {
 			static_assert(depth >= fixed_depth);
 
 

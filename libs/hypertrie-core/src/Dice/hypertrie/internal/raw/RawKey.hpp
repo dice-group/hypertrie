@@ -44,7 +44,7 @@ namespace hypertrie::internal::raw {
 
 			assert(slice_key.get_fixed_depth() == fixed_depth);
 			size_t pos = 0;
-			size_t key_pos = 0;
+			pos_type key_pos = 0;
 			for (const auto &opt_key_part : slice_key) {
 				if (opt_key_part.has_value())
 					fixed_values[pos++] = {key_pos, opt_key_part.value()};

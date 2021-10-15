@@ -28,7 +28,7 @@ namespace hypertrie::tests::core::node {
 		template<size_t depth, HypertrieCoreTrait tri,
 				 size_t no_key_parts,
 				 size_t no_entries>
-		void test_diagonal(size_t max_entry_sets = 10'000) {
+		void test_diagonal(size_t max_entry_sets = 500) {
 			SUBCASE(fmt::format("no_entries: {}", no_entries).c_str()) {
 
 				using key_part_type = typename tri::key_part_type;

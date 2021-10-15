@@ -96,7 +96,8 @@ namespace hypertrie::tests::core::node {
 			}
 		}
 
-		bool operator==(RawHypertrieContext<max_depth, tri_t> const &other) const {
+		template <HypertrieCoreTrait tri_t2>
+		bool operator==(RawHypertrieContext<max_depth, tri_t2> const &other) const {
 			namespace hana = boost::hana;
 
 			hana::for_each(hana::range_c<size_t, 1, max_depth>, [this, &other](auto depth) {
@@ -105,6 +106,7 @@ namespace hypertrie::tests::core::node {
 
 				CHECK(this_FNs.size() == other_FNs.size());
 				for (const auto &[id, node] : this_FNs) {
+					// TODO: Fix for N>1
 					CHECK(other_FNs.contains(id));
 					if (other_FNs.contains(id)) {
 						auto other_node = other_FNs.find(id).value();

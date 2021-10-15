@@ -22,6 +22,16 @@ namespace hypertrie::internal::raw {
 				if (i != remove_pos) sub_key[j++] = (*this)[i];
 			return sub_key;
 		}
+
+		/* I cannot introduce a constructor because
+		 * than the implicit constructors of the array will be blocked!
+		 * Because the trait does not change anything, a reinterpret_cast should be fine.
+		 * TODO: Does this operator can become a runtime problem? (there should be no copy, so probably no?)
+		*/
+		template <HypertrieCoreTrait tri2>
+		operator RawKey<depth, tri2> const&() const{
+			return *reinterpret_cast<RawKey<depth, tri2>const *>(this);
+		}
 	};
 
 	template<size_t fixed_depth, HypertrieCoreTrait tri_t>

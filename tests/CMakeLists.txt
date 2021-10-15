@@ -98,6 +98,7 @@ target_link_libraries(tests_RawHypertrieContext_systematic
         fmt-definitions
         tests-utils
         fmt::fmt
+        pthread
         )
 
 add_executable(tests_Identifier core/node/tests_Identifier.cpp)

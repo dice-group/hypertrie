@@ -68,6 +68,13 @@ namespace hypertrie::internal::raw {
 		[[nodiscard]] bool empty() const noexcept {
 			return this->with_tri.empty();
 		}
+
+		bool operator==(const SliceResult &rhs) const noexcept {
+			return std::tie(with_tri, uses_tri_alloc_, managed_) == std::tie(rhs.with_tri, rhs.uses_tri_alloc_, rhs.managed_);
+		}
+		bool operator!=(const SliceResult &rhs) const noexcept {
+			return !(rhs == *this);
+		}
 	};
 
 }// namespace hypertrie::internal::raw

@@ -34,7 +34,7 @@ namespace hypertrie::internal::raw {
 				SliceResult_t,
 				value_type>;
 
-		FNContainer<depth, tri> const *node_container_;
+		FNContainer<depth, tri> const node_container_;
 		RawHypertrieContext<context_max_depth, tri> *context_;
 		DiagonalPositions diag_poss_;
 		/**
@@ -48,25 +48,30 @@ namespace hypertrie::internal::raw {
 		IterValue value_;
 
 	public:
+		RawHashDiagonal() = default;
+
 		template<size_t any_depth>
 		explicit RawHashDiagonal(FNContainer<depth, tri> const &nodec, DiagonalPositions diag_poss, RawHypertrieContext<any_depth, tri> &node_context) noexcept
-			: node_container_(&nodec), diag_poss_(diag_poss), context_(&node_context) {
+			: node_container_(nodec), context_(&node_context), diag_poss_(diag_poss) {
 			static_assert(any_depth >= depth);
 		}
 
+		/**
+		 * this must not be empty()
+		 */
 		RawHashDiagonal &begin() noexcept {
 			if constexpr (depth > 1) {
-				const size_t min_card_pos = node_container_->node_ptr()->min_card_pos(diag_poss_);
+				const size_t min_card_pos = node_container_.node_ptr()->min_card_pos(diag_poss_);
 				// generate the sub_diag_poss_ diagonal positions mask to apply the diagonal to the values of iter_
 				if constexpr (diag_depth > 1)
 					sub_diag_poss_ = diag_poss_.template sub_raw_key_positions(min_card_pos);
 
-				const auto &min_dim_edges = node_container_->node_ptr()->edges(min_card_pos);
+				const auto &min_dim_edges = node_container_.node_ptr()->edges(min_card_pos);
 				iter_ = min_dim_edges.begin();
 				end_ = min_dim_edges.end();
 			} else {// depth == 1 => diag_depth == 1
-				iter_ = node_container_->node_ptr()->edges(0).begin();
-				end_ = node_container_->node_ptr()->edges(0).end();
+				iter_ = node_container_.node_ptr()->edges(0).begin();
+				end_ = node_container_.node_ptr()->edges(0).end();
 			}
 			forward_until_result(false);
 			return *this;
@@ -77,7 +82,7 @@ namespace hypertrie::internal::raw {
 		}
 
 		bool find(key_part_type key_part) noexcept {
-			value_ = context_->template diagonal_slice<depth, diag_depth>(*node_container_, diag_poss_, key_part,
+			value_ = context_->template diagonal_slice<depth, diag_depth>(node_container_, diag_poss_, key_part,
 																		  (result_depth > 0) ? &compressed_node_cache_ : nullptr);
 			if constexpr (result_depth == 0)
 				return value_ != value_type{};
@@ -85,7 +90,9 @@ namespace hypertrie::internal::raw {
 				return not value_.empty();
 		}
 
-
+		/**
+		 * Only valid when used as a iterator (not with find())
+		 */
 		const key_part_type &current_key_part() const noexcept {
 			if constexpr (depth == 1 and HypertrieCoreTrait_bool_valued<tri>)
 				return *iter_;
@@ -93,26 +100,40 @@ namespace hypertrie::internal::raw {
 				return iter_->first;
 		}
 
+		/**
+		 * this must not be empty()
+		 */
 		auto current_value() const noexcept {
 			return value_;
 		}
 
+		/**
+		 * Only valid when used as a iterator (not with find())
+		 */
 		std::pair<key_part_type, IterValue> operator*() const noexcept {
 			return std::make_pair(current_key_part(), current_value());
 		}
 
-
+		/**
+		 * this must not be empty()
+		 */
 		RawHashDiagonal &operator++() noexcept {
 			forward_until_result(true);
 			return *this;
 		}
 
+		/**
+		 * this must not be empty()
+		 */
 		RawHashDiagonal operator++(int) noexcept {
 			RawHashDiagonal old = *this;
 			++(*this);
 			return old;
 		}
 
+		/**
+		 * this must not be empty()
+		 */
 		operator bool() const noexcept {
 			return iter_ != end_;
 		}
@@ -121,21 +142,25 @@ namespace hypertrie::internal::raw {
 			return not bool(*this);
 		}
 
+		/**
+		 * Check whether the hypertrie where the diagonal is applied is empty()
+		 */
 		bool empty() const noexcept {
-			return node_container_->empty();
+			return node_container_.empty();
 		}
 
+		/**
+		 * Upper bound to the number of non-zero slices
+		 */
 		size_t size() const noexcept {
-			if (not empty()) {
+			if (empty()) {
 				return 0UL;
-
 			} else {
 				if constexpr (depth > 1) {
-					const auto min_card_pos = node_container_->uncompressed_node()->minCardPos(diag_poss_);
-					return node_container_->uncompressed_node()->edges(min_card_pos).size();
-
+					const auto min_card_pos = node_container_.node_ptr()->min_card_pos(diag_poss_);
+					return node_container_.node_ptr()->edges(min_card_pos).size();
 				} else {
-					return node_container_->uncompressed_node()->size();
+					return node_container_.node_ptr()->size();
 				}
 			}
 		}
@@ -160,13 +185,17 @@ namespace hypertrie::internal::raw {
 						RawIdentifier<result_depth, tri> next_result_hash = iter_->second;
 						if constexpr (result_depth == 1 and HypertrieCoreTrait_bool_valued_and_taggable_key_part<tri>) {// TODO: was only bool valued before
 							if (iter_->second.is_sen()) {
-								value_ = SliceResult<result_depth, tri>::make_managed_tri_alloc(next_result_hash);
-								return *this;
-							}
-						}
+								value_ = SliceResult<result_depth, tri>::make_with_tri_alloc(next_result_hash);
 
-						NodeContainer<result_depth, tri> child_node_container = context_->node_storage_.template lookup<result_depth>(next_result_hash);
-						value_ = SliceResult<result_depth, tri>::make_with_tri_alloc(child_node_container);
+							} else {
+								auto child_node_ptr = context_->node_storage_.template lookup<result_depth, FullNode>(next_result_hash);
+								value_ = SliceResult<result_depth, tri>::make_with_tri_alloc(next_result_hash, child_node_ptr);
+							}
+							return;
+						} else {
+							NodeContainer<result_depth, tri> child_node_container = context_->node_storage_.template lookup<result_depth>(next_result_hash);
+							value_ = SliceResult<result_depth, tri>::make_with_tri_alloc(child_node_container);
+						}
 					}
 				}
 			}
@@ -179,19 +208,25 @@ namespace hypertrie::internal::raw {
 			static_assert(diag_depth >= 2);
 			const key_part_type key_part = iter_->first;
 
-			if constexpr (HypertrieCoreTrait_bool_valued_and_taggable_key_part<tri> and depth == 2)
+			if constexpr (HypertrieCoreTrait_bool_valued_and_taggable_key_part<tri> and depth == 2) {
 				if (iter_->second.is_sen()) {
 					value_ = iter_->second.get_entry().key()[0] == key_part;
-					return value_;
-				}
 
-			NodeContainer<depth - 1, tri> child_node = context_->node_storage_.lookup(iter_->second);
-			value_ = context_->template diagonal_slice<depth - 1, diag_depth - 1>(child_node, sub_diag_poss_, key_part,
-																				  (result_depth > 0) ? &compressed_node_cache_ : nullptr);
-			if constexpr (result_depth == 0)
-				return value_ != value_type{};
-			else
-				return not value_.empty();
+				} else {
+					auto child_node_ptr = context_->node_storage_.template lookup<1, FullNode>(iter_->second);
+					value_ = context_->template get<1>(FNContainer<1, tri>{iter_->second, child_node_ptr}, {{key_part}});
+				}
+				return value_;
+			} else {
+
+				NodeContainer<depth - 1, tri> child_node = context_->node_storage_.lookup(iter_->second);
+				value_ = context_->template diagonal_slice<depth - 1, diag_depth - 1>(child_node, sub_diag_poss_, key_part,
+																					  (result_depth > 0) ? &compressed_node_cache_ : nullptr);
+				if constexpr (result_depth == 0)
+					return value_ != value_type{};
+				else
+					return not value_.empty();
+			}
 		}
 	};
 
@@ -215,36 +250,38 @@ namespace hypertrie::internal::raw {
 				SliceResult_t,
 				value_type>;
 
-		SENContainer<depth, tri> *nodec_;
+		SENContainer<depth, tri> nodec_;
 		SingleEntryNode<result_depth, tri_with_stl_alloc<tri>> internal_compressed_node;
 		std::pair<key_part_type, IterValue> value_;
 		bool ended_ = true;
-		bool contains;
+		bool contains = false;
 		DiagonalPositions diag_poss_;
 
 	public:
-		RawHashDiagonal(SENContainer<depth, tri> &nodec, DiagonalPositions diag_poss) noexcept
-			: nodec_{&nodec}, diag_poss_(diag_poss) {
+		RawHashDiagonal() = default;
+
+		RawHashDiagonal(SENContainer<depth, tri> const &nodec, DiagonalPositions diag_poss) noexcept
+			: nodec_{nodec}, diag_poss_(diag_poss) {
 			value_.first = [&]() {// key_part
 				if constexpr (depth == 1 and HypertrieCoreTrait_bool_valued_and_taggable_key_part<tri>)
-					return nodec_->raw_identifier().get_entry().key()[0];
+					return nodec_.raw_identifier().get_entry().key()[0];
 				else
-					return nodec_->compressed_node()->key()[diag_poss.first_pos()];
+					return nodec_.node_ptr()->key()[diag_poss.first_pos()];
 			}();
 			if constexpr (depth == 1 and HypertrieCoreTrait_bool_valued_and_taggable_key_part<tri>) {
 				contains = true;
 				value_.second = true;
 			} else {
 
-				auto opt_slice = diag_poss.template slice<diag_depth>(nodec_->node_ptr()->key());
+				auto opt_slice = diag_poss.template slice<diag_depth>(nodec_.node_ptr()->key(), value_.first);
 
 				if (opt_slice.has_value()) {
 					contains = true;
 					if constexpr (diag_depth == depth) {
-						value_.second = nodec_->node_ptr().value();
+						value_.second = nodec_.node_ptr()->value();
 					} else {
-						internal_compressed_node = {opt_slice.value(), nodec_->node_ptr().value()};
-						value_.second = SliceResult_t::make_with_stl_alloc(true, RawIdentifier<result_depth, tri_with_stl_alloc<tri>>{internal_compressed_node});
+						internal_compressed_node = SingleEntryNode<result_depth, tri_with_stl_alloc<tri>>{opt_slice.value(), nodec_.node_ptr()->value()};
+						value_.second = SliceResult_t::make_with_stl_alloc(true, RawIdentifier<result_depth, tri_with_stl_alloc<tri>>{internal_compressed_node}, &internal_compressed_node);
 					}
 				} else {
 					contains = false;
@@ -267,11 +304,11 @@ namespace hypertrie::internal::raw {
 		}
 
 
-		const key_part_type &currentKeyPart() const noexcept {
+		const key_part_type &current_key_part() const noexcept {
 			return value_.first;
 		}
 
-		auto currentValue() const noexcept {
+		auto current_value() const noexcept {
 			return value_.second;
 		}
 
@@ -302,6 +339,9 @@ namespace hypertrie::internal::raw {
 			return not contains;
 		}
 
+		/**
+		 * Upper bound to the number of non-zero slices
+		 */
 		size_t size() const noexcept {
 			return size_t(contains);
 		}

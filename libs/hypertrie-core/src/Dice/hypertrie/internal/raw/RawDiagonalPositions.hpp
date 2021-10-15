@@ -37,8 +37,6 @@ namespace hypertrie::internal::raw {
 		}
 
 		[[nodiscard]] size_t first_pos() const noexcept {
-			size_t byte_id = 0;
-
 			for (size_t pos = 0; pos < depth; ++pos)
 				if ((*this)[pos])
 					return pos;

@@ -22,9 +22,13 @@ namespace hypertrie::tests::core::node {
 		using ResultEntriesType = std::vector<SingleEntry<result_depth, tri_with_stl_alloc<tri>>>;
 		using DiagonalPositions = RawKeyPositions<depth>;
 		using key_part_type = typename tri::key_part_type;
+
+	protected:
 		std::unordered_map<key_part_type, ResultEntriesType> non_zero_diagonals_;
 		std::unordered_map<key_part_type, RawIdentifier<result_depth, tri_with_stl_alloc<tri>>> non_zero_diagonal_ids_;
+		std::unordered_set<key_part_type> key_parts_;
 
+	public:
 		ValidationRawHashDiagonal(EntriesType const &entries, DiagonalPositions diag_poss) noexcept {
 			for (const auto &entry : entries) {
 				key_part_type key_part = entry.key()[diag_poss.first_pos()];
@@ -33,8 +37,10 @@ namespace hypertrie::tests::core::node {
 					non_zero_diagonals_[key_part].emplace_back(*opt_slice, entry.value());
 			}
 
-			for (const auto &[key_part, diag_entries] : non_zero_diagonals_)
+			for (const auto &[key_part, diag_entries] : non_zero_diagonals_) {
 				non_zero_diagonal_ids_[key_part] = RawIdentifier<result_depth, tri_with_stl_alloc<tri>>{diag_entries};
+				key_parts_.insert(key_part);
+			}
 		}
 
 		auto has_diagonal(key_part_type key_part) const noexcept {
@@ -47,6 +53,10 @@ namespace hypertrie::tests::core::node {
 
 		auto &raw_identifier(key_part_type key_part) const {
 			return non_zero_diagonal_ids_.at(key_part);
+		}
+
+		const std::unordered_set<key_part_type> &key_parts() const noexcept {
+			return key_parts_;
 		}
 
 		[[nodiscard]] size_t size() const noexcept {

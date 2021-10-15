@@ -43,6 +43,32 @@ namespace hypertrie::internal::raw {
 		}
 
 		template<size_t depth>
+		size_t fn_size(FNContainer<depth, tri> const &fn_container) const noexcept {
+			if (not fn_container.empty()) {
+				assert(not fn_container.is_null_ptr());
+				return fn_container.node_ptr()->size();
+			} else
+				return 0;
+		}
+
+		// TODO: rename to size?
+		template<size_t depth>
+		size_t sen_size(SENContainer<depth, tri> const &sen_container) const noexcept {
+			if (not sen_container.empty())
+				return 1;
+			else
+				return 0;
+		}
+
+		template<size_t depth>
+		size_t size(NodeContainer<depth, tri> const &nodec) const noexcept {
+			if (nodec.is_sen())
+				return this->template sen_size<depth>(nodec.template specific<SingleEntryNode>());
+			else
+				return this->template fn_size<depth>(nodec.template specific<FullNode>());
+		}
+
+		template<size_t depth>
 		auto set(NodeContainer<depth, tri> &nodec, SingleEntry<depth, tri_with_stl_alloc<tri>> const &entry) {
 			if constexpr (HypertrieCoreTrait_bool_valued_and_taggable_key_part<tri> and depth == 1)
 				if (nodec.empty())

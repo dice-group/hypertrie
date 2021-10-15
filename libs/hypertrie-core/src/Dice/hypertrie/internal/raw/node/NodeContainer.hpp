@@ -55,6 +55,13 @@ namespace hypertrie::internal::raw {
 		 * Check if the the NodePtr is null.
 		 */
 		[[nodiscard]] bool is_null_ptr() const noexcept { return this->void_node_ptr() == VoidNodePtr{}; }
+
+		bool operator==(const RawNodeContainer &rhs) const {
+			return std::tie(node_identifier_, node_ptr_) == std::tie(rhs.node_identifier_, rhs.node_ptr_);
+		}
+		bool operator!=(const RawNodeContainer &rhs) const {
+			return !(rhs == *this);
+		}
 	};
 
 	template<size_t depth,

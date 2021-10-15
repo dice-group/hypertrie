@@ -10,6 +10,7 @@
 #include <RawEntryGenerator.hpp>
 
 
+#include <Dice/hypertrie/internal/raw/fmt_Hypertrie_core_trait.hpp>
 #include <Dice/hypertrie/internal/raw/iteration/RawHashDiagonal.hpp>
 #include <Dice/hypertrie/internal/raw/node/fmt_FullNode.hpp>
 #include <Dice/hypertrie/internal/raw/node/fmt_Identifier.hpp>
@@ -161,21 +162,24 @@ namespace hypertrie::tests::core::node {
 						   tagged_bool_cfg<1>,
 						   long_cfg<1>,
 						   double_cfg<1>) {
-			constexpr size_t no_key_parts = 3;
+			SUBCASE(fmt::format("{}", typename T::tri{}).c_str()) {
 
-			{
-				constexpr size_t no_entries = 1;
-				test_diagonal<T::depth, typename T::tri, no_key_parts, no_entries>();
-			}
+				constexpr size_t no_key_parts = 3;
 
-			{
-				constexpr size_t no_entries = 2;
-				test_diagonal<T::depth, typename T::tri, no_key_parts, no_entries>();
-			}
+				{
+					constexpr size_t no_entries = 1;
+					test_diagonal<T::depth, typename T::tri, no_key_parts, no_entries>();
+				}
 
-			{
-				constexpr size_t no_entries = 3;
-				test_diagonal<T::depth, typename T::tri, no_key_parts, no_entries>();
+				{
+					constexpr size_t no_entries = 2;
+					test_diagonal<T::depth, typename T::tri, no_key_parts, no_entries>();
+				}
+
+				{
+					constexpr size_t no_entries = 3;
+					test_diagonal<T::depth, typename T::tri, no_key_parts, no_entries>();
+				}
 			}
 		}
 
@@ -184,15 +188,18 @@ namespace hypertrie::tests::core::node {
 						   tagged_bool_cfg<2>,
 						   long_cfg<2>,
 						   double_cfg<2>) {
-			constexpr size_t no_key_parts = 2;
-			{
-				constexpr size_t no_entries = 1;
-				test_diagonal<T::depth, typename T::tri, no_key_parts, no_entries>();
-			}
+			SUBCASE(fmt::format("{}", typename T::tri{}).c_str()) {
 
-			{
-				constexpr size_t no_entries = 2;
-				test_diagonal<T::depth, typename T::tri, no_key_parts, no_entries>();
+				constexpr size_t no_key_parts = 2;
+				{
+					constexpr size_t no_entries = 1;
+					test_diagonal<T::depth, typename T::tri, no_key_parts, no_entries>();
+				}
+
+				{
+					constexpr size_t no_entries = 2;
+					test_diagonal<T::depth, typename T::tri, no_key_parts, no_entries>();
+				}
 			}
 		}
 
@@ -201,22 +208,24 @@ namespace hypertrie::tests::core::node {
 						   tagged_bool_cfg<3>,
 						   long_cfg<3>,
 						   double_cfg<3>) {
-			{
-				constexpr size_t no_key_parts = 3;
+			SUBCASE(fmt::format("{}", typename T::tri{}).c_str()) {
 				{
-					constexpr size_t no_entries = 1;
-					test_diagonal<T::depth, typename T::tri, no_key_parts, no_entries>();
-				}
-			}
-			{
-				constexpr size_t no_key_parts = 2;
-				{
-					constexpr size_t no_entries = 2;
-					test_diagonal<T::depth, typename T::tri, no_key_parts, no_entries>();
+					constexpr size_t no_key_parts = 3;
+					{
+						constexpr size_t no_entries = 1;
+						test_diagonal<T::depth, typename T::tri, no_key_parts, no_entries>();
+					}
 				}
 				{
-					constexpr size_t no_entries = 3;
-					test_diagonal<T::depth, typename T::tri, no_key_parts, no_entries>();
+					constexpr size_t no_key_parts = 2;
+					{
+						constexpr size_t no_entries = 2;
+						test_diagonal<T::depth, typename T::tri, no_key_parts, no_entries>();
+					}
+					{
+						constexpr size_t no_entries = 3;
+						test_diagonal<T::depth, typename T::tri, no_key_parts, no_entries>();
+					}
 				}
 			}
 		}
@@ -226,23 +235,26 @@ namespace hypertrie::tests::core::node {
 						   tagged_bool_cfg<4>,
 						   long_cfg<4>,
 						   double_cfg<4>) {
-			{
-				constexpr size_t no_key_parts = 3;
-				constexpr size_t no_entries = 1;
-				test_diagonal<T::depth, typename T::tri, no_key_parts, no_entries>();
-			}
+			SUBCASE(fmt::format("{}", typename T::tri{}).c_str()) {
 
-			{
-				constexpr size_t no_key_parts = 2;
-				constexpr size_t no_entries = 2;
-				test_diagonal<T::depth, typename T::tri, no_key_parts, no_entries>();
-			}
+				{
+					constexpr size_t no_key_parts = 3;
+					constexpr size_t no_entries = 1;
+					test_diagonal<T::depth, typename T::tri, no_key_parts, no_entries>();
+				}
 
-			{
-				constexpr size_t no_key_parts = 2;
-				constexpr size_t no_entries = 3;
-				test_diagonal<T::depth, typename T::tri, no_key_parts, no_entries>();
+				{
+					constexpr size_t no_key_parts = 2;
+					constexpr size_t no_entries = 2;
+					test_diagonal<T::depth, typename T::tri, no_key_parts, no_entries>();
+				}
+
+				{
+					constexpr size_t no_key_parts = 2;
+					constexpr size_t no_entries = 3;
+					test_diagonal<T::depth, typename T::tri, no_key_parts, no_entries>();
+				}
 			}
 		}
-	};
+	}
 };// namespace hypertrie::tests::core::node

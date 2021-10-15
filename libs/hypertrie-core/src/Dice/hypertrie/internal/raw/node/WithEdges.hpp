@@ -123,16 +123,20 @@ namespace hypertrie::internal::raw {
 		}
 
 		[[nodiscard]] size_t min_card_pos() const noexcept {
-			pos_type min_pos = 0;
-			auto min_card = std::numeric_limits<size_t>::max();
-			for (const pos_type pos : iter::range(depth)) {
-				const size_t current_card = edges(pos).size();
-				if (current_card < min_card) {
-					min_card = current_card;
-					min_pos = pos;
+			if constexpr (depth == 1)
+				return 0;
+			else {
+				pos_type min_pos = 0;
+				auto min_card = std::numeric_limits<size_t>::max();
+				for (const pos_type pos : iter::range(depth)) {
+					const size_t current_card = edges(pos).size();
+					if (current_card < min_card) {
+						min_card = current_card;
+						min_pos = pos;
+					}
 				}
+				return min_pos;
 			}
-			return min_pos;
 		}
 
 
@@ -166,9 +170,8 @@ namespace hypertrie::internal::raw {
 			return cards;
 		}
 
-		[[nodiscard]] size_t minCardPos(const RawKeyPositions<depth> &positions_mask) const {
-			assert(positions_mask.any());
-			auto min_pos = 0;
+		[[nodiscard]] size_t min_card_pos(const RawKeyPositions<depth> &positions_mask) const noexcept {
+			size_t min_pos = 0;
 			auto min_card = std::numeric_limits<size_t>::max();
 			for (const size_t pos : iter::range(depth)) {
 				if (positions_mask[pos]) {

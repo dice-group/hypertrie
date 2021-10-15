@@ -118,6 +118,16 @@ target_link_libraries(tests_HypertrieContext
         )
 
 
+add_executable(tests_RawHashDiagonal core/node/tests_RawHashDiagonal.cpp)
+target_link_libraries(tests_RawHashDiagonal
+        doctest
+        hypertrie
+        tests-utils
+        fmt::fmt
+        fmt-definitions
+        )
+
+
 # fmt
 add_executable(tests_fmt_definitions fmt/tests_fmt_definitions.cpp)
 target_link_libraries(tests_fmt_definitions

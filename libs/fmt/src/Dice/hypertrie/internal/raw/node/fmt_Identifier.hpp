@@ -2,6 +2,7 @@
 #define HYPERTRIE_FMT_IDENTIFIER_HPP
 
 #include <Dice/hypertrie/internal/raw/node/Identifier.hpp>
+#include <Dice/hypertrie/internal/util/fmt_utils.hpp>
 
 namespace fmt {
 	template<size_t depth, ::hypertrie::internal::raw::HypertrieCoreTrait tri>

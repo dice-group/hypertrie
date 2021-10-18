@@ -130,8 +130,8 @@ namespace hypertrie::tests::utils {
 		 * @return if entry was further incremented; false if the key reached the maximum and was reset to all min_key_part
 		 */
 		bool inc_entries_combination() noexcept {
-			ssize_t i;
-			for (i = 0; i < ssize_t(number_of_entries); ++i) {
+			ssize_t i = 0;
+			for (; i < ssize_t(number_of_entries); ++i) {
 				if (inc_entry_permutation(entries_[i]) and (id_of(entries_[i]) <= max_entry_id - i)) {
 					break;
 				}
@@ -148,8 +148,12 @@ namespace hypertrie::tests::utils {
 
 	public:
 		EntrySetGenerator &operator++() noexcept {
-			if (not inc_entries_combination())
+			if constexpr (number_of_entries != 0) {
+				if (not inc_entries_combination())
+					not_ended_ = false;
+			} else {
 				not_ended_ = false;
+			}
 			return *this;
 		}
 
@@ -164,16 +168,18 @@ namespace hypertrie::tests::utils {
 		}
 
 		EntrySetGenerator &begin() noexcept {
-			assert(ssize_t(std::pow(ssize_t(max_key_part + 1) - ssize_t(min_key_part), depth)) >= ssize_t(number_of_entries));
-			static core::node::RawKey<depth, tri> key{};
-			key.fill(min_key_part);
+			if constexpr (number_of_entries != 0) {
+				assert(ssize_t(std::pow(ssize_t(max_key_part + 1) - ssize_t(min_key_part), depth)) >= ssize_t(number_of_entries));
+				static core::node::RawKey<depth, tri> key{};
+				key.fill(min_key_part);
 
-			for (size_t i = 0; i < number_of_entries; ++i) {
-				if (i == 0)
-					entries_[number_of_entries - 1] = SinlgeEntry_t{key, value_type(1)};
-				else {
-					entries_[number_of_entries - 1 - i] = entries_[number_of_entries - i - 1 + 1];
-					inc_entry_permutation(entries_[number_of_entries - 1 - i]);
+				for (size_t i = 0; i < number_of_entries; ++i) {
+					if (i == 0)
+						entries_[number_of_entries - 1] = SinlgeEntry_t{key, value_type(1)};
+					else {
+						entries_[number_of_entries - 1 - i] = entries_[number_of_entries - i - 1 + 1];
+						inc_entry_permutation(entries_[number_of_entries - 1 - i]);
+					}
 				}
 			}
 			not_ended_ = true;

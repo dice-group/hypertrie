@@ -32,11 +32,11 @@ namespace hypertrie::tests::core::node {
 			using SingleEntry_t = SingleEntry<depth, tri_with_stl_alloc<tri>>;
 			constexpr auto count = 2;
 
-			std::vector<SingleEntry_t> all_entries{SingleEntry_t{{1, 1, 2, 1}, true},
-												   SingleEntry_t{{1, 1, 1, 1}, true},
-												   SingleEntry_t{{1, 1, 1, 2}, true},
-												   SingleEntry_t{{1, 2, 1, 1}, true},
-												   SingleEntry_t{{2, 1, 1, 1}, true}
+			std::vector<SingleEntry_t> all_entries{SingleEntry_t{{{1, 1, 2, 1}}, true},
+												   SingleEntry_t{{{1, 1, 1, 1}}, true},
+												   SingleEntry_t{{{1, 1, 1, 2}}, true},
+												   SingleEntry_t{{{1, 2, 1, 1}}, true},
+												   SingleEntry_t{{{2, 1, 1, 1}}, true}
 			};
 			decltype(all_entries) entries_0 = {all_entries.begin(), all_entries.begin() + count};
 			decltype(all_entries) entries_1 = {all_entries.begin() + count, all_entries.end()};
@@ -71,9 +71,9 @@ namespace hypertrie::tests::core::node {
 			using SingleEntry_t = SingleEntry<depth, tri_with_stl_alloc<tri>>;
 			constexpr auto count = 2;
 
-			std::vector<SingleEntry_t> all_entries{SingleEntry_t{{1, 2, 1, 1}, true},
-												   SingleEntry_t{{1, 1, 1, 1}, true},
-												   SingleEntry_t{{1, 2, 2, 1}, true}
+			std::vector<SingleEntry_t> all_entries{SingleEntry_t{{{1, 2, 1, 1}}, true},
+												   SingleEntry_t{{{1, 1, 1, 1}}, true},
+												   SingleEntry_t{{{1, 2, 2, 1}}, true}
 			};
 			decltype(all_entries) entries_0 = {all_entries.begin(), all_entries.begin() + count};
 			decltype(all_entries) entries_1 = {all_entries.begin() + count, all_entries.end()};
@@ -108,10 +108,10 @@ namespace hypertrie::tests::core::node {
 			using SingleEntry_t = SingleEntry<depth, tri_with_stl_alloc<tri>>;
 			constexpr auto count = 2;
 
-			std::vector<SingleEntry_t> all_entries{SingleEntry_t{{1, 1, 2, 1}, true},
-												   SingleEntry_t{{2, 1, 1, 1}, true},
-												   SingleEntry_t{{1, 1, 1, 2}, true},
-												   SingleEntry_t{{1, 2, 1, 1}, true}
+			std::vector<SingleEntry_t> all_entries{SingleEntry_t{{{1, 1, 2, 1}}, true},
+												   SingleEntry_t{{{2, 1, 1, 1}}, true},
+												   SingleEntry_t{{{1, 1, 1, 2}}, true},
+												   SingleEntry_t{{{1, 2, 1, 1}}, true}
 			};
 			decltype(all_entries) entries_0 = {all_entries.begin(), all_entries.begin() + count};
 			decltype(all_entries) entries_1 = {all_entries.begin() + count, all_entries.end()};
@@ -146,10 +146,10 @@ namespace hypertrie::tests::core::node {
 			using SingleEntry_t = SingleEntry<depth, tri_with_stl_alloc<tri>>;
 			constexpr auto count = 2;
 
-			std::vector<SingleEntry_t> all_entries{SingleEntry_t{{2, 1, 1, 1}, true},
-												   SingleEntry_t{{1, 1, 1, 1}, true},
-												   SingleEntry_t{{2, 1, 1, 2}, true},
-												   SingleEntry_t{{2, 1, 2, 1}, true}
+			std::vector<SingleEntry_t> all_entries{SingleEntry_t{{{2, 1, 1, 1}}, true},
+												   SingleEntry_t{{{1, 1, 1, 1}}, true},
+												   SingleEntry_t{{{2, 1, 1, 2}}, true},
+												   SingleEntry_t{{{2, 1, 2, 1}}, true}
 			};
 			decltype(all_entries) entries_0 = {all_entries.begin(), all_entries.begin() + count};
 			decltype(all_entries) entries_1 = {all_entries.begin() + count, all_entries.end()};
@@ -184,11 +184,11 @@ namespace hypertrie::tests::core::node {
 			using SingleEntry_t = SingleEntry<depth, tri_with_stl_alloc<tri>>;
 			constexpr auto count = 3;
 
-			std::vector<SingleEntry_t> all_entries{SingleEntry_t{{2, 1, 2}, true},
-												   SingleEntry_t{{2, 1, 1}, true},
-												   SingleEntry_t{{1, 1, 1}, true},
-												   SingleEntry_t{{1, 1, 2}, true},
-												   SingleEntry_t{{2, 2, 1}, true}
+			std::vector<SingleEntry_t> all_entries{SingleEntry_t{{{2, 1, 2}}, true},
+												   SingleEntry_t{{{2, 1, 1}}, true},
+												   SingleEntry_t{{{1, 1, 1}}, true},
+												   SingleEntry_t{{{1, 1, 2}}, true},
+												   SingleEntry_t{{{2, 2, 1}}, true}
 			};
 			decltype(all_entries) entries_0 = {all_entries.begin(), all_entries.begin() + count};
 			decltype(all_entries) entries_1 = {all_entries.begin() + count, all_entries.end()};
@@ -223,10 +223,10 @@ namespace hypertrie::tests::core::node {
 			using SingleEntry_t = SingleEntry<depth, tri_with_stl_alloc<tri>>;
 			constexpr auto count = 2;
 
-			std::vector<SingleEntry_t> all_entries{SingleEntry_t{{4, 3, 1}, true},
-												   SingleEntry_t{{2, 1, 1}, true},
-												   SingleEntry_t{{4, 1, 3}, true},
-												   SingleEntry_t{{1, 3, 1}, true}
+			std::vector<SingleEntry_t> all_entries{SingleEntry_t{{{4, 3, 1}}, true},
+												   SingleEntry_t{{{2, 1, 1}}, true},
+												   SingleEntry_t{{{4, 1, 3}}, true},
+												   SingleEntry_t{{{1, 3, 1}}, true}
 			};
 			decltype(all_entries) entries_0 = {all_entries.begin(), all_entries.begin() + count};
 			decltype(all_entries) entries_1 = {all_entries.begin() + count, all_entries.end()};
@@ -261,10 +261,10 @@ namespace hypertrie::tests::core::node {
 			using SingleEntry_t = SingleEntry<depth, tri_with_stl_alloc<tri>>;
 			constexpr auto count = 2;
 
-			std::vector<SingleEntry_t> all_entries{SingleEntry_t{{2, 1, 1}, true},
-												   SingleEntry_t{{1, 1, 1}, true},
-												   SingleEntry_t{{1, 2, 1}, true},
-												   SingleEntry_t{{3, 1, 1}, true}
+			std::vector<SingleEntry_t> all_entries{SingleEntry_t{{{2, 1, 1}}, true},
+												   SingleEntry_t{{{1, 1, 1}}, true},
+												   SingleEntry_t{{{1, 2, 1}}, true},
+												   SingleEntry_t{{{3, 1, 1}}, true}
 												   };
 			decltype(all_entries) entries_0 = {all_entries.begin(), all_entries.begin() + count};
 			decltype(all_entries) entries_1 = {all_entries.begin() + count, all_entries.end()};
@@ -299,10 +299,10 @@ namespace hypertrie::tests::core::node {
 			using SingleEntry_t = SingleEntry<depth, tri_with_stl_alloc<tri>>;
 			constexpr auto count = 2;
 
-			std::vector<SingleEntry_t> all_entries{SingleEntry_t{{2, 3, 3, 1}, true},
-												   SingleEntry_t{{1, 3, 3, 2}, true},
-												   SingleEntry_t{{2, 3, 1, 1}, true},
-												   SingleEntry_t{{3, 1, 3, 1}, true}};
+			std::vector<SingleEntry_t> all_entries{SingleEntry_t{{{2, 3, 3, 1}}, true},
+												   SingleEntry_t{{{1, 3, 3, 2}}, true},
+												   SingleEntry_t{{{2, 3, 1, 1}}, true},
+												   SingleEntry_t{{{3, 1, 3, 1}}, true}};
 			decltype(all_entries) entries_0 = {all_entries.begin(), all_entries.begin() + count};
 			decltype(all_entries) entries_1 = {all_entries.begin() + count, all_entries.end()};
 			std::cout << fmt::format("entries_0: {{ {} }}", fmt::join(entries_0, ", \n")) << std::endl;
@@ -336,10 +336,10 @@ namespace hypertrie::tests::core::node {
 			using SingleEntry_t = SingleEntry<depth, tri_with_stl_alloc<tri>>;
 			constexpr auto count = 2;
 
-			std::vector<SingleEntry_t> all_entries{SingleEntry_t{{2, 3, 2}, true},
-												   SingleEntry_t{{2, 1, 2}, true},
-												   SingleEntry_t{{3, 3, 2}, true},
-												   SingleEntry_t{{2, 2, 2}, true}};
+			std::vector<SingleEntry_t> all_entries{SingleEntry_t{{{2, 3, 2}}, true},
+												   SingleEntry_t{{{2, 1, 2}}, true},
+												   SingleEntry_t{{{3, 3, 2}}, true},
+												   SingleEntry_t{{{2, 2, 2}}, true}};
 			decltype(all_entries) entries_0 = {all_entries.begin(), all_entries.begin() + count};
 			decltype(all_entries) entries_1 = {all_entries.begin() + count, all_entries.end()};
 			std::cout << fmt::format("entries_0: {{ {} }}", fmt::join(entries_0, ", \n")) << std::endl;
@@ -373,16 +373,16 @@ namespace hypertrie::tests::core::node {
 			using SingleEntry_t = SingleEntry<depth, tri_with_stl_alloc<tri>>;
 			constexpr auto count = 2;
 
-			std::vector<SingleEntry_t> all_entries{SingleEntry_t{{3, 3, 4}, true},
-												   SingleEntry_t{{3, 3, 2}, true},
-												   SingleEntry_t{{2, 1, 2}, true},
-												   SingleEntry_t{{6, 6, 1}, true},
-												   SingleEntry_t{{2, 2, 3}, true},
-												   SingleEntry_t{{3, 4, 6}, true},
-												   SingleEntry_t{{6, 2, 2}, true},
-												   SingleEntry_t{{3, 3, 5}, true},
-												   SingleEntry_t{{4, 5, 4}, true},
-												   SingleEntry_t{{5, 5, 1}, true}};
+			std::vector<SingleEntry_t> all_entries{SingleEntry_t{{{3, 3, 4}}, true},
+												   SingleEntry_t{{{3, 3, 2}}, true},
+												   SingleEntry_t{{{2, 1, 2}}, true},
+												   SingleEntry_t{{{6, 6, 1}}, true},
+												   SingleEntry_t{{{2, 2, 3}}, true},
+												   SingleEntry_t{{{3, 4, 6}}, true},
+												   SingleEntry_t{{{6, 2, 2}}, true},
+												   SingleEntry_t{{{3, 3, 5}}, true},
+												   SingleEntry_t{{{4, 5, 4}}, true},
+												   SingleEntry_t{{{5, 5, 1}}, true}};
 			decltype(all_entries) entries_0 = {all_entries.begin(), all_entries.begin() + count};
 			decltype(all_entries) entries_1 = {all_entries.begin() + count, all_entries.end()};
 			std::cout << fmt::format("entries_0: {{ {} }}", fmt::join(entries_0, ", \n")) << std::endl;

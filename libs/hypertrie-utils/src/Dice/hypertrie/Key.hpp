@@ -61,7 +61,7 @@ namespace hypertrie {
 
 	public:
 		[[nodiscard]] size_t get_fixed_depth() const noexcept {
-			return this->size() - std::ranges::count(*this, typename tr::key_part_type{});
+			return this->size() - std::ranges::count_if(*this, [](auto const &item) { return not item.has_value(); });
 		}
 	};
 }// namespace hypertrie

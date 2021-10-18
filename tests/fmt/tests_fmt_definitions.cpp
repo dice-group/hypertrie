@@ -33,7 +33,7 @@ namespace hypertrie::tests::fmt {
 		}
 
 		TEST_CASE("RawKeyPositions") {
-			RawKeyPositions<5> pos{0b10101};
+			RawKeyPositions<5> pos{std::vector<size_t>{0,2,4}};
 			std::string result = ::fmt::format("{}", pos);
 			REQUIRE(result == "[1, 0, 1, 0, 1]");
 		}
@@ -45,7 +45,7 @@ namespace hypertrie::tests::fmt {
 		}
 
 		TEST_CASE("RawSliceKey") {
-			RawSliceKey<5, Hypertrie_core_t<default_bool_Hypertrie_trait>> pos{1,2,std::nullopt,4,5};
+			RawSliceKey<5, Hypertrie_core_t<default_bool_Hypertrie_trait>> pos{{1,2,std::nullopt,4,5}};
 			std::string result = ::fmt::format("{}", pos);
 			REQUIRE(result == "[1, 2, -, 4, 5]");
 		}

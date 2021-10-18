@@ -118,7 +118,7 @@ namespace hypertrie::internal::raw {
 		 * If depth is 1, a value_type is return
 		 */
 		template<size_t depth>
-		inline auto resolve(FNContainer<depth, tri> &nodec, pos_type pos, key_part_type key_part)
+		inline auto resolve(FNContainer<depth, tri> const &nodec, pos_type pos, key_part_type key_part)
 				-> std::conditional_t<(depth > 1), NodeContainer<depth - 1, tri>, value_type> {
 			assert(pos < depth);
 			if (nodec.empty())
@@ -141,6 +141,41 @@ namespace hypertrie::internal::raw {
 			}
 		}
 
+		template<size_t depth, HypertrieCoreTrait tri2>
+		static auto get(const SENContainer<depth, tri2> &nodec, RawKey<depth, tri> key) -> value_type {
+			if (nodec.empty())
+				return {};
+			else {
+				if constexpr (depth == 1 and HypertrieCoreTrait_bool_valued_and_taggable_key_part<tri>) {
+					return nodec.raw_identifier().get_entry().key()[0] == key[0];
+				} else {
+					if (nodec.node_ptr()->key() == key) {
+						if constexpr (tri::is_bool_valued) return true;
+						else
+							return nodec.node_ptr()->value();
+					} else
+						return {};
+				}
+			}
+		}
+
+		template<size_t depth>
+		auto get(const FNContainer<depth, tri> &nodec, RawKey<depth, tri> key) -> value_type {
+			if (nodec.empty())
+				return {};
+			else {
+				if constexpr (depth > 1) {
+					// TODO: better max_card_pos?
+					auto pos = nodec.node_ptr()->min_card_pos();
+					NodeContainer<depth - 1, tri> child = this->template resolve<depth>(nodec, pos, key[pos]);
+
+					return get<depth - 1>(child, key.template subkey(pos));
+				} else {
+					return this->template resolve<1>(nodec, 0UL, key[0]);
+				}
+			}
+		}
+
 		/**
 		 * Retrieves the value for a key.
 		 * @tparam depth the depth of the node container
@@ -150,30 +185,46 @@ namespace hypertrie::internal::raw {
 		 */
 		template<size_t depth>
 		auto get(const NodeContainer<depth, tri> &nodec, RawKey<depth, tri> key) -> value_type {
-			if (nodec.empty())
-				return {};
-			else if (nodec.is_sen()) {
+			if (nodec.is_sen()) {
 				SENContainer<depth, tri> sen_nodec = nodec.template specific<SingleEntryNode>();
-				if constexpr (depth == 1 and HypertrieCoreTrait_bool_valued_and_taggable_key_part<tri>) {
-					return nodec.raw_identifier().get_entry().key()[0] == key[0];
-				} else {
-					if (sen_nodec.node_ptr()->key() == key) {
-						if constexpr (tri::is_bool_valued) return true;
-						else
-							return sen_nodec.node_ptr()->value();
-					} else
-						return {};
-				}
+				return get(sen_nodec, key);
 			} else {
 				FNContainer<depth, tri> fn_nodec = nodec.template specific<FullNode>();
-				if constexpr (depth > 1) {
-					// TODO: better max_card_pos?
-					auto pos = fn_nodec.node_ptr()->min_card_pos();
-					NodeContainer<depth - 1, tri> child = this->template resolve<depth>(fn_nodec, pos, key[pos]);
+				return get(fn_nodec, key);
+			}
+		}
 
-					return get<depth - 1>(child, key.template subkey(pos));
-				} else {
-					return this->template resolve<1>(fn_nodec, 0UL, key[0]);
+		template<size_t depth, size_t fixed_keyparts, HypertrieCoreTrait tr2>
+		static auto slice(const SENContainer<depth, tr2> &nodec, RawSliceKey<fixed_keyparts, tri> raw_slice_key)
+				-> std::conditional_t<(depth > fixed_keyparts), SliceResult<depth - fixed_keyparts, tri>, value_type> {
+			constexpr static const size_t result_depth = depth - fixed_keyparts;
+
+			using SliceResult_t = SliceResult<depth - fixed_keyparts, tri>;
+
+			if constexpr (fixed_keyparts == 0)
+				return SliceResult_t::make_with_stl_alloc(false, nodec.raw_identifier(), new SingleEntryNode<depth, tri_with_stl_alloc<tri>>{*nodec.node_ptr()});
+			else if constexpr (depth == fixed_keyparts) {
+				RawKey<depth, tri> raw_key;
+				for (size_t i = 0; i < depth; ++i)
+					raw_key[i] = raw_slice_key[i].key_part;
+				return get(nodec, raw_key);
+			} else {
+				if (nodec.empty())
+					return {};
+				else {
+					auto slice_opt = raw_slice_key.slice(nodec.node_ptr()->key());
+					if (slice_opt.has_value()) {
+						auto slice = slice_opt.value();
+						SingleEntry<result_depth, tri_with_stl_alloc<tri>> entry{slice, nodec.node_ptr()->value()};
+						RawIdentifier<result_depth, tri_with_stl_alloc<tri>> identifier{entry};
+						if constexpr (result_depth == 1 and HypertrieCoreTrait_bool_valued_and_taggable_key_part<tri>)
+							return SliceResult_t::make_with_tri_alloc(identifier);
+						else {
+							return SliceResult_t::make_with_stl_alloc(false, identifier, new SingleEntryNode<result_depth, tri_with_stl_alloc<tri>>(entry));
+						}
+					} else {
+						return SliceResult_t{};
+					}
 				}
 			}
 		}
@@ -191,7 +242,6 @@ namespace hypertrie::internal::raw {
 		template<size_t depth, size_t fixed_keyparts>
 		auto slice(const NodeContainer<depth, tri> &nodec, RawSliceKey<fixed_keyparts, tri> raw_slice_key)
 				-> std::conditional_t<(depth > fixed_keyparts), SliceResult<depth - fixed_keyparts, tri>, value_type> {
-			// TODO: implement for NodeContainer<depth, tri_with_stl_alloc<tri>
 			using Res = SliceResult<depth - fixed_keyparts, tri>;
 			if constexpr (fixed_keyparts == 0)
 				return SliceResult<depth, tri>::make_with_tri_alloc(nodec);
@@ -216,20 +266,7 @@ namespace hypertrie::internal::raw {
 			using SliceResult_t = SliceResult<result_depth, tri>;
 			if (nodec.is_sen()) {
 				SENContainer<current_depth, tri> sen_nodec = nodec.template specific<SingleEntryNode>();
-
-				auto slice_opt = raw_slice_key.slice(sen_nodec.node_ptr()->key());
-				if (slice_opt.has_value()) {
-					auto slice = slice_opt.value();
-					SingleEntry<result_depth, tri_with_stl_alloc<tri>> entry{slice, sen_nodec.node_ptr()->value()};
-					RawIdentifier<result_depth, tri_with_stl_alloc<tri>> identifier{entry};
-					if constexpr (result_depth == 1 and HypertrieCoreTrait_bool_valued_and_taggable_key_part<tri>)
-						return SliceResult_t::make_with_tri_alloc(identifier);
-					else {
-						return SliceResult_t::make_with_stl_alloc(false, identifier, new SingleEntryNode<result_depth, tri_with_stl_alloc<tri>>(entry));
-					}
-				} else {
-					return SliceResult_t{};
-				}
+				return slice(sen_nodec, raw_slice_key);
 			} else {
 				FNContainer<current_depth, tri> fn_nodec = nodec.template specific<FullNode>();
 				const size_t slice_key_i = fn_nodec.node_ptr()->min_fixed_keypart_i(raw_slice_key);

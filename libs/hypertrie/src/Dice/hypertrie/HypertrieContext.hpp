@@ -48,6 +48,39 @@ namespace hypertrie {
 	protected:
 		DefaultHypertrieContext() = default;
 	};
+
+	template<internal::HypertrieTrait tr_t>
+	class TaggedHypertrieContextPtr {
+	public:
+		using tr = tr_t;
+
+	private:
+		std::uintptr_t raw_{};
+
+		static inline std::uintptr_t encode(HypertrieContext<tr> *ctx_ptr, bool is_managed) noexcept {
+			return std::uintptr_t(ctx_ptr) | (std::uintptr_t(not is_managed) << 63);
+		}
+
+		HypertrieContext<tr> *ptr() const noexcept {
+			return reinterpret_cast<HypertrieContext<tr> *>(raw_ & ~(std::uintptr_t(1) << 63));
+		}
+
+	public:
+		TaggedHypertrieContextPtr() = default;
+
+		TaggedHypertrieContextPtr(HypertrieContext<tr> *ctx, bool is_managed = true) : raw_(encode(ctx, is_managed)) {}
+		HypertrieContext<tr> &operator*() const noexcept {
+			return *ptr();
+		}
+
+		[[nodiscard]] bool is_managed() const noexcept {
+			return not(raw_ & (std::uintptr_t(1) << 63));
+		}
+
+		operator HypertrieContext<tr> *() const noexcept {
+			return ptr();
+		}
+	};
 }// namespace hypertrie
 
 #endif//HYPERTRIE_HYPERTRIECONTEXT_HPP

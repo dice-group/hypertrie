@@ -26,6 +26,15 @@ namespace hypertrie::tests::core::node {
 			CHECK(std::get<bool>(result) == true);
 			CHECK(hypertrie[Key<tr>{{1, 2, 3}}] == true);
 			CHECK(hypertrie[Key<tr>{{0, 0, 0}}] == false);
+
+			SUBCASE("Add another entry") {
+				hypertrie.set({{1, 2, 2}}, true);
+				auto slice_0_var = hypertrie[SliceKey<tr>{{1, std::nullopt, std::nullopt}}];
+				auto slice_0 = std::get<0>(slice_0_var);
+				CHECK(slice_0[Key<tr>{{2, 2}}] == true);
+				CHECK(slice_0[Key<tr>{{2, 3}}] == true);
+				CHECK(slice_0[Key<tr>{{3, 2}}] == false);
+			}
 		};
 	};
 };// namespace hypertrie::tests::core::node

@@ -98,6 +98,15 @@ target_link_libraries(tests_RawHypertrieContext_systematic
         fmt-definitions
         tests-utils
         fmt::fmt
+        )
+
+add_executable(tests_RawHypertrieContext_systematic_metall core/node/tests_RawHypertrieContext_systematic_metall.cpp)
+target_link_libraries(tests_RawHypertrieContext_systematic_metall
+        doctest
+        hypertrie-core
+        fmt-definitions
+        tests-utils
+        fmt::fmt
         pthread
         )
 

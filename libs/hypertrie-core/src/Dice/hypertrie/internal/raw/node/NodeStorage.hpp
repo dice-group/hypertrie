@@ -89,24 +89,26 @@ namespace hypertrie::internal::raw {
 								  ssize_t delta_ref_count) noexcept {
 			auto &nodes_ = this->template nodes<depth, SingleEntryNode>().nodes();
 			auto &node_lifecycle_ = this->template nodes<depth, SingleEntryNode>().node_lifecycle();
-			 if (delta_ref_count != 0) {
-				 auto found = nodes_.find(identifier);
-				 if (found != nodes_.end()) {
-					 auto &node_ptr = found->second;
-					 assert(ssize_t(node_ptr->ref_count()) + delta_ref_count >= 0);
-					 node_ptr->ref_count() += delta_ref_count;
-					 sen = SingleEntry<depth, tri_with_stl_alloc<tri>>{node_ptr->key(), node_ptr->value()};
-					 if (node_ptr->ref_count() == 0UL)
-						 nodes_.erase(found);
-				 } else {
-					 assert(delta_ref_count > 0);
-					 nodes_.insert(found, {identifier, node_lifecycle_.new_(sen, delta_ref_count)});
-				 }
-			 }
+			if (delta_ref_count != 0) {
+				auto found = nodes_.find(identifier);
+				if (found != nodes_.end()) {
+					auto node_ptr = found->second;
+					assert(ssize_t(node_ptr->ref_count()) + delta_ref_count >= 0);
+					node_ptr->ref_count() += delta_ref_count;
+					sen = SingleEntry<depth, tri_with_stl_alloc<tri>>{node_ptr->key(), node_ptr->value()};
+					if (node_ptr->ref_count() == 0UL) {
+						node_lifecycle_.delete_(node_ptr);
+						nodes_.erase(found);
+					}
+				} else {
+					assert(delta_ref_count > 0);
+					nodes_.insert(found, {identifier, node_lifecycle_.new_(sen, delta_ref_count)});
+				}
+			}
 		}
 
 		template<size_t depth>
-		NodeContainer<depth, tri> lookup(RawIdentifier<depth, tri> identifier) noexcept{
+		NodeContainer<depth, tri> lookup(RawIdentifier<depth, tri> identifier) noexcept {
 			if (identifier.empty())
 				return {};
 			else if (identifier.is_fn()) {

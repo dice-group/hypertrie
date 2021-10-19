@@ -34,6 +34,12 @@ namespace hypertrie::tests::core::node {
 				CHECK(slice_0[Key<tr>{{2, 2}}] == true);
 				CHECK(slice_0[Key<tr>{{2, 3}}] == true);
 				CHECK(slice_0[Key<tr>{{3, 2}}] == false);
+				SUBCASE("Diagonal") {
+					HashDiagonal<tr> hash_diagonal(slice_0, ::hypertrie::internal::raw::RawKeyPositions<hypertrie_max_depth>{std::initializer_list<size_t>{0, 1}});
+
+					CHECK(hash_diagonal.find(2));
+					CHECK(not hash_diagonal.find(3));
+				}
 			}
 			SUBCASE("Diagonal") {
 				HashDiagonal<tr> hash_diagonal(hypertrie, ::hypertrie::internal::raw::RawKeyPositions<hypertrie_max_depth>{std::initializer_list<size_t>{1, 2}});

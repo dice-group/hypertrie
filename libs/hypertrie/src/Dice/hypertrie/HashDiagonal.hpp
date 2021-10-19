@@ -149,10 +149,11 @@ namespace hypertrie {
 					});
 		}
 
-		inline static const std::vector<std::vector<std::tuple<RawMethods, RawMethods, RawMethods>>> raw_method_cache = []() noexcept {
+		using RawMethosCache = std::vector<std::vector<std::tuple<RawMethods, RawMethods, RawMethods>>>;
+		inline static const RawMethosCache raw_method_cache = []() noexcept {
 			using namespace ::hypertrie::internal::raw;
 			using namespace ::hypertrie::internal::util;
-			std::decay_t<decltype(raw_method_cache)> raw_methods;
+			RawMethosCache raw_methods;
 			// depth = 1 ... hypertrie_max_depth
 			// diag_depth = 1 ... depth
 			// tuple = <FullNode(tri alloc), SingleEntryNode(tri alloc), SingleEntryNode(stl alloc)>

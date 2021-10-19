@@ -4,7 +4,10 @@
 #include <Dice/hypertrie/internal/raw/Hypertrie_core_trait.hpp>
 #include <Dice/hypertrie/internal/raw/RawDiagonalPositions.hpp>
 #include <Dice/hypertrie/internal/raw/node/FullNode.hpp>
+#include <Dice/hypertrie/internal/raw/node/NodeContainer.hpp>
 #include <Dice/hypertrie/internal/raw/node/SingleEntryNode.hpp>
+#include <Dice/hypertrie/internal/raw/node_context/RawHypertrieContext.hpp>
+#include <Dice/hypertrie/internal/raw/node_context/SliceResult.hpp>
 
 namespace hypertrie::internal::raw {
 

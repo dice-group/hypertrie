@@ -3,7 +3,7 @@
 
 #include "Dice/hypertrie/internal/container/AllContainer.hpp"
 
-//#include "Dice/hypertrie/internal/HashDiagonal.hpp"
+#include "Dice/hypertrie/HashDiagonal.hpp"
 #include "Dice/hypertrie/HypertrieContext.hpp"
 #include "Dice/hypertrie/Hypertrie_predeclare.hpp"
 #include "Dice/hypertrie/internal/Hypertrie_trait.hpp"
@@ -28,6 +28,8 @@ namespace hypertrie {
 		using value_type = typename tr::value_type;
 
 		static_assert(sizeof(value_type) <= sizeof(void *), "Types with sizeof larger than void* are not supported as value_type.");
+
+		friend HashDiagonal<tr>;
 
 
 	private:
@@ -97,7 +99,7 @@ namespace hypertrie {
 			if constexpr (min_depth <= hypertrie_max_depth)
 				if (contextless() and unmanaged() and not node_container_.is_null_ptr() and depth() != 0) {
 					assert(not node_container_.is_null_ptr());
-					switch_cases<min_depth, hypertrie_max_depth>(
+					switch_cases<min_depth, hypertrie_max_depth + 1>(
 							this->depth_,
 							[&](auto depth_arg) {
 								// contextless nodes are always SingleEntryNodes
@@ -118,7 +120,7 @@ namespace hypertrie {
 			if constexpr (min_depth <= hypertrie_max_depth)
 				if (contextless() and unmanaged() and not node_container_.is_null_ptr() and depth() != 0) {
 					assert(not node_container_.is_null_ptr());
-					switch_cases<min_depth, hypertrie_max_depth>(
+					switch_cases<min_depth, hypertrie_max_depth + 1>(
 							this->depth_,
 							[&](auto depth_arg) {
 								// contextless nodes are always SingleEntryNodes
@@ -204,14 +206,14 @@ namespace hypertrie {
 			else
 				// TODO: a differentiation between Identifier<tr> and RawIdentifier<tr, depth> would also be helpful
 				// TODO: (non-raw) Identifier needs only a subset of functionality (e.g., read only).
-				return internal::util::switch_cases<1, hypertrie_max_depth>(
+				return internal::util::switch_cases<1, hypertrie_max_depth + 1>(
 						this->depth_,
 						[&](auto depth_arg) -> size_t {
 							using namespace internal::util;
 							using namespace internal::raw;
 
 							auto get_size = [&](const auto &nodec) {
-								return nodec.template secific<FullNode>().node_ptr()->size();
+								return nodec.template specific<FullNode>().node_ptr()->size();
 							};
 
 							if (contextless()) {
@@ -266,7 +268,7 @@ namespace hypertrie {
 				using namespace internal::util;
 				using namespace internal::raw;
 
-				return switch_cases<1, hypertrie_max_depth>(
+				return switch_cases<1, hypertrie_max_depth + 1>(
 						this->depth_,
 						[&](auto depth_arg) -> size_t {
 							RawKey<depth_arg, tri> raw_key;
@@ -308,10 +310,10 @@ namespace hypertrie {
 				using namespace internal::util;
 				using namespace internal::raw;
 
-				return switch_cases<1, hypertrie_max_depth>(
+				return switch_cases<1, hypertrie_max_depth + 1>(
 						this->depth_,
 						[&](auto depth_arg) -> const_Hypertrie<tr> {
-							return switch_cases<1, depth_arg - 1>(
+							return switch_cases<1, depth_arg + 1>(
 									fixed_depth,
 									[&](auto slice_key_depth_arg) -> const_Hypertrie<tr> {
 										if constexpr (depth_arg != slice_key_depth_arg) {
@@ -367,7 +369,7 @@ namespace hypertrie {
 				using namespace internal::util;
 				using namespace internal::raw;
 
-				return switch_cases<2, hypertrie_max_depth>(
+				return switch_cases<2, hypertrie_max_depth + 1>(
 						depth_,
 						[&](auto depth_arg) -> std::vector<size_t> {
 							assert(this->node_container_.is_sen());
@@ -461,7 +463,7 @@ namespace hypertrie {
 				}
 				return old_value;
 			} else
-				return switch_cases<1, hypertrie_max_depth>(
+				return switch_cases<1, hypertrie_max_depth + 1>(
 						this->depth_,
 						[&](auto depth_arg) -> value_type {
 							SingleEntry<depth_arg, tri_with_stl_alloc<tri>> raw_entry{{}, value};
@@ -478,7 +480,7 @@ namespace hypertrie {
 			using namespace internal::util;
 			using namespace internal::raw;
 			if (not this->empty() and this->depth() != 0)
-				switch_cases<1, hypertrie_max_depth>(
+				switch_cases<1, hypertrie_max_depth + 1>(
 						this->depth_,
 						[&](auto depth_arg) {
 							this->context()->raw_context().template inc_ref_count<depth_arg>(this->node_container_);
@@ -492,7 +494,7 @@ namespace hypertrie {
 				if (hypertrie.contextless())// TODO: add copying contextless hypertries
 					throw std::logic_error{"Copying contextless const_Hypertries is not yet supported."};
 				else
-					switch_cases<1UL, hypertrie_max_depth>(
+					switch_cases<1UL, hypertrie_max_depth + 1>(
 							this->depth_,
 							[&](auto depth_arg) {
 								this->context()->raw_context().template inc_ref_count<depth_arg>(this->node_container_);
@@ -509,7 +511,7 @@ namespace hypertrie {
 			using namespace internal::util;
 			using namespace internal::raw;
 			if (not this->empty() and this->depth() != 0)
-				switch_cases<1, hypertrie_max_depth>(
+				switch_cases<1, hypertrie_max_depth + 1>(
 						this->depth_,
 						[&](auto depth_arg) {
 							this->context()->raw_context().template decr_ref_count<depth_arg>(unsafe_cast<NodeContainer<depth_arg, tri>>(this->node_container_));

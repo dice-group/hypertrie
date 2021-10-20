@@ -127,6 +127,15 @@ target_link_libraries(tests_RawHashDiagonal
         fmt-definitions
         )
 
+add_executable(tests_RawIterator core/node/tests_RawIterator.cpp)
+target_link_libraries(tests_RawIterator
+        doctest
+        hypertrie
+        tests-utils
+        fmt::fmt
+        fmt-definitions
+        )
+
 
 # fmt
 add_executable(tests_fmt_definitions fmt/tests_fmt_definitions.cpp)

@@ -11,21 +11,19 @@
 #include <Dice/hypertrie/internal/util/SwitchTemplateFunctions.hpp>
 namespace hypertrie::internal::raw {
 
-	// TODO: parameter for switching between raw-key and key
 	// TODO: support for iterating contextless sen
-	template<size_t depth, HypertrieCoreTrait tri_t, size_t context_max_depth>
+	template<size_t depth, bool use_raw_key, HypertrieCoreTrait tri_t, size_t context_max_depth>
 	class RawIterator {
 	public:
 		using tri = tri_t;
 		using key_part_type = typename tri::key_part_type;
-		using value_type = typename tri::value_type;
+		using value_type = std::conditional_t<use_raw_key, SingleEntry<depth, tri>, NonZeroEntry<typename tri::tr>>;
 
 	private:
 		template<size_t depth2>
 		using child_iterator = typename FullNode<depth2, tri>::ChildrenType::const_iterator;
 
-
-		SingleEntryNode<depth, tri_with_stl_alloc<tri>> value_;
+		value_type value_ = []() { if constexpr (use_raw_key) return value_type{}; else return value_type(depth); }();
 		RawHypertrieContext<context_max_depth, tri> const *context_;
 		util::IntegralTemplatedTuple<child_iterator, 1, depth> iters_;
 		util::IntegralTemplatedTuple<child_iterator, 1, depth> ends_;

@@ -52,7 +52,9 @@ namespace hypertrie::tests::core::node {
 
 							context.insert(nc, entries_0);
 
-							RawIterator<depth, tri, depth> raw_iterator{nc, context};
+							using RawIterator_t = RawIterator<depth, true, tri, depth>;
+
+							RawIterator_t raw_iterator{nc, context};
 
 							size_t count = 0;
 							while (not raw_iterator.ended()) {

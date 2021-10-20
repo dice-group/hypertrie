@@ -6,10 +6,10 @@
 #include "Dice/hypertrie/HashDiagonal.hpp"
 #include "Dice/hypertrie/HypertrieContext.hpp"
 #include "Dice/hypertrie/Hypertrie_predeclare.hpp"
+#include "Dice/hypertrie/Iterator.hpp"
 #include "Dice/hypertrie/internal/Hypertrie_trait.hpp"
 #include "Dice/hypertrie/internal/raw/node_context/RawHypertrieContext.hpp"
 #include "Dice/hypertrie/internal/util/SwitchTemplateFunctions.hpp"
-//#include "Dice/hypertrie/internal/Iterator.hpp"
 
 //#include "Dice/hypertrie/internal/util/CONSTANTS.hpp"
 #include <itertools.hpp>
@@ -30,9 +30,10 @@ namespace hypertrie {
 		static_assert(sizeof(value_type) <= sizeof(void *), "Types with sizeof larger than void* are not supported as value_type.");
 
 		friend HashDiagonal<tr>;
+		friend Iterator<tr>;
 
 
-	private:
+	protected:
 		template<size_t depth>
 		using RawKey_t = internal::raw::RawKey<depth, tri>;
 
@@ -381,21 +382,21 @@ namespace hypertrie {
 			}
 		}
 
-		//		using iterator = Iterator<tr>;
-		//		using const_iterator = iterator;
-		//
-		//		[[nodiscard]] iterator begin() const {
-		//			if (depth() != 0)
-		//				return iterator{*this};
-		//			else
-		//				throw std::logic_error("Iterator is not yet implemented for depth 0.");
-		//		}
-		//
-		//		[[nodiscard]] const_iterator cbegin() const { return this->begin(); }
-		//
-		//		[[nodiscard]] bool end() const { return false; }
-		//
-		//		[[nodiscard]] bool cend() const { return false; }
+		using iterator = Iterator<tr>;
+		using const_iterator = iterator;
+
+		[[nodiscard]] iterator begin() const {
+			if (depth() != 0) [[likely]]
+				return iterator{*this};
+			else [[unlikely]]
+				throw std::logic_error("Iterator is not yet implemented for depth 0.");
+		}
+
+		[[nodiscard]] const_iterator cbegin() const { return this->begin(); }
+
+		[[nodiscard]] bool end() const noexcept { return false; }
+
+		[[nodiscard]] bool cend() const noexcept { return false; }
 
 		[[nodiscard]] bool operator==(const const_Hypertrie<tr> &other) const noexcept {
 			return this->hash() == other.hash() and this->depth() == other.depth();

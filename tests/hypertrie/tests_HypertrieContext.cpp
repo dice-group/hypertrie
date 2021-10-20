@@ -47,6 +47,14 @@ namespace hypertrie::tests::core::node {
 				CHECK(hash_diagonal.find(2));
 				CHECK(not hash_diagonal.find(3));
 			}
+
+			SUBCASE("Iterator") {
+				for (const auto &entry : hypertrie){
+					auto[key, value] = entry.tuple();
+					fmt::print("{} -> {}\n", fmt::join(key, ", "), value);
+				}
+
+			}
 		};
 	};
 };// namespace hypertrie::tests::core::node

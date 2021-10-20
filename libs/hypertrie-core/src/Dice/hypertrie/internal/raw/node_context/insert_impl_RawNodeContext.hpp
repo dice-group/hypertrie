@@ -185,13 +185,11 @@ namespace hypertrie::internal::raw {
 						auto &se_nodes_ = node_storage.template nodes<depth, SingleEntryNode>().nodes();
 						if (id_before.is_sen()) {
 							if (auto found = lv_changes.SEN_new_ones.find(id_before); found != lv_changes.SEN_new_ones.end()) {
-								if (found->second.entry == decltype(found->second.entry){}) {
-									// TODO: that is only an workaround
-									// make it right and use std::optional for entry
+								if (not found->second.entry.has_value()) {
 									auto sen_before = se_nodes_.find(id_before)->second;
 									found.value().entry = *sen_before;
 								}
-								change.entries.emplace_back(found->second.entry);
+								change.entries.emplace_back(found->second.entry.value());
 							} else {
 								assert(se_nodes_.contains(id_before));
 								auto &sen_node_before = se_nodes_[id_before];

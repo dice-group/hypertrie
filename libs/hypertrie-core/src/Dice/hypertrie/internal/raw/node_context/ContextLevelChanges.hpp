@@ -20,7 +20,7 @@ namespace hypertrie::internal::raw {
 
 		struct SEN_Change {
 			ssize_t ref_count_delta = 0;
-			Entry entry;
+			std::optional<Entry> entry;
 		};
 
 		struct FN_New {

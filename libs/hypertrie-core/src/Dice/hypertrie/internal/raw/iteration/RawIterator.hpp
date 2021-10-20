@@ -13,11 +13,8 @@ namespace hypertrie::internal::raw {
 
 	// TODO: parameter for switching between raw-key and key
 	// TODO: support for iterating contextless sen
-	template<size_t depth, template<size_t, typename> typename node_type, HypertrieCoreTrait tri, size_t context_max_depth>
-	class RawIterator;
-
 	template<size_t depth, HypertrieCoreTrait tri_t, size_t context_max_depth>
-	class RawIterator<depth, FullNode, tri_t, context_max_depth> {
+	class RawIterator {
 	public:
 		using tri = tri_t;
 		using key_part_type = typename tri::key_part_type;
@@ -36,9 +33,9 @@ namespace hypertrie::internal::raw {
 		bool ended_ = true;
 
 		template<size_t child_depth>
-		child_iterator<child_depth> &get_iter() { return iters_.template get<child_depth + 1>(); }
+		child_iterator<child_depth> &get_iter() { return iters_.template get<child_depth>(); }
 		template<size_t child_depth>
-		child_iterator<child_depth> &get_end() { return ends_.template get<child_depth + 1>(); }
+		child_iterator<child_depth> &get_end() { return ends_.template get<child_depth>(); }
 
 		[[nodiscard]] bool is_sen() const noexcept {
 			return active_iter_ == 0;
@@ -72,8 +69,8 @@ namespace hypertrie::internal::raw {
 		}
 
 		RawIterator(NodeContainer<depth, tri> const &nodec, RawHypertrieContext<context_max_depth, tri> const &context)
-			: RawIterator((nodec.is_sen()) ? RawIterator(util::unsafe_cast<SENContainer<depth, tri>>(nodec))
-										   : RawIterator(util::unsafe_cast<FNContainer<depth, tri>>(nodec), context)) {}
+			: RawIterator((nodec.is_sen()) ? RawIterator(util::unsafe_cast<SENContainer<depth, tri> const>(nodec))
+										   : RawIterator(util::unsafe_cast<FNContainer<depth, tri> const>(nodec), context)) {}
 
 		[[nodiscard]] bool ended() const noexcept {
 			return ended_;
@@ -87,7 +84,7 @@ namespace hypertrie::internal::raw {
 			return value_;
 		}
 
-		inline void inc() {
+		inline void inc() noexcept {
 			if (is_sen()) {
 				ended_ = true;
 			} else
@@ -99,7 +96,7 @@ namespace hypertrie::internal::raw {
 
 	protected:
 		template<size_t current_depth>
-		void init_fn_rek(FNContainer<depth, tri> const &nodec) {
+		void init_fn_rek(FNContainer<current_depth, tri> const &nodec) {
 			active_iter_ = current_depth;
 
 			const auto fn_ptr = nodec.node_ptr();
@@ -113,8 +110,8 @@ namespace hypertrie::internal::raw {
 			if constexpr (current_depth > 1) {
 				if (iter->second.is_fn()) {
 					// child is fn, go on recursively
-					auto child_fn_ptr = context_->node_storage_.template lookup<depth, FullNode>(iter->second);
-					this->init_fn_rek<current_depth - 1>(FNContainer<current_depth - 1, tri>{iter->second, child_fn_ptr});
+					auto child_fn_ptr = context_->node_storage_.template lookup<current_depth - 1, FullNode>(iter->second);
+					this->template init_fn_rek<current_depth - 1>(FNContainer<current_depth - 1, tri>{iter->second, child_fn_ptr});
 				} else {
 					// child is compressed
 					write_compressed<current_depth - 1>();
@@ -139,10 +136,10 @@ namespace hypertrie::internal::raw {
 			} else {
 				// set rest of the key (and value) with the data in the compressed node
 				auto &iter = get_iter<node_depth + 1>();
-				auto sen_ptr = context_->node_storage_.template lookup<depth, SingleEntryNode>(iter->second);
+				auto sen_ptr = context_->node_storage_.template lookup<node_depth, SingleEntryNode>(iter->second);
 				const auto &sen_key = sen_ptr->key();
 				// copy the key of the compressed child node to the iterator key
-				std::copy(sen_key.cbegin(), sen_key.cend(), value_.key().cbegin());
+				std::copy(sen_key.cbegin(), sen_key.cend(), value_.key().begin());
 				if constexpr (not HypertrieCoreTrait_bool_valued<tri>)
 					value_.value() = sen_ptr->value();
 			}
@@ -158,7 +155,7 @@ namespace hypertrie::internal::raw {
 
 			// set the key at the corresponding position
 			auto key_part = [&]() {
-				if constexpr (node_depth == 0 and HypertrieCoreTrait_bool_valued<tri>)
+				if constexpr (node_depth == 1 and HypertrieCoreTrait_bool_valued<tri>)
 					return *iter;
 				else
 					return iter->first;
@@ -173,7 +170,7 @@ namespace hypertrie::internal::raw {
 
 
 		template<pos_type current_depth>
-		inline bool inc_rek() {
+		inline void inc_rek() {
 			active_iter_ = current_depth;
 			auto &iter = get_iter<current_depth>();
 			auto &end = get_end<current_depth>();
@@ -184,15 +181,15 @@ namespace hypertrie::internal::raw {
 				if constexpr (current_depth > 1) {
 					if (iter->second.is_fn()) {
 						// child is fn, go on recursively
-						auto child_fn_ptr = context_->node_storage_.template lookup<depth, FullNode>(iter->second);
-						this->init_fn_rek<current_depth - 1>(FNContainer<current_depth - 1, tri>{iter->second, child_fn_ptr});
+						auto child_fn_ptr = context_->node_storage_.template lookup<current_depth - 1, FullNode>(iter->second);
+						this->template init_fn_rek<current_depth - 1>(FNContainer<current_depth - 1, tri>{iter->second, child_fn_ptr});
 					} else {
 						// child is compressed
 						write_compressed<current_depth - 1>();
 					}
 				}
 			} else {
-				if (current_depth == depth)
+				if constexpr (current_depth == depth)
 					ended_ = true;
 				else
 					this->template inc_rek<current_depth + 1>();

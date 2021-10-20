@@ -65,7 +65,7 @@ namespace hypertrie::internal::raw {
 		}
 
 		template<size_t depth, template<size_t, typename> typename node_type>
-		SpecificNodePtr<depth, node_type> lookup(RawIdentifier<depth, tri> identifier) noexcept {
+		SpecificNodePtr<depth, node_type> lookup(RawIdentifier<depth, tri> identifier) const noexcept {
 			auto &nodes_ = nodes<depth, node_type>().nodes();
 			auto found = nodes_.find(identifier);
 			if (found != nodes_.end()) {
@@ -108,7 +108,7 @@ namespace hypertrie::internal::raw {
 		}
 
 		template<size_t depth>
-		NodeContainer<depth, tri> lookup(RawIdentifier<depth, tri> identifier) noexcept {
+		NodeContainer<depth, tri> lookup(RawIdentifier<depth, tri> identifier) const noexcept {
 			if (identifier.empty())
 				return {};
 			else if (identifier.is_fn()) {

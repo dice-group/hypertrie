@@ -115,11 +115,11 @@ namespace hypertrie {
 		[[nodiscard]] size_t size() const noexcept { return key_.size(); }
 
 		std::tuple<Key<tr> const &, value_type> tuple() const noexcept {
-			return std::make_tuple(key_, value_);
+			return std::forward_as_tuple(key_, value_);
 		}
 
 		std::tuple<Key<tr> &, value_type> tuple() noexcept {
-			return std::make_tuple(key_, value_);
+			return std::forward_as_tuple(key_, value_);
 		}
 	};
 }// namespace hypertrie

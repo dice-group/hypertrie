@@ -20,6 +20,7 @@ namespace hypertrie {
 
 		struct RawMethods {
 			void (*construct)(const const_Hypertrie<tr> &, void *) noexcept = nullptr;
+			void (*destroy)(void *) noexcept = nullptr;
 
 			NonZeroEntry<tr> const &(*value)(void const *) noexcept = nullptr;
 
@@ -30,10 +31,11 @@ namespace hypertrie {
 			RawMethods() = default;
 
 			RawMethods(void (*construct)(const_Hypertrie<tr> const &, void *) noexcept,
+					   void (*destroy)(void *) noexcept,
 					   NonZeroEntry<tr> const &(*value)(const void *) noexcept,
 					   void (*inc)(void *) noexcept,
 					   bool (*ended)(void const *) noexcept)
-				: construct(construct), value(value), inc(inc), ended(ended) {}
+				: construct(construct), destroy(destroy), value(value), inc(inc), ended(ended) {}
 		};
 
 		template<size_t depth>
@@ -41,6 +43,9 @@ namespace hypertrie {
 			return RawMethods(
 					[](const_Hypertrie<tr> const &hypertrie, void *raw_iterator_ptr) noexcept {
 						std::construct_at(reinterpret_cast<RawIterator_t<depth> *>(raw_iterator_ptr), hypertrie.template node_container<depth>(), hypertrie.context()->raw_context());
+					},
+					[](void *raw_iterator_ptr) noexcept {
+						std::destroy_at(reinterpret_cast<RawIterator_t<depth> *>(raw_iterator_ptr));
 					},
 					[](void const *raw_iterator_ptr) noexcept -> NonZeroEntry<tr> const & {
 						return reinterpret_cast<RawIterator_t<depth> const *>(raw_iterator_ptr)->value();
@@ -79,7 +84,10 @@ namespace hypertrie {
 		using value_type = NonZeroEntry<tr>;
 
 		Iterator() = default;
-
+		~Iterator() noexcept {
+			if (raw_methods != nullptr)
+				raw_methods->destroy(&raw_iterator);
+		}
 		explicit Iterator(const_Hypertrie<tr> const &hypertrie) noexcept : raw_methods(&getRawMethods(hypertrie.depth())) {
 			raw_methods->construct(hypertrie, &raw_iterator);
 		}

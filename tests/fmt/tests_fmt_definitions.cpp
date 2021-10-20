@@ -39,7 +39,7 @@ namespace hypertrie::tests::fmt {
 		}
 
 		TEST_CASE("RawKey") {
-			RawKey<5, Hypertrie_core_t<default_bool_Hypertrie_trait>> pos{1,2,3,4,5};
+			RawKey<5, Hypertrie_core_t<default_bool_Hypertrie_trait>> pos{{1, 2, 3, 4, 5}};
 			std::string result = ::fmt::format("{}", pos);
 			REQUIRE(result == "[1, 2, 3, 4, 5]");
 		}

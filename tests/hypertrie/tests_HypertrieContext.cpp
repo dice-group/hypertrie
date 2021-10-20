@@ -40,6 +40,13 @@ namespace hypertrie::tests::core::node {
 					CHECK(hash_diagonal.find(2));
 					CHECK(not hash_diagonal.find(3));
 				}
+
+				SUBCASE("Iterator") {
+					for (const auto &entry : slice_0) {
+						auto [key, value] = entry.tuple();
+						fmt::print("{} -> {}\n", fmt::join(key, ", "), value);
+					}
+				}
 			}
 			SUBCASE("Diagonal") {
 				HashDiagonal<tr> hash_diagonal(hypertrie, ::hypertrie::internal::raw::RawKeyPositions<hypertrie_max_depth>{std::initializer_list<size_t>{1, 2}});
@@ -49,11 +56,20 @@ namespace hypertrie::tests::core::node {
 			}
 
 			SUBCASE("Iterator") {
-				for (const auto &entry : hypertrie){
-					auto[key, value] = entry.tuple();
+				for (const auto &entry : hypertrie) {
+					auto [key, value] = entry.tuple();
 					fmt::print("{} -> {}\n", fmt::join(key, ", "), value);
 				}
+			}
 
+			SUBCASE("Hypertrie2") {
+				Hypertrie<tr> hypertrie2{3};
+				hypertrie.set({{1, 2, 3}}, true);
+				auto slice_12 = std::get<0>(hypertrie[SliceKey<tr>{{std::nullopt, 2, 3}}]);
+				for (const auto &entry : slice_12) {
+					auto [key, value] = entry.tuple();
+					fmt::print("{} -> {}\n", fmt::join(key, ", "), value);
+				}
 			}
 		};
 	};

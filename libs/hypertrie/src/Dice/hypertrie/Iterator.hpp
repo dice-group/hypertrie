@@ -42,7 +42,10 @@ namespace hypertrie {
 		inline static RawMethods generateRawMethods() noexcept {
 			return RawMethods(
 					[](const_Hypertrie<tr> const &hypertrie, void *raw_iterator_ptr) noexcept {
-						std::construct_at(reinterpret_cast<RawIterator_t<depth> *>(raw_iterator_ptr), hypertrie.template node_container<depth>(), hypertrie.context()->raw_context());
+						if (not (hypertrie.size() == 1 and hypertrie.contextless()))
+							std::construct_at(reinterpret_cast<RawIterator_t<depth> *>(raw_iterator_ptr), hypertrie.template node_container<depth>(), hypertrie.context()->raw_context());
+						else
+							std::construct_at(reinterpret_cast<RawIterator_t<depth> *>(raw_iterator_ptr), hypertrie.template stl_node_container<depth>());
 					},
 					[](void *raw_iterator_ptr) noexcept {
 						std::destroy_at(reinterpret_cast<RawIterator_t<depth> *>(raw_iterator_ptr));

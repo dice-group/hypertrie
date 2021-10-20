@@ -11,7 +11,6 @@
 #include <Dice/hypertrie/internal/util/SwitchTemplateFunctions.hpp>
 namespace hypertrie::internal::raw {
 
-	// TODO: support for iterating contextless sen
 	template<size_t depth, bool use_raw_key, HypertrieCoreTrait tri_t, size_t context_max_depth>
 	class RawIterator {
 	public:
@@ -49,7 +48,8 @@ namespace hypertrie::internal::raw {
 			}
 		}
 
-		explicit RawIterator(SENContainer<depth, tri> const &nodec) : ended_(nodec.empty()) {
+		template<HypertrieCoreTrait tri2>
+		explicit RawIterator(SENContainer<depth, tri2> const &nodec) : ended_(nodec.empty()) {
 			if (not ended_) {
 				if constexpr (depth == 1 and HypertrieCoreTrait_bool_valued_and_taggable_key_part<tri>) {
 					// set key_part stored in the identifier

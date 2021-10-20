@@ -180,11 +180,7 @@ namespace hypertrie {
 
 		explicit const_Hypertrie(size_t depth) noexcept : depth_(depth) {}
 
-		[[nodiscard]] void *rawNode() const noexcept {
-			return node_container_.pointer_sized;
-		}
-
-		const RawNodeContainer_t *rawNodeContainer() const noexcept {
+		const RawNodeContainer_t *raw_node_container() const noexcept {
 			return &node_container_;
 		}
 

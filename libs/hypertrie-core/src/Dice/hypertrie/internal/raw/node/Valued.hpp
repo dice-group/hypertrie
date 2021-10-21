@@ -15,13 +15,13 @@ namespace hypertrie::internal::raw {
 		using value_type = typename tri::value_type;
 
 	protected:
-		value_type value_;
+		value_type value_{};
 
 	public:
 		/**
 		 * Default constructor sets value to 0, 0.0, true (value initialization)
 		 */
-		Valued() noexcept : value_{} {};
+		Valued() = default;
 
 		/**
 		 * Uses the provided value.

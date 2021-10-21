@@ -18,6 +18,76 @@ namespace hypertrie::tests::core::node {
 	using namespace ::hypertrie::internal::raw;
 	using namespace ::hypertrie::internal;
 
+	struct Equal {
+		template <typename Set1, typename Set2>
+		static bool set_equal(Set1 const& lhs, Set2 const& rhs) {
+			if(lhs.size() != rhs.size()) {return false;}
+			for (auto const & key : rhs) {
+				if (lhs.find(key) == lhs.end()) {return false;}
+			}
+			return true;
+		}
+
+		template <typename Map1, typename Map2>
+		static bool map_equal(Map1 const& lhs, Map2 const& rhs) {
+			if(lhs.size() != rhs.size()) {return false;}
+			for (auto const & [key, value_rhs] : rhs) {
+				auto iter = lhs.find(key);
+				if (iter == lhs.end()) {return false;}
+				auto value_lhs = iter->second;
+				if(!equal(value_lhs, value_rhs)) {
+					return false;
+				}
+			}
+			return true;
+		}
+
+		/* This is the fall-back if no other funciton is found.
+		 * I know that this is not nice, however it is difficult to check if some type is a set.
+		 */
+		template <typename Set1, typename Set2>
+		static bool equal(Set1 const& lhs, Set2 const& rhs) {
+			return set_equal(lhs, rhs);
+		}
+
+		template <typename Map1, typename Map2> requires requires() {
+			typename Map1::key_type;
+			typename Map1::mapped_type;
+			typename Map2::key_type;
+			typename Map2::mapped_type;
+		}
+		static bool equal(Map1 const& lhs, Map2 const& rhs) {
+			return map_equal(lhs, rhs);
+		}
+
+
+		template <size_t depth, HypertrieCoreTrait tri_t1, HypertrieCoreTrait tri_t2>
+		static bool equal(RawIdentifier<depth, tri_t1> const& lhs, RawIdentifier<depth, tri_t2> const& rhs) {
+			return lhs.hash() == rhs.hash();
+		}
+
+		template <size_t depth, typename Type1, typename Type2>
+		static bool equal(std::array<Type1, depth> const& lhs, std::array<Type2, depth> const& rhs) {
+			bool result = true;
+			boost::hana::for_each(boost::hana::range_c<size_t, 0, depth>, [&lhs, &rhs, &result](size_t index){
+				if(!equal(lhs[index], rhs[index])){
+					result = false;
+				}
+			});
+			return result;
+		}
+
+		template <size_t depth, HypertrieCoreTrait tri_t1, HypertrieCoreTrait tri_t2>
+		static bool equal(FullNode<depth, tri_t1> const& lhs, FullNode<depth, tri_t2> const& rhs) {
+			return equal(lhs.edges(), rhs.edges());
+		}
+
+		template <size_t depth, HypertrieCoreTrait tri_t1, HypertrieCoreTrait tri_t2>
+		static bool equal(SingleEntryNode<depth, tri_t1> const& lhs, SingleEntryNode<depth, tri_t2> const& rhs) {
+			return lhs.key() == rhs.key() && lhs.value() == rhs.value();
+		}
+	};
+
 	template<size_t max_depth, HypertrieCoreTrait tri_t>
 	struct ValidationRawNodeContext : public RawHypertrieContext<max_depth, tri_t> {
 		using tri = tri_t;
@@ -105,12 +175,20 @@ namespace hypertrie::tests::core::node {
 				const auto &other_FNs = other.node_storage_.template nodes<depth, FullNode>().nodes();
 
 				CHECK(this_FNs.size() == other_FNs.size());
-				for (const auto &[id, node] : this_FNs) {
-					// TODO: Fix for N>1
+				/* Usage of different allocators create different types even if the types are bitwise equal.
+			     * converter simply swaps the allocator type to the one needed.
+			     * DOES NOT WORK FOR ALL TYPES!
+			    */
+				auto ident_converter = [depth](RawIdentifier<depth, tri_t> const& rawIdent) {
+					return reinterpret_cast<RawIdentifier<depth, tri_t2> const&>(rawIdent);
+				};
+
+				for (const auto &[raw_id, node] : this_FNs) {
+					auto id = ident_converter(raw_id);
 					CHECK(other_FNs.contains(id));
 					if (other_FNs.contains(id)) {
 						auto other_node = other_FNs.find(id).value();
-						CHECK(*node == *other_node);
+						CHECK(Equal::equal(*node, *other_node));
 						CHECK(node->ref_count() == other_node->ref_count());
 					}
 				}
@@ -121,11 +199,12 @@ namespace hypertrie::tests::core::node {
 					const auto &other_SENs = other.node_storage_.template nodes<depth, SingleEntryNode>().nodes();
 					CHECK(this_SENs.size() == other_SENs.size());
 
-					for (const auto &[id, node] : this_SENs) {
+					for (const auto &[raw_id, node] : this_SENs) {
+						auto id = ident_converter(raw_id);
 						CHECK(other_SENs.contains(id));
 						if (other_SENs.contains(id)) {
 							auto other_node = other_SENs.find(id).value();
-							CHECK(*node == *other_node);
+							CHECK(Equal::equal(*node, *other_node));
 							CHECK(node->ref_count() == other_node->ref_count());
 						}
 					}

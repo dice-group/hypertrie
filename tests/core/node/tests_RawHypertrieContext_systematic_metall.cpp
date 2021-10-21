@@ -122,7 +122,7 @@ namespace hypertrie::tests::core::node {
 		}
 
 		TEST_CASE_TEMPLATE("hypertrie depth 1", T,
-						   metall_bool_cfg<1> /*, metall_bool_cfg<2>*/) {
+						   metall_bool_cfg<1>, metall_bool_cfg<2>, metall_bool_cfg<3>){
 			constexpr size_t no_key_parts = 3;
 			constexpr size_t min_no_entries = 1;
 			constexpr size_t max_no_entries = 3;

@@ -3,7 +3,7 @@
 
 #include <Dice/hypertrie/internal/raw/Hypertrie_core_trait.hpp>
 
-namespace hypertrie::internal::raw {
+namespace Dice::hypertrie::internal::raw {
 
 	/**
 	* A super class to provide a single value in a Node.
@@ -41,6 +41,6 @@ namespace hypertrie::internal::raw {
 		 */
 		const value_type &value() const noexcept { return this->value_; }
 	};
-}// namespace hypertrie::internal::raw
+}// namespace Dice::hypertrie::internal::raw
 
 #endif//HYPERTRIE_VALUED_HPP

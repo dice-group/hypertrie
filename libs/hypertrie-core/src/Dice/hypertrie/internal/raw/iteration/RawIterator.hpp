@@ -9,7 +9,7 @@
 #include <Dice/hypertrie/internal/raw/node_context/RawHypertrieContext.hpp>
 #include <Dice/hypertrie/internal/raw/node_context/SliceResult.hpp>
 #include <Dice/hypertrie/internal/util/SwitchTemplateFunctions.hpp>
-namespace hypertrie::internal::raw {
+namespace Dice::hypertrie::internal::raw {
 
 	template<size_t depth, bool use_raw_key, HypertrieCoreTrait tri_t, size_t context_max_depth>
 	class RawIterator {
@@ -195,6 +195,6 @@ namespace hypertrie::internal::raw {
 		}
 	};
 
-};// namespace hypertrie::internal::raw
+};// namespace Dice::hypertrie::internal::raw
 
 #endif//HYPERTRIE_RAWITERATOR_HPP

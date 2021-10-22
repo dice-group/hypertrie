@@ -13,9 +13,9 @@
 #include <Dice/hypertrie/internal/Hypertrie_traits_tostring.hpp>
 #include <Dice/hypertrie/internal/raw/node/Identifier.hpp>
 
-namespace hypertrie::tests::core::node {
+namespace Dice::hypertrie::tests::core::node {
 
-	using namespace hypertrie::internal::raw;
+	using namespace Dice::hypertrie::internal::raw;
 	TEST_CASE_TEMPLATE("RawIdentifier", T,
 					   bool_cfg<1>, bool_cfg<2>, bool_cfg<3>, bool_cfg<4>, bool_cfg<5>,
 					   tagged_bool_cfg<1>, tagged_bool_cfg<2>, tagged_bool_cfg<3>, tagged_bool_cfg<4>, tagged_bool_cfg<5>,
@@ -31,7 +31,7 @@ namespace hypertrie::tests::core::node {
 
 		hypertrie::tests::utils::RawGenerator<depth, tri> gen{};
 
-		SUBCASE(::hypertrie::internal::to_string<typename T::tr>().c_str()) {
+		SUBCASE(::Dice::hypertrie::internal::to_string<typename T::tr>().c_str()) {
 			SUBCASE(fmt::format("depth = {}", depth).c_str()) {
 				SUBCASE("default construct") {
 					REQUIRE(RawIdentifier_t().empty());
@@ -126,4 +126,4 @@ namespace hypertrie::tests::core::node {
 			}
 		}
 	}
-}// namespace hypertrie::tests::core::node
+}// namespace Dice::hypertrie::tests::core::node

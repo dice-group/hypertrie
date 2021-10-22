@@ -19,11 +19,11 @@
 #include <Dice/hypertrie/internal/raw/node_context/RawHypertrieContext.hpp>
 #include <Dice/hypertrie/internal/raw/node_context/fmt_RawHypertrieContext.hpp>
 
-namespace hypertrie::tests::core::node {
+namespace Dice::hypertrie::tests::core::node {
 
 	TEST_SUITE("Testing of RawNodeContext") {
-		using namespace ::hypertrie::internal::raw;
-		using namespace ::hypertrie::internal::util;
+		using namespace ::Dice::hypertrie::internal::raw;
+		using namespace ::Dice::hypertrie::internal::util;
 
 		TEST_CASE("problematic entries 11") {
 			using T = bool_cfg<4>;
@@ -447,4 +447,4 @@ namespace hypertrie::tests::core::node {
 			std::cout << fmt::format("result identifier 1: {}", nc.raw_identifier()) << std::endl;
 		};
 	};
-};// namespace hypertrie::tests::core::node
+};// namespace Dice::hypertrie::tests::core::node

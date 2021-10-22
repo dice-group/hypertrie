@@ -5,7 +5,7 @@
 #include <vector>
 #include <memory> //allocator_traits
 
-namespace hypertrie::internal::container {
+namespace Dice::hypertrie::internal::container {
     template<typename key_type, typename Allocator = std::allocator<key_type>>
     using std_set = std::set
             <

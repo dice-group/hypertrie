@@ -19,11 +19,11 @@
 #include <Dice/hypertrie/internal/raw/node_context/RawHypertrieContext.hpp>
 #include <Dice/hypertrie/internal/raw/node_context/fmt_RawHypertrieContext.hpp>
 
-namespace hypertrie::tests::core::node {
+namespace Dice::hypertrie::tests::core::node {
 
 	TEST_SUITE("randomized testing of RawNodeContext") {
-		using namespace ::hypertrie::internal::raw;
-		using namespace ::hypertrie::internal::util;
+		using namespace ::Dice::hypertrie::internal::raw;
+		using namespace ::Dice::hypertrie::internal::util;
 
 
 		template<size_t depth, HypertrieCoreTrait tri>
@@ -118,4 +118,4 @@ namespace hypertrie::tests::core::node {
 			write_and_read<T::depth, typename T::tri>();
 		}
 	}
-};// namespace hypertrie::tests::core::node
+};// namespace Dice::hypertrie::tests::core::node

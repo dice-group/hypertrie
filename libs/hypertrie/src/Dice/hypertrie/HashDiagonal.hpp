@@ -6,9 +6,9 @@
 #include "Dice/hypertrie/internal/raw/iteration/RawHashDiagonal.hpp"
 #include "Dice/hypertrie/internal/util/SwitchTemplateFunctions.hpp"
 
-namespace hypertrie {
+namespace Dice::hypertrie {
 
-	template<internal::HypertrieTrait tr_t>
+	template<HypertrieTrait tr_t>
 	class HashDiagonal {
 	public:
 		using tr = tr_t;
@@ -60,8 +60,8 @@ namespace hypertrie {
 
 		template<size_t diag_depth, size_t depth, template<size_t, typename> typename node_type, bool with_tri_alloc = false>
 		inline static RawMethods generateRawMethods() noexcept {
-			using namespace ::hypertrie::internal::raw;
-			using namespace ::hypertrie::internal::util;
+			using namespace ::Dice::hypertrie::internal::raw;
+			using namespace ::Dice::hypertrie::internal::util;
 			[[maybe_unused]] constexpr static const size_t result_depth = depth - diag_depth;
 
 			static constexpr bool is_fn = std::is_same_v<node_type<depth, tri>, FullNode<depth, tri>>;
@@ -151,8 +151,8 @@ namespace hypertrie {
 
 		using RawMethosCache = std::vector<std::vector<std::tuple<RawMethods, RawMethods, RawMethods>>>;
 		inline static const RawMethosCache raw_method_cache = []() noexcept {
-			using namespace ::hypertrie::internal::raw;
-			using namespace ::hypertrie::internal::util;
+			using namespace ::Dice::hypertrie::internal::raw;
+			using namespace ::Dice::hypertrie::internal::util;
 			RawMethosCache raw_methods;
 			// depth = 1 ... hypertrie_max_depth
 			// diag_depth = 1 ... depth
@@ -206,10 +206,7 @@ namespace hypertrie {
 										 hypertrie.size() > 1 and not hypertrie.contextless())),
 			  context_(hypertrie.context()) {
 			raw_methods->construct_(hypertrie, diag_poss, &raw_hash_diagonal);
-			//TODO: construction/destruction/copy/move needs review/reconsideration
 		}
-
-		// TODO: implement copy constructor
 
 		HashDiagonal(HashDiagonal &&other) noexcept : raw_methods(other.raw_methods),
 													  raw_hash_diagonal(other.raw_hash_diagonal),
@@ -236,6 +233,7 @@ namespace hypertrie {
 			if (raw_methods != nullptr) {
 				raw_methods->destruct_(&raw_hash_diagonal);
 			}
+			raw_methods = nullptr;
 		}
 
 
@@ -296,6 +294,6 @@ namespace hypertrie {
 			return raw_methods->size_(&raw_hash_diagonal);
 		}
 	};
-}// namespace hypertrie
+}// namespace Dice::hypertrie
 
 #endif//HYPERTRIE_HASHDIAGONAL_HPP

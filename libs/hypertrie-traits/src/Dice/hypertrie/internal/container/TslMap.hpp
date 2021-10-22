@@ -8,7 +8,7 @@
 #include <memory>//allocator_traits
 
 
-namespace hypertrie::internal::container {
+namespace Dice::hypertrie::internal::container {
 	template<typename Key, typename T, typename Allocator = std::allocator<std::pair<Key, T>>>
 	using tsl_sparse_map = tsl::sparse_map<Key,
 										   T,
@@ -24,6 +24,6 @@ namespace hypertrie::internal::container {
 	inline V &deref(typename tsl_sparse_map<K, V, Allocator>::iterator &map_it) {
 		return map_it->value();
 	}
-}// namespace hypertrie::internal::container
+}// namespace Dice::hypertrie::internal::container
 
 #endif//HYPERTRIE_TSLMAP_HPP

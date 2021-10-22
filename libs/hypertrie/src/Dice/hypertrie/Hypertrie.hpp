@@ -3,23 +3,23 @@
 
 #include "Dice/hypertrie/internal/container/AllContainer.hpp"
 
+#include "Dice/hypertrie/BulkInserter_predeclare.hpp"
 #include "Dice/hypertrie/HashDiagonal.hpp"
 #include "Dice/hypertrie/HypertrieContext.hpp"
 #include "Dice/hypertrie/Hypertrie_predeclare.hpp"
 #include "Dice/hypertrie/Iterator.hpp"
-#include "Dice/hypertrie/internal/Hypertrie_trait.hpp"
+#include "Dice/hypertrie/Hypertrie_trait.hpp"
 #include "Dice/hypertrie/internal/raw/node_context/RawHypertrieContext.hpp"
 #include "Dice/hypertrie/internal/util/SwitchTemplateFunctions.hpp"
 
-//#include "Dice/hypertrie/internal/util/CONSTANTS.hpp"
 #include <itertools.hpp>
 #include <optional>
 #include <variant>
 #include <vector>
 
-namespace hypertrie {
+namespace Dice::hypertrie {
 
-	template<hypertrie::internal::HypertrieTrait tr_t>
+	template<hypertrie::HypertrieTrait tr_t>
 	class const_Hypertrie {
 	public:
 		using tr = tr_t;
@@ -31,6 +31,7 @@ namespace hypertrie {
 
 		friend HashDiagonal<tr>;
 		friend Iterator<tr>;
+		friend BulkInserter<tr>;
 
 
 	protected:
@@ -423,7 +424,7 @@ namespace hypertrie {
 		//		}
 	};
 
-	template<internal::HypertrieTrait tr_t>
+	template<HypertrieTrait tr_t>
 	class Hypertrie : public const_Hypertrie<tr_t> {
 	public:
 		using tr = tr_t;
@@ -520,6 +521,6 @@ namespace hypertrie {
 			: const_Hypertrie<tr>(depth, &context, true) {}
 	};
 
-}// namespace hypertrie
+}// namespace Dice::hypertrie
 
 #endif//HYPERTRIE_HYPERTRIE_HPP

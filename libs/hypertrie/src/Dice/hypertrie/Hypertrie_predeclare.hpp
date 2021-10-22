@@ -1,17 +1,17 @@
 #ifndef HYPERTRIE_HYPERTRIEPREDECLARE_HPP
 #define HYPERTRIE_HYPERTRIEPREDECLARE_HPP
 
-#include "Dice/hypertrie/internal/Hypertrie_trait.hpp"
+#include "Dice/hypertrie/Hypertrie_trait.hpp"
 
-namespace hypertrie {
+namespace Dice::hypertrie {
 
-	template<internal::HypertrieTrait tr>
+	template<HypertrieTrait tr>
 	class const_Hypertrie;
 
-	template<internal::HypertrieTrait tr>
+	template<HypertrieTrait tr>
 	class Hypertrie;
 
-}// namespace hypertrie
+}// namespace Dice::hypertrie
 
 
 #endif//HYPERTRIE_HYPERTRIEPREDECLARE_HPP

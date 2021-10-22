@@ -6,7 +6,7 @@
 #include "Dice/hypertrie/internal/raw/node/SingleEntryNode.hpp"
 #include "Dice/hypertrie/internal/util/UnsafeCast.hpp"
 
-namespace hypertrie::internal::raw {
+namespace Dice::hypertrie::internal::raw {
 	/**
 	 * Parent type to NodeContainer, SpecificNodeContainer (and its aliases CompressedNodeContainer and UncompressedNodeContainer).
 	 * This class defines the memory layout for the inheriting classes. Inheriting classes must not add any further fields.
@@ -158,7 +158,7 @@ namespace hypertrie::internal::raw {
 	template<size_t depth, HypertrieCoreTrait tri>
 	using SENContainer = SpecificNodeContainer<depth, tri, SingleEntryNode>;
 
-};// namespace hypertrie::internal::raw
+};// namespace Dice::hypertrie::internal::raw
 
 
 #endif//HYPERTRIE_NODECONTAINER_HPP

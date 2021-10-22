@@ -42,7 +42,7 @@ inline PhysicalMem get_memory_usage() {
 
 int main(int argc, char *argv[]) {
 
-	using namespace hypertrie;
+	using namespace Dice::hypertrie;
 	using namespace fmt::literals;
 	using namespace std::chrono;
 	if (argc != 2) {

@@ -7,7 +7,7 @@
 
 #include <Dice/hypertrie/internal/raw/node/SingleEntry.hpp>
 
-namespace hypertrie::tests::utils {
+namespace Dice::hypertrie::tests::utils {
 
 	template<size_t depth, internal::raw::HypertrieCoreTrait tri_t>
 	class RawEntryGenerator : public AssetGenerator {
@@ -15,8 +15,8 @@ namespace hypertrie::tests::utils {
 		using tri = tri_t;
 		using key_part_type = typename tri::key_part_type;
 		using value_type = typename tri::value_type;
-		using RawKey_t = ::hypertrie::internal::raw::RawKey<depth, tri>;
-		using SingleEntry_t = ::hypertrie::internal::raw::SingleEntry<depth, tri>;
+		using RawKey_t = ::Dice::hypertrie::internal::raw::RawKey<depth, tri>;
+		using SingleEntry_t = ::Dice::hypertrie::internal::raw::SingleEntry<depth, tri>;
 
 	protected:
 		value_type value_min_;
@@ -117,5 +117,5 @@ namespace hypertrie::tests::utils {
 		}
 	};
 
-}// namespace hypertrie::tests::utils
+}// namespace Dice::hypertrie::tests::utils
 #endif//HYPERTRIE_RAWENTRYGENERATOR_HPP

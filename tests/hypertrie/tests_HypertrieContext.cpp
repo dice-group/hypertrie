@@ -7,15 +7,14 @@
 
 #include <RawEntryGenerator.hpp>
 
-#include <Dice/hypertrie/Hypertrie.hpp>
-#include <Dice/hypertrie/HypertrieContext.hpp>
-#include <Dice/hypertrie/internal/Hypertrie_default_traits.hpp>
+#include <Dice/hypertrie.hpp>
+#include <Dice/hypertrie/Hypertrie_default_traits.hpp>
 
 
-namespace hypertrie::tests::core::node {
+namespace Dice::hypertrie::tests::core::node {
 
 	TEST_SUITE("Testing of HypertrieContext") {
-		using namespace ::hypertrie;
+		using namespace ::Dice::hypertrie;
 
 		TEST_CASE("write and read a single entry") {
 			using tr = tagged_bool_Hypertrie_trait;
@@ -35,7 +34,7 @@ namespace hypertrie::tests::core::node {
 				CHECK(slice_0[Key<tr>{{2, 3}}] == true);
 				CHECK(slice_0[Key<tr>{{3, 2}}] == false);
 				SUBCASE("Diagonal") {
-					HashDiagonal<tr> hash_diagonal(slice_0, ::hypertrie::internal::raw::RawKeyPositions<hypertrie_max_depth>{std::initializer_list<size_t>{0, 1}});
+					HashDiagonal<tr> hash_diagonal(slice_0, ::Dice::hypertrie::internal::raw::RawKeyPositions<hypertrie_max_depth>{std::initializer_list<size_t>{0, 1}});
 
 					CHECK(hash_diagonal.find(2));
 					CHECK(not hash_diagonal.find(3));
@@ -49,7 +48,7 @@ namespace hypertrie::tests::core::node {
 				}
 			}
 			SUBCASE("Diagonal") {
-				HashDiagonal<tr> hash_diagonal(hypertrie, ::hypertrie::internal::raw::RawKeyPositions<hypertrie_max_depth>{std::initializer_list<size_t>{1, 2}});
+				HashDiagonal<tr> hash_diagonal(hypertrie, ::Dice::hypertrie::internal::raw::RawKeyPositions<hypertrie_max_depth>{std::initializer_list<size_t>{1, 2}});
 
 				CHECK(hash_diagonal.find(2));
 				CHECK(not hash_diagonal.find(3));
@@ -70,7 +69,25 @@ namespace hypertrie::tests::core::node {
 					auto [key, value] = entry.tuple();
 					fmt::print("{} -> {}\n", fmt::join(key, ", "), value);
 				}
+				SUBCASE("Bulkinserter") {
+					BulkInserter<tr> bi{
+							hypertrie2, 10, []([[maybe_unused]] size_t processed_entries,//
+											   [[maybe_unused]] size_t inserted_entries, //
+											   [[maybe_unused]] size_t hypertrie_size_after) noexcept {
+								fmt::print("processed_entries {}\n"
+										   "inserted_entries {}\n"
+										   "hypertrie_size_after {}\n",
+										   processed_entries,
+										   inserted_entries,
+										   hypertrie_size_after);
+							}//
+					};
+					bi.add(NonZeroEntry<tr>{{1, 2, 3}});
+					bi.add(NonZeroEntry<tr>{{1, 2, 3}});
+					bi.add(NonZeroEntry<tr>{{1, 4, 3}});
+					bi.add(NonZeroEntry<tr>{{3, 2, 3}});
+				}
 			}
 		};
 	};
-};// namespace hypertrie::tests::core::node
+};// namespace Dice::hypertrie::tests::core::node

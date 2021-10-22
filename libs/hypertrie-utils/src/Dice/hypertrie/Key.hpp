@@ -1,12 +1,16 @@
 #ifndef HYPERTRIE_KEY_HPP
 #define HYPERTRIE_KEY_HPP
 
-#include <Dice/hypertrie/internal/Hypertrie_trait.hpp>
+#include <Dice/hash/DiceHash.hpp>
+
+#include <Dice/hypertrie/Hypertrie_trait.hpp>
+
+#include <algorithm>
 #include <optional>
 #include <vector>
 
-namespace hypertrie {
-	template<::hypertrie::internal::HypertrieTrait tr>
+namespace Dice::hypertrie {
+	template<HypertrieTrait tr>
 	class Key : public ::std::vector<typename tr::key_part_type> {
 		using super_t = ::std::vector<typename tr::key_part_type>;
 
@@ -33,7 +37,7 @@ namespace hypertrie {
 			: super_t(first, last, a) {}
 	};
 
-	template<::hypertrie::internal::HypertrieTrait tr>
+	template<HypertrieTrait tr>
 	class SliceKey : public ::std::vector<::std::optional<typename tr::key_part_type>> {
 		using super_t = ::std::vector<::std::optional<typename tr::key_part_type>>;
 
@@ -65,7 +69,7 @@ namespace hypertrie {
 		}
 	};
 
-	template<::hypertrie::internal::HypertrieTrait tr>
+	template<HypertrieTrait tr>
 	class NonZeroEntry {
 	public:
 		using key_part_type = typename tr::key_part_type;
@@ -74,10 +78,10 @@ namespace hypertrie {
 	private:
 		struct AlwaysTrue {
 			AlwaysTrue() = default;
-			explicit AlwaysTrue(bool) noexcept {};
-			constexpr operator bool() const noexcept { return true; }
+			constexpr explicit AlwaysTrue(bool) noexcept {};
+			consteval operator bool() const noexcept { return true; }
 		};
-		using ValueType = std::conditional_t<(::hypertrie::internal::HypertrieTrait_bool_valued<tr>), AlwaysTrue, value_type>;
+		using ValueType = std::conditional_t<(HypertrieTrait_bool_valued<tr>), AlwaysTrue, value_type>;
 
 		Key<tr> key_;
 		mutable ValueType value_;
@@ -86,7 +90,7 @@ namespace hypertrie {
 		NonZeroEntry() = default;
 		explicit NonZeroEntry(size_t size) noexcept
 			: key_(size), value_(1) {}
-		explicit NonZeroEntry(Key<tr> key, value_type value = value_type(1)) noexcept
+		explicit NonZeroEntry(Key<tr> key, value_type value = value_type(1))
 			: key_(key), value_(value) {
 			if (value == value_type{}) [[unlikely]]
 				throw std::logic_error("value must not be zero equivalent.");
@@ -96,7 +100,7 @@ namespace hypertrie {
 		Key<tr> &key() noexcept { return key_; }
 		const value_type &value() const noexcept { return value_; }
 		void value([[maybe_unused]] value_type new_value) {
-			if constexpr (not ::hypertrie::internal::HypertrieTrait_bool_valued<tr>) {
+			if constexpr (not HypertrieTrait_bool_valued<tr>) {
 				if (new_value != value_type{}) [[likely]]
 					value_ = new_value;
 				else [[unlikely]]
@@ -121,7 +125,30 @@ namespace hypertrie {
 		std::tuple<Key<tr> &, value_type> tuple() noexcept {
 			return std::forward_as_tuple(key_, value_);
 		}
+
+		void fill(key_part_type const &key_part) noexcept {
+			std::fill(key_.begin(), key_.end(), key_part);
+		}
 	};
-}// namespace hypertrie
+}// namespace Dice::hypertrie
+
+namespace Dice::hash {
+	template<::Dice::hypertrie::HypertrieTrait tr>
+	struct is_ordered_container<::Dice::hypertrie::Key<tr>> : std::true_type {};
+
+	template<::Dice::hypertrie::HypertrieTrait tr>
+	struct is_ordered_container<::Dice::hypertrie::SliceKey<tr>> : std::true_type {};
+
+	template<typename Policy, ::Dice::hypertrie::HypertrieTrait tr>
+	struct dice_hash_overload<Policy, ::Dice::hypertrie::NonZeroEntry<tr>> {
+		static std::size_t dice_hash(::Dice::hypertrie::NonZeroEntry<tr> const &entry) noexcept {
+			return dice_hash_templates<Policy>::dice_hash(std::make_tuple(entry.key(), entry.value()));
+		}
+	};
+}// namespace Dice::hash
+
+namespace Dice::hash {
+
+}// namespace Dice::hash
 
 #endif//HYPERTRIE_KEY_HPP

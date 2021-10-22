@@ -1,13 +1,13 @@
 #ifndef HYPERTRIE_HYPERTRIE_CORE_TRAIT_HPP
 #define HYPERTRIE_HYPERTRIE_CORE_TRAIT_HPP
 
-#include <Dice/hypertrie/internal/Hypertrie_trait.hpp>
+#include <Dice/hypertrie/Hypertrie_trait.hpp>
 #include <bitset>
 #include <enumerate.hpp>
 #include <map>
 #include <zip.hpp>
 
-namespace hypertrie::internal::raw {
+namespace Dice::hypertrie::internal::raw {
 
 
 	template<HypertrieTrait tr_t>
@@ -88,6 +88,6 @@ namespace hypertrie::internal::raw {
 	template<HypertrieCoreTrait tri>
 	using tri_with_stl_alloc = decltype(detail::inject_allocator_type<std::allocator<std::byte>>(tri{}));
 
-};// namespace hypertrie::internal::raw
+};// namespace Dice::hypertrie::internal::raw
 
 #endif//HYPERTRIE_HYPERTRIE_CORE_TRAIT_HPP

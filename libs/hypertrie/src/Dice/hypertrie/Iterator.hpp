@@ -4,9 +4,9 @@
 #include "Dice/hypertrie/Hypertrie_predeclare.hpp"
 #include "Dice/hypertrie/internal/raw/iteration/RawIterator.hpp"
 
-namespace hypertrie {
+namespace Dice::hypertrie {
 
-	template<internal::HypertrieTrait tr_t>
+	template<HypertrieTrait tr_t>
 	class Iterator {
 	public:
 		using tr = tr_t;
@@ -111,7 +111,7 @@ namespace hypertrie {
 		operator bool() const noexcept { return not raw_methods->ended(&raw_iterator); }
 	};
 
-}// namespace hypertrie
+}// namespace Dice::hypertrie
 
 
 #endif//HYPERTRIE_ITERATOR_HPP

@@ -6,10 +6,10 @@
 
 namespace fmt {
 	template <typename Key, typename Value>
-	struct formatter<::hypertrie::internal::container::std_map<Key, Value>> : public hypertrie::internal::util::SimpleParsing {
+	struct formatter<::Dice::hypertrie::internal::container::std_map<Key, Value>> : public ::Dice::hypertrie::internal::util::SimpleParsing {
 		template <typename FormatContext>
-		auto format(::hypertrie::internal::container::std_map<Key, Value> const& map, FormatContext &ctx) {
-			return ::hypertrie::internal::util::format_map(map, ctx.out());
+		auto format(::Dice::hypertrie::internal::container::std_map<Key, Value> const& map, FormatContext &ctx) {
+			return ::Dice::hypertrie::internal::util::format_map(map, ctx.out());
 		}
 	};
 }

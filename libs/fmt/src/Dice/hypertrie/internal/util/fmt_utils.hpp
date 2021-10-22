@@ -9,7 +9,7 @@
 #include <vector>
 
 // TODO: refactor and make the parameter format consistent!
-namespace hypertrie::internal::util {
+namespace Dice::hypertrie::internal::util {
 	// only allow "{}" and "{:}" in the formatting string for our own types
 	struct SimpleParsing {
 		static constexpr auto parse(fmt::format_parse_context &ctx) {
@@ -144,5 +144,5 @@ namespace hypertrie::internal::util {
 		return format_container_optional(out, vec);
 	}
 
-}// namespace hypertrie::internal::util
+}// namespace Dice::hypertrie::internal::util
 #endif//HYPERTRIE_FMT_UTILS_HPP

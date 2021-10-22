@@ -5,16 +5,16 @@
 
 
 namespace Dice::hash {
-	template<typename Policy, size_t depth, ::hypertrie::internal::raw::HypertrieCoreTrait tri>
-	struct dice_hash_overload<Policy, ::hypertrie::internal::raw::SingleEntry<depth, tri>> {
-		static std::size_t dice_hash(::hypertrie::internal::raw::SingleEntry<depth, tri> const &entry) noexcept {
+	template<typename Policy, size_t depth, ::Dice::hypertrie::internal::raw::HypertrieCoreTrait tri>
+	struct dice_hash_overload<Policy, ::Dice::hypertrie::internal::raw::SingleEntry<depth, tri>> {
+		static std::size_t dice_hash(::Dice::hypertrie::internal::raw::SingleEntry<depth, tri> const &entry) noexcept {
 			return dice_hash_templates<Policy>::dice_hash(std::make_tuple(entry.key(), entry.value()));
 		}
 	};
 }// namespace Dice::hash
 
 
-namespace hypertrie::internal::raw {
+namespace Dice::hypertrie::internal::raw {
 
 	template<size_t depth, HypertrieCoreTrait tri_t>
 	class RawIdentifier;
@@ -317,40 +317,40 @@ namespace hypertrie::internal::raw {
 		bool operator==(const RawIdentifier &other) const noexcept { return this->hash_ == other.hash_; }
 	};
 
-}// namespace hypertrie::internal::raw
+}// namespace Dice::hypertrie::internal::raw
 
 
 namespace Dice::hash {
-	template<typename Policy, size_t depth, ::hypertrie::internal::raw::HypertrieCoreTrait tri>
-	struct dice_hash_overload<Policy, ::hypertrie::internal::raw::RawIdentifier<depth, tri>> {
-		static std::size_t dice_hash(::hypertrie::internal::raw::RawIdentifier<depth, tri> const &identifier) noexcept {
+	template<typename Policy, size_t depth, ::Dice::hypertrie::internal::raw::HypertrieCoreTrait tri>
+	struct dice_hash_overload<Policy, ::Dice::hypertrie::internal::raw::RawIdentifier<depth, tri>> {
+		static std::size_t dice_hash(::Dice::hypertrie::internal::raw::RawIdentifier<depth, tri> const &identifier) noexcept {
 			return identifier.hash();
 		}
 	};
 }// namespace Dice::hash
 
 namespace std {
-	template<size_t depth, ::hypertrie::internal::raw::HypertrieCoreTrait tri>
-	struct hash<::hypertrie::internal::raw::RawIdentifier<depth, tri>> {
-		size_t operator()(const ::hypertrie::internal::raw::RawIdentifier<depth, tri> &identifier) const noexcept {
+	template<size_t depth, ::Dice::hypertrie::internal::raw::HypertrieCoreTrait tri>
+	struct hash<::Dice::hypertrie::internal::raw::RawIdentifier<depth, tri>> {
+		size_t operator()(const ::Dice::hypertrie::internal::raw::RawIdentifier<depth, tri> &identifier) const noexcept {
 			return identifier.hash();
 		}
 	};
 }// namespace std
 
 namespace Dice::hash {
-	template<typename Policy, ::hypertrie::internal::raw::HypertrieCoreTrait tri>
-	struct dice_hash_overload<Policy, ::hypertrie::internal::raw::Identifier<tri>> {
-		static std::size_t dice_hash(::hypertrie::internal::raw::Identifier<tri> const &identifier) noexcept {
+	template<typename Policy, ::Dice::hypertrie::internal::raw::HypertrieCoreTrait tri>
+	struct dice_hash_overload<Policy, ::Dice::hypertrie::internal::raw::Identifier<tri>> {
+		static std::size_t dice_hash(::Dice::hypertrie::internal::raw::Identifier<tri> const &identifier) noexcept {
 			return identifier.hash();
 		}
 	};
 }// namespace Dice::hash
 
 namespace std {
-	template<::hypertrie::internal::raw::HypertrieCoreTrait tri>
-	struct hash<::hypertrie::internal::raw::Identifier<tri>> {
-		size_t operator()(const ::hypertrie::internal::raw::Identifier<tri> &identifier) const noexcept {
+	template<::Dice::hypertrie::internal::raw::HypertrieCoreTrait tri>
+	struct hash<::Dice::hypertrie::internal::raw::Identifier<tri>> {
+		size_t operator()(const ::Dice::hypertrie::internal::raw::Identifier<tri> &identifier) const noexcept {
 			return identifier.hash();
 		}
 	};

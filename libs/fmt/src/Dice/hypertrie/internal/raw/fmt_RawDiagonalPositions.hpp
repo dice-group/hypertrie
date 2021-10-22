@@ -5,10 +5,10 @@
 
 namespace fmt {
 
-	template<size_t depth> struct formatter<::hypertrie::internal::raw::RawKeyPositions<depth>> : hypertrie::internal::util::SimpleParsing {
+	template<size_t depth> struct formatter<::Dice::hypertrie::internal::raw::RawKeyPositions<depth>> : ::Dice::hypertrie::internal::util::SimpleParsing {
 		template<typename FormatContext>
-		auto format(::hypertrie::internal::raw::RawKeyPositions<depth> const &raw_key, FormatContext &ctx) {
-			using namespace ::hypertrie::internal;
+		auto format(::Dice::hypertrie::internal::raw::RawKeyPositions<depth> const &raw_key, FormatContext &ctx) {
+			using namespace ::Dice::hypertrie::internal;
 			std::vector<pos_type> positions;
 			for (pos_type i = 0; i < pos_type(depth); ++i)
 				if (raw_key[i])

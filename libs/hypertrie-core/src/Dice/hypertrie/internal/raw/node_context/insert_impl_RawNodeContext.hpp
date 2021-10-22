@@ -4,7 +4,7 @@
 #include <Dice/hypertrie/internal/raw/node/NodeStorage.hpp>
 #include <Dice/hypertrie/internal/raw/node_context/ContextLevelChanges.hpp>
 
-namespace hypertrie::internal::raw {
+namespace Dice::hypertrie::internal::raw {
 
 	template<size_t max_depth, HypertrieCoreTrait tri_t>
 	struct insert_impl_RawNodeContext {
@@ -330,5 +330,5 @@ namespace hypertrie::internal::raw {
 			full_nodes_lifecycle.delete_(node);
 		}
 	};
-}// namespace hypertrie::internal::raw
+}// namespace Dice::hypertrie::internal::raw
 #endif//HYPERTRIE_INSERT_IMPL_RAWNODECONTEXT_HPP

@@ -11,7 +11,7 @@
 
 #include <Dice/hypertrie/internal/raw/node/SingleEntry.hpp>
 
-namespace hypertrie::tests::utils {
+namespace Dice::hypertrie::tests::utils {
 	template<size_t depth,
 			 internal::raw::HypertrieCoreTrait tri_t,
 			 typename tri_t::key_part_type max_key_part = typename tri_t::key_part_type(1),
@@ -22,7 +22,7 @@ namespace hypertrie::tests::utils {
 		using value_type = typename tri::value_type;
 		using key_part_type = typename tri::key_part_type;
 
-		using SinlgeEntry_t = ::hypertrie::internal::raw::SingleEntry<depth, tri>;
+		using SinlgeEntry_t = ::Dice::hypertrie::internal::raw::SingleEntry<depth, tri>;
 
 		SinlgeEntry_t entry_;
 
@@ -89,7 +89,7 @@ namespace hypertrie::tests::utils {
 
 		static constexpr size_t max_entry_id = pow(size_t(1 + max_key_part - min_key_part), depth) - 1;
 
-		using SinlgeEntry_t = ::hypertrie::internal::raw::SingleEntry<depth, tri>;
+		using SinlgeEntry_t = ::Dice::hypertrie::internal::raw::SingleEntry<depth, tri>;
 
 		std::vector<SinlgeEntry_t> entries_ = std::vector<SinlgeEntry_t>(number_of_entries);
 
@@ -239,5 +239,5 @@ namespace hypertrie::tests::utils {
 		}
 	};
 
-}// namespace hypertrie::tests::utils
+}// namespace Dice::hypertrie::tests::utils
 #endif//HYPERTRIE_ENTRYSETGENERATOR_HPP

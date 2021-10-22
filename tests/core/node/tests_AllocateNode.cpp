@@ -16,11 +16,11 @@
 #include <Dice/hypertrie/internal/raw/node/SpecificNodeStorage.hpp>
 
 
-namespace hypertrie::tests::core::node {
+namespace Dice::hypertrie::tests::core::node {
 
 	TEST_SUITE("NodeStorage") {
-		using namespace ::hypertrie::internal::raw;
-		using namespace ::hypertrie::internal::util;
+		using namespace ::Dice::hypertrie::internal::raw;
+		using namespace ::Dice::hypertrie::internal::util;
 
 		template<size_t depth, HypertrieCoreTrait tri>
 		void create() {
@@ -52,4 +52,4 @@ namespace hypertrie::tests::core::node {
 			create<T::depth, typename T::tri>();
 		}
 	}
-};// namespace hypertrie::tests::core::node
+};// namespace Dice::hypertrie::tests::core::node

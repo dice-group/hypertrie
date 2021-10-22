@@ -1,7 +1,7 @@
 #ifndef HYPERTRIE_INTEGRALTEMPLATEDTUPLE_HPP
 #define HYPERTRIE_INTEGRALTEMPLATEDTUPLE_HPP
 
-namespace hypertrie::internal::util {
+namespace Dice::hypertrie::internal::util {
 	/**
          * This class is a wrapper around a tuple std::tuple<T<FIRST> .. T<LAST>>.
          * FIRST is allowed to be smaller then LAST.
@@ -104,6 +104,6 @@ namespace hypertrie::internal::util {
 	auto make_integral_template_tuple(Args &&...args) {
 		return IntegralTemplatedTuple<EntryTypeTemplate, FIRST, LAST, Args...>(std::forward<Args>(args)...);
 	}
-}// namespace hypertrie::internal::util
+}// namespace Dice::hypertrie::internal::util
 
 #endif//HYPERTRIE_INTEGRALTEMPLATEDTUPLE_HPP

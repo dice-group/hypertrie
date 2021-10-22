@@ -10,7 +10,7 @@
 #include <set>
 #include <iostream>
 
-#include <Dice/hypertrie.hpp>
+#include <Dice/einsum.hpp>
 
 #include <torch/torch.h>
 
@@ -20,7 +20,7 @@
 #include <chrono>
 
 
-namespace hypertrie::tests::einsum {
+namespace Dice::hypertrie::tests::einsum {
 	using namespace std::literals::chrono_literals;
 	using time_point = std::chrono::steady_clock::time_point;
 
@@ -37,10 +37,10 @@ namespace hypertrie::tests::einsum {
 				} else
 					return (actual_result.count(key)) ? actual_result[key] : 0;
 			}();
-			auto expected_entry = value_type(TorchHelper<long>::resolve(expected_result, key));// to bool
+			auto expected_entry = value_type(TorchHelper<tr>::resolve(expected_result, key));// to bool
 			INFO("key: ({})"_format(fmt::join(key, ", ")));
-			INFO("expected: {}, actual {}"_format(TorchHelper<long>::resolve(expected_result, key), actual_entry))
-			REQUIRE(actual_entry == expected_entry);
+			INFO("expected: {}, actual {}"_format(TorchHelper<tr>::resolve(expected_result, key), actual_entry))
+			CHECK(actual_entry == expected_entry);
 		}
 	}
 
@@ -88,9 +88,9 @@ namespace hypertrie::tests::einsum {
 	void runSubscript(std::string subscript_string, long excl_max = 4, bool empty = false, std::size_t runs = 15,
 					  std::chrono::milliseconds timeout_duration = 0ms) {
 		static std::string result_type_str = std::is_same_v<result_type, bool> ? "bool" : "ulong";
-		SECTION("{} [res:{}]"_format(subscript_string, result_type_str)) {
+		SUBCASE("{} [res:{}]"_format(subscript_string, result_type_str).c_str()) {
 			for (std::size_t run : iter::range(runs))
-				SECTION("run {}"_format(run)) {
+				SUBCASE("run {}"_format(run).c_str()) {
 					auto subscript = std::make_shared<Subscript>(subscript_string);
 					std::vector<TestOperand<tr>> operands{};
 					for (const auto &operand_sc : subscript->getRawSubscript().operands) {
@@ -153,149 +153,139 @@ namespace hypertrie::tests::einsum {
 		validateResult<value_type, tr>(excl_max, test_einsum, actual_result, expected_result);
 	}
 
-	TEMPLATE_TEST_CASE("Problematic Cases", "[einsum]", lsbunused_bool_Hypertrie_t, default_bool_Hypertrie_t) {
+	TEST_CASE_TEMPLATE("simple einsum", TestType, ::Dice::hypertrie::default_bool_Hypertrie_trait) {
 		using tr = TestType;
 		using namespace std::string_literals;
-		using Key = typename tr::Key;
 		using value_type = typename tr::value_type;
-		using Entry = std::pair<Key, value_type>;
+		using Entry = NonZeroEntry<tr>;
+
+		Entry e{{3, 2, 1}};
 
 		std::vector<std::tuple<std::string, std::vector<std::set<Entry>>>> configurations{
 				{std::string{"caa->ca"},
 				 {
 						 {
-								 {{3, 2, 2}, true},
-								 {{3, 1, 3}, true},
-								 {{2, 1, 1}, true},
-								 {{0, 3, 1}, true},
-								 {{1, 3, 1}, true},
-								 {{1, 1, 1}, true}// op0}
+								 Entry{{3, 2, 2}, true},
+								 Entry{{3, 1, 3}, true},
+								 Entry{{2, 1, 1}, true},
+								 Entry{{0, 3, 1}, true},
+								 Entry{{1, 3, 1}, true},
+								 Entry{{1, 1, 1}, true}// op0}
 						 }                        //op0
-				 }},                              // caa->ca
-				{
-						std::string{"caa->ca"},
-						{
-								{{{2, 2, 2}, true},
-								 {{2, 2, 3}, true},
-								 {{2, 3, 3}, true},
-								 {{0, 1, 1}, true},
-								 {{3, 2, 2}, true},
-								 {{3, 2, 0}, true}}// op0
-						}                          //op0
-				},                                 // caa->ca
+				 }}
 		};
 		auto i = 0;
 		for (const auto &[subscript_str, operands_entries] : configurations) {
-			SECTION("case {}: {}"_format(i++, subscript_str)) {
+			SUBCASE("case {}: {}"_format(i++, subscript_str).c_str()) {
 				run_single_cases<tr>(subscript_str, operands_entries);
 			}
 		}
 	}
-
-	TEMPLATE_TEST_CASE("default test cases", "[einsum]", lsbunused_bool_Hypertrie_t, default_bool_Hypertrie_t) {
-		using tr = TestType;
-		std::vector<std::string> subscript_strs{
-				"a->a",
-				"ab->a",
-				"ab->b",
-				"ab->ab",
-				"ab->ba",
-				"caa->ca",
-				"a,a->a",
-				"ab,a->a",
-				"ab,a->b",
-				"ab,a->ab",
-				"ab,a->ba",
-				"a,b->a",
-				"a,b->b",
-				"a,b->ab",
-				"aa,bb->ab",
-				"aa,bb->b",
-				"aa,bb->a",
-				"ac,cb->c",
-				"ac,cb->b",
-				"abc,ab->a",
-				"abc,ab->b",
-				"abc,ab->c",
-				"abc,ab->ca",
-				"aac,ab->ca",
-				"aca,ab->ca",
-				"caa,ab->ca",
-				"caa,cc->ca",
-				"cab,cc->ca",
-				"a,b,c->abc",
-				"a,b,c->ac",
-				"a,b,c->ca",
-				"a,b,c->a",
-				"a,b,c->c",
-				"ab,cd,aec->bde",
-				"a,b,cd->d",
-				"a,bbc,cdc,cf->f",
-				"ab,bc,ca->abc",
-				"ab,bc,ca,ax,xy,ya->a",
-				"aa,ae,ac,ad,a,ab->ab"};
-		for (bool empty : {false, true}) {
-			SECTION("empty = {}"_format(empty))
-			for (auto excl_max : {4, 7, 10, 15, 30}) {
-				SECTION("excl_max = {}"_format(excl_max))
-				for (auto subscript_str : subscript_strs) {
-					runSubscript<tr, std::size_t>(subscript_str, excl_max, empty);
-					runSubscript<tr, bool>(subscript_str, excl_max, empty);
-				}
-			}
-		}
-	}
-
-	TEMPLATE_TEST_CASE("Cartesian test cases", "[einsum]", lsbunused_bool_Hypertrie_t, default_bool_Hypertrie_t) {
-		using tr = TestType;
-		std::vector<std::string> subscript_strs{
-				"a,b->ab",
-				"a,b->ba",
-				"a,b->a",
-				"a,b->b",
-				"a,b,c->abc",
-				"a,b,c->ab",
-				"a,b,c->bc",
-				"a,b,c->ca",
-				"a,b,c->a",
-				"a,b,c->b",
-				"a,b,c->c",
-				"ab,bc,d,e->abc",
-				"d,ab,bc,e->abc",
-				"d,e,ab,bc->abc",
-				"ab,bc,bc,de,ee,ef,gh,hg->adg"};
-		for (bool empty : {false, true}) {
-			SECTION("empty = {}"_format(empty))
-			for (auto excl_max : {4, 7, 10, 15, 30}) {
-				SECTION("excl_max = {}"_format(excl_max))
-				for (auto subscript_str : subscript_strs) {
-					runSubscript<tr, std::size_t>(subscript_str, excl_max, empty);
-					runSubscript<tr, bool>(subscript_str, excl_max, empty);
-				}
-			}
-		}
-	}
-
-	TEMPLATE_TEST_CASE("complex test cases", "[einsum]", lsbunused_bool_Hypertrie_t, default_bool_Hypertrie_t) {
-		using tr = TestType;
-		std::vector<std::string> subscript_strs{
-				"abc,dcebf,gdghg,bdg,ijibg->c",// is calculated faster
-				"abc,dcebf,gdghg,ijibg->c",    // its minimal
-				"abcd,ceffb,cfgaf,hbgi,ccfaj->j",
-				"abbc,d,ebcfg,hdif,hhchj->b"
-
-		};
-		for (bool empty : {false, true}) {
-			SECTION("empty = {}"_format(empty))
-			for (auto excl_max : {4, 7, 10, 15, 30}) {
-				SECTION("excl_max = {}"_format(excl_max))
-				for (auto subscript_str : subscript_strs) {
-					runSubscript<tr, std::size_t>(subscript_str, excl_max, empty);
-					runSubscript<tr, bool>(subscript_str, excl_max, empty);
-				}
-			}
-		}
+//
+//	TEMPLATE_TEST_CASE("default test cases", "[einsum]", lsbunused_bool_Hypertrie_t, default_bool_Hypertrie_t) {
+//		using tr = TestType;
+//		std::vector<std::string> subscript_strs{
+//				"a->a",
+//				"ab->a",
+//				"ab->b",
+//				"ab->ab",
+//				"ab->ba",
+//				"caa->ca",
+//				"a,a->a",
+//				"ab,a->a",
+//				"ab,a->b",
+//				"ab,a->ab",
+//				"ab,a->ba",
+//				"a,b->a",
+//				"a,b->b",
+//				"a,b->ab",
+//				"aa,bb->ab",
+//				"aa,bb->b",
+//				"aa,bb->a",
+//				"ac,cb->c",
+//				"ac,cb->b",
+//				"abc,ab->a",
+//				"abc,ab->b",
+//				"abc,ab->c",
+//				"abc,ab->ca",
+//				"aac,ab->ca",
+//				"aca,ab->ca",
+//				"caa,ab->ca",
+//				"caa,cc->ca",
+//				"cab,cc->ca",
+//				"a,b,c->abc",
+//				"a,b,c->ac",
+//				"a,b,c->ca",
+//				"a,b,c->a",
+//				"a,b,c->c",
+//				"ab,cd,aec->bde",
+//				"a,b,cd->d",
+//				"a,bbc,cdc,cf->f",
+//				"ab,bc,ca->abc",
+//				"ab,bc,ca,ax,xy,ya->a",
+//				"aa,ae,ac,ad,a,ab->ab"};
+//		for (bool empty : {false, true}) {
+//			SECTION("empty = {}"_format(empty))
+//			for (auto excl_max : {4, 7, 10, 15, 30}) {
+//				SECTION("excl_max = {}"_format(excl_max))
+//				for (auto subscript_str : subscript_strs) {
+//					runSubscript<tr, std::size_t>(subscript_str, excl_max, empty);
+//					runSubscript<tr, bool>(subscript_str, excl_max, empty);
+//				}
+//			}
+//		}
+//	}
+//
+//	TEMPLATE_TEST_CASE("Cartesian test cases", "[einsum]", lsbunused_bool_Hypertrie_t, default_bool_Hypertrie_t) {
+//		using tr = TestType;
+//		std::vector<std::string> subscript_strs{
+//				"a,b->ab",
+//				"a,b->ba",
+//				"a,b->a",
+//				"a,b->b",
+//				"a,b,c->abc",
+//				"a,b,c->ab",
+//				"a,b,c->bc",
+//				"a,b,c->ca",
+//				"a,b,c->a",
+//				"a,b,c->b",
+//				"a,b,c->c",
+//				"ab,bc,d,e->abc",
+//				"d,ab,bc,e->abc",
+//				"d,e,ab,bc->abc",
+//				"ab,bc,bc,de,ee,ef,gh,hg->adg"};
+//		for (bool empty : {false, true}) {
+//			SECTION("empty = {}"_format(empty))
+//			for (auto excl_max : {4, 7, 10, 15, 30}) {
+//				SECTION("excl_max = {}"_format(excl_max))
+//				for (auto subscript_str : subscript_strs) {
+//					runSubscript<tr, std::size_t>(subscript_str, excl_max, empty);
+//					runSubscript<tr, bool>(subscript_str, excl_max, empty);
+//				}
+//			}
+//		}
+//	}
+//
+//	TEMPLATE_TEST_CASE("complex test cases", "[einsum]", lsbunused_bool_Hypertrie_t, default_bool_Hypertrie_t) {
+//		using tr = TestType;
+//		std::vector<std::string> subscript_strs{
+//				"abc,dcebf,gdghg,bdg,ijibg->c",// is calculated faster
+//				"abc,dcebf,gdghg,ijibg->c",    // its minimal
+//				"abcd,ceffb,cfgaf,hbgi,ccfaj->j",
+//				"abbc,d,ebcfg,hdif,hhchj->b"
+//
+//		};
+//		for (bool empty : {false, true}) {
+//			SECTION("empty = {}"_format(empty))
+//			for (auto excl_max : {4, 7, 10, 15, 30}) {
+//				SECTION("excl_max = {}"_format(excl_max))
+//				for (auto subscript_str : subscript_strs) {
+//					runSubscript<tr, std::size_t>(subscript_str, excl_max, empty);
+//					runSubscript<tr, bool>(subscript_str, excl_max, empty);
+//				}
+//			}
+//		}
 	}
 
 	// TODO: re-add randomly generated test-cases
-}// namespace hypertrie::tests::einsum
+}// namespace Dice::hypertrie::tests::einsum

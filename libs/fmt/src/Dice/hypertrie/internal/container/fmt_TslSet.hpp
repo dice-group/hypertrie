@@ -6,10 +6,10 @@
 
 namespace fmt {
 	template <typename Key>
-	struct formatter<::hypertrie::internal::container::tsl_sparse_set<Key>> : public hypertrie::internal::util::SimpleParsing {
+	struct formatter<::Dice::hypertrie::internal::container::tsl_sparse_set<Key>> : public ::Dice::hypertrie::internal::util::SimpleParsing {
 		template <typename FormatContext>
-		auto format(::hypertrie::internal::container::tsl_sparse_set<Key> const& set, FormatContext &ctx) {
-			return ::hypertrie::internal::util::format_set(set, ctx.out());
+		auto format(::Dice::hypertrie::internal::container::tsl_sparse_set<Key> const& set, FormatContext &ctx) {
+			return ::Dice::hypertrie::internal::util::format_set(set, ctx.out());
 		}
 	};
 }

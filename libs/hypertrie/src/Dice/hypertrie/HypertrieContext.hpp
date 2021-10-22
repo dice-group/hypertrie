@@ -3,14 +3,14 @@
 
 
 #include "Dice/hypertrie/HypertrieContextConfig.hpp"
-#include "Dice/hypertrie/internal/Hypertrie_trait.hpp"
+#include "Dice/hypertrie/Hypertrie_trait.hpp"
 #include "Dice/hypertrie/internal/raw/node_context/RawHypertrieContext.hpp"
 #include <memory>
 
 
-namespace hypertrie {
+namespace Dice::hypertrie {
 
-	template<internal::HypertrieTrait tr_t>
+	template<HypertrieTrait tr_t>
 	class HypertrieContext {
 	private:
 		static constexpr const size_t max_depth_ = hypertrie_max_depth;
@@ -34,7 +34,7 @@ namespace hypertrie {
 		}
 	};
 
-	template<internal::HypertrieTrait tr>
+	template<HypertrieTrait tr>
 	class DefaultHypertrieContext {
 	public:
 		static HypertrieContext<tr> &instance() {
@@ -49,7 +49,7 @@ namespace hypertrie {
 		DefaultHypertrieContext() = default;
 	};
 
-	template<internal::HypertrieTrait tr_t>
+	template<HypertrieTrait tr_t>
 	class TaggedHypertrieContextPtr {
 	public:
 		using tr = tr_t;
@@ -81,6 +81,6 @@ namespace hypertrie {
 			return ptr();
 		}
 	};
-}// namespace hypertrie
+}// namespace Dice::hypertrie
 
 #endif//HYPERTRIE_HYPERTRIECONTEXT_HPP

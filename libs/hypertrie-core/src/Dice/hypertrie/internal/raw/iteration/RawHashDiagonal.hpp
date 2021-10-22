@@ -9,7 +9,7 @@
 #include <Dice/hypertrie/internal/raw/node_context/RawHypertrieContext.hpp>
 #include <Dice/hypertrie/internal/raw/node_context/SliceResult.hpp>
 
-namespace hypertrie::internal::raw {
+namespace Dice::hypertrie::internal::raw {
 
 	template<size_t diag_depth, size_t depth, template<size_t, typename> typename node_type, HypertrieCoreTrait tri, size_t context_max_depth>
 	class RawHashDiagonal;
@@ -349,7 +349,7 @@ namespace hypertrie::internal::raw {
 			return size_t(contains);
 		}
 	};
-}// namespace hypertrie::internal::raw
+}// namespace Dice::hypertrie::internal::raw
 
 
 #endif//HYPERTRIE_RAWHASHDIAGONAL_HPP

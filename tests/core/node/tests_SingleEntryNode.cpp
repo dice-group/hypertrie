@@ -11,17 +11,17 @@
 #include <Dice/hypertrie/internal/raw/node/SingleEntryNode.hpp>
 
 
-namespace hypertrie::tests::core::node {
+namespace Dice::hypertrie::tests::core::node {
 
 	TEST_SUITE("SingleEntryNode") {
-		using namespace ::hypertrie::internal::raw;
-		using namespace ::hypertrie::internal::util;
+		using namespace ::Dice::hypertrie::internal::raw;
+		using namespace ::Dice::hypertrie::internal::util;
 
 		template<size_t depth, HypertrieCoreTrait tri>
 		void create() {
 			using key_part_type = typename tri::key_part_type;
 			using value_type = typename tri::value_type;
-			using RawKey = ::hypertrie::internal::raw::RawKey<depth, tri>;
+			using RawKey = ::Dice::hypertrie::internal::raw::RawKey<depth, tri>;
 
 			hypertrie::tests::utils::RawGenerator<depth, tri> gen{};
 
@@ -55,4 +55,4 @@ namespace hypertrie::tests::core::node {
 			create<T::depth, typename T::tri>();
 		}
 	}
-};// namespace hypertrie::tests::core::node
+};// namespace Dice::hypertrie::tests::core::node

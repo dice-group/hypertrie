@@ -6,14 +6,14 @@
 
 namespace fmt {
 	// TODO: find a way to represent node_type_t.
-	template <size_t depth, ::hypertrie::internal::raw::HypertrieCoreTrait tri_t, template<size_t, typename> typename node_type_t>
-	struct formatter<::hypertrie::internal::raw::AllocateNode<depth, tri_t, node_type_t>> : hypertrie::internal::util::SimpleParsing {
+	template <size_t depth, ::Dice::hypertrie::internal::raw::HypertrieCoreTrait tri_t, template<size_t, typename> typename node_type_t>
+	struct formatter<::Dice::hypertrie::internal::raw::AllocateNode<depth, tri_t, node_type_t>> : ::Dice::hypertrie::internal::util::SimpleParsing {
 		template<typename T>
 		static auto nameOfType() {
-			return ::hypertrie::internal::util::name_of_type<T>();
+			return ::Dice::hypertrie::internal::util::name_of_type<T>();
 		}
 		template <typename FormatContext>
-		auto format(::hypertrie::internal::raw::AllocateNode<depth, tri_t, node_type_t> const&, FormatContext &ctx) {
+		auto format(::Dice::hypertrie::internal::raw::AllocateNode<depth, tri_t, node_type_t> const&, FormatContext &ctx) {
 			return format_to(ctx.out(),
 					"<depth = {}, trait = {} ({})>",
 				 	depth, nameOfType<tri_t>(), tri_t{}

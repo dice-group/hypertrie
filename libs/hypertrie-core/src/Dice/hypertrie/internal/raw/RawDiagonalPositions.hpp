@@ -3,7 +3,7 @@
 
 #include <Dice/hypertrie/internal/raw/RawKey.hpp>
 
-namespace hypertrie::internal::raw {
+namespace Dice::hypertrie::internal::raw {
 
 	template<size_t depth>
 	class RawKeyPositions {
@@ -88,6 +88,6 @@ namespace hypertrie::internal::raw {
 		}
 	};
 
-}// namespace hypertrie::internal::raw
+}// namespace Dice::hypertrie::internal::raw
 
 #endif//HYPERTRIE_RAWDIAGONALPOSITIONS_HPP

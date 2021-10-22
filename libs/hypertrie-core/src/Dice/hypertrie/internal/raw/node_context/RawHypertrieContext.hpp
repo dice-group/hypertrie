@@ -7,7 +7,7 @@
 
 #include <Dice/hypertrie/internal/raw/RawKey.hpp>
 
-namespace hypertrie::internal::raw {
+namespace Dice::hypertrie::internal::raw {
 
 
 	template<size_t max_depth, HypertrieCoreTrait tri_t>
@@ -345,6 +345,6 @@ namespace hypertrie::internal::raw {
 	};
 
 
-}// namespace hypertrie::internal::raw
+}// namespace Dice::hypertrie::internal::raw
 
 #endif//HYPERTRIE_NODECONTEXT_HPP

@@ -5,7 +5,7 @@
 #include <concepts>
 #include <cstdint>
 
-namespace hypertrie::internal::util {
+namespace Dice::hypertrie::internal::util {
 
 	namespace detail_switch_cases {
 
@@ -113,6 +113,6 @@ namespace hypertrie::internal::util {
 	constexpr void switch_cases(typename detail_switch_cases::Range<0, last>::int_type x, F cases_function) {
 		switch_cases<0, last>(x, cases_function);
 	}
-}// namespace hypertrie::internal::util
+}// namespace Dice::hypertrie::internal::util
 
 #endif//HYPERTRIE_SWITCHTEMPLATEFUNCTIONS_HPP

@@ -1,11 +1,11 @@
 #ifndef HYPERTRIE_HYPERTRIE_TRAITS_TOSTRING_HPP
 #define HYPERTRIE_HYPERTRIE_TRAITS_TOSTRING_HPP
 
-#include "Dice/hypertrie/internal/Hypertrie_trait.hpp"
+#include "Dice/hypertrie/Hypertrie_trait.hpp"
 #include "Dice/hypertrie/internal/util/name_of_type.hpp"
 #include <string>
 
-namespace hypertrie::internal {
+namespace Dice::hypertrie::internal {
 
 	template<HypertrieTrait hypertrie_trait>
 	inline auto to_string() {
@@ -21,5 +21,5 @@ namespace hypertrie::internal {
 			   ", taggable_key_part = " + std::to_string(hypertrie_trait::taggable_key_part) +
 			   " >";
 	}
-}// namespace hypertrie::internal
+}// namespace Dice::hypertrie::internal
 #endif//HYPERTRIE_HYPERTRIE_TRAITS_TOSTRING_HPP

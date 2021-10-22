@@ -9,7 +9,7 @@
 #include <tsl/sparse_map.h>
 #include <tsl/sparse_set.h>
 
-namespace hypertrie::internal::raw {
+namespace Dice::hypertrie::internal::raw {
 
 	template<size_t depth, HypertrieCoreTrait tri_t>
 	class ContextLevelChanges {
@@ -149,6 +149,6 @@ namespace hypertrie::internal::raw {
 	class ContextLevelChanges<0, tri> {
 		// is instantiated for simplicity but must never be used (therefore, has no members or methods).
 	};
-}// namespace hypertrie::internal::raw
+}// namespace Dice::hypertrie::internal::raw
 
 #endif//HYPERTRIE_CONTEXTLEVELCHANGES_HPP

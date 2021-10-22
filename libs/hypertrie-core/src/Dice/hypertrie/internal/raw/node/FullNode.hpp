@@ -9,7 +9,7 @@
 #include <Dice/hypertrie/internal/raw/node/Valued.hpp>
 #include <Dice/hypertrie/internal/raw/node/WithEdges.hpp>
 
-namespace hypertrie::internal::raw {
+namespace Dice::hypertrie::internal::raw {
 
 
 	template<size_t depth, HypertrieCoreTrait tri_t>
@@ -145,6 +145,6 @@ namespace hypertrie::internal::raw {
 			return this->edges() == other.edges();
 		}
 	};
-}// namespace hypertrie::internal::raw
+}// namespace Dice::hypertrie::internal::raw
 
 #endif//HYPERTRIE_FULLNODE_HPP

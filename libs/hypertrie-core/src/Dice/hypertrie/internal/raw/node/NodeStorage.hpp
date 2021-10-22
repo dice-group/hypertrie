@@ -11,7 +11,7 @@
 #include <Dice/hypertrie/internal/util/IntegralTemplatedTuple.hpp>
 
 
-namespace hypertrie::internal::raw {
+namespace Dice::hypertrie::internal::raw {
 
 	template<size_t max_depth, HypertrieCoreTrait tri_t>
 	class NodeStorage {
@@ -123,6 +123,6 @@ namespace hypertrie::internal::raw {
 			return {};
 		}
 	};
-}// namespace hypertrie::internal::raw
+}// namespace Dice::hypertrie::internal::raw
 
 #endif//HYPERTRIE_NODESTORAGE_HPP

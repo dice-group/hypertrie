@@ -5,7 +5,7 @@
 #include <vector>
 #include <memory> //allocator_traits
 
-namespace hypertrie::internal::container {
+namespace Dice::hypertrie::internal::container {
 
 	template<typename Key, typename Allocator = std::allocator<Key>>
 	using tsl_sparse_set = tsl::sparse_set<

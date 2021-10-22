@@ -4,7 +4,7 @@
 #include <Dice/hypertrie/internal/raw/Hypertrie_core_trait.hpp>
 #include <Dice/hypertrie/internal/raw/RawKey.hpp>
 
-namespace hypertrie::internal::raw {
+namespace Dice::hypertrie::internal::raw {
 
 	/**
  * A super class to provide a single key in a Node.
@@ -49,5 +49,5 @@ namespace hypertrie::internal::raw {
 		[[nodiscard]] constexpr size_t size() const noexcept { return 1; }
 	};
 
-}// namespace hypertrie::internal::raw
+}// namespace Dice::hypertrie::internal::raw
 #endif//HYPERTRIE_SINGLEKEY_HPP

@@ -8,7 +8,7 @@
 
 #include <Dice/hypertrie/internal/commons/PosType.hpp>
 
-namespace hypertrie::internal::raw {
+namespace Dice::hypertrie::internal::raw {
 
 	// TODO: review this class
 	template<size_t depth, HypertrieCoreTrait tri>
@@ -186,7 +186,7 @@ namespace hypertrie::internal::raw {
 		}
 	};
 
-}// namespace hypertrie::internal::raw
+}// namespace Dice::hypertrie::internal::raw
 
 
 #endif//HYPERTRIE_WITHEDGES_HPP

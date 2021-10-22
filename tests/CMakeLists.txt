@@ -117,6 +117,13 @@ target_link_libraries(tests_HypertrieContext
         fmt::fmt
         )
 
+add_executable(tests_Einsum einsum/tests_Einsum.cpp)
+target_link_libraries(tests_Einsum
+        doctest
+        einsum
+        tests-utils
+        fmt::fmt
+        )
 
 add_executable(tests_RawHashDiagonal core/node/tests_RawHashDiagonal.cpp)
 target_link_libraries(tests_RawHashDiagonal

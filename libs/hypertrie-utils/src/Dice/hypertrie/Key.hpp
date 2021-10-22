@@ -96,6 +96,10 @@ namespace Dice::hypertrie {
 				throw std::logic_error("value must not be zero equivalent.");
 		}
 
+		inline static NonZeroEntry make_filled(size_t size, key_part_type key_part, value_type value = value_type(1)) noexcept {
+			return NonZeroEntry(Key<tr>{size, key_part}, value);
+		}
+
 		const Key<tr> &key() const noexcept { return key_; }
 		Key<tr> &key() noexcept { return key_; }
 		const value_type &value() const noexcept { return value_; }

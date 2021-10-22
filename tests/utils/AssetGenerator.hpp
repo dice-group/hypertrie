@@ -8,7 +8,7 @@
 #include <Dice/hypertrie/Key.hpp>
 #include <Dice/hypertrie/internal/raw/RawKey.hpp>
 
-namespace hypertrie::tests::utils {
+namespace Dice::hypertrie::tests::utils {
 
 	/**
 	 * float / Integral independent uniform dist
@@ -47,7 +47,7 @@ namespace hypertrie::tests::utils {
 		using tri = tri_t;
 		using key_part_type = typename tri::key_part_type;
 		using value_type = typename tri::value_type;
-		using RawKey = ::hypertrie::internal::raw::RawKey<depth, tri>;
+		using RawKey = ::Dice::hypertrie::internal::raw::RawKey<depth, tri>;
 
 	protected:
 		value_type value_min_;
@@ -187,6 +187,6 @@ namespace hypertrie::tests::utils {
 			return entry_map;
 		}
 	};
-}// namespace hypertrie::tests::utils
+}// namespace Dice::hypertrie::tests::utils
 
 #endif//HYPERTRIE_ASSETGENERATOR_HPP

@@ -18,11 +18,11 @@
 #include <Dice/hypertrie/internal/raw/node_context/RawHypertrieContext.hpp>
 #include <Dice/hypertrie/internal/raw/node_context/fmt_RawHypertrieContext.hpp>
 
-namespace hypertrie::tests::core::node {
+namespace Dice::hypertrie::tests::core::node {
 
 	TEST_SUITE("Testing of RawNodeContext") {
-		using namespace ::hypertrie::internal::raw;
-		using namespace ::hypertrie::internal::util;
+		using namespace ::Dice::hypertrie::internal::raw;
+		using namespace ::Dice::hypertrie::internal::util;
 
 		// TODO: check handling all all positions fixed
 		// TODO: add handling of no positions fixed
@@ -193,4 +193,4 @@ namespace hypertrie::tests::core::node {
 			}
 		}
 	}
-};// namespace hypertrie::tests::core::node
+};// namespace Dice::hypertrie::tests::core::node

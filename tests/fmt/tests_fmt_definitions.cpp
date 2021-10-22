@@ -12,11 +12,11 @@
 
 #include <string>
 #include <fmt/core.h>
-#include <Dice/hypertrie/internal/Hypertrie_default_traits.hpp>
+#include <Dice/hypertrie/Hypertrie_default_traits.hpp>
 
-namespace hypertrie::tests::fmt {
+namespace Dice::hypertrie::tests::fmt {
 	TEST_SUITE("fmt tests") {
-		using namespace ::hypertrie::internal::raw;
+		using namespace ::Dice::hypertrie::internal::raw;
 
 		TEST_CASE("hypertrie_trait") {
 			std::string result = ::fmt::format("{}", default_bool_Hypertrie_trait{});
@@ -33,19 +33,19 @@ namespace hypertrie::tests::fmt {
 		}
 
 		TEST_CASE("RawKeyPositions") {
-			RawKeyPositions<5> pos{0b10101};
+			RawKeyPositions<5> pos{std::vector<size_t>{0,2,4}};
 			std::string result = ::fmt::format("{}", pos);
 			REQUIRE(result == "[1, 0, 1, 0, 1]");
 		}
 
 		TEST_CASE("RawKey") {
-			RawKey<5, Hypertrie_core_t<default_bool_Hypertrie_trait>> pos{1,2,3,4,5};
+			RawKey<5, Hypertrie_core_t<default_bool_Hypertrie_trait>> pos{{1, 2, 3, 4, 5}};
 			std::string result = ::fmt::format("{}", pos);
 			REQUIRE(result == "[1, 2, 3, 4, 5]");
 		}
 
 		TEST_CASE("RawSliceKey") {
-			RawSliceKey<5, Hypertrie_core_t<default_bool_Hypertrie_trait>> pos{1,2,std::nullopt,4,5};
+			RawSliceKey<5, Hypertrie_core_t<default_bool_Hypertrie_trait>> pos{{1,2,std::nullopt,4,5}};
 			std::string result = ::fmt::format("{}", pos);
 			REQUIRE(result == "[1, 2, -, 4, 5]");
 		}
@@ -64,7 +64,7 @@ namespace hypertrie::tests::fmt {
 		 * Also it wasn't able to deduce the Allocator as a second template parameter (std_set rebinds).
 		 */
 		TEST_CASE("std_set") {
-			::hypertrie::internal::container::std_set<std::string> set = {"Hello", "World"};
+			::Dice::hypertrie::internal::container::std_set<std::string> set = {"Hello", "World"};
 			std::string result = ::fmt::format("{}", set);
 			REQUIRE(result == "{Hello, World}");
 		}
@@ -73,7 +73,7 @@ namespace hypertrie::tests::fmt {
 		 * Also it wasn't able to deduce the Allocator as a second template parameter (std_map rebinds).
 		 */
 		TEST_CASE("std_map") {
-			::hypertrie::internal::container::std_map<int, std::string> map = {{0, "Hello"}, {1, "World"}};
+			::Dice::hypertrie::internal::container::std_map<int, std::string> map = {{0, "Hello"}, {1, "World"}};
 			std::string result = ::fmt::format("{}", map);
 			REQUIRE(result == "{(0, Hello), (1, World)}");
 		}
@@ -82,7 +82,7 @@ namespace hypertrie::tests::fmt {
 		 * Also it wasn't able to deduce the Allocator as a second template parameter (tsl::sparse_set rebinds).
 		 */
 		TEST_CASE("tsl_sparse_set") {
-			::hypertrie::internal::container::tsl_sparse_set<std::string> set = {"Hello", "World"};
+			::Dice::hypertrie::internal::container::tsl_sparse_set<std::string> set = {"Hello", "World"};
 			std::string result = ::fmt::format("{}", set);
 			REQUIRE(result == "{World, Hello}");
 		}
@@ -91,7 +91,7 @@ namespace hypertrie::tests::fmt {
 		 * Also it wasn't able to deduce the Allocator as a second template parameter (tsl_sparse_map rebinds).
 		 */
 		TEST_CASE("tsl_sparse_map") {
-			::hypertrie::internal::container::tsl_sparse_map<int, std::string> map = {{0, "Hello"}, {1, "World"}};
+			::Dice::hypertrie::internal::container::tsl_sparse_map<int, std::string> map = {{0, "Hello"}, {1, "World"}};
 			std::string result = ::fmt::format("{}", map);
 			REQUIRE(result == "{(0, Hello), (1, World)}");
 		}

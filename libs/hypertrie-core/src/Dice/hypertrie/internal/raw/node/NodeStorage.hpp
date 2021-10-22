@@ -11,7 +11,7 @@
 #include <Dice/hypertrie/internal/util/IntegralTemplatedTuple.hpp>
 
 
-namespace hypertrie::internal::raw {
+namespace Dice::hypertrie::internal::raw {
 
 	template<size_t max_depth, HypertrieCoreTrait tri_t>
 	class NodeStorage {
@@ -65,7 +65,7 @@ namespace hypertrie::internal::raw {
 		}
 
 		template<size_t depth, template<size_t, typename> typename node_type>
-		SpecificNodePtr<depth, node_type> lookup(RawIdentifier<depth, tri> identifier) noexcept {
+		SpecificNodePtr<depth, node_type> lookup(RawIdentifier<depth, tri> identifier) const noexcept {
 			auto &nodes_ = nodes<depth, node_type>().nodes();
 			auto found = nodes_.find(identifier);
 			if (found != nodes_.end()) {
@@ -85,28 +85,30 @@ namespace hypertrie::internal::raw {
 		 */
 		template<size_t depth>
 		void update_or_create_sen(RawIdentifier<depth, tri> identifier,
-								  SingleEntry<depth, tri_with_stl_alloc<tri>> &sen,
+								  std::optional<SingleEntry<depth, tri_with_stl_alloc<tri>>> &sen,
 								  ssize_t delta_ref_count) noexcept {
 			auto &nodes_ = this->template nodes<depth, SingleEntryNode>().nodes();
 			auto &node_lifecycle_ = this->template nodes<depth, SingleEntryNode>().node_lifecycle();
-			 if (delta_ref_count != 0) {
-				 auto found = nodes_.find(identifier);
-				 if (found != nodes_.end()) {
-					 auto &node_ptr = found->second;
-					 assert(ssize_t(node_ptr->ref_count()) + delta_ref_count >= 0);
-					 node_ptr->ref_count() += delta_ref_count;
-					 sen = SingleEntry<depth, tri_with_stl_alloc<tri>>{node_ptr->key(), node_ptr->value()};
-					 if (node_ptr->ref_count() == 0UL)
-						 nodes_.erase(found);
-				 } else {
-					 assert(delta_ref_count > 0);
-					 nodes_.insert(found, {identifier, node_lifecycle_.new_(sen, delta_ref_count)});
-				 }
-			 }
+			if (delta_ref_count != 0) {
+				auto found = nodes_.find(identifier);
+				if (found != nodes_.end()) {
+					auto node_ptr = found->second;
+					assert(ssize_t(node_ptr->ref_count()) + delta_ref_count >= 0);
+					node_ptr->ref_count() += delta_ref_count;
+					sen = SingleEntry<depth, tri_with_stl_alloc<tri>>{node_ptr->key(), node_ptr->value()};
+					if (node_ptr->ref_count() == 0UL) {
+						node_lifecycle_.delete_(node_ptr);
+						nodes_.erase(found);
+					}
+				} else {
+					assert(delta_ref_count > 0);
+					nodes_.insert(found, {identifier, node_lifecycle_.new_(sen.value(), delta_ref_count)});
+				}
+			}
 		}
 
 		template<size_t depth>
-		NodeContainer<depth, tri> lookup(RawIdentifier<depth, tri> identifier) noexcept{
+		NodeContainer<depth, tri> lookup(RawIdentifier<depth, tri> identifier) const noexcept {
 			if (identifier.empty())
 				return {};
 			else if (identifier.is_fn()) {
@@ -121,6 +123,6 @@ namespace hypertrie::internal::raw {
 			return {};
 		}
 	};
-}// namespace hypertrie::internal::raw
+}// namespace Dice::hypertrie::internal::raw
 
 #endif//HYPERTRIE_NODESTORAGE_HPP

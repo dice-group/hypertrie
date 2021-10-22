@@ -5,7 +5,7 @@
 #include <Dice/hypertrie/internal/raw/node/AllocateNode.hpp>
 #include <Dice/hypertrie/internal/raw/node/SpecificNodeStorage.hpp>
 
-namespace hypertrie::internal::raw {
+namespace Dice::hypertrie::internal::raw {
 
 	template<size_t depth, HypertrieCoreTrait tri_t, template<size_t, typename> typename node_type_t>
 	class SpecificNodeStorage {
@@ -50,6 +50,6 @@ namespace hypertrie::internal::raw {
 			return nodes_;
 		}
 	};
-}// namespace hypertrie::internal::raw
+}// namespace Dice::hypertrie::internal::raw
 
 #endif//HYPERTRIE_SPECIFICNODESTORAGE_HPP

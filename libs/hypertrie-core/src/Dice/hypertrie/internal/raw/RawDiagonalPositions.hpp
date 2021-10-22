@@ -3,7 +3,7 @@
 
 #include <Dice/hypertrie/internal/raw/RawKey.hpp>
 
-namespace hypertrie::internal::raw {
+namespace Dice::hypertrie::internal::raw {
 
 	template<size_t depth>
 	class RawKeyPositions {
@@ -57,6 +57,13 @@ namespace hypertrie::internal::raw {
 			return sub_poss;
 		}
 
+		[[nodiscard]] size_t count() const noexcept {
+			size_t count = 0;
+			for (size_t pos = 0; pos < depth; ++pos)
+				count += (*this)[pos];
+			return count;
+		}
+
 		template<size_t fixed_depth, HypertrieCoreTrait tri>
 		std::optional<RawKey<depth - fixed_depth, tri_with_stl_alloc<tri>>> slice(RawKey<depth, tri> const &raw_key, typename tri::key_part_type fixed_key_part) const noexcept {
 			static_assert(depth >= fixed_depth);
@@ -81,6 +88,6 @@ namespace hypertrie::internal::raw {
 		}
 	};
 
-}// namespace hypertrie::internal::raw
+}// namespace Dice::hypertrie::internal::raw
 
 #endif//HYPERTRIE_RAWDIAGONALPOSITIONS_HPP

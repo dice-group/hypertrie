@@ -6,10 +6,10 @@
 #include <Dice/hypertrie/internal/util/fmt_utils.hpp>
 
 namespace fmt {
-	template<size_t depth, ::hypertrie::internal::raw::HypertrieCoreTrait tri_t>
-	struct formatter<::hypertrie::internal::raw::SingleEntryNode<depth, tri_t>> : hypertrie::internal::util::SimpleParsing {
+	template<size_t depth, ::Dice::hypertrie::internal::raw::HypertrieCoreTrait tri_t>
+	struct formatter<::Dice::hypertrie::internal::raw::SingleEntryNode<depth, tri_t>> : ::Dice::hypertrie::internal::util::SimpleParsing {
 		template<typename FormatContext>
-		auto format(::hypertrie::internal::raw::SingleEntryNode<depth, tri_t> const &sen, FormatContext &ctx) {
+		auto format(::Dice::hypertrie::internal::raw::SingleEntryNode<depth, tri_t> const &sen, FormatContext &ctx) {
 			return format_to(ctx.out(), "{{ [ref_count={}] <{}> -> {} }}", sen.ref_count(), fmt::join(sen.key(), ", "), sen.value());
 		}
 	};

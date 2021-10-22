@@ -5,7 +5,7 @@
 #include <memory>
 
 
-namespace hypertrie::internal::raw {
+namespace Dice::hypertrie::internal::raw {
 
 	// TODO: concept for a Node
 	template<size_t depth, HypertrieCoreTrait tri_t, template<size_t, typename> typename node_type_t>
@@ -60,5 +60,5 @@ namespace hypertrie::internal::raw {
 		}
 	};
 
-}// namespace hypertrie::internal::raw
+}// namespace Dice::hypertrie::internal::raw
 #endif//HYPERTRIE_ALLOCATENODE_HPP

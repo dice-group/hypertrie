@@ -12,11 +12,11 @@
 #include <boost/hana/for_each.hpp>
 #include <boost/hana/range.hpp>
 
-namespace hypertrie::tests::core::node {
+namespace Dice::hypertrie::tests::core::node {
 	using namespace fmt::literals;
 
-	using namespace ::hypertrie::internal::raw;
-	using namespace ::hypertrie::internal;
+	using namespace ::Dice::hypertrie::internal::raw;
+	using namespace ::Dice::hypertrie::internal;
 
 	template<size_t max_depth, HypertrieCoreTrait tri_t>
 	struct ValidationRawNodeContext : public RawHypertrieContext<max_depth, tri_t> {
@@ -133,6 +133,6 @@ namespace hypertrie::tests::core::node {
 		}
 	};
 
-}// namespace hypertrie::tests::core::node
+}// namespace Dice::hypertrie::tests::core::node
 
 #endif//HYPERTRIE_VALIDATIONRAWNODECONTEXT_HPP

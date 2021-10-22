@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-namespace hypertrie::internal {
+namespace Dice::hypertrie {
 
 	template<typename key_part_type_t,
 			 typename value_type_t,
@@ -80,6 +80,12 @@ namespace hypertrie::internal {
 		{T::key_part_tagging_bit} -> std::convertible_to<ssize_t>;
 		{T::taggable_key_part} -> std::convertible_to<bool>;
 	};
-};// namespace hypertrie::internal
+
+	template<class T>
+	concept HypertrieTrait_bool_valued = HypertrieTrait<T> and T::is_bool_valued;
+
+	template<class T>
+	concept HypertrieTrait_bool_valued_and_taggable_key_part = HypertrieTrait_bool_valued<T> and T::taggable_key_part;
+};// namespace Dice::hypertrie::internal
 
 #endif//HYPERTRIE_HYPERTRIE_TRAIT_HPP

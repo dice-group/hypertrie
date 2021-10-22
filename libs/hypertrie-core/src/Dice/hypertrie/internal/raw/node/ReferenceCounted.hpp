@@ -2,7 +2,7 @@
 #define HYPERTRIE_REFERENCECOUNTED_HPP
 
 #include <cstddef>
-namespace hypertrie::internal::raw {
+namespace Dice::hypertrie::internal::raw {
 
 	/**
 	 * A super class to provide counting references in a Node.
@@ -35,5 +35,5 @@ namespace hypertrie::internal::raw {
 		[[nodiscard]] const size_t &ref_count() const noexcept { return this->ref_count_; }
 	};
 
-}// namespace hypertrie::internal::raw
+}// namespace Dice::hypertrie::internal::raw
 #endif//HYPERTRIE_REFERENCECOUNTED_HPP

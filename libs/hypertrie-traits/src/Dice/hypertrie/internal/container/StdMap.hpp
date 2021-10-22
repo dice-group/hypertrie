@@ -5,7 +5,7 @@
 #include <memory>//allocator_traits
 #include "Dice/hypertrie/internal/container/deref_map_iterator.hpp"
 
-namespace hypertrie::internal::container {
+namespace Dice::hypertrie::internal::container {
 	template<typename key_type, typename value, typename Allocator = std::allocator<std::pair<key_type, value>>>
 	using std_map = std::map<
 			key_type,

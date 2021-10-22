@@ -8,7 +8,7 @@
 #include <Dice/hypertrie/internal/raw/node/SingleKey.hpp>
 #include <Dice/hypertrie/internal/raw/node/Valued.hpp>
 
-namespace hypertrie::internal::raw {
+namespace Dice::hypertrie::internal::raw {
 
 	template<size_t depth, HypertrieCoreTrait tri_t>
 	class SingleEntry : public SingleKey<depth, tri_t>, public Valued<tri_t> {
@@ -61,6 +61,6 @@ namespace hypertrie::internal::raw {
 	};
 
 
-}// namespace hypertrie::internal::raw
+}// namespace Dice::hypertrie::internal::raw
 
 #endif//HYPERTRIE_ENTRY_HPP

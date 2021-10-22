@@ -4,9 +4,12 @@
 #include <Dice/hypertrie/internal/raw/Hypertrie_core_trait.hpp>
 #include <Dice/hypertrie/internal/raw/RawDiagonalPositions.hpp>
 #include <Dice/hypertrie/internal/raw/node/FullNode.hpp>
+#include <Dice/hypertrie/internal/raw/node/NodeContainer.hpp>
 #include <Dice/hypertrie/internal/raw/node/SingleEntryNode.hpp>
+#include <Dice/hypertrie/internal/raw/node_context/RawHypertrieContext.hpp>
+#include <Dice/hypertrie/internal/raw/node_context/SliceResult.hpp>
 
-namespace hypertrie::internal::raw {
+namespace Dice::hypertrie::internal::raw {
 
 	template<size_t diag_depth, size_t depth, template<size_t, typename> typename node_type, HypertrieCoreTrait tri, size_t context_max_depth>
 	class RawHashDiagonal;
@@ -44,7 +47,7 @@ namespace hypertrie::internal::raw {
 
 		child_iterator iter_;
 		child_iterator end_;
-		SingleEntryNode<result_depth, tri_with_stl_alloc<tri>> compressed_node_cache_;
+		SingleEntryNode<result_depth, tri_with_stl_alloc<tri>> sen_cache_;
 		IterValue value_;
 
 	public:
@@ -83,7 +86,7 @@ namespace hypertrie::internal::raw {
 
 		bool find(key_part_type key_part) noexcept {
 			value_ = context_->template diagonal_slice<depth, diag_depth>(node_container_, diag_poss_, key_part,
-																		  (result_depth > 0) ? &compressed_node_cache_ : nullptr);
+																		  (result_depth > 0) ? &sen_cache_ : nullptr);
 			if constexpr (result_depth == 0)
 				return value_ != value_type{};
 			else
@@ -221,7 +224,7 @@ namespace hypertrie::internal::raw {
 
 				NodeContainer<depth - 1, tri> child_node = context_->node_storage_.lookup(iter_->second);
 				value_ = context_->template diagonal_slice<depth - 1, diag_depth - 1>(child_node, sub_diag_poss_, key_part,
-																					  (result_depth > 0) ? &compressed_node_cache_ : nullptr);
+																					  (result_depth > 0) ? &sen_cache_ : nullptr);
 				if constexpr (result_depth == 0)
 					return value_ != value_type{};
 				else
@@ -346,7 +349,7 @@ namespace hypertrie::internal::raw {
 			return size_t(contains);
 		}
 	};
-}// namespace hypertrie::internal::raw
+}// namespace Dice::hypertrie::internal::raw
 
 
 #endif//HYPERTRIE_RAWHASHDIAGONAL_HPP

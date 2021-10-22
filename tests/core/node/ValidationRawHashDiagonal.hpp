@@ -7,11 +7,11 @@
 #include <Dice/hypertrie/internal/raw/iteration/RawHashDiagonal.hpp>
 #include <Dice/hypertrie/internal/raw/node/SingleEntry.hpp>
 
-namespace hypertrie::tests::core::node {
+namespace Dice::hypertrie::tests::core::node {
 	using namespace fmt::literals;
 
-	using namespace ::hypertrie::internal::raw;
-	using namespace ::hypertrie::internal;
+	using namespace ::Dice::hypertrie::internal::raw;
+	using namespace ::Dice::hypertrie::internal;
 
 	template<size_t diag_depth, size_t depth, HypertrieCoreTrait tri>
 	class ValidationRawHashDiagonal {
@@ -63,6 +63,6 @@ namespace hypertrie::tests::core::node {
 			return non_zero_diagonals_.size();
 		}
 	};
-}// namespace hypertrie::tests::core::node
+}// namespace Dice::hypertrie::tests::core::node
 
 #endif//HYPERTRIE_VALIDATIONRAWHASHDIAGONAL_SLICE_HPP

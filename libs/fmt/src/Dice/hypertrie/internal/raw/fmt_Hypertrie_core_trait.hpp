@@ -5,13 +5,13 @@
 #include "Dice/hypertrie/internal/util/fmt_utils.hpp"
 
 namespace fmt {
-	template<hypertrie::internal::raw::HypertrieCoreTrait trait>
-	struct formatter<trait> : public hypertrie::internal::util::SimpleParsing {
+	template<::Dice::hypertrie::internal::raw::HypertrieCoreTrait trait>
+	struct formatter<trait> : public ::Dice::hypertrie::internal::util::SimpleParsing {
 		using key_part_type = typename trait::key_part_type;
 		using value_type = typename trait::value_type;
 		template<typename T>
 		static auto nameOfType() {
-			return ::hypertrie::internal::util::name_of_type<T>();
+			return ::Dice::hypertrie::internal::util::name_of_type<T>();
 		}
 
 		template<typename FormatContext>

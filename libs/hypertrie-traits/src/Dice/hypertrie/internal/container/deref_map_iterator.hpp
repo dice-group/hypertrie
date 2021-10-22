@@ -1,6 +1,6 @@
 #ifndef HYPERTRIE_DEREF_MAP_ITERATOR_HPP
 #define HYPERTRIE_DEREF_MAP_ITERATOR_HPP
-namespace hypertrie::internal::container {
+namespace Dice::hypertrie::internal::container {
 	/**
 	 * Different maps use different methods to provide access to non-constant mapped_type references. This method provides an abstraction.
 	 * @tparam K key_type of the map
@@ -12,6 +12,6 @@ namespace hypertrie::internal::container {
 	inline V &deref(typename map_type<K, V, Allocator>::iterator &map_it) {
 		return map_it->second;
 	}
-}// namespace hypertrie::internal::container
+}// namespace Dice::hypertrie::internal::container
 
 #endif//HYPERTRIE_DEREF_MAP_ITERATOR_HPP

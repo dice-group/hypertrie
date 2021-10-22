@@ -10,7 +10,7 @@
 #include <Dice/hypertrie/internal/raw/Hypertrie_core_trait.hpp>
 
 
-namespace hypertrie::internal::raw {
+namespace Dice::hypertrie::internal::raw {
 	template<size_t depth, HypertrieCoreTrait tri>
 	class RawKey : public std::array<typename tri::key_part_type, depth> {
 	public:
@@ -127,12 +127,12 @@ namespace hypertrie::internal::raw {
 			return sub_slicekey;
 		}
 	};
-}// namespace hypertrie::internal::raw
+}// namespace Dice::hypertrie::internal::raw
 
 
 namespace Dice::hash {
-	template<size_t depth, ::hypertrie::internal::raw::HypertrieCoreTrait tri>
-	struct is_ordered_container<::hypertrie::internal::raw::RawKey<depth, tri>> : std::true_type {};
+	template<size_t depth, ::Dice::hypertrie::internal::raw::HypertrieCoreTrait tri>
+	struct is_ordered_container<::Dice::hypertrie::internal::raw::RawKey<depth, tri>> : std::true_type {};
 }// namespace Dice::hash
 
 

@@ -1,17 +1,17 @@
 #ifndef HYPERTRIE_HYPERTRIE_TRAITS_TOSTRING_HPP
 #define HYPERTRIE_HYPERTRIE_TRAITS_TOSTRING_HPP
 
-#include <Dice/hypertrie/internal/Hypertrie_trait.hpp>
+#include <Dice/hypertrie/Hypertrie_trait.hpp>
 #include "Dice/hypertrie/internal/util/fmt_utils.hpp"
 
 namespace fmt {
-	template<hypertrie::internal::HypertrieTrait hypertrie_trait>
-	struct formatter<hypertrie_trait> : public hypertrie::internal::util::SimpleParsing {
+	template<::Dice::hypertrie::HypertrieTrait hypertrie_trait>
+	struct formatter<hypertrie_trait> : public ::Dice::hypertrie::internal::util::SimpleParsing {
 		using key_part_type = typename hypertrie_trait::key_part_type;
 		using value_type = typename hypertrie_trait::value_type;
 		template<typename T>
 		static auto nameOfType() {
-			return ::hypertrie::internal::util::name_of_type<T>();
+			return ::Dice::hypertrie::internal::util::name_of_type<T>();
 		}
 
 		template<typename FormatContext>

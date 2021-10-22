@@ -20,11 +20,11 @@
 #include <Dice/hypertrie/internal/raw/node_context/fmt_RawHypertrieContext.hpp>
 #include <EntrySetGenerator.hpp>
 
-namespace hypertrie::tests::core::node {
+namespace Dice::hypertrie::tests::core::node {
 
 	TEST_SUITE("Testing of RawHashDiagonal") {
-		using namespace ::hypertrie::internal::raw;
-		using namespace ::hypertrie::internal::util;
+		using namespace ::Dice::hypertrie::internal::raw;
+		using namespace ::Dice::hypertrie::internal::util;
 
 		template<size_t depth, HypertrieCoreTrait tri,
 				 size_t no_key_parts,
@@ -257,4 +257,4 @@ namespace hypertrie::tests::core::node {
 			}
 		}
 	}
-};// namespace hypertrie::tests::core::node
+};// namespace Dice::hypertrie::tests::core::node

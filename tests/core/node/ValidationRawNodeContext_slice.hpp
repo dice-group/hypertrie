@@ -5,11 +5,11 @@
 #include <Dice/hypertrie/internal/raw/RawKey.hpp>
 #include <Dice/hypertrie/internal/raw/node/SingleEntry.hpp>
 
-namespace hypertrie::tests::core::node {
+namespace Dice::hypertrie::tests::core::node {
 	using namespace fmt::literals;
 
-	using namespace ::hypertrie::internal::raw;
-	using namespace ::hypertrie::internal;
+	using namespace ::Dice::hypertrie::internal::raw;
+	using namespace ::Dice::hypertrie::internal;
 
 	template<size_t depth, size_t fixed_depth, HypertrieCoreTrait tri>
 	inline auto slice_entries(std::vector<SingleEntry<depth, tri>> const &entries, RawSliceKey<fixed_depth, tri> const &raw_slice_key) {
@@ -19,6 +19,6 @@ namespace hypertrie::tests::core::node {
 				result_entries.emplace_back(*sliced, entry.value());
 		return result_entries;
 	}
-}// namespace hypertrie::tests::core::node
+}// namespace Dice::hypertrie::tests::core::node
 
 #endif//HYPERTRIE_VALIDATIONRAWNODECONTEXT_SLICE_HPP

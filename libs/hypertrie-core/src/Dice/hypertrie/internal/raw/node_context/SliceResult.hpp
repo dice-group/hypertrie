@@ -6,7 +6,7 @@
 
 #include <utility>
 
-namespace hypertrie::internal::raw {
+namespace Dice::hypertrie::internal::raw {
 
 	template<size_t result_depth, HypertrieCoreTrait tri_t>
 	struct SliceResult {
@@ -77,5 +77,5 @@ namespace hypertrie::internal::raw {
 		}
 	};
 
-}// namespace hypertrie::internal::raw
+}// namespace Dice::hypertrie::internal::raw
 #endif//HYPERTRIE_SLICERESULT_HPP

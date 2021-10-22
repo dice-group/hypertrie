@@ -3,7 +3,7 @@
 
 #include <boost/type_index.hpp>
 
-namespace hypertrie::internal::util {
+namespace Dice::hypertrie::internal::util {
 
 	template<typename T>
 	inline std::string name_of_type() {
@@ -12,6 +12,6 @@ namespace hypertrie::internal::util {
 		return string.substr(0, pos);
 	}
 
-}// namespace hypertrie::internal::util
+}// namespace Dice::hypertrie::internal::util
 
 #endif//HYPERTRIE_NAME_OF_TYPE_HPP

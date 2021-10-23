@@ -13,5 +13,6 @@ target_link_libraries(hypertrie-core INTERFACE
         hypertrie-utils
         cppitertools::cppitertools
         Threads::Threads
+        atomic_queue
         )
 

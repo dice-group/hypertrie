@@ -3,8 +3,7 @@
 
 #include <Dice/hypertrie/internal/raw/node/NodeContainer.hpp>
 #include <Dice/hypertrie/internal/raw/node_context/RawHypertrieContext.hpp>
-#include <boost/lockfree/policies.hpp>
-#include <boost/lockfree/spsc_queue.hpp>
+#include <atomic_queue/atomic_queue.h>
 #include <tsl/sparse_set.h>
 
 #include <functional>
@@ -30,12 +29,12 @@ namespace Dice::hypertrie::internal::raw {
 		using tri = tri_t;
 		using tr = typename tri::tr;
 		using Entry = SingleEntry<depth, tri_with_stl_alloc<tri>>;
+		using key_part_type = typename tri::key_part_type;
 
 	private:
-		// TODO: there are faster queues than this one
 		// TODO: compare with previous approach
 		// TODO: move to own submodule (because it has dependencies)
-		boost::lockfree::spsc_queue<Entry> entry_queue_;
+		atomic_queue::AtomicQueue2<Entry, 6291456/sizeof(Entry), true, false, false, false> entry_queue_;
 		NodeContainer<depth, tri> *nodec_;
 		RawHypertrieContext<context_max_depth, tri> *context_;
 		std::jthread check_and_insertion_thread_;
@@ -58,7 +57,7 @@ namespace Dice::hypertrie::internal::raw {
 				BulkInserter_bulk_loaded_callback get_stats = []([[maybe_unused]] size_t processed_entries,
 																 [[maybe_unused]] size_t inserted_entries,
 																 [[maybe_unused]] size_t hypertrie_size_after) {})
-			: entry_queue_(bulk_size), nodec_(&nodec), context_(&context), bulk_size_(bulk_size), get_stats_(get_stats) {
+			: entry_queue_(), nodec_(&nodec), context_(&context), bulk_size_(bulk_size), get_stats_(get_stats) {
 			if (bulk_size_ == 0)
 				bulk_size_ = 1;
 			new_entries_.reserve(bulk_size_);
@@ -68,20 +67,21 @@ namespace Dice::hypertrie::internal::raw {
 					size_t no_seen_entries = 0;
 
 					while (new_entries_.size() < bulk_size_ and
-						   not(entry_queue_.read_available() == 0 and stoken.stop_requested())) {
-						entry_queue_.consume_all([&](auto const &entry) {
+						   not(entry_queue_.was_empty() and stoken.stop_requested())) {
+						static Entry entry;
+						if (entry_queue_.try_pop(entry)){
 							no_seen_entries++;
 							RawIdentifier<depth, tri> id{entry};
 							const auto &[_, is_new] = de_duplication.insert(id);
 							if (is_new)
 								if (not context_->template get<depth>(*nodec_, entry.key()))
 									new_entries_.push_back(entry);
-						});
+						};
 					}
 					context_->template insert(*nodec_, new_entries_);
 					get_stats_(no_seen_entries, new_entries_.size(), context_->template size(nodec));
 					new_entries_.clear();
-				} while (not(entry_queue_.read_available() == 0 and stoken.stop_requested()));
+				} while (not(entry_queue_.was_empty() and stoken.stop_requested()));
 			});
 		}
 
@@ -93,7 +93,7 @@ namespace Dice::hypertrie::internal::raw {
 
 		void add(Entry const &entry) noexcept {
 			while (true) {
-				bool push_succeeded = entry_queue_.push(entry);
+				bool push_succeeded = entry_queue_.try_push(entry);
 				if (push_succeeded) [[likely]]
 					return;
 			}

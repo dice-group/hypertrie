@@ -27,38 +27,34 @@ namespace Dice::hypertrie {
 			void (*inc)(void *) noexcept = nullptr;
 
 			bool (*ended)(void const *) noexcept = nullptr;
-
-			RawMethods() = default;
-
-			RawMethods(void (*construct)(const_Hypertrie<tr> const &, void *) noexcept,
-					   void (*destroy)(void *) noexcept,
-					   NonZeroEntry<tr> const &(*value)(const void *) noexcept,
-					   void (*inc)(void *) noexcept,
-					   bool (*ended)(void const *) noexcept)
-				: construct(construct), destroy(destroy), value(value), inc(inc), ended(ended) {}
 		};
 
 		template<size_t depth>
-		inline static RawMethods generateRawMethods() noexcept {
-			return RawMethods(
-					[](const_Hypertrie<tr> const &hypertrie, void *raw_iterator_ptr) noexcept {
-						if (not (hypertrie.size() == 1 and hypertrie.contextless()))
-							std::construct_at(reinterpret_cast<RawIterator_t<depth> *>(raw_iterator_ptr), hypertrie.template node_container<depth>(), hypertrie.context()->raw_context());
-						else
-							std::construct_at(reinterpret_cast<RawIterator_t<depth> *>(raw_iterator_ptr), hypertrie.template stl_node_container<depth>());
-					},
-					[](void *raw_iterator_ptr) noexcept {
-						std::destroy_at(reinterpret_cast<RawIterator_t<depth> *>(raw_iterator_ptr));
-					},
-					[](void const *raw_iterator_ptr) noexcept -> NonZeroEntry<tr> const & {
+		inline static RawMethods generate_raw_methods() noexcept {
+			return RawMethods{
+					.construct =
+							[](const_Hypertrie<tr> const &hypertrie, void *raw_iterator_ptr) noexcept {
+								if (not(hypertrie.size() == 1 and hypertrie.contextless()))
+									std::construct_at(reinterpret_cast<RawIterator_t<depth> *>(raw_iterator_ptr), hypertrie.template node_container<depth>(), hypertrie.context()->raw_context());
+								else
+									std::construct_at(reinterpret_cast<RawIterator_t<depth> *>(raw_iterator_ptr), hypertrie.template stl_node_container<depth>());
+							},
+					.destroy =
+							[](void *raw_iterator_ptr) noexcept {
+								std::destroy_at(reinterpret_cast<RawIterator_t<depth> *>(raw_iterator_ptr));
+							},
+					.value =
+							[](void const *raw_iterator_ptr) noexcept -> NonZeroEntry<tr> const & {
 						return reinterpret_cast<RawIterator_t<depth> const *>(raw_iterator_ptr)->value();
 					},
-					[](void *raw_iterator_ptr) noexcept {
-						reinterpret_cast<RawIterator_t<depth> *>(raw_iterator_ptr)->inc();
-					},
-					[](void const *raw_iterator_ptr) noexcept -> bool {
+					.inc =
+							[](void *raw_iterator_ptr) noexcept {
+								reinterpret_cast<RawIterator_t<depth> *>(raw_iterator_ptr)->inc();
+							},
+					.ended =
+							[](void const *raw_iterator_ptr) noexcept -> bool {
 						return reinterpret_cast<RawIterator_t<depth> const *>(raw_iterator_ptr)->ended();
-					});
+					}};
 		}
 
 		inline static const std::vector<RawMethods> raw_method_cache = []() noexcept {
@@ -68,13 +64,13 @@ namespace Dice::hypertrie {
 				raw_methods.push_back(util::switch_cases<1, hypertrie_max_depth + 1>(
 						depth,
 						[](auto depth_arg) -> RawMethods {
-							return generateRawMethods<depth_arg>();
+							return generate_raw_methods<depth_arg>();
 						},
 						[]() -> RawMethods { assert(false); __builtin_unreachable(); }));
 			return raw_methods;
 		}();
 
-		static RawMethods const &getRawMethods(size_t depth) noexcept {
+		static RawMethods const &get_raw_methods(size_t depth) noexcept {
 			return raw_method_cache[depth - 1];
 		};
 
@@ -88,7 +84,7 @@ namespace Dice::hypertrie {
 
 		Iterator() = default;
 
-		Iterator(Iterator &&other )  noexcept {
+		Iterator(Iterator &&other) noexcept {
 			if (raw_methods != nullptr)
 				raw_methods->destroy(&raw_iterator);
 			this->raw_methods = other.raw_methods;
@@ -113,7 +109,7 @@ namespace Dice::hypertrie {
 				raw_methods->destroy(&raw_iterator);
 			raw_methods = nullptr;
 		}
-		explicit Iterator(const_Hypertrie<tr> const &hypertrie) noexcept : raw_methods(&getRawMethods(hypertrie.depth())) {
+		explicit Iterator(const_Hypertrie<tr> const &hypertrie) noexcept : raw_methods(&get_raw_methods(hypertrie.depth())) {
 			raw_methods->construct(hypertrie, &raw_iterator);
 		}
 
@@ -128,7 +124,7 @@ namespace Dice::hypertrie {
 			return copy;
 		}
 
-		value_type const &operator*() const { return raw_methods->value(&raw_iterator); }
+		value_type const &operator*() const noexcept { return raw_methods->value(&raw_iterator); }
 
 		operator bool() const noexcept { return not raw_methods->ended(&raw_iterator); }
 	};

@@ -33,7 +33,7 @@ namespace Dice::einsum::internal {
 			sub_entries.reserve(sub_subscripts.size());
 			for (const auto &sub_subscript : sub_subscripts) {
 				sub_operators.push_back(Operator_t::construct(sub_subscript, context));
-				sub_entries.push_back(Entry_t(sub_subscript->resultLabelCount(), default_key_part));
+				sub_entries.push_back(Entry_t::make_filled(sub_subscript->resultLabelCount(), default_key_part));
 			}
 		}
 
@@ -61,11 +61,11 @@ namespace Dice::einsum::internal {
 				}
 			}
 			const auto &iterated_sub_entry = self.sub_entries[self.iterated_pos];
-			updateEntryKey(self.iterated_sub_operator_result_mapping, *self.entry, iterated_sub_entry.key);
-			assert(iterated_sub_entry.value);
-			assert(self.entry->value);
+			updateEntryKey(self.iterated_sub_operator_result_mapping, *self.entry, iterated_sub_entry.key());
+			assert(iterated_sub_entry.value());
+			assert(self.entry->value());
 			if constexpr (not bool_value_type)
-				self.entry->value *= iterated_sub_entry.value;
+				self.entry->value(self.entry->value() * iterated_sub_entry.value());
 			if constexpr (_debugeinsum_)
 				fmt::print("[{}]->{} {}\n", fmt::join(self.entry->key, ","), self.entry->value, self.subscript);
 		}
@@ -102,7 +102,7 @@ namespace Dice::einsum::internal {
 			for (auto &sub_operator : sub_operators)
 				sub_operator->clear();
 			for (auto &sub_entry : sub_entries)
-				sub_entry.clear(default_key_part);
+				sub_entry.fill(default_key_part);
 			calculated_operands = {};
 		}
 
@@ -147,7 +147,7 @@ namespace Dice::einsum::internal {
 							return;
 						}
 						auto &sub_entry = sub_entries[cart_op_pos];
-						assert(sub_entry.value);
+						assert(sub_entry.value());
 						sub_result[sub_entry.key] = sub_entry.value;
 						sub_results.emplace_back(std::move(sub_result));
 						continue;
@@ -155,8 +155,8 @@ namespace Dice::einsum::internal {
 				}
 				auto &sub_entry = sub_entries[cart_op_pos];
 				while (not cart_op->ended()) {
-					assert(sub_entry.value);
-					sub_result[sub_entry.key] += sub_entry.value;
+					assert(sub_entry.value());
+					sub_result[sub_entry.key()] += sub_entry.value();
 					cart_op->operator++();
 					if (this->context->hasTimedOut()) {
 						ended_ = true;
@@ -184,8 +184,8 @@ namespace Dice::einsum::internal {
 			// initialize iterated sub_operator
 			iterated_sub_operator_result_mapping = {
 					this->subscript->getCartesianSubscript().getOriginalResultPoss()[iterated_pos]};
-			updateEntryKey(iterated_sub_operator_result_mapping, *this->entry, sub_entries[iterated_pos].key);
-			this->entry->value *= sub_entries[iterated_pos].value;
+			updateEntryKey(iterated_sub_operator_result_mapping, *this->entry, sub_entries[iterated_pos].key());
+			this->entry->value(this->entry->value() * sub_entries[iterated_pos].value());
 		}
 
 
@@ -193,7 +193,7 @@ namespace Dice::einsum::internal {
 		updateEntryKey(const OriginalResultPoss &original_result_poss, Entry_t &sink,
 					   const Key_t &source_key) {
 			for (auto i : iter::range(original_result_poss.size()))
-				sink.key[original_result_poss[i]] = source_key[i];
+				sink.key()[original_result_poss[i]] = source_key[i];
 		}
 
 
@@ -233,7 +233,7 @@ namespace Dice::einsum::internal {
 					if constexpr (not bool_value_type)
 						value *= iters[i]->second;
 				}
-				this->entry->value = value;
+				this->entry->value(value);
 				restart();
 			}
 
@@ -249,7 +249,7 @@ namespace Dice::einsum::internal {
 						updateEntryKey(result_mapping[i], *this->entry, iters[i]->first);
 						if constexpr (not bool_value_type)// all entries are true anyways
 							value = (value * iters[i]->second) / last_value;
-						this->entry->value = value;
+						this->entry->value(value);
 						return;
 					} else {
 						iters[i] = sub_results[i].cbegin();
@@ -259,7 +259,7 @@ namespace Dice::einsum::internal {
 					}
 				}
 				assert(value);
-				this->entry->value = value;
+				this->entry->value(value);
 				ended_ = true;
 			}
 

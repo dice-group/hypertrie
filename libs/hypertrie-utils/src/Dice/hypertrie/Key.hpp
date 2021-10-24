@@ -97,7 +97,7 @@ namespace Dice::hypertrie {
 		}
 
 		inline static NonZeroEntry make_filled(size_t size, key_part_type key_part, value_type value = value_type(1)) noexcept {
-			return NonZeroEntry(Key<tr>{size, key_part}, value);
+			return NonZeroEntry(Key<tr>(size, key_part), value);
 		}
 
 		const Key<tr> &key() const noexcept { return key_; }

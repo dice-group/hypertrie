@@ -119,7 +119,7 @@ namespace Dice::einsum::internal {
 		bool end() { return false; }
 
 		void load(std::vector<::Dice::hypertrie::const_Hypertrie<tr>> operands,
-				  ::Dice::hypertrie::NonZeroEntry<tr> &entry) {
+				  Entry_t &entry) {
 			load_fp(this, std::move(operands), entry);
 		}
 

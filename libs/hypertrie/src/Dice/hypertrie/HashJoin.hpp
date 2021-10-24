@@ -12,8 +12,6 @@ namespace Dice::hypertrie {
 
 	template<HypertrieTrait tr>
 	class HashJoin {
-
-
 	public:
 		using key_part_type = typename tr::key_part_type;
 		using value_type = typename tr::value_type;
@@ -62,7 +60,7 @@ namespace Dice::hypertrie {
 					const auto &join_poss = join.positions_[pos];
 					const auto &hypertrie = join.hypertries_[pos];
 					if (size(join_poss) > 0) {
-						ops_.emplace_back(HashDiagonal<tr>{hypertrie, join_poss});
+						ops_.emplace_back(HashDiagonal<tr>{hypertrie, internal::raw::RawKeyPositions<hypertrie_max_depth>(join_poss)});
 						auto result_depth = result_depths_.emplace_back(hypertrie.depth() - size(join_poss));
 						if (result_depth) {
 							pos_in_out_.push_back(out_pos++);
@@ -92,7 +90,7 @@ namespace Dice::hypertrie {
 
 				while (not smallest_operand.ended()) {
 
-					value.second = smallest_operand.currentKeyPart();
+					value.second = smallest_operand.current_key_part();
 
 					found = true;
 					// iterate all but the first Diagonal
@@ -106,7 +104,7 @@ namespace Dice::hypertrie {
 					if (found) {
 						for (size_t op_pos = 0; op_pos < ops_.size(); ++op_pos) {
 							if (const auto &result_depth = result_depths_[op_pos]; result_depth)
-								value.first[pos_in_out_[op_pos]] = const_Hypertrie<tr>(ops_[op_pos].currentHypertrie());
+								value.first[pos_in_out_[op_pos]] = const_Hypertrie<tr>(ops_[op_pos].current_hypertrie());
 						}
 						return;
 					}

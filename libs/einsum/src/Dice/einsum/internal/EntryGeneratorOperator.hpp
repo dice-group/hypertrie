@@ -42,8 +42,8 @@ namespace Dice::einsum::internal {
 			if constexpr (_debugeinsum_) fmt::print("EntryGen {}\n", this->subscript);
 			this->entry = &entry;
 			_ended = false;
-			this->entry->clear(default_key_part);
-			this->entry->value = value_type(1);
+			this->entry->fill(default_key_part);
+			this->entry->value(1);
 		}
 	};
 }// namespace Dice::einsum::internal

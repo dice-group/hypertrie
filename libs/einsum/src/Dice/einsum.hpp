@@ -33,7 +33,7 @@ namespace Dice::einsum {
 				return results;
 
 		Einsum<value_type, tr> einsum{subscript, operands, time_point};
-		for (auto &&entry : einsum) {
+		for (const auto &entry : einsum) {
 			results[entry.key()] += entry.value();
 		}
 		return results;

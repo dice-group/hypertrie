@@ -101,7 +101,7 @@ namespace Dice::einsum::internal {
 			// iterate the operands that hold the label
 			for (auto [i, op_pos] : iter::enumerate(op_poss)) {
 				const auto &operand = operands[op_pos];
-				const auto op_dim_cards = operand.getCards(label_poss_in_operands[op_pos]);
+				const auto op_dim_cards = operand.get_cards(label_poss_in_operands[op_pos]);
 				const auto min_op_dim_card = *std::min_element(op_dim_cards.cbegin(), op_dim_cards.cend());
 				const auto max_op_dim_card = *std::max_element(op_dim_cards.cbegin(), op_dim_cards.cend());
 

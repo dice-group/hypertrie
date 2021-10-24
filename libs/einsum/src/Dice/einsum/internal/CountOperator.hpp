@@ -43,8 +43,8 @@ namespace Dice::einsum::internal {
 			assert(operands.size() == 1);// only one operand must be left to be resolved
 			_ended = operands[0].empty();
 			if (not ended(this)) {
-				entry.clear(default_key_part);
-				this->entry->value = operands[0].size();
+				entry.fill(default_key_part);
+				this->entry->value(operands[0].size());
 			}
 		}
 	};

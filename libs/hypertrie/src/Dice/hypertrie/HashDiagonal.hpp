@@ -15,7 +15,7 @@ namespace Dice::hypertrie {
 		using tri = internal::raw::template Hypertrie_core_t<tr>;
 		using key_part_type = typename tr::key_part_type;
 		using value_type = typename tr::value_type;
-		using KeyPositions_t = internal::raw::RawKeyPositions<hypertrie_max_depth>;
+		using RawKeyPositions_t = internal::raw::RawKeyPositions<hypertrie_max_depth>;
 
 	private:
 		template<size_t diag_depth, size_t depth, template<size_t, typename> typename node_type>
@@ -26,7 +26,7 @@ namespace Dice::hypertrie {
 
 	protected:
 		struct RawMethods {
-			void (*construct_)(const_Hypertrie<tr> const &, KeyPositions_t const &, void *) noexcept;
+			void (*construct_)(const_Hypertrie<tr> const &, RawKeyPositions_t const &, void *) noexcept;
 
 			void (*destruct_)(void *) noexcept;
 
@@ -46,7 +46,7 @@ namespace Dice::hypertrie {
 
 			size_t (*size_)(void const *) noexcept;
 			RawMethods() = default;
-			RawMethods(void (*construct)(const_Hypertrie<tr> const &, KeyPositions_t const &, void *) noexcept,
+			RawMethods(void (*construct)(const_Hypertrie<tr> const &, RawKeyPositions_t const &, void *) noexcept,
 					   void (*destruct)(void *) noexcept,
 					   void (*begin)(void *) noexcept,
 					   key_part_type (*currentKeyPart)(const void *) noexcept,
@@ -71,7 +71,7 @@ namespace Dice::hypertrie {
 			using RawDiagonalHash_tt = RawHashDiagonal<diag_depth, depth, node_type, used_tri, hypertrie_max_depth>;
 			return RawMethods(
 					// construct
-					[](const_Hypertrie<tr> const &hypertrie, KeyPositions_t const &diagonal_poss, void *raw_diagonal_ptr) noexcept {
+					[](const_Hypertrie<tr> const &hypertrie, RawKeyPositions_t const &diagonal_poss, void *raw_diagonal_ptr) noexcept {
 						auto &raw_diag_poss = unsafe_cast<RawKeyPositions<depth> const>(diagonal_poss);
 						if constexpr (is_fn) {
 							auto &nodec = unsafe_cast<FNContainer<depth, used_tri> const>(hypertrie.template node_container<depth>());
@@ -199,7 +199,7 @@ namespace Dice::hypertrie {
 		HypertrieContext<tr> *context_;// already imprinted into Hypertrie Context
 
 	public:
-		HashDiagonal(const const_Hypertrie<tr> &hypertrie, const KeyPositions_t &diag_poss) noexcept
+		HashDiagonal( const_Hypertrie<tr> const &hypertrie, const RawKeyPositions_t &diag_poss) noexcept
 			: raw_methods(&getRawMethods(hypertrie.depth(),
 										 diag_poss.count(),
 										 hypertrie.size() > 1,
@@ -211,20 +211,21 @@ namespace Dice::hypertrie {
 		HashDiagonal(HashDiagonal &&other) noexcept : raw_methods(other.raw_methods),
 													  raw_hash_diagonal(other.raw_hash_diagonal),
 													  context_(other.context_) {
-			other.raw_hash_diagonal = nullptr;
+			other.raw_methods = nullptr;
+			other.raw_hash_diagonal = {};
 			other.context_ = nullptr;
 		}
 
 
 		HashDiagonal &operator=(HashDiagonal &&other) noexcept {
-			if (raw_hash_diagonal != nullptr) {
-				raw_methods->destruct_(raw_hash_diagonal);
-				raw_hash_diagonal = nullptr;
+			if (raw_methods != nullptr) {
+				raw_methods->destruct_(&raw_hash_diagonal);
 			}
 			this->raw_methods = other.raw_methods;
 			this->raw_hash_diagonal = other.raw_hash_diagonal;
 			this->context_ = other.context_;
-			other.raw_hash_diagonal = nullptr;
+			other.raw_methods = nullptr;
+			other.raw_hash_diagonal = {};
 			other.context_ = nullptr;
 			return *this;
 		}
@@ -234,6 +235,7 @@ namespace Dice::hypertrie {
 				raw_methods->destruct_(&raw_hash_diagonal);
 			}
 			raw_methods = nullptr;
+			context_ = nullptr;
 		}
 
 

@@ -87,9 +87,31 @@ namespace Dice::hypertrie {
 		using value_type = NonZeroEntry<tr>;
 
 		Iterator() = default;
+
+		Iterator(Iterator &&other )  noexcept {
+			if (raw_methods != nullptr)
+				raw_methods->destroy(&raw_iterator);
+			this->raw_methods = other.raw_methods;
+			this->raw_iterator = other.raw_iterator;
+			other.raw_iterator = {};
+			other.raw_methods = nullptr;
+		}
+
+		// TODO: copy constructor and assignment
+		Iterator &operator=(Iterator &&other) noexcept {
+			if (raw_methods != nullptr)
+				raw_methods->destroy(&raw_iterator);
+			this->raw_methods = other.raw_methods;
+			this->raw_iterator = other.raw_iterator;
+			other.raw_iterator = {};
+			other.raw_methods = nullptr;
+			return *this;
+		}
+
 		~Iterator() noexcept {
 			if (raw_methods != nullptr)
 				raw_methods->destroy(&raw_iterator);
+			raw_methods = nullptr;
 		}
 		explicit Iterator(const_Hypertrie<tr> const &hypertrie) noexcept : raw_methods(&getRawMethods(hypertrie.depth())) {
 			raw_methods->construct(hypertrie, &raw_iterator);

@@ -160,14 +160,12 @@ namespace Dice::hypertrie {
 			return *this;
 		}
 
-
 		const_Hypertrie &operator=(const_Hypertrie &&const_hypertrie) noexcept {
 			this->node_container_ = const_hypertrie.node_container_;
 			this->context_ = const_hypertrie.context_;
 			this->depth_ = const_hypertrie.depth_;
 			const_hypertrie.context_ = nullptr;
-			const_hypertrie.node_container_.hash_sized = 0;
-			const_hypertrie.node_container_.pointer_sized = nullptr;
+			const_hypertrie.node_container_ = {};
 			return *this;
 		}
 
@@ -372,10 +370,10 @@ namespace Dice::hypertrie {
 						[&](auto depth_arg) -> std::vector<size_t> {
 							assert(this->node_container_.is_sen());
 							using FNContainer_t = FNContainer<depth_arg, tri>;
-							auto &fn_node_container = unsafe_cast<FNContainer_t &>(this->node_container_);
+							const auto &fn_node_container = unsafe_cast<FNContainer_t const>(this->node_container_);
 							return fn_node_container.node_ptr()->getCards(positions);
 						},
-						[]() { assert(false); __builtin_unreachable(); });
+						[]() -> std::vector<size_t> { assert(false); __builtin_unreachable(); });
 			}
 		}
 

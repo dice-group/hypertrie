@@ -31,10 +31,10 @@ namespace Dice::einsum::internal {
 			self.ended_ = not self.operand_iter;
 			if (self.ended_)
 				return;
-			self.entry->value = value_type(1);
+			self.entry->value(1);
 			const auto &operand_key = *self.operand_iter;
 			for (auto i : iter::range(operand_key.size()))
-				self.entry->key[self.label_pos_in_result[i]] = operand_key[i];
+				self.entry->key()[self.label_pos_in_result[i]] = operand_key[i];
 			if constexpr (bool_value_type) {
 				if (self.subscript->all_result_done) {
 					self.ended_ = true;
@@ -43,7 +43,7 @@ namespace Dice::einsum::internal {
 			}
 
 			if constexpr (_debugeinsum_)
-				fmt::print("[{}]->{} {}\n", fmt::join(self.entry->key, ","), self.entry->value, self.subscript);
+				fmt::print("[{}]->{} {}\n", fmt::join(self.entry->key(), ","), self.entry->value, self.subscript);
 		}
 
 		static bool ended(const void *self_raw) {
@@ -67,15 +67,15 @@ namespace Dice::einsum::internal {
 			if constexpr (_debugeinsum_) fmt::print("Resolve {}\n", this->subscript);
 			this->entry = &entry;
 			assert(operands.size() == 1);// only one operand must be left to be resolved
-			operand_iter = std::move(operands[0].cbegin());
+			operand_iter = operands[0].cbegin();
 			assert(operand_iter);
 			ended_ = not operand_iter;
 			if (not ended_) {
-				this->entry->clear(default_key_part);
-				this->entry->value = value_type(1);
-				const auto &operand_key = *this->operand_iter;
+				this->entry->fill(default_key_part);
+				this->entry->value(1);
+				const auto &operand_key = *operand_iter;
 				for (auto i : iter::range(operand_key.size()))
-					this->entry->key[this->label_pos_in_result[i]] = operand_key[i];
+					this->entry->key()[this->label_pos_in_result[i]] = operand_key[i];
 			}
 		}
 	};

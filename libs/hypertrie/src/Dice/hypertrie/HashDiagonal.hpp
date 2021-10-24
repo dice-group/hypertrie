@@ -26,40 +26,29 @@ namespace Dice::hypertrie {
 
 	protected:
 		struct RawMethods {
-			void (*construct_)(const_Hypertrie<tr> const &, RawKeyPositions_t const &, void *) noexcept;
+			void (*construct)(const_Hypertrie<tr> const &, RawKeyPositions_t const &, void *) noexcept;
 
-			void (*destruct_)(void *) noexcept;
+			void (*destruct)(void *) noexcept;
 
-			void (*begin_)(void *) noexcept;
+			void (*begin)(void *) noexcept;
 
-			key_part_type (*current_key_part_)(void const *) noexcept;
+			key_part_type (*current_key_part)(void const *) noexcept;
 
-			const_Hypertrie<tr> (*current_hypertrie_)(void const *, HypertrieContext<tr> *) noexcept;
+			const_Hypertrie<tr> (*current_hypertrie)(void const *, HypertrieContext<tr> *) noexcept;
 
-			value_type (*current_scalar_)(void const *) noexcept;
+			value_type (*current_scalar)(void const *) noexcept;
 
-			bool (*find_)(void *, key_part_type) noexcept;
+			bool (*find)(void *, key_part_type) noexcept;
 
-			void (*inc_)(void *) noexcept;
+			void (*inc)(void *) noexcept;
 
-			bool (*ended_)(void const *) noexcept;
+			bool (*ended)(void const *) noexcept;
 
-			size_t (*size_)(void const *) noexcept;
-			RawMethods() = default;
-			RawMethods(void (*construct)(const_Hypertrie<tr> const &, RawKeyPositions_t const &, void *) noexcept,
-					   void (*destruct)(void *) noexcept,
-					   void (*begin)(void *) noexcept,
-					   key_part_type (*currentKeyPart)(const void *) noexcept,
-					   const_Hypertrie<tr> (*currentHypertrie)(const void *, HypertrieContext<tr> *) noexcept,
-					   value_type (*currentScalar)(const void *) noexcept,
-					   bool (*find)(void *, key_part_type) noexcept,
-					   void (*inc)(void *) noexcept,
-					   bool (*ended)(const void *) noexcept,
-					   size_t (*size)(const void *) noexcept) : construct_(construct), destruct_(destruct), begin_(begin), current_key_part_(currentKeyPart), current_hypertrie_(currentHypertrie), current_scalar_(currentScalar), find_(find), inc_(inc), ended_(ended), size_(size) {}
+			size_t (*size)(void const *) noexcept;
 		};
 
 		template<size_t diag_depth, size_t depth, template<size_t, typename> typename node_type, bool with_tri_alloc = false>
-		inline static RawMethods generateRawMethods() noexcept {
+		inline static RawMethods generate_raw_methods() noexcept {
 			using namespace ::Dice::hypertrie::internal::raw;
 			using namespace ::Dice::hypertrie::internal::util;
 			[[maybe_unused]] constexpr static const size_t result_depth = depth - diag_depth;
@@ -69,39 +58,39 @@ namespace Dice::hypertrie {
 
 			using used_tri = std::conditional_t<(with_tri_alloc), tri, tri_with_stl_alloc<tri>>;
 			using RawDiagonalHash_tt = RawHashDiagonal<diag_depth, depth, node_type, used_tri, hypertrie_max_depth>;
-			return RawMethods(
-					// construct
-					[](const_Hypertrie<tr> const &hypertrie, RawKeyPositions_t const &diagonal_poss, void *raw_diagonal_ptr) noexcept {
-						auto &raw_diag_poss = unsafe_cast<RawKeyPositions<depth> const>(diagonal_poss);
-						if constexpr (is_fn) {
-							auto &nodec = unsafe_cast<FNContainer<depth, used_tri> const>(hypertrie.template node_container<depth>());
-							std::construct_at(reinterpret_cast<RawDiagonalHash_tt *>(raw_diagonal_ptr),
-											  nodec,
-											  raw_diag_poss,
-											  hypertrie.context()->raw_context());
-						} else {
-							auto &nodec = unsafe_cast<SENContainer<depth, used_tri> const>(hypertrie.template node_container<depth>());
-							std::construct_at(reinterpret_cast<RawDiagonalHash_tt *>(raw_diagonal_ptr),
-											  nodec,
-											  raw_diag_poss);
-						}
-					},
-					// destruct
-					[](void *raw_diagonal_ptr) noexcept {
-						std::destroy_at(reinterpret_cast<RawDiagonalHash_tt *>(raw_diagonal_ptr));
-					},
-					// begin
-					[](void *raw_diagonal_ptr) noexcept {
-						auto &raw_diagonal = *reinterpret_cast<RawDiagonalHash_tt *>(raw_diagonal_ptr);
-						raw_diagonal.begin();
-					},
-					// currentKeyPart
-					[](void const *raw_diagonal_ptr) noexcept -> key_part_type {
+			return RawMethods{
+					.construct =
+							[](const_Hypertrie<tr> const &hypertrie, RawKeyPositions_t const &diagonal_poss, void *raw_diagonal_ptr) noexcept {
+								auto &raw_diag_poss = unsafe_cast<RawKeyPositions<depth> const>(diagonal_poss);
+								if constexpr (is_fn) {
+									auto &nodec = unsafe_cast<FNContainer<depth, used_tri> const>(hypertrie.template node_container<depth>());
+									std::construct_at(reinterpret_cast<RawDiagonalHash_tt *>(raw_diagonal_ptr),
+													  nodec,
+													  raw_diag_poss,
+													  hypertrie.context()->raw_context());
+								} else {
+									auto &nodec = unsafe_cast<SENContainer<depth, used_tri> const>(hypertrie.template node_container<depth>());
+									std::construct_at(reinterpret_cast<RawDiagonalHash_tt *>(raw_diagonal_ptr),
+													  nodec,
+													  raw_diag_poss);
+								}
+							},
+					.destruct =
+							[](void *raw_diagonal_ptr) noexcept {
+								std::destroy_at(reinterpret_cast<RawDiagonalHash_tt *>(raw_diagonal_ptr));
+							},
+					.begin =
+							[](void *raw_diagonal_ptr) noexcept {
+								auto &raw_diagonal = *reinterpret_cast<RawDiagonalHash_tt *>(raw_diagonal_ptr);
+								raw_diagonal.begin();
+							},
+					.current_key_part =
+							[](void const *raw_diagonal_ptr) noexcept -> key_part_type {
 						const auto &raw_diagonal = *reinterpret_cast<const RawDiagonalHash_tt *>(raw_diagonal_ptr);
 						return raw_diagonal.current_key_part();
 					},
-					// currentHypertrie
-					[](void const *raw_diagonal_ptr, HypertrieContext<tr> *context) noexcept -> const_Hypertrie<tr> {
+					.current_hypertrie =
+							[](void const *raw_diagonal_ptr, HypertrieContext<tr> *context) noexcept -> const_Hypertrie<tr> {
 						if constexpr (diag_depth < depth) {
 							const auto &raw_diagonal = *reinterpret_cast<const RawDiagonalHash_tt *>(raw_diagonal_ptr);
 							const auto &value = raw_diagonal.current_value();
@@ -117,8 +106,8 @@ namespace Dice::hypertrie {
 							__builtin_unreachable();
 						}
 					},
-					// currentScalar
-					[](void const *raw_diagonal_ptr) noexcept -> value_type {
+					.current_scalar =
+							[](void const *raw_diagonal_ptr) noexcept -> value_type {
 						const auto &raw_diagonal = *reinterpret_cast<const RawDiagonalHash_tt *>(raw_diagonal_ptr);
 						if constexpr (diag_depth == depth) {
 							return raw_diagonal.current_value();
@@ -128,25 +117,26 @@ namespace Dice::hypertrie {
 						}
 					},
 					// find
-					[](void *raw_diagonal_ptr, key_part_type key_part) noexcept -> bool {
+					.find =
+							[](void *raw_diagonal_ptr, key_part_type key_part) noexcept -> bool {
 						auto &raw_diagonal = *reinterpret_cast<RawDiagonalHash_tt *>(raw_diagonal_ptr);
 						return raw_diagonal.find(key_part);
 					},
-					// inc
-					[](void *raw_diagonal_ptr) noexcept {
-						auto &raw_diagonal = *reinterpret_cast<RawDiagonalHash_tt *>(raw_diagonal_ptr);
-						++raw_diagonal;
-					},
-					// ended
-					[](const void *raw_diagonal_ptr) noexcept -> bool {
+					.inc =
+							[](void *raw_diagonal_ptr) noexcept {
+								auto &raw_diagonal = *reinterpret_cast<RawDiagonalHash_tt *>(raw_diagonal_ptr);
+								++raw_diagonal;
+							},
+					.ended =
+							[](const void *raw_diagonal_ptr) noexcept -> bool {
 						const auto &raw_diagonal = *reinterpret_cast<const RawDiagonalHash_tt *>(raw_diagonal_ptr);
 						return raw_diagonal.ended();
 					},
-					// size
-					[](const void *raw_diagonal_ptr) noexcept -> size_t {
+					.size =
+							[](const void *raw_diagonal_ptr) noexcept -> size_t {
 						const auto &raw_diagonal = *reinterpret_cast<const RawDiagonalHash_tt *>(raw_diagonal_ptr);
 						return raw_diagonal.size();
-					});
+					}};
 		}
 
 		using RawMethosCache = std::vector<std::vector<std::tuple<RawMethods, RawMethods, RawMethods>>>;
@@ -170,9 +160,9 @@ namespace Dice::hypertrie {
 												diag_depth,
 												[&](auto diag_depth_arg) -> std::tuple<RawMethods, RawMethods, RawMethods> {
 													return std::make_tuple(
-															generateRawMethods<diag_depth_arg, depth_arg, FullNode, true>(),
-															generateRawMethods<diag_depth_arg, depth_arg, SingleEntryNode, true>(),
-															generateRawMethods<diag_depth_arg, depth_arg, SingleEntryNode, false>());
+															generate_raw_methods<diag_depth_arg, depth_arg, FullNode, true>(),
+															generate_raw_methods<diag_depth_arg, depth_arg, SingleEntryNode, true>(),
+															generate_raw_methods<diag_depth_arg, depth_arg, SingleEntryNode, false>());
 												},
 												[&]() -> std::tuple<RawMethods, RawMethods, RawMethods> { assert(false); __builtin_unreachable(); });
 									},
@@ -182,7 +172,7 @@ namespace Dice::hypertrie {
 			return raw_methods;
 		}();
 
-		static RawMethods const &getRawMethods(size_t depth, size_t diag_depth, bool full_node, bool tri_alloc = true) noexcept {
+		static RawMethods const &get_raw_methods(size_t depth, size_t diag_depth, bool full_node, bool tri_alloc = true) noexcept {
 			auto &resolve_depth_and_diag_depth = raw_method_cache[depth - 1][diag_depth - 1];
 			assert(not(full_node and not tri_alloc));
 			if (full_node)
@@ -199,13 +189,13 @@ namespace Dice::hypertrie {
 		HypertrieContext<tr> *context_;// already imprinted into Hypertrie Context
 
 	public:
-		HashDiagonal( const_Hypertrie<tr> const &hypertrie, const RawKeyPositions_t &diag_poss) noexcept
-			: raw_methods(&getRawMethods(hypertrie.depth(),
-										 diag_poss.count(),
-										 hypertrie.size() > 1,
-										 hypertrie.size() > 1 and not hypertrie.contextless())),
+		HashDiagonal(const_Hypertrie<tr> const &hypertrie, const RawKeyPositions_t &diag_poss) noexcept
+			: raw_methods(&get_raw_methods(hypertrie.depth(),
+										   diag_poss.count(),
+										   hypertrie.size() > 1,
+										   hypertrie.size() > 1 and not hypertrie.contextless())),
 			  context_(hypertrie.context()) {
-			raw_methods->construct_(hypertrie, diag_poss, &raw_hash_diagonal);
+			raw_methods->construct(hypertrie, diag_poss, &raw_hash_diagonal);
 		}
 
 		HashDiagonal(HashDiagonal &&other) noexcept : raw_methods(other.raw_methods),
@@ -219,7 +209,7 @@ namespace Dice::hypertrie {
 
 		HashDiagonal &operator=(HashDiagonal &&other) noexcept {
 			if (raw_methods != nullptr) {
-				raw_methods->destruct_(&raw_hash_diagonal);
+				raw_methods->destruct(&raw_hash_diagonal);
 			}
 			this->raw_methods = other.raw_methods;
 			this->raw_hash_diagonal = other.raw_hash_diagonal;
@@ -232,56 +222,56 @@ namespace Dice::hypertrie {
 
 		~HashDiagonal() noexcept {
 			if (raw_methods != nullptr) {
-				raw_methods->destruct_(&raw_hash_diagonal);
+				raw_methods->destruct(&raw_hash_diagonal);
 			}
 			raw_methods = nullptr;
 			context_ = nullptr;
 		}
 
 
-		HashDiagonal &begin() {
-			raw_methods->begin_(&raw_hash_diagonal);
+		HashDiagonal &begin() noexcept {
+			raw_methods->begin(&raw_hash_diagonal);
 			return *this;
 		}
 
-		[[nodiscard]] bool end() const {
+		[[nodiscard]] bool end() const noexcept {
 			return false;
 		}
 
-		[[nodiscard]] key_part_type current_key_part() const {
-			return raw_methods->current_key_part_(&raw_hash_diagonal);
+		[[nodiscard]] key_part_type current_key_part() const noexcept {
+			return raw_methods->current_key_part(&raw_hash_diagonal);
 		}
 
-		[[nodiscard]] const_Hypertrie<tr> current_hypertrie() const {
-			return raw_methods->current_hypertrie_(&raw_hash_diagonal, context_);
+		[[nodiscard]] const_Hypertrie<tr> current_hypertrie() const noexcept {
+			return raw_methods->current_hypertrie(&raw_hash_diagonal, context_);
 		}
 
 
-		[[nodiscard]] value_type current_scalar() const {
-			return raw_methods->current_scalar_(&raw_hash_diagonal);
+		[[nodiscard]] value_type current_scalar() const noexcept {
+			return raw_methods->current_scalar(&raw_hash_diagonal);
 		}
 
-		[[nodiscard]] bool find(key_part_type key_part) {
-			return raw_methods->find_(&raw_hash_diagonal, key_part);
+		[[nodiscard]] bool find(key_part_type key_part) noexcept {
+			return raw_methods->find(&raw_hash_diagonal, key_part);
 		}
 
 		HashDiagonal &operator++() noexcept {
-			raw_methods->inc_(&raw_hash_diagonal);
+			raw_methods->inc(&raw_hash_diagonal);
 			return *this;
 		}
 
-		HashDiagonal operator++(int) const {
+		HashDiagonal operator++(int) const noexcept {
 			auto old = *this;
 			++(*this);
 			return old;
 		}
 
 		[[nodiscard]] explicit operator bool() const noexcept {
-			return not raw_methods->ended_(&raw_hash_diagonal);
+			return not raw_methods->ended(&raw_hash_diagonal);
 		}
 
 		[[nodiscard]] [[nodiscard]] bool ended() const noexcept {
-			return raw_methods->ended_(&raw_hash_diagonal);
+			return raw_methods->ended(&raw_hash_diagonal);
 		}
 
 		bool operator==(bool other) const noexcept {
@@ -293,7 +283,7 @@ namespace Dice::hypertrie {
 		}
 
 		[[nodiscard]] size_t size() const noexcept {
-			return raw_methods->size_(&raw_hash_diagonal);
+			return raw_methods->size(&raw_hash_diagonal);
 		}
 	};
 }// namespace Dice::hypertrie

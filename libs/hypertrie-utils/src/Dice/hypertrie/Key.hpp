@@ -80,6 +80,7 @@ namespace Dice::hypertrie {
 			AlwaysTrue() = default;
 			constexpr explicit AlwaysTrue(bool) noexcept {};
 			consteval operator bool() const noexcept { return true; }
+			static inline const bool default_instance = true;
 		};
 		using ValueType = std::conditional_t<(HypertrieTrait_bool_valued<tr>), AlwaysTrue, value_type>;
 
@@ -102,7 +103,7 @@ namespace Dice::hypertrie {
 
 		const Key<tr> &key() const noexcept { return key_; }
 		Key<tr> &key() noexcept { return key_; }
-		const value_type &value() const noexcept { return value_; }
+		const value_type &value() const noexcept { if constexpr (HypertrieTrait_bool_valued<tr>) return AlwaysTrue::default_instance; else return this->value_; }
 		void value([[maybe_unused]] value_type new_value) {
 			if constexpr (not HypertrieTrait_bool_valued<tr>) {
 				if (new_value != value_type{}) [[likely]]
@@ -133,6 +134,15 @@ namespace Dice::hypertrie {
 		void fill(key_part_type const &key_part) noexcept {
 			std::fill(key_.begin(), key_.end(), key_part);
 		}
+
+		auto operator<=>(const NonZeroEntry &rhs) const noexcept{
+			return std::tie(key_, value()) <=> std::tie(rhs.key_, rhs.value());
+		}
+
+		bool operator==(const NonZeroEntry &rhs) const noexcept{
+			return std::tie(key_, value()) == std::tie(rhs.key_, rhs.value());
+		}
+
 	};
 }// namespace Dice::hypertrie
 

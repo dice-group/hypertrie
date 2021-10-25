@@ -127,7 +127,6 @@ namespace Dice::einsum::internal {
 
 		using Operator_t = Operator<value_type, tr>;
 		using Entry_t = Entry<bool, tr>;
-		using Key_t = typename Entry_t::Key;
 		using key_part_type = typename tr::key_part_type;
 
 		std::shared_ptr<Subscript> subscript{};
@@ -142,7 +141,7 @@ namespace Dice::einsum::internal {
 			: subscript(std::move(subscript)), context{std::make_shared<Context>(timeout)},
 			  operands(operands),
 			  op{Operator_t::construct(this->subscript, context)},
-			  entry(this->subscript->resultLabelCount(), Operator_t::default_key_part) {}
+			  entry(Entry_t::make_filled(this->subscript->resultLabelCount(), Operator_t::default_key_part)) {}
 
 		[[nodiscard]] const std::shared_ptr<Subscript> &getSubscript() const {
 			return subscript;
@@ -168,8 +167,7 @@ namespace Dice::einsum::internal {
 
 			explicit iterator(Einsum &einsum, Entry_t &entry) : op(einsum.op), current_entry{&entry} {
 				if (not op->ended()) {
-					// TODO: we need to have the right hash here
-					const size_t hash = Dice::hash::DiceHashxxh3<int>()(current_entry->key);
+					const size_t hash = Dice::hash::DiceHashxxh3<decltype(current_entry->key())>()(current_entry->key());
 					found_entries.insert(hash);
 				}
 			}
@@ -177,10 +175,8 @@ namespace Dice::einsum::internal {
 			iterator &operator++() {
 				op->next();
 				while (not op->ended()) {
-					assert(current_entry->value == true);
-					// TODO: we need to have the right hash here
-
-					const size_t hash = Dice::hash::DiceHashxxh3<int>()(current_entry->key);
+					assert(current_entry->value() == true);
+					const size_t hash = Dice::hash::DiceHashxxh3<decltype(current_entry->key())>()(current_entry->key());
 					if (not found_entries.contains(hash)) {
 						found_entries.insert(hash);
 						return *this;

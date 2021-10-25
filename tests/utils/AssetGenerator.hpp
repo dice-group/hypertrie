@@ -143,13 +143,13 @@ namespace Dice::hypertrie::tests::utils {
 	template<internal::raw::HypertrieCoreTrait tri_t>
 	class EntryGenerator : public RawGenerator<1, tri_t> {
 		using tri = tri_t;
+		using tr = typename tri::tr;
+
 		using super = RawGenerator<1, tri>;
 		using key_part_type = typename tri::key_part_type;
 		using value_type = typename tri::value_type;
 		using RawKey = typename super::RawKey;
 
-
-		using Key = hypertrie::Key<tri>;
 
 	public:
 		explicit EntryGenerator(key_part_type min = std::numeric_limits<key_part_type>::min(),
@@ -159,7 +159,7 @@ namespace Dice::hypertrie::tests::utils {
 			: RawGenerator<1, tri>(min, max, valueMin, valueMax) {}
 
 		auto key(const size_t depth = 1) {
-			Key key_(depth);
+			Key<tr> key_(depth);
 			std::generate(key_.begin(), key_.end(), [&]() { return this->key_part(); });
 			return key_;
 		}
@@ -169,7 +169,7 @@ namespace Dice::hypertrie::tests::utils {
 		}
 
 		auto keys(size_t size, const size_t depth = 1) {
-			std::set<Key> key_set;
+			std::set<Key<tr>> key_set;
 			while (key_set.size() < size) {
 				key_set.insert(this->key(depth));
 			}
@@ -177,7 +177,7 @@ namespace Dice::hypertrie::tests::utils {
 		}
 
 		auto entries(const size_t &size, const size_t &depth = 1) {
-			std::map<Key, value_type> entry_map;
+			std::map<Key<tr>, value_type> entry_map;
 			while (entry_map.size() < size) {
 				auto next_entry = this->entry(depth);
 				if (entry_map.count(next_entry.first))

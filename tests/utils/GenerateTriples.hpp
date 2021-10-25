@@ -2,10 +2,12 @@
 #define HYPERTRIE_GENERATENTUPLES_HPP
 
 #include <array>
-#include <random>
 #include <itertools.hpp>
+#include <random>
 
-namespace hypertrie::tests::utils {
+
+// TODO: needs review!
+namespace Dice::hypertrie::tests::utils {
 	namespace {
 	}
 
@@ -39,7 +41,7 @@ namespace hypertrie::tests::utils {
 	}
 
 
-/**
+	/**
  * Generates a std::array of length count that contains deterministic n-tuples. 
  * Calling the function twice will return exactly the same n-tuples. 
  * The range for the j-th entry of a n-triple is [0, J]
@@ -83,12 +85,11 @@ namespace hypertrie::tests::utils {
 		RandomNumberGenerator &randomNumberGenerator;
 		std::uniform_int_distribution<T> distribution;
 
-		Randoms(size_t size, T min, T max, RandomNumberGenerator &randomNumberGenerator) :
-				size(size),
-				min(min),
-				max(max),
-				randomNumberGenerator(randomNumberGenerator),
-				distribution{min, max} {}
+		Randoms(size_t size, T min, T max, RandomNumberGenerator &randomNumberGenerator) : size(size),
+																						   min(min),
+																						   max(max),
+																						   randomNumberGenerator(randomNumberGenerator),
+																						   distribution{min, max} {}
 
 		struct iterator {
 			Randoms &container;
@@ -120,7 +121,6 @@ namespace hypertrie::tests::utils {
 		decltype(auto) end() {
 			return iterator(*this, size);
 		}
-
 	};
 
 	template<typename T, typename RandomNumberGenerator>
@@ -134,5 +134,5 @@ namespace hypertrie::tests::utils {
 	}
 
 
-}
-#endif //HYPERTRIE_GENERATENTUPLES_HPP
+}// namespace Dice::hypertrie::tests::utils
+#endif//HYPERTRIE_GENERATENTUPLES_HPP

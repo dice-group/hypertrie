@@ -5,7 +5,7 @@
 #include <random>
 #include <itertools.hpp>
 
-namespace hypertrie::tests::utils {
+namespace Dice::hypertrie::tests::utils {
 	namespace {
 		using namespace iter;
 	}

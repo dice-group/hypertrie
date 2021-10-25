@@ -1,43 +1,41 @@
 #ifndef HYPERTRIE_EINSUMTESTDATA_HPP
 #define HYPERTRIE_EINSUMTESTDATA_HPP
 
-#include <ranges>
 #include <fmt/core.h>
 #include <fmt/format.h>
+#include <iostream>
+//#include <ranges>
 #include <set>
 #include <unordered_set>
-#include <iostream>
 
-#include <Dice/hypertrie/hypertrie.hpp>
-#include <Dice/hypertrie/internal/raw/Hypertrie_internal_traits.hpp>
 #include <Dice/einsum/internal/Subscript.hpp>
+#include <Dice/hypertrie.hpp>
+#include <Dice/hypertrie/Hypertrie_default_traits.hpp>
 
 
 #include <torch/torch.h>
 
-#include "../utils/GenerateTriples.hpp"
 #include "../utils/AssetGenerator.hpp"
+#include "../utils/GenerateTriples.hpp"
 #include "../utils/Product.hpp"
 #include "../utils/TorchHelper.hpp"
 
-namespace hypertrie::tests::einsum {
+namespace Dice::hypertrie::tests::einsum {
 
 	namespace {
 
-		using namespace ::hypertrie::tests::utils;
-		using namespace ::einsum::internal;
+		using namespace ::Dice::hypertrie::tests::utils;
+		using namespace ::Dice::einsum::internal;
 
 		using namespace ::fmt::literals;
-		using namespace ::hypertrie;
-		using Key = typename hypertrie::Key<size_t>;
-		using SliceKey = typename hypertrie::SliceKey <size_t>;
+		using namespace ::Dice::hypertrie;
 		using pos_type = uint8_t;
-	}
+	}// namespace
 
-	template<HypertrieTrait tr>
+	template<::Dice::hypertrie::HypertrieTrait tr>
 	struct TestOperand {
 
-		using tri = typename internal::raw::Hypertrie_internal_t<tr>;
+		using tri = typename internal::raw::Hypertrie_core_t<tr>;
 		using dtype = typename tr::value_type;
 		static_assert(std::is_same_v<dtype, bool> or
 					  std::is_same_v<dtype, int64_t> or
@@ -48,7 +46,7 @@ namespace hypertrie::tests::einsum {
 		size_t excl_max;
 		uint8_t depth;
 
-		inline static utils::EntryGenerator<unsigned long, unsigned long> gen{};
+		inline static utils::EntryGenerator<tri> gen{};
 
 		TestOperand() = default;
 
@@ -58,46 +56,36 @@ namespace hypertrie::tests::einsum {
 
 		TestOperand(TestOperand &&) = default;
 
-		TestOperand(uint8_t depth, size_t excl_max = 10, bool empty = false) :
-				torch_tensor(torch::zeros(std::vector<long>(depth, excl_max), torch::TensorOptions().dtype<long>())),
-				hypertrie{depth},
-				excl_max(excl_max),
-				depth(depth) {
+		TestOperand(uint8_t depth, size_t excl_max = 10, bool empty = false) : torch_tensor(torch::zeros(std::vector<long>(depth, excl_max), torch::TensorOptions().dtype<long>())),
+																			   hypertrie{depth},
+																			   excl_max(excl_max),
+																			   depth(depth) {
 
 			if (not empty) {
 				gen.setKeyPartMinMax(0, excl_max - 1);
 				auto entries = gen.entries(excl_max * depth / 2, depth);
 				// TODO: only supports boolean tensors so far
 				BulkInserter<tr> bulk_inserter{hypertrie};
-				for (auto [key, value] : entries){
-					auto key_cpy = key;
-					if constexpr (tr::is_bool_valued and tr::lsb_unused)
-						for (auto&key_part : key_cpy)
-							key_part <<= 2;
-					bulk_inserter.add(std::move(key_cpy));
+				for (const auto &[key, value] : entries) {
+					bulk_inserter.add(NonZeroEntry<tr>{key, value});
 
-					long &value_ref = TorchHelper<long>::resolve(torch_tensor, key);
+					long &value_ref = TorchHelper<tr>::resolve(torch_tensor, key);
 					value_ref = long(dtype(value));
 				}
 			}
 			if (empty)
-				assert(hypertrie.size() == 0);
-//			WARN(torch_tensor);
-			WARN((std::string) hypertrie);
-//			WARN((std::string) hypertrie.context()->raw_context.storage);
+				assert(hypertrie.empty());
+			//			WARN(torch_tensor);
+//			WARN((std::string) hypertrie);
+			//			WARN((std::string) hypertrie.context()->raw_context.storage);
 			assert(hypertrie.size() == std::size_t(torch_tensor.sum().item<long>()));
-
 		}
 
-		void set(const Key &key, const dtype &value){
-			std::ranges::for_each(key, [&](const auto &i){assert(i < excl_max);});
-			auto key_cpy = key;
-			if constexpr (tr::is_bool_valued and tr::lsb_unused)
-				for (auto&key_part : key_cpy)
-					key_part <<= 2;
-			this->hypertrie.set(std::move(key_cpy), value);
-			long &value_ref = TorchHelper<long>::resolve(this->torch_tensor, key);
-			value_ref = long(value);
+		void set(const NonZeroEntry<tr> &entry) {
+			std::ranges::for_each(entry.key(), [&](const auto &i) { assert(i < excl_max); });
+			this->hypertrie.set(entry.key(), entry.value());
+			long &value_ref = TorchHelper<tr>::resolve(this->torch_tensor, entry.key());
+			value_ref = long(entry.value());
 		}
 	};
 
@@ -108,7 +96,7 @@ namespace hypertrie::tests::einsum {
 		std::string str_subscript;
 
 		TestEinsum(const std::shared_ptr<Subscript> &test_subscript, std::vector<TestOperand<tr>> &test_operands)
-				: subscript(test_subscript), str_subscript(subscript->to_string()) {
+			: subscript(test_subscript), str_subscript(subscript->to_string()) {
 			for (auto &test_operand : test_operands)
 				operands.emplace_back(test_operand);
 		}
@@ -118,7 +106,7 @@ namespace hypertrie::tests::einsum {
 		 * Generates a random TestEinsum over the given test_operand_candidates
 		 * @param test_operand_candidates
 		 */
-		TestEinsum(std::vector<TestOperand<tr>> &test_operand_candidates, int max_operand_count= 5) {
+		TestEinsum(std::vector<TestOperand<tr>> &test_operand_candidates, int max_operand_count = 5) {
 			uint8_t operands_count = *gen_random<uint8_t>(1, 1, max_operand_count).begin();
 			auto depth_sum = 0;
 			for (auto &&i : gen_random<std::size_t>(operands_count, 0, test_operand_candidates.size() - 1)) {
@@ -143,7 +131,7 @@ namespace hypertrie::tests::einsum {
 			ResultSc result_sc;
 			result_sc.reserve(result_depth);
 			for (auto pos : gen_random<std::set<Label>::iterator::difference_type>(result_depth, 0,
-			                                                                       used_labels.size() - 1)) {
+																				   used_labels.size() - 1)) {
 				auto it = used_labels.begin();
 				std::advance(it, pos);
 				Label label = *it;
@@ -172,5 +160,5 @@ namespace hypertrie::tests::einsum {
 		}
 	};
 
-}
-#endif //HYPERTRIE_EINSUMTESTDATA_HPP
+}// namespace Dice::hypertrie::tests::einsum
+#endif//HYPERTRIE_EINSUMTESTDATA_HPP

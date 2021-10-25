@@ -368,7 +368,7 @@ namespace Dice::hypertrie {
 				return switch_cases<2, hypertrie_max_depth + 1>(
 						depth_,
 						[&](auto depth_arg) -> std::vector<size_t> {
-							assert(this->node_container_.is_sen());
+							assert(this->node_container_.is_fn());
 							using FNContainer_t = FNContainer<depth_arg, tri>;
 							const auto &fn_node_container = unsafe_cast<FNContainer_t const>(this->node_container_);
 							return fn_node_container.node_ptr()->getCards(positions);

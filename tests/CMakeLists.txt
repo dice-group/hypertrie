@@ -150,20 +150,27 @@ target_link_libraries(tests_fmt_definitions
         doctest
         fmt-definitions
         )
+add_executable(tests_einsum TestEinsum.cpp)
+target_link_libraries(tests_einsum PRIVATE
+        doctest
+        einsum
+        fmt::fmt
+        tests-utils
+        )
 
-#set(hypertrie_LIBTORCH_PATH "" CACHE PATH "The installation directory of pytorch.")
-#if (hypertrie_LIBTORCH_PATH)
-#    # add path
-#    list(APPEND CMAKE_PREFIX_PATH ${hypertrie_LIBTORCH_PATH})
-#    find_package(Torch REQUIRED)
-#    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
-#    target_link_libraries(tests_einsum PRIVATE
-#            ${TORCH_LIBRARIES}
-#            )
-#    # define C++ preprocess flag to include the tests depending on pytorch
-#    add_compile_definitions(HYPERTRIE_ENABLE_LIBTORCH)
-#endif ()
+set(hypertrie_LIBTORCH_PATH "" CACHE PATH "The installation directory of pytorch.")
+if (hypertrie_LIBTORCH_PATH)
+    # add path
+    list(APPEND CMAKE_PREFIX_PATH ${hypertrie_LIBTORCH_PATH})
+    find_package(Torch REQUIRED)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
+    target_link_libraries(tests_einsum PRIVATE
+            ${TORCH_LIBRARIES}
+            )
+    # define C++ preprocess flag to include the tests depending on pytorch
+    add_compile_definitions(HYPERTRIE_ENABLE_LIBTORCH)
+endif ()
 
 # copy files for testing to the binary folder
-file(COPY data DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+#file(COPY data DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 

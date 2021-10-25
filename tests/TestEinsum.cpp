@@ -27,62 +27,55 @@ namespace Dice::hypertrie::tests::einsum {
 	template<typename value_type, typename tr, typename HypertrieEinsumResultType>
 	void validateResult(const long excl_max, const TestEinsum<tr> &test_einsum, HypertrieEinsumResultType actual_result, torch::Tensor &expected_result) {
 		unsigned long result_depth = test_einsum.subscript->resultLabelCount();
-		for (const auto &key : product<std::size_t>(result_depth, excl_max)) {
-			auto actual_entry = [&] {
-				if constexpr (tr::is_bool_valued and tr::lsb_unused) {
-					auto shifted_key = key;
-					for (auto &key_part : shifted_key)
-						key_part <<= 2;
-					return (actual_result.count(shifted_key)) ? actual_result[shifted_key] : 0;
-				} else
-					return (actual_result.count(key)) ? actual_result[key] : 0;
-			}();
+		for (const auto &key_parts : product<std::size_t>(result_depth, excl_max)) {
+			Key<tr>key {key_parts.begin(), key_parts.end()};
+			auto actual_entry = (actual_result.count(key)) ? actual_result[key] : 0;
 			auto expected_entry = value_type(TorchHelper<tr>::resolve(expected_result, key));// to bool
-			INFO("key: ({})"_format(fmt::join(key, ", ")));
-			INFO("expected: {}, actual {}"_format(TorchHelper<tr>::resolve(expected_result, key), actual_entry))
-			CHECK(actual_entry == expected_entry);
+			INFO("key: ({})"_format(fmt::join(key, ", ")).c_str());
+			INFO("expected: {}, actual {}"_format(TorchHelper<tr>::resolve(expected_result, key), actual_entry).c_str());
+			REQUIRE(actual_entry == expected_entry);
 		}
 	}
 
-	template<HypertrieTrait tr, typename value_type>
-	void runTest(long excl_max, TestEinsum<tr> &test_einsum, std::chrono::milliseconds timeout_duration = 0ms) {
-		auto einsum = &hypertrie::einsum2map<value_type, tr>;
-		// result how it is
-		auto start_time = std::chrono::steady_clock::now();
-		auto timeout = (timeout_duration != 0ms) ? start_time + timeout_duration : time_point::max();
-		auto actual_result = einsum(test_einsum.subscript, test_einsum.hypertrieOperands(), timeout);
-		std::string actual_result_str = [&]() {
-			std::vector<std::string> elements;
-			for(auto &[key, value] : actual_result)
-				elements.push_back(fmt::format("⟨{}⟩ → {}", fmt::join(key, ", "), value));
-			return fmt::format("[ {} ]", fmt::join(elements, ", "));
-		}();
-		WARN(actual_result_str);
-		WARN("result entries: {}"_format(actual_result.size()));
-		auto end_time = std::chrono::steady_clock::now();
-		WARN(fmt::format("hypertrie: {}ms ",
-						 std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count()));
-		if (timeout_duration != 0ms)
-			REQUIRE((end_time - start_time) < (timeout_duration + 10ms));
-
-
-		// expected result
-		start_time = std::chrono::steady_clock::now();
-		torch::Tensor expected_result = at::einsum(test_einsum.str_subscript, test_einsum.torchOperands());
-		end_time = std::chrono::steady_clock::now();
-		WARN(fmt::format("pytorch: {}ms ",
-						 std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count()));
-		if (timeout_duration == 0ms) {
-			validateResult<value_type, tr>(excl_max, test_einsum, actual_result, expected_result);
-		}
-	}
-
-	template<HypertrieTrait tr, typename T>
-	void runTest(long excl_max, std::vector<TestOperand<tr>> &operands, const std::shared_ptr<Subscript> &subscript,
-				 std::chrono::milliseconds timeout_duration = 0ms) {
-		TestEinsum<tr> test_einsum{subscript, operands};
-		runTest<tr, T>(excl_max, test_einsum, timeout_duration);
-	}
+//	template<HypertrieTrait tr, typename value_type>
+//	void runTest(long excl_max, TestEinsum<tr> &test_einsum, std::chrono::milliseconds timeout_duration = 0ms) {
+//		auto einsum = &::Dice::einsum::einsum2map<value_type, tr>;
+//		// result how it is
+//		auto start_time = std::chrono::steady_clock::now();
+//		auto timeout = (timeout_duration != 0ms) ? start_time + timeout_duration : time_point::max();
+//		auto actual_result = einsum(test_einsum.subscript, test_einsum.hypertrieOperands(), timeout);
+//		std::string actual_result_str = [&]() {
+//			std::vector<std::string> elements;
+//			for(auto &[key, value] : actual_result)
+//				elements.push_back(fmt::format("⟨{}⟩ → {}", fmt::join(key, ", "), value));
+//			return fmt::format("[ {} ]", fmt::join(elements, ", "));
+//		}();
+//		WARN(actual_result_str);
+//		WARN("result entries: {}"_format(actual_result.size()));
+//		auto end_time = std::chrono::steady_clock::now();
+//		WARN(fmt::format("hypertrie: {}ms ",
+//						 std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count()));
+//		if (timeout_duration != 0ms)
+//			REQUIRE((end_time - start_time) < (timeout_duration + 10ms));
+//
+//
+//		// expected result
+//		start_time = std::chrono::steady_clock::now();
+//		torch::Tensor expected_result = at::einsum(test_einsum.str_subscript, test_einsum.torchOperands());
+//		end_time = std::chrono::steady_clock::now();
+//		WARN(fmt::format("pytorch: {}ms ",
+//						 std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count()));
+//		if (timeout_duration == 0ms) {
+//			validateResult<value_type, tr>(excl_max, test_einsum, actual_result, expected_result);
+//		}
+//	}
+//
+//	template<HypertrieTrait tr, typename T>
+//	void runTest(long excl_max, std::vector<TestOperand<tr>> &operands, const std::shared_ptr<Subscript> &subscript,
+//				 std::chrono::milliseconds timeout_duration = 0ms) {
+//		TestEinsum<tr> test_einsum{subscript, operands};
+//		runTest<tr, T>(excl_max, test_einsum, timeout_duration);
+//	}
 
 	template<HypertrieTrait tr, typename result_type>
 	void runSubscript(std::string subscript_string, long excl_max = 4, bool empty = false, std::size_t runs = 15,
@@ -104,10 +97,10 @@ namespace Dice::hypertrie::tests::einsum {
 
 	template<HypertrieTrait tr>
 	void run_single_cases(
-			const std::string subscript_str,
-			const std::vector<std::set<std::pair<typename tr::Key, typename tr::value_type>>> &operands_entries) {
+			const std::string& subscript_str,
+			const std::vector<std::set<NonZeroEntry<tr>>> &operands_entries) {
 		using value_type = typename tr::value_type;
-		auto einsum = &hypertrie::einsum2map<value_type, tr>;
+		auto einsum = &::Dice::einsum::einsum2map<value_type, tr>;
 
 
 		auto subscript = std::make_shared<Subscript>(Subscript::from_string(subscript_str));
@@ -115,8 +108,8 @@ namespace Dice::hypertrie::tests::einsum {
 		size_t excl_max = [&]() {
 			auto max = 0;
 			for (const auto &entries : operands_entries)
-				for (const auto &[key, _] : entries)
-					for (const auto &key_part : key)
+				for (const auto &entry : entries)
+					for (const auto &key_part : entry.key())
 						max = std::max<long>(max, key_part);
 			return max + 1;
 		}();
@@ -126,13 +119,12 @@ namespace Dice::hypertrie::tests::einsum {
 
 		for (auto [op_pos, op_entries] : iter::enumerate(operands_entries)) {
 			const uint8_t op_dims = subscript->getOperandLabels(op_pos).size();
-			const bool emtpy = true;
-			TestOperand<tr> operand{op_dims, excl_max, emtpy};
+			const bool empty = true;
+			TestOperand<tr> operand{op_dims, excl_max, empty};
 
-			for (const auto &[key, value] : op_entries) {
-				operand.set(key, value);
+			for (const auto &entry : op_entries) {
+				operand.set(entry);
 			}
-			WARN(fmt::format("operand {}:\n{}", op_pos, (std::string) operand.hypertrie));
 			test_operands.push_back(std::move(operand));
 		}
 
@@ -145,7 +137,7 @@ namespace Dice::hypertrie::tests::einsum {
 				elements.push_back(fmt::format("⟨{}⟩ → {}", fmt::join(key, ", "), value));
 			return fmt::format("[ {} ]", fmt::join(elements, ", "));
 		}();
-		WARN(fmt::format("actual result:\n{}", actual_result_str));
+		WARN(fmt::format("actual result:\n{}", actual_result_str).c_str());
 
 		torch::Tensor expected_result = at::einsum(test_einsum.str_subscript, test_einsum.torchOperands());
 
@@ -156,7 +148,6 @@ namespace Dice::hypertrie::tests::einsum {
 	TEST_CASE_TEMPLATE("simple einsum", TestType, ::Dice::hypertrie::default_bool_Hypertrie_trait) {
 		using tr = TestType;
 		using namespace std::string_literals;
-		using value_type = typename tr::value_type;
 		using Entry = NonZeroEntry<tr>;
 
 		Entry e{{3, 2, 1}};
@@ -285,7 +276,7 @@ namespace Dice::hypertrie::tests::einsum {
 //				}
 //			}
 //		}
-	}
+//	}
 
 	// TODO: re-add randomly generated test-cases
 }// namespace Dice::hypertrie::tests::einsum

@@ -148,7 +148,7 @@ namespace Dice::einsum::internal {
 						}
 						auto &sub_entry = sub_entries[cart_op_pos];
 						assert(sub_entry.value());
-						sub_result[sub_entry.key] = sub_entry.value;
+						sub_result[sub_entry.key()] = sub_entry.value();
 						sub_results.emplace_back(std::move(sub_result));
 						continue;
 					}
@@ -185,7 +185,8 @@ namespace Dice::einsum::internal {
 			iterated_sub_operator_result_mapping = {
 					this->subscript->getCartesianSubscript().getOriginalResultPoss()[iterated_pos]};
 			updateEntryKey(iterated_sub_operator_result_mapping, *this->entry, sub_entries[iterated_pos].key());
-			this->entry->value(this->entry->value() * sub_entries[iterated_pos].value());
+			if constexpr (not hypertrie::HypertrieTrait_bool_valued<tr>)
+				this->entry->value(this->entry->value() * sub_entries[iterated_pos].value());
 		}
 
 

@@ -2,6 +2,7 @@
 #define HYPERTRIE_EINSUMENTRY_HPP
 
 #include <Dice/hypertrie/Hypertrie_trait.hpp>
+#include <Dice/hypertrie/Key.hpp>
 //#define DEBUGEINSUM
 #ifdef DEBUGEINSUM
 #include <fmt/chrono.h>
@@ -37,10 +38,10 @@ namespace Dice::einsum::internal {
 	using tri_with_value_type = decltype(detail::inject_value_type<value_type>(tr{}));
 
 	template<typename value_type, hypertrie::HypertrieTrait_bool_valued tr>
-	using Entry = hypertrie::NonZeroEntry<tri_with_value_type<value_type, tr>>;
+	using Entry = ::Dice::hypertrie::NonZeroEntry<tri_with_value_type<value_type, tr>>;
 
 	template<typename value_type, hypertrie::HypertrieTrait_bool_valued tr>
-	using Key = hypertrie::Key<tri_with_value_type<value_type, tr>>;
+	using Key = ::Dice::hypertrie::Key<tri_with_value_type<value_type, tr>>;
 
 
 }// namespace Dice::einsum::internal

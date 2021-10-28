@@ -25,6 +25,15 @@
 //where do we include this??
 #include <tsl/boost_offset_pointer.h>
 
+//TODO: I only need this on my laptop, not on my other machines.
+// I need to find out why that is.
+namespace std {
+	template<typename T>
+	struct indirectly_readable_traits<boost::interprocess::offset_ptr<T>> {
+		using value_type = typename boost::interprocess::offset_ptr<T>::value_type;
+	};
+}// namespace std
+
 namespace hypertrie::tests::core::node {
 
 	using metall_bool_Hypertrie_trait = Hypertrie_trait<unsigned long,

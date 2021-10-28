@@ -18,6 +18,28 @@ namespace hypertrie::tests::core::node {
 	using namespace ::hypertrie::internal::raw;
 	using namespace ::hypertrie::internal;
 
+	/* The Equal struct needs a way to know whether a type is a set, map or something completely different.
+	 * This namespace collects different concepts to help with this problem.
+	 */
+	namespace EqualTraits {
+		template <typename T>
+		concept ProbablyMap = requires (T t) {
+			typename T::key_type;
+			typename T::mapped_type;
+			{*t.begin()} -> std::convertible_to<std::pair<typename T::key_type const, typename T::mapped_type>>;
+		};
+		template <typename T>
+		concept ProbablySet = requires (T t) {
+			typename T::key_type;
+			{*t.begin()} -> std::convertible_to<typename T::key_type const>;
+		};
+
+		template <typename, typename>
+		struct EqualCheckPossible : std::false_type{};
+		template <typename T, typename V> requires requires (T t, V v) {t == v;}
+		struct EqualCheckPossible<T,V> : std::true_type{};
+	}
+
 	struct Equal {
 		template <typename Set1, typename Set2>
 		static bool set_equal(Set1 const& lhs, Set2 const& rhs) {
@@ -42,20 +64,17 @@ namespace hypertrie::tests::core::node {
 			return true;
 		}
 
-		/* This is the fall-back if no other funciton is found.
-		 * I know that this is not nice, however it is difficult to check if some type is a set.
-		 */
-		template <typename Set1, typename Set2>
+		template <typename T, typename V> requires EqualTraits::EqualCheckPossible<T,V>::value
+		static bool equal(T const& lhs, V const& rhs) {
+			return lhs == rhs;
+		}
+
+		template <EqualTraits::ProbablySet Set1, EqualTraits::ProbablySet Set2> requires (!EqualTraits::EqualCheckPossible<Set1, Set2>::value)
 		static bool equal(Set1 const& lhs, Set2 const& rhs) {
 			return set_equal(lhs, rhs);
 		}
 
-		template <typename Map1, typename Map2> requires requires() {
-			typename Map1::key_type;
-			typename Map1::mapped_type;
-			typename Map2::key_type;
-			typename Map2::mapped_type;
-		}
+		template <EqualTraits::ProbablyMap Map1, EqualTraits::ProbablyMap Map2> requires (!EqualTraits::EqualCheckPossible<Map1, Map2>::value)
 		static bool equal(Map1 const& lhs, Map2 const& rhs) {
 			return map_equal(lhs, rhs);
 		}

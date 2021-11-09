@@ -31,6 +31,10 @@ namespace hypertrie::internal::raw {
 		using DiagonalPositions = typename tri::template DiagonalPositions<depth>;
 		using SubDiagonalPositions = typename tri::template DiagonalPositions<(depth>1) ? depth - 1 : 0>;
 
+		using NodeRepr = std::conditional_t<tri::compressed_nodes,
+											TensorHash,
+											PlainTensorHash>;
+
 	private:
 		using child_iterator = typename UncompressedNode<depth, tri>::ChildrenType::const_iterator;
 
@@ -97,20 +101,28 @@ namespace hypertrie::internal::raw {
 							else
 								value_ = iter_->second;
 						} else {
-							TensorHash next_result_hash;
-							if constexpr (result_depth == 1 and tri::is_lsb_unused) {
-								if (iter_->second.isCompressed()){
-									value_.nodec.hash() = iter_->second;
-									value_.is_managed = true;
-									return *this;
+							if constexpr (tri::compressed_nodes) {
+								if constexpr (result_depth == 1 and tri::is_lsb_unused) {
+									if (iter_->second.isCompressed()) {
+										value_.nodec.hash() = iter_->second;
+										value_.is_managed = true;
+										return *this;
+									} else {
+										auto next_result_hash = iter_->second.hash();
+										NodeContainer<result_depth, tri> child_node = node_context_->storage.template getNode<result_depth>(next_result_hash);
+										value_ = {child_node,true};
+									}
 								} else {
-									next_result_hash = iter_->second.hash();
+									auto next_result_hash = iter_->second;
+									NodeContainer<result_depth, tri> child_node = node_context_->storage.template getNode<result_depth>(next_result_hash);
+									value_ = {child_node,true};
 								}
+
 							} else {
-								next_result_hash = iter_->second;
+								auto next_result_hash = iter_->second;
+								UncompressedNodeContainer<result_depth, tri> child_node = node_context_->storage.template getUncompressedNode<result_depth>(next_result_hash);
+								value_ = {child_node,true};
 							}
-							NodeContainer<result_depth, tri> child_node = node_context_->storage.template getNode<result_depth>(next_result_hash);
-							value_ = {child_node,true};
 						}
 					}
 				}
@@ -129,7 +141,10 @@ namespace hypertrie::internal::raw {
 
 		auto operator[](key_part_type key_part){
 			if constexpr (result_depth > 0)
-				value_ = node_context_->template diagonal_slice<depth, diag_depth>(*nodec_, diag_poss_, key_part, &internal_compressed_node);
+				if constexpr (tri::compressed_nodes)
+					value_ = node_context_->template diagonal_slice<depth, diag_depth>(*nodec_, diag_poss_, key_part, &internal_compressed_node);
+				else
+					value_ = node_context_->template diagonal_slice<depth, diag_depth>(*nodec_, diag_poss_, key_part);
 			else
 				value_ = node_context_->template diagonal_slice<depth, diag_depth>(*nodec_, diag_poss_, key_part);
 			return value_;
@@ -142,7 +157,10 @@ namespace hypertrie::internal::raw {
 			if constexpr (not (tri::is_lsb_unused and depth - 1 == 1)){
 				NodeContainer<depth - 1, tri> child_node = node_context_->storage.template getNode<depth - 1>(iter_->second);
 				if constexpr (result_depth > 0)
-					value_ = node_context_->template diagonal_slice<depth - 1, diag_depth - 1>(child_node, sub_diag_poss_, key_part, &internal_compressed_node);
+					if constexpr (tri::compressed_nodes)
+						value_ = node_context_->template diagonal_slice<depth - 1, diag_depth - 1>(child_node, sub_diag_poss_, key_part, &internal_compressed_node);
+					else
+						value_ = node_context_->template diagonal_slice<depth - 1, diag_depth - 1>(child_node, sub_diag_poss_, key_part);
 				else
 					value_ = node_context_->template diagonal_slice<depth - 1, diag_depth - 1>(child_node, sub_diag_poss_, key_part);
 				if constexpr(result_depth == 0)
@@ -151,11 +169,17 @@ namespace hypertrie::internal::raw {
 					return not value_.nodec.empty();
 			} else {
 				static_assert(depth == 2);
-				if (iter_->second.isCompressed()){
-					value_ = iter_->second.getKeyPart() == key_part;
-					return value_;
+				if constexpr (tri::compressed_nodes) {
+					if (iter_->second.isCompressed()) {
+						value_ = iter_->second.getKeyPart() == key_part;
+						return value_;
+					} else {
+						NodeContainer<depth - 1, tri> child_node = node_context_->storage.template getNode<depth - 1>(iter_->second.hash());
+						value_ = node_context_->template diagonal_slice<depth - 1, diag_depth - 1>(child_node, sub_diag_poss_, key_part);
+						return value_;
+					}
 				} else {
-					NodeContainer<depth - 1, tri> child_node = node_context_->storage.template getNode<depth - 1>(iter_->second.hash());
+					UncompressedNodeContainer<depth - 1, tri> child_node = node_context_->storage.template getUncompressedNode<depth - 1>(iter_->second.hash());
 					value_ = node_context_->template diagonal_slice<depth - 1, diag_depth - 1>(child_node, sub_diag_poss_, key_part);
 					return value_;
 				}
@@ -201,7 +225,7 @@ namespace hypertrie::internal::raw {
 						else
 							value_ = iter_->second;
 					} else {
-						TensorHash next_result_hash;
+						NodeRepr next_result_hash;
 						if constexpr (result_depth == 1 and tri::is_lsb_unused) {
 							if (iter_->second.isCompressed()){
 								value_.nodec.hash() = iter_->second;
@@ -253,6 +277,7 @@ namespace hypertrie::internal::raw {
 	template<size_t diag_depth, size_t depth, HypertrieInternalTrait tri_t>
 	class HashDiagonal<diag_depth, depth, NodeCompression::compressed, tri_t> {
 		static constexpr const size_t result_depth = depth - diag_depth;
+		static_assert(tri_t::compressed_nodes);
 
 	public:
 		using tri = tri_t;
@@ -266,6 +291,10 @@ namespace hypertrie::internal::raw {
 
 		using DiagonalPositions = typename tri::template DiagonalPositions<depth>;
 
+		using CompressedNodeCacheType = std::conditional_t<tri::compressed_nodes,
+														   CompressedNode<(result_depth > 0) ? result_depth : 1, tri>,
+														   bool>; // dummy type
+
 	private:
 		using IterValue = std::conditional_t<
 				(result_depth > 0),
@@ -275,8 +304,7 @@ namespace hypertrie::internal::raw {
 	private:
 		CompressedNodeContainer<depth, tri> *nodec_;
 		DiagonalPositions diag_poss_;
-
-		CompressedNode<(result_depth > 0) ? result_depth : 1, tri> internal_compressed_node;
+		CompressedNodeCacheType internal_compressed_node;
 		std::pair<key_part_type, IterValue> value_;
 		bool ended_ = true;
 		bool contains;

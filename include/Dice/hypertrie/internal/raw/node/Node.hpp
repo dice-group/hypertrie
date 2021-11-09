@@ -2,10 +2,11 @@
 #define HYPERTRIE_NODE_HPP
 
 #include "Dice/hypertrie/internal/raw/Hypertrie_internal_traits.hpp"
-#include "Dice/hypertrie/internal/util/PosType.hpp"
 #include "Dice/hypertrie/internal/raw/node/NodeCompression.hpp"
 #include "Dice/hypertrie/internal/raw/node/TaggedTensorHash.hpp"
 #include "Dice/hypertrie/internal/raw/node/TensorHash.hpp"
+#include "Dice/hypertrie/internal/util/PosType.hpp"
+#include "PlainTensorHash.hpp"
 #include <range.hpp>
 
 namespace hypertrie::internal::raw {
@@ -129,10 +130,13 @@ namespace hypertrie::internal::raw {
 		template<typename K, typename V>
 		using map_type = typename tri::template map_type<K, V>;
 
+		using NodeRepr = std::conditional_t<tri::compressed_nodes,
+											std::conditional_t<(depth == 2 and tri::is_lsb_unused),
+															   TaggedTensorHash<tri>,
+															   TensorHash>,
+											PlainTensorHash>;
 		using ChildType = std::conditional_t<(depth > 1),
-											 std::conditional_t<(depth == 2 and tri::is_lsb_unused),
-																TaggedTensorHash<tri>,
-																TensorHash>,
+											 NodeRepr,
 											 value_type>;
 
 		using ChildrenType = std::conditional_t<((depth == 1) and tri::is_bool_valued),
@@ -298,6 +302,7 @@ namespace hypertrie::internal::raw {
 		using value_type = typename tri::value_type;
 		using ChildrenType = typename WithEdges<depth, tri_t>::ChildrenType;
 		using EdgesType = typename WithEdges<depth, tri_t>::EdgesType;
+		using NodeRepr = typename WithEdges<depth, tri_t>::NodeRepr;
 
 	private:
 		static constexpr const auto subkey = &tri::template subkey<depth>;
@@ -312,7 +317,7 @@ namespace hypertrie::internal::raw {
 			if constexpr (not tri::is_bool_valued)
 				for (const size_t pos : iter::range(depth)) {
 					auto sub_key = subkey(key, pos);
-					TensorHash &hash = this->edges(pos)[key[pos]];
+					NodeRepr &hash = this->edges(pos)[key[pos]];
 					hash.changeValue(sub_key, old_value, new_value);
 				}
 		}

@@ -3,6 +3,7 @@
 
 #include "Dice/hypertrie/internal/raw/Hypertrie_internal_traits.hpp"
 #include "Dice/hypertrie/internal/raw/node/TensorHash.hpp"
+#include "Dice/hypertrie/internal/raw/node/PlainTensorHash.hpp"
 #include "Dice/hypertrie/internal/raw/storage/Entry.hpp"
 
 //from
@@ -30,6 +31,9 @@ namespace hypertrie::internal::raw {
 	public:
 		using tri = tri_t;
 		/// public definitions
+		using NodeRepr = std::conditional_t<tri::compressed_nodes,
+											TensorHash,
+											PlainTensorHash>;
 		using key_part_type = typename tri::key_part_type;
 		using value_type = typename tri::value_type;
 		using RawKey = typename tri::template RawKey<depth>;
@@ -41,8 +45,8 @@ namespace hypertrie::internal::raw {
 	private:
 
 		ModificationOperations mod_op_{};
-		TensorHash hash_before_{};
-		mutable TensorHash hash_after_{};
+		NodeRepr hash_before_{};
+		mutable NodeRepr hash_after_{};
 		mutable std::vector<Entry> entries_{};
 
 	public:
@@ -50,18 +54,18 @@ namespace hypertrie::internal::raw {
 
 		const ModificationOperations &modOp() const noexcept { return this->mod_op_;}
 
-		TensorHash &hashBefore()  noexcept { return this->hash_before_;}
+		NodeRepr &hashBefore()  noexcept { return this->hash_before_;}
 
-		const TensorHash &hashBefore() const noexcept {
+		const NodeRepr &hashBefore() const noexcept {
 			return this->hash_before_;
 		}
 
-		TensorHash &hashAfter() noexcept {
+		NodeRepr &hashAfter() noexcept {
 			if (hash_after_.empty()) calcHashAfter();
 			return this->hash_after_;
 		}
 
-		const TensorHash &hashAfter() const noexcept {
+		const NodeRepr &hashAfter() const noexcept {
 			if (hash_after_.empty()) calcHashAfter();
 			return this->hash_after_;
 		}
@@ -121,7 +125,7 @@ namespace hypertrie::internal::raw {
 					break;
 				case ModificationOperations::NEW_COMPRESSED_NODE:{
 					assert(hash_before_.empty());
-					hash_after_ = TensorHash::getCompressedNodeHash(firstKey(), firstValue());
+					hash_after_ = NodeRepr::getCompressedNodeHash(firstKey(), firstValue());
 					break;
 				}
 				case ModificationOperations::INSERT_INTO_COMPRESSED_NODE:
@@ -133,9 +137,10 @@ namespace hypertrie::internal::raw {
 					break;
 				case ModificationOperations::NEW_UNCOMPRESSED_NODE:
 					assert(hash_before_.empty());
-					assert(entries_.size() > 1);
+					if constexpr (tri::compressed_nodes)
+						assert(entries_.size() > 1);
 
-					hash_after_ = TensorHash::getCompressedNodeHash(firstKey(), firstValue());
+					hash_after_ = NodeRepr::getCompressedNodeHash(firstKey(), firstValue());
 					for (auto entry_it = std::next(entries_.begin()); entry_it != entries_.end(); ++entry_it)
 						hash_after_.addEntry(red::key(*entry_it), red::value(*entry_it));
 					break;

@@ -4,6 +4,7 @@
 #include "Dice/hypertrie/internal/raw/node/Node.hpp"
 #include "Dice/hypertrie/internal/raw/node/NodePtr.hpp"
 #include "Dice/hypertrie/internal/raw/node/TensorHash.hpp"
+#include "Dice/hypertrie/internal/raw/node/PlainTensorHash.hpp"
 
 namespace hypertrie::internal::raw {
 
@@ -38,7 +39,11 @@ namespace hypertrie::internal::raw {
 		 * Normally the node representation is just a TensorHash.
 		 * However, if depth == 1 and tri::is_bool_valued and tri::is_lsb_unused, then the key_part is directly stored in a TaggedTensorHash.
 		 */
-		using NodeRepr = std::conditional_t<(not (depth == 1 and tri::is_bool_valued and tri::is_lsb_unused)), TensorHash, TaggedTensorHash<tri_t>>;
+		using NodeRepr = std::conditional_t<tri::compressed_nodes,
+											std::conditional_t<(not(depth == 1 and tri::is_bool_valued and tri::is_lsb_unused)),
+															   TensorHash, TaggedTensorHash<tri_t>>,
+											PlainTensorHash>;
+
 	protected:
 		/**
 		 * NodeHash (or TaggedNodeHash) that identifies (or represents) the Node.
@@ -116,7 +121,11 @@ namespace hypertrie::internal::raw {
 
 	template<size_t depth, HypertrieInternalTrait tri_t>
 	struct SpecificNodeContainer<depth, NodeCompression::compressed, tri_t> : public NodeContainer<depth, tri_t> {
-		using NodeRepr = std::conditional_t<(not (depth == 1 and tri_t::is_bool_valued and tri_t::is_lsb_unused)), TensorHash, TaggedTensorHash<tri_t>>;
+		static_assert(tri_t::compressed_nodes);
+		using NodeRepr = std::conditional_t<tri_t::compressed_nodes,
+											std::conditional_t<(not(depth == 1 and tri_t::is_bool_valued and tri_t::is_lsb_unused)),
+															   TensorHash, TaggedTensorHash<tri_t>>,
+											PlainTensorHash>;
 
 		SpecificNodeContainer() noexcept : NodeContainer<depth, tri_t>{} {}
 
@@ -147,7 +156,10 @@ namespace hypertrie::internal::raw {
 	template<size_t depth,
 			 HypertrieInternalTrait tri_t>
 	struct SpecificNodeContainer<depth, NodeCompression::uncompressed, tri_t> : public NodeContainer<depth, tri_t> {
-		using NodeRepr = std::conditional_t<(not (depth == 1 and tri_t::is_bool_valued and tri_t::is_lsb_unused)), TensorHash, TaggedTensorHash<tri_t>>;
+		using NodeRepr = std::conditional_t<tri_t::compressed_nodes,
+											std::conditional_t<(not(depth == 1 and tri_t::is_bool_valued and tri_t::is_lsb_unused)),
+															   TensorHash, TaggedTensorHash<tri_t>>,
+											PlainTensorHash>;
 
 		SpecificNodeContainer() noexcept : NodeContainer<depth, tri_t>{} {}
 

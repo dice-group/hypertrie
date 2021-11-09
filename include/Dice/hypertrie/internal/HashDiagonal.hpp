@@ -50,6 +50,8 @@ namespace hypertrie {
 		inline static RawMethods generateRawMethods() {
 			[[maybe_unused]] constexpr static const size_t result_depth = depth - diag_depth;
 			using RawDiagonalHash_t = RawHashDiagonal<diag_depth, depth, compression>;
+			if constexpr (not tr::compressed_nodes)
+				static_assert(compression == NodeCompression::uncompressed);
 			return RawMethods(
 					// construct
 					[](const const_Hypertrie<tr> &hypertrie, const KeyPositions &diagonal_poss) -> void * {
@@ -88,10 +90,14 @@ namespace hypertrie {
 						if constexpr (diag_depth < depth) {
 							const auto &raw_diagonal = *reinterpret_cast<const RawDiagonalHash_t *>(raw_diagonal_ptr);
 							const auto &value = raw_diagonal.currentValue();
-							if (value.is_managed) {
-								return const_Hypertrie<tr>(result_depth, context, {value.nodec.hash().hash(), value.nodec.node()});
+							if constexpr (tr::compressed_nodes) {
+								if (value.is_managed) {
+									return const_Hypertrie<tr>(result_depth, context, {value.nodec.hash().hash(), value.nodec.node()});
+								} else {
+									return const_Hypertrie<tr>(result_depth, nullptr, {value.nodec.hash().hash(), new internal::raw::CompressedNode<result_depth, tri>(*value.nodec.compressed_node())});
+								}
 							} else {
-								return const_Hypertrie<tr>(result_depth, nullptr, {value.nodec.hash().hash(), new internal::raw::CompressedNode<result_depth, tri>(*value.nodec.compressed_node())});
+								return const_Hypertrie<tr>(result_depth, context, {value.nodec.hash().hash(), value.nodec.node()});
 							}
 						} else {
 							assert(false);
@@ -133,22 +139,36 @@ namespace hypertrie {
 		  std::vector<std::vector<std::vector<RawMethods>>> raw_methods(2);
 			raw_methods[0] = std::vector<std::vector<RawMethods>>(hypertrie_depth_limit);
 			raw_methods[1] = std::vector<std::vector<RawMethods>>(hypertrie_depth_limit);
+
 			for (size_t depth : iter::range(1UL, hypertrie_depth_limit))
-				for (size_t diag_depth : iter::range(1UL, depth + 1))
-					for (int compression : iter::range(2))
+				for (size_t diag_depth : iter::range(1UL, depth + 1)) {
+					if constexpr (tr::compressed_nodes){
+						for (size_t compression : {0,1})
+							compiled_switch<hypertrie_depth_limit, 1>::switch_void(
+									depth,
+									[&](auto depth_arg) {//
+										compiled_switch<depth_arg + 1, 1>::switch_void(
+												diag_depth,
+												[&](auto diag_depth_arg) {
+													compiled_switch<2, 0>::switch_void(
+															compression,
+															[&](auto compression_arg) {
+																raw_methods[size_t(compression_arg)][depth_arg - 1].push_back(generateRawMethods<diag_depth_arg, depth_arg, static_cast<NodeCompression>(bool(compression_arg))>());
+															});
+												});
+									});
+					} else {
 						compiled_switch<hypertrie_depth_limit, 1>::switch_void(
 								depth,
 								[&](auto depth_arg) {//
 									compiled_switch<depth_arg + 1, 1>::switch_void(
 											diag_depth,
 											[&](auto diag_depth_arg) {
-												compiled_switch<2, 0>::switch_void(
-														compression,
-														[&](auto compression_arg) {
-															raw_methods[compression_arg][depth_arg - 1].push_back(generateRawMethods<diag_depth_arg, depth_arg, static_cast<NodeCompression>(bool(compression_arg))>());
-														});
+												raw_methods[size_t(NodeCompression::uncompressed)][depth_arg - 1].push_back(generateRawMethods<diag_depth_arg, depth_arg, NodeCompression::uncompressed>());
 											});
 								});
+					}
+				}
 			return raw_methods;
 		}();
 
@@ -163,7 +183,7 @@ namespace hypertrie {
 
 	public:
 		HashDiagonal(const const_Hypertrie<tr> &hypertrie, const KeyPositions &diag_poss)
-			: raw_methods(&getRawMethods(hypertrie.depth(), diag_poss.size(), hypertrie.size() == 1)),
+			: raw_methods(&getRawMethods(hypertrie.depth(), diag_poss.size(), (tr::compressed_nodes) ? hypertrie.size() == 1 : false)),
 			  raw_hash_diagonal(raw_methods->construct(hypertrie, diag_poss)), context_(hypertrie.context()) {}
 
 		HashDiagonal(HashDiagonal &&other)

@@ -50,40 +50,45 @@ namespace hypertrie {
 
 
 		void destruct_contextless_node() noexcept {
-			if (contextless() and node_container_.hash_sized != 0 and depth() != 0) {
-				if (tr::is_bool_valued and tr::lsb_unused and depth_ == 1 and size() == 1)
-					return;
-				using namespace internal;
-				assert(node_container_.pointer_sized != nullptr);
-				compiled_switch<hypertrie_depth_limit, 1>::switch_void(
-						this->depth_,
-						[&](auto depth_arg) {
-						  using CND = typename internal::raw::template CompressedNodeContainer<depth_arg, tri>;
-						  if constexpr (not(depth_arg == 1 and tri::is_bool_valued and tri::is_lsb_unused))
-							  delete reinterpret_cast<CND *>(&this->node_container_)->compressed_node();
-						},
-						[]() { assert(false); });
+			if constexpr (tr::compressed_nodes) {
+				if (contextless() and node_container_.hash_sized != 0 and depth() != 0) {
+					if (tr::is_bool_valued and tr::lsb_unused and depth_ == 1 and size() == 1)
+						return;
+					using namespace internal;
+					assert(node_container_.pointer_sized != nullptr);
+					compiled_switch<hypertrie_depth_limit, 1>::switch_void(
+							this->depth_,
+							[&](auto depth_arg) {
+								using CND = typename internal::raw::template CompressedNodeContainer<depth_arg, tri>;
+								if constexpr (not(depth_arg == 1 and tri::is_bool_valued and tri::is_lsb_unused))
+									delete reinterpret_cast<CND *>(&this->node_container_)->compressed_node();
+							},
+							[]() { assert(false); });
+				}
 			}
 		}
 
 		void copy_contextless_node() noexcept {
-			if (contextless() and not empty() and depth() != 0) {
-				if (not(tr::is_bool_valued and tr::lsb_unused and depth_ == 1 and size() == 1))internal::compiled_switch<hypertrie_depth_limit, 1>::switch_void(
-						this->depth_,
-						[&](auto depth_arg) {
-						  using CNodec = typename internal::raw::template NodeContainer<depth_arg, tri>;
-						  if constexpr (not(depth_arg == 1 and tri::is_bool_valued and tri::is_lsb_unused)) {
-							  // create a copy of the contextless compressed node
-							  CNodec &cnodec = *reinterpret_cast<CNodec *>(&this->node_container_);
-							  cnodec.compressed_node() = new internal::raw::CompressedNode<depth_arg, tri>{*cnodec.compressed_node()};;
-						  }
-						},
-						[]() { assert(false); });
+			if constexpr (tr::compressed_nodes) {
+				if (contextless() and not empty() and depth() != 0) {
+					if (not(tr::is_bool_valued and tr::lsb_unused and depth_ == 1 and size() == 1))internal::compiled_switch<hypertrie_depth_limit, 1>::switch_void(
+							this->depth_,
+							[&](auto depth_arg) {
+								using CNodec = typename internal::raw::template NodeContainer<depth_arg, tri>;
+								if constexpr (not(depth_arg == 1 and tri::is_bool_valued and tri::is_lsb_unused)) {
+									// create a copy of the contextless compressed node
+									CNodec &cnodec = *reinterpret_cast<CNodec *>(&this->node_container_);
+									cnodec.compressed_node() = new internal::raw::CompressedNode<depth_arg, tri>{*cnodec.compressed_node()};;
+								}
+							},
+							[]() { assert(false); });
+				}
 			}
 		}
 	public:
 		~const_Hypertrie() {
-			destruct_contextless_node();
+			if constexpr (tr::compressed_nodes)
+				destruct_contextless_node();
 		}
 
 		const_Hypertrie(const_Hypertrie &&const_hypertrie)
@@ -93,11 +98,13 @@ namespace hypertrie {
 		}
 
 		const_Hypertrie &operator=(const const_Hypertrie &const_hypertrie) noexcept {
-			destruct_contextless_node();
+			if constexpr (tr::compressed_nodes)
+				destruct_contextless_node();
 			this->node_container_ = const_hypertrie.node_container_;
 			this->context_ = const_hypertrie.context_;
 			this->depth_ = const_hypertrie.depth_;
-			copy_contextless_node();
+			if constexpr (tr::compressed_nodes)
+				copy_contextless_node();
 
 			return *this;
 		}
@@ -115,7 +122,8 @@ namespace hypertrie {
 
 		const_Hypertrie(const const_Hypertrie &const_hypertrie)
 			: node_container_(const_hypertrie.node_container_), context_(const_hypertrie.context_), depth_(const_hypertrie.depth_) {
-			copy_contextless_node();
+			if constexpr (tr::compressed_nodes)
+				copy_contextless_node();
 		}
 
 		const_Hypertrie() = default;
@@ -159,8 +167,11 @@ namespace hypertrie {
 							this->depth_,
 							[&](auto depth_arg) -> size_t {
 								const auto &node_container = *reinterpret_cast<const internal::raw::NodeContainer<depth_arg, tri> *>(&this->node_container_);
-								if (node_container.isCompressed())
-									return node_container.compressed_node()->size();
+								if constexpr (tr::compressed_nodes)
+									if (node_container.isCompressed())
+										return node_container.compressed_node()->size();
+									else
+										return node_container.uncompressed_node()->size();
 								else
 									return node_container.uncompressed_node()->size();
 							},

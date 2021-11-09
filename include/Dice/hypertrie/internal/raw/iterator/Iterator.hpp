@@ -11,6 +11,10 @@ namespace hypertrie::internal::raw {
 		using tri = tri_t;
 		using tr = typename tri::tr;
 	protected:
+		using NodeRepr = std::conditional_t<tri::compressed_nodes,
+											TensorHash,
+											PlainTensorHash>;
+
 		template<size_t depth_>
 		using UncomressedChildren = typename UncompressedNode<depth_, tri>::ChildrenType;
 		template<size_t depth_>
@@ -49,7 +53,8 @@ namespace hypertrie::internal::raw {
 	public:
 		base_iterator() = default;
 
-		base_iterator(void *nodeContext, void *nodec, NodeCompression compression, bool ended) : node_context_(nodeContext), nodec_(nodec), compression_(compression), ended_(ended) {}
+		base_iterator(void *nodeContext, void *nodec, NodeCompression compression, bool ended)
+			: node_context_(nodeContext), nodec_(nodec), compression_(compression), ended_(ended) {}
 	};
 
 	template<size_t depth_t,
@@ -63,6 +68,9 @@ namespace hypertrie::internal::raw {
 		using tri = tri_t;
 		using tr = typename tri::tr;
 	private:
+		using NodeRepr = std::conditional_t<tri::compressed_nodes,
+											TensorHash,
+											PlainTensorHash>;
 		using key_part_type = typename tri::key_part_type;
 
 		using RawKey = typename tri::template RawKey<depth>;
@@ -200,7 +208,7 @@ namespace hypertrie::internal::raw {
 		template<pos_type current_depth = depth,
 				 typename = std::enable_if_t<(current_depth <= depth and current_depth >= 1)>>
 		inline void init_rek() {
-			if constexpr (current_depth == depth)
+			if constexpr (current_depth == depth and tri::compressed_nodes)
 				if (this->compression_ == NodeCompression::compressed){
 					writeCompressed<current_depth>();
 					return;
@@ -213,7 +221,7 @@ namespace hypertrie::internal::raw {
 					return *this->nodec();
 				} else {
 					auto &parent_iter = this->template getIter<current_depth>();
-					TensorHash hash;
+					NodeRepr hash;
 					if constexpr (current_depth == 1 and tri::is_lsb_unused)
 						hash = parent_iter->second.hash();
 					else
@@ -234,12 +242,16 @@ namespace hypertrie::internal::raw {
 
 			// call recursively, if no leaf is reached (depth == 1 or child is compressed)
 			if constexpr (current_depth > 1)  {
-				if (iter->second.isUncompressed())
-					// child is uncompressed, go on recursively
+				if constexpr (tri::compressed_nodes) {
+					if (iter->second.isUncompressed())
+						// child is uncompressed, go on recursively
+						this->init_rek<child_depth>();
+					else {
+						// child is compressed
+						writeCompressed<child_depth>();
+					}
+				} else {
 					this->init_rek<child_depth>();
-				else {
-					// child is compressed
-					writeCompressed<child_depth>();
 				}
 			}
 		}
@@ -247,7 +259,7 @@ namespace hypertrie::internal::raw {
 		template<pos_type current_depth = depth,
 				 typename = std::enable_if_t<(current_depth <= depth and current_depth >= 1)>>
 		inline bool inc_rek() {
-			if constexpr (current_depth == depth)
+			if constexpr (current_depth == depth and tri::compressed_nodes)
 				if (this->compression_ == NodeCompression::compressed){
 					this->ended_ = true;
 					return true;
@@ -259,7 +271,10 @@ namespace hypertrie::internal::raw {
 				if constexpr (current_depth == 1)
 					return true;
 				else
-					return iter->second.isCompressed();
+					if constexpr (tri::compressed_nodes)
+						return iter->second.isCompressed();
+					else
+						return false;
 			}();
 			// if the child is compressed there is no child_it we can forward
 			if constexpr (current_depth > 1)
@@ -274,14 +289,19 @@ namespace hypertrie::internal::raw {
 				if (iter != end) { // this it has values left
 					writeUncompressed<child_depth>();
 
-					if constexpr (current_depth > 1)  {
-						if (iter->second.isUncompressed())
-							// child is uncompressed, initialize it recursively
+					if constexpr (current_depth > 1) {
+						if constexpr (tri::compressed_nodes) {
+							if (iter->second.isUncompressed())
+								// child is uncompressed, initialize it recursively
+								init_rek<current_depth - 1>();
+							else
+								// child is compressed
+								writeCompressed<child_depth>();
+						} else {
 							init_rek<current_depth - 1>();
-						else
-							// child is compressed
-							writeCompressed<child_depth>();
+						}
 					}
+
 					return false;
 				} else {
 					if constexpr(current_depth == depth) this->ended_ = true;

@@ -22,6 +22,9 @@ namespace hypertrie::internal::raw {
 	public:
 		using tri = tri_t;
 		/// public definitions
+		using NodeRepr = std::conditional_t<tri::compressed_nodes,
+											TensorHash,
+											PlainTensorHash>;
 		using key_part_type = typename tri::key_part_type;
 		using value_type = typename tri::value_type;
 		template<typename key, typename value>
@@ -114,25 +117,36 @@ namespace hypertrie::internal::raw {
 		 */
 		template<size_t depth>
 		inline auto getChild(UncompressedNodeContainer<depth, tri> &nodec, size_t pos, key_part_type key_part)
-		-> std::conditional_t<(depth > 1), NodeContainer<depth - 1, tri>, value_type> {
+				-> std::conditional_t<(depth > 1), NodeContainer<depth - 1, tri>, value_type> {
 			assert(pos < depth);
 			if (nodec.empty())
 				return {};
 			else {
 				auto child = nodec.getChildHashOrValue(pos, key_part);
-				if constexpr (depth == 2 and tri::is_lsb_unused and tri::is_bool_valued) {
-					if (child.isCompressed()) {
-						return CompressedNodeContainer<depth - 1, tri>{child, {}};
+				if constexpr (tri::compressed_nodes) {
+					if constexpr (depth == 2 and tri::is_lsb_unused and tri::is_bool_valued) {
+						if (child.isCompressed()) {
+							return CompressedNodeContainer<depth - 1, tri>{child, {}};
+						} else {
+							return storage.template getUncompressedNode<depth - 1>(child.getTaggedNodeHash());
+						}
+					} else if constexpr (depth > 1) {
+						if (not child.empty())
+							return storage.template getNode<depth - 1>(child);
+						else
+							return {};
 					} else {
-						return storage.template getUncompressedNode<depth - 1>(child.getTaggedNodeHash());
+						return child;
 					}
-				} else if constexpr (depth > 1) {
-					if (not child.empty())
-						return storage.template getNode<depth - 1>(child);
-					else
-						return {};
-				} else {
-					return child;
+				} else { // no compressed nodes
+					if constexpr (depth > 1) {
+						if (not child.empty())
+							return storage.template getUncompressedNode<depth - 1>(child);
+						else
+							return {};
+					} else {
+						return child;
+					}
 				}
 			}
 		}
@@ -149,19 +163,40 @@ namespace hypertrie::internal::raw {
 			static constexpr const auto subkey = &tri::template subkey<depth>;
 			if (nodec.empty())
 				return {};
-			else if (nodec.isCompressed()) {
-				if constexpr (tri::is_lsb_unused and depth == 1){
-					return nodec.hash().getKeyPart() == key[0];
+			else if constexpr (tri::compressed_nodes) {
+				if (nodec.isCompressed()) {
+					if constexpr (tri::is_lsb_unused and depth == 1) {
+						return nodec.hash().getKeyPart() == key[0];
+					} else {
+						auto *node = nodec.compressed_node();
+						if (node->key() == key) {
+							if constexpr (tri::is_bool_valued) return true;
+							else
+								return node->value();
+						} else
+							return {};
+					}
 				} else {
-					auto *node = nodec.compressed_node();
-					if (node->key() == key) {
-						if constexpr (tri::is_bool_valued) return true;
-						else
-							return node->value();
-					} else
-						return {};
+					UncompressedNodeContainer<depth, tri> nc = nodec.uncompressed();
+					if constexpr (depth > 1) {
+						// TODO: implement minCardPos();
+						auto pos = 0;//minCardPos();
+						NodeContainer<depth - 1, tri> child = this->template getChild<depth>(nc, pos, key[pos]);
+						if (not child.empty()) {
+							if constexpr (depth == 2 and tri::is_lsb_unused and tri::is_bool_valued) {
+								if (child.isCompressed())// here, we have an KeyPart stored instead of a hash
+									return key[1] == child.hash().getKeyPart();
+							}
+							return get<depth - 1>(child, subkey(key, pos));
+						} else {
+							return {};// false, 0, 0.0
+						}
+					} else {
+
+						return this->template getChild<1>(nc, 0UL, key[0]);
+					}
 				}
-			} else {
+			} else {// uncompressed nodes only
 				UncompressedNodeContainer<depth, tri> nc = nodec.uncompressed();
 				if constexpr (depth > 1) {
 					// TODO: implement minCardPos();
@@ -169,7 +204,7 @@ namespace hypertrie::internal::raw {
 					NodeContainer<depth - 1, tri> child = this->template getChild<depth>(nc, pos, key[pos]);
 					if (not child.empty()) {
 						if constexpr (depth == 2 and tri::is_lsb_unused and tri::is_bool_valued) {
-							if (child.isCompressed()) // here, we have an KeyPart stored instead of a hash
+							if (child.isCompressed())// here, we have an KeyPart stored instead of a hash
 								return key[1] == child.hash().getKeyPart();
 						}
 						return get<depth - 1>(child, subkey(key, pos));
@@ -211,59 +246,68 @@ namespace hypertrie::internal::raw {
 			if constexpr (slice_offset >= fixed_keyparts) // break condition
 				return {nodec, true};
 			else { // recursion
-				if (nodec.isUncompressed()){
+				if constexpr (not tri::compressed_nodes){
 					auto uncompressed_nodec = nodec.uncompressed();
 					auto child = this->template getChild(uncompressed_nodec, raw_slice_key[slice_offset].pos - slice_offset, raw_slice_key[slice_offset].key_part);
 					if (child.empty())
 						return {};
 					else
 						return slice_rek<current_depth - 1, fixed_keyparts, slice_offset +1> (child, raw_slice_key);
-
-				} else { // nodec.isCompressed()
-					// check if key-parts match the slice key
-					for (auto slice_key_i : iter::range(slice_offset, fixed_keyparts))
-						if (nodec.compressed_node()->key()[raw_slice_key[slice_key_i].pos - slice_offset] != raw_slice_key[slice_key_i].key_part)
+				} else {
+					if (nodec.isUncompressed()) {
+						auto uncompressed_nodec = nodec.uncompressed();
+						auto child = this->template getChild(uncompressed_nodec, raw_slice_key[slice_offset].pos - slice_offset, raw_slice_key[slice_offset].key_part);
+						if (child.empty())
 							return {};
-					// when this point is reached, the compressed node is a match
-					if constexpr (result_depth > 0){ // return key/value
-						CompressedNodeContainer<result_depth, tri> nc;
-						if constexpr (tri::is_bool_valued and tri::is_lsb_unused and (result_depth == 1)){
-							size_t slice_pos = 0;
-							for (auto nodec_pos : iter::range(current_depth)){
-								if (slice_pos + slice_offset < fixed_keyparts and nodec_pos == raw_slice_key[slice_pos + slice_offset].pos - slice_offset){
-									++slice_pos;
-									continue;
-								} else {
-									nc.hash() = TaggedTensorHash<tri>(nodec.compressed_node()->key()[nodec_pos]);
-									return {nc,false};
-								}
-							}
-							assert(false);
-							return {};
-
-						} else {
-							nc.node() = new CompressedNode<result_depth, tri>();
-							// todo: don't return a new node if the compressednode is not sliced
-							size_t slice_pos = 0;
-							size_t result_pos = 0;
-							for (auto nodec_pos : iter::range(current_depth)){
-								if (slice_pos + slice_offset < fixed_keyparts and nodec_pos == raw_slice_key[slice_pos + slice_offset].pos - slice_offset){
-									++slice_pos;
-									continue;
-								} else {
-									nc.compressed_node()->key()[result_pos++] = nodec.compressed_node()->key()[nodec_pos];
-								}
-							}
-							if constexpr (not tri::is_bool_valued)
-								nc.compressed_node()->value() = nodec.compressed_node()->value();
-							nc.hash() = TensorHash().addFirstEntry(nc.compressed_node()->key(), nc.compressed_node()->value());
-							return {nc,false};
-						}
-					} else { // return just the mapped value
-						if constexpr (tri::is_bool_valued)
-							return true;
 						else
-							return nodec.compressed_node()->value();
+							return slice_rek<current_depth - 1, fixed_keyparts, slice_offset + 1>(child, raw_slice_key);
+
+					} else {// nodec.isCompressed()
+						// check if key-parts match the slice key
+						for (auto slice_key_i : iter::range(slice_offset, fixed_keyparts))
+							if (nodec.compressed_node()->key()[raw_slice_key[slice_key_i].pos - slice_offset] != raw_slice_key[slice_key_i].key_part)
+								return {};
+						// when this point is reached, the compressed node is a match
+						if constexpr (result_depth > 0) {// return key/value
+							CompressedNodeContainer<result_depth, tri> nc;
+							if constexpr (tri::is_bool_valued and tri::is_lsb_unused and (result_depth == 1)) {
+								size_t slice_pos = 0;
+								for (auto nodec_pos : iter::range(current_depth)) {
+									if (slice_pos + slice_offset < fixed_keyparts and nodec_pos == raw_slice_key[slice_pos + slice_offset].pos - slice_offset) {
+										++slice_pos;
+										continue;
+									} else {
+										nc.hash() = TaggedTensorHash<tri>(nodec.compressed_node()->key()[nodec_pos]);
+										return {nc, false};
+									}
+								}
+								assert(false);
+								return {};
+
+							} else {
+								nc.node() = new CompressedNode<result_depth, tri>();
+								// todo: don't return a new node if the compressednode is not sliced
+								size_t slice_pos = 0;
+								size_t result_pos = 0;
+								for (auto nodec_pos : iter::range(current_depth)) {
+									if (slice_pos + slice_offset < fixed_keyparts and nodec_pos == raw_slice_key[slice_pos + slice_offset].pos - slice_offset) {
+										++slice_pos;
+										continue;
+									} else {
+										nc.compressed_node()->key()[result_pos++] = nodec.compressed_node()->key()[nodec_pos];
+									}
+								}
+								if constexpr (not tri::is_bool_valued)
+									nc.compressed_node()->value() = nodec.compressed_node()->value();
+								nc.hash() = NodeRepr().addFirstEntry(nc.compressed_node()->key(), nc.compressed_node()->value());
+								return {nc, false};
+							}
+						} else {// return just the mapped value
+							if constexpr (tri::is_bool_valued)
+								return true;
+							else
+								return nodec.compressed_node()->value();
+						}
 					}
 				}
 			}
@@ -289,7 +333,7 @@ namespace hypertrie::internal::raw {
 			if constexpr (offset >= fixed_keyparts) // break condition
 				return {nodec, true};
 			else { // recursion
-				if (nodec.isUncompressed()){
+				if constexpr (not tri::compressed_nodes){
 					auto uncompressed_nodec = nodec.uncompressed();
 					while(not diagonal_positions[key_pos])
 						++key_pos;
@@ -297,78 +341,93 @@ namespace hypertrie::internal::raw {
 					if constexpr (current_depth == 1)
 						return child;
 					else {
-					if (child.empty())
-						return {};
-					else
-						return diagonal_slice_rek<current_depth - 1, fixed_keyparts, offset +1> (child, diagonal_positions, key_part, contextless_compressed_result, key_pos + 1);
+						if (child.empty())
+							return {};
+						else
+							return diagonal_slice_rek<current_depth - 1, fixed_keyparts, offset +1> (child, diagonal_positions, key_part, contextless_compressed_result, key_pos + 1);
 					}
-
-				} else { // nodec.isCompressed()
-
-					if constexpr (current_depth == 1 and tri::is_bool_valued and tri::is_lsb_unused) {
-						// lsb-unused, compressed, depth 1 takes a shortcut here
-						return nodec.hash().getKeyPart() == key_part;
-					} else {
-						// check if key-parts match the slice key
-						for (size_t pos : iter::range(key_pos, depth)) {
-							if (diagonal_positions[pos])
-								if (nodec.compressed_node()->key()[pos - offset] != key_part)
-									return {};
-							++pos;
+				} else {
+					if (nodec.isUncompressed()) {
+						auto uncompressed_nodec = nodec.uncompressed();
+						while (not diagonal_positions[key_pos])
+							++key_pos;
+						auto child = this->template getChild(uncompressed_nodec, key_pos - offset, key_part);
+						if constexpr (current_depth == 1)
+							return child;
+						else {
+							if (child.empty())
+								return {};
+							else
+								return diagonal_slice_rek<current_depth - 1, fixed_keyparts, offset + 1>(child, diagonal_positions, key_part, contextless_compressed_result, key_pos + 1);
 						}
 
-						// when this point is reached, the compressed node is a match
-						if constexpr (result_depth > 0) {// return key/value
-							CompressedNodeContainer<result_depth, tri> nc;
-							if constexpr (tri::is_bool_valued and tri::is_lsb_unused and (result_depth == 1)) {
+					} else {// nodec.isCompressed()
 
-								size_t read_pos = 0;
-								size_t result_pos = 0;
-								size_t local_offset = 0;
-								while (result_pos < result_depth) {
-									if (not diagonal_positions[read_pos]) {
-										CompressedNodeContainer<result_depth, tri> nc;
-										nc.hash() = TaggedTensorHash<tri>(nodec.compressed_node()->key()[read_pos - local_offset]);
-										return {nc, true};
-									} else if (local_offset < offset)// see comment in general case about local_offset
-										local_offset++;
-									++read_pos;
-								}
-
-								assert(false);
-								return {};
-
-							} else {
-								if (contextless_compressed_result == nullptr)
-									nc.node() = new CompressedNode<result_depth, tri>();
-								else
-									nc.node() = contextless_compressed_result;
-								size_t read_pos = 0;
-								size_t result_pos = 0;
-								size_t local_offset = 0;
-								while (result_pos < result_depth) {
-									if (not diagonal_positions[read_pos])
-										nc.compressed_node()->key()[result_pos++] = nodec.compressed_node()->key()[read_pos - local_offset];
-									// we need to revisit all positions. Thus, we need to use a new local_offset.
-									// As we do not prune the available key-positions anymore like done by the recursion
-									// the local_offset must not grow beyond the recursion's offset
-									else {
-										if constexpr( offset != 0)
-											if (local_offset < offset)
-												local_offset++;
-									}
-									++read_pos;
-								}
-								if constexpr (not tri::is_bool_valued)
-									nc.compressed_node()->value() = nodec.compressed_node()->value();
-								nc.hash() = TensorHash().addFirstEntry(nc.compressed_node()->key(), nc.compressed_node()->value());
-								return {nc, contextless_compressed_result != nullptr};
+						if constexpr (current_depth == 1 and tri::is_bool_valued and tri::is_lsb_unused) {
+							// lsb-unused, compressed, depth 1 takes a shortcut here
+							return nodec.hash().getKeyPart() == key_part;
+						} else {
+							// check if key-parts match the slice key
+							for (size_t pos : iter::range(key_pos, depth)) {
+								if (diagonal_positions[pos])
+									if (nodec.compressed_node()->key()[pos - offset] != key_part)
+										return {};
+								++pos;
 							}
-						} else {// return just the mapped value
-							if constexpr (tri::is_bool_valued)
-								return true;
-							else
-								return nodec.compressed_node()->value();
+
+							// when this point is reached, the compressed node is a match
+							if constexpr (result_depth > 0) {// return key/value
+								CompressedNodeContainer<result_depth, tri> nc;
+								if constexpr (tri::is_bool_valued and tri::is_lsb_unused and (result_depth == 1)) {
+
+									size_t read_pos = 0;
+									size_t result_pos = 0;
+									size_t local_offset = 0;
+									while (result_pos < result_depth) {
+										if (not diagonal_positions[read_pos]) {
+											CompressedNodeContainer<result_depth, tri> nc;
+											nc.hash() = TaggedTensorHash<tri>(nodec.compressed_node()->key()[read_pos - local_offset]);
+											return {nc, true};
+										} else if (local_offset < offset)// see comment in general case about local_offset
+											local_offset++;
+										++read_pos;
+									}
+
+									assert(false);
+									return {};
+
+								} else {
+									if (contextless_compressed_result == nullptr)
+										nc.node() = new CompressedNode<result_depth, tri>();
+									else
+										nc.node() = contextless_compressed_result;
+									size_t read_pos = 0;
+									size_t result_pos = 0;
+									size_t local_offset = 0;
+									while (result_pos < result_depth) {
+										if (not diagonal_positions[read_pos])
+											nc.compressed_node()->key()[result_pos++] = nodec.compressed_node()->key()[read_pos - local_offset];
+										// we need to revisit all positions. Thus, we need to use a new local_offset.
+										// As we do not prune the available key-positions anymore like done by the recursion
+										// the local_offset must not grow beyond the recursion's offset
+										else {
+											if constexpr (offset != 0)
+												if (local_offset < offset)
+													local_offset++;
+										}
+										++read_pos;
+									}
+									if constexpr (not tri::is_bool_valued)
+										nc.compressed_node()->value() = nodec.compressed_node()->value();
+									nc.hash() = NodeRepr().addFirstEntry(nc.compressed_node()->key(), nc.compressed_node()->value());
+									return {nc, contextless_compressed_result != nullptr};
+								}
+							} else {// return just the mapped value
+								if constexpr (tri::is_bool_valued)
+									return true;
+								else
+									return nodec.compressed_node()->value();
+							}
 						}
 					}
 				}
@@ -382,10 +441,16 @@ namespace hypertrie::internal::raw {
 		std::size_t size(NodeContainer<depth, tri> &nodec) {
 			if (nodec.empty())
 				return 0;
-			else if (nodec.isCompressed())
-				return 1;
-			else
-				return nodec.uncompressed_node()->size();
+			else {
+				if constexpr (not tri::compressed_nodes){
+					return nodec.uncompressed_node()->size();
+				} else {
+					if (nodec.isCompressed())
+						return 1;
+					else
+						return nodec.uncompressed_node()->size();
+				}
+			}
 		}
 	};
 }// namespace hypertrie::internal

@@ -51,8 +51,44 @@ namespace hypertrie::internal::raw {
 		}
 	};
 
-	template<HypertrieInternalTrait tri_t>
-	struct LevelNodeStorage<1, tri_t, std::enable_if_t<(tri_t::is_lsb_unused and tri_t::is_bool_valued)>> {
+	/**
+	 * Only hashing, no compressed nodes
+	 */
+	template<size_t depth, HypertrieInternalTrait_only_uc tri_t>
+	struct LevelNodeStorage<depth, tri_t> {
+		using tri = tri_t;
+		using NodeRepr = std::conditional_t<tri::compressed_nodes,
+											TensorHash,
+											PlainTensorHash>;
+		template<typename K, typename V>
+		using map_type = typename tri::template map_type<K, V*>;
+		using UncompressedNodeMap = map_type<NodeRepr, UncompressedNode<depth, tri>>;
+	protected:
+		UncompressedNodeMap uncompressed_nodes_;
+
+	public:
+		~LevelNodeStorage() {
+			for(auto &[hash, node] : uncompressed_nodes_)
+				delete node;
+		}
+
+		const UncompressedNodeMap &uncompressedNodes() const { return this->uncompressed_nodes_; }
+		UncompressedNodeMap &uncompressedNodes() { return this->uncompressed_nodes_; }
+
+		template<NodeCompression compression>
+		static Node<depth, compression, tri> &deref(typename map_type<NodeRepr, Node<depth, compression, tri>>::iterator &map_it) {
+			return *tri::template deref<NodeRepr, Node<depth, compression, tri>*>(map_it);
+		}
+
+		explicit operator std::string() const {
+			return fmt::format("{{ depth = {}\n"
+							   " uncompressed: {} }}",
+							   depth, this->uncompressed_nodes_);
+		}
+	};
+
+	template<HypertrieInternalTrait_tagged tri_t>
+	struct LevelNodeStorage<1, tri_t> {
 		using tri = tri_t;
 		template<typename K, typename V>
 		using map_type = typename tri::template map_type<K, V*>;
@@ -89,6 +125,10 @@ namespace hypertrie::internal::raw {
 	public:
 		using tri = tri_t;
 
+		using NodeRepr = std::conditional_t<tri::compressed_nodes,
+											TensorHash,
+											PlainTensorHash>;
+
 		using key_part_type = typename tri::key_part_type;
 		using value_type = typename tri::value_type;
 
@@ -101,11 +141,13 @@ namespace hypertrie::internal::raw {
 		template<size_t depth>
 		using NodeStorage_t = LevelNodeStorage<depth, tri>;
 
+		/*
 		template<size_t depth>
 		using CompressedNodeMap = typename NodeStorage_t<depth>::CompressedNodeMap;
 
 		template<size_t depth>
 		using UncompressedNodeMap = typename NodeStorage_t<depth>::UncompressedNodeMap;
+		*/
 
 	private:
 		using storage_t = util::IntegralTemplatedTuple<NodeStorage_t, 1, max_depth>;
@@ -135,7 +177,7 @@ namespace hypertrie::internal::raw {
 		}
 
 		template<size_t depth, NodeCompression compression, typename = std::enable_if_t<(not (depth == 1 and tri_t::is_lsb_unused and tri_t::is_bool_valued and compression == NodeCompression::compressed))>>
-		SpecificNodeContainer<depth, compression, tri> getNode(const TensorHash &node_hash) {
+		SpecificNodeContainer<depth, compression, tri> getNode(const NodeRepr &node_hash) {
 			auto &nodes = getNodeStorage<depth, compression>();
 			auto found = nodes.find(node_hash);
 			if (found != nodes.end())
@@ -148,21 +190,25 @@ namespace hypertrie::internal::raw {
 		}
 
 		template<size_t depth, typename = std::enable_if_t<(not (depth == 1 and tri_t::is_lsb_unused and tri_t::is_bool_valued))>>
-		CompressedNodeContainer<depth, tri> getCompressedNode(const TensorHash &node_hash) {
+		CompressedNodeContainer<depth, tri> getCompressedNode(const NodeRepr &node_hash) {
 			return getNode<depth, NodeCompression::compressed>(node_hash);
 		}
 
 		template<size_t depth>
-		UncompressedNodeContainer<depth, tri> getUncompressedNode(const TensorHash &node_hash) {
+		UncompressedNodeContainer<depth, tri> getUncompressedNode(const NodeRepr &node_hash) {
 			return getNode<depth, NodeCompression::uncompressed>(node_hash);
 		}
 
 		template<size_t depth>
-		NodeContainer<depth, tri> getNode(const TensorHash &node_hash) {
-			if (node_hash.isCompressed()) {
-				assert(not (depth == 1 and tri_t::is_lsb_unused and tri_t::is_bool_valued));
-				if constexpr(not (depth == 1 and tri_t::is_lsb_unused and tri_t::is_bool_valued))
-					return getCompressedNode<depth>(node_hash);
+		NodeContainer<depth, tri> getNode(const NodeRepr &node_hash) {
+			if constexpr (tri::compressed_nodes) {
+				if (node_hash.isCompressed()) {
+					assert(not(depth == 1 and tri_t::is_lsb_unused and tri_t::is_bool_valued));
+					if constexpr (not(depth == 1 and tri_t::is_lsb_unused and tri_t::is_bool_valued))
+						return getCompressedNode<depth>(node_hash);
+				} else {
+					return getUncompressedNode<depth>(node_hash);
+				}
 			} else {
 				return getUncompressedNode<depth>(node_hash);
 			}
@@ -170,11 +216,11 @@ namespace hypertrie::internal::raw {
 
 	public:
 		template<size_t depth, typename = std::enable_if_t<(not (depth == 1 and tri_t::is_lsb_unused and tri_t::is_bool_valued))>>
-		CompressedNodeContainer<depth, tri> newCompressedNode(const RawKey<depth> &key, value_type value, size_t ref_count, TensorHash hash) {
+		CompressedNodeContainer<depth, tri> newCompressedNode(const RawKey<depth> &key, value_type value, size_t ref_count, NodeRepr hash) {
 			auto &node_storage = getNodeStorage<depth, NodeCompression::compressed>();
 			auto [it, success] = [&]() {
 			  if constexpr(tri::is_bool_valued) return node_storage.insert({hash, new CompressedNode<depth, tri>{key, ref_count}});
-			  else return node_storage.insert({hash, new CompressedNode<depth, tri>{key, value, ref_count}}); 
+			  else return node_storage.insert({hash, new CompressedNode<depth, tri>{key, value, ref_count}});
 			}();
 			assert(success);
 			return CompressedNodeContainer<depth, tri>{hash, &LevelNodeStorage<depth, tri>::template deref<NodeCompression::compressed>(it)};
@@ -185,7 +231,7 @@ namespace hypertrie::internal::raw {
 		 * creates a new node with the value changed. The old node is NOT deleted if keep_old is true and must eventually be deleted afterwards.
 		 */
 		template<size_t depth, NodeCompression compression, bool keep_old = true, typename = std::enable_if_t<(not (depth == 1 and tri_t::is_lsb_unused and tri_t::is_bool_valued and compression == NodeCompression::compressed))>>
-		auto changeNodeValue(SpecificNodeContainer<depth, compression, tri> nc, RawKey<depth> key, value_type old_value, value_type new_value, long count_diff, TensorHash new_hash)
+		auto changeNodeValue(SpecificNodeContainer<depth, compression, tri> nc, RawKey<depth> key, value_type old_value, value_type new_value, long count_diff, NodeRepr new_hash)
 				-> SpecificNodeContainer<depth, compression, tri> {
 			auto &nodes = getNodeStorage<depth, compression>();
 			assert(nc.hash() != new_hash);
@@ -215,7 +261,7 @@ namespace hypertrie::internal::raw {
 		}
 
 		template<size_t depth, NodeCompression compression, typename = std::enable_if_t<(not (depth == 1 and tri_t::is_lsb_unused and tri_t::is_bool_valued and compression == NodeCompression::compressed))>>
-		void deleteNode(const TensorHash &node_hash) {
+		void deleteNode(const NodeRepr &node_hash) {
 			auto &nodes = getNodeStorage<depth, compression>();
 			auto it = nodes.find(node_hash);
 			assert(it != nodes.end());
@@ -224,13 +270,14 @@ namespace hypertrie::internal::raw {
 			nodes.erase(it);
 		}
 
+		template<typename = void>
 		void setLSBCompressedLeaf(NodeContainer<1, tri> &nodec, const key_part_type &key_part, const bool &value) {
 			if (value)
 				nodec.hash() = TaggedTensorHash<tri>{key_part};
 		}
 
 		template<size_t depth>
-		void deleteNode(const TensorHash &node_hash) {
+		void deleteNode(const NodeRepr &node_hash) {
 			if (node_hash.isCompressed()) {
 				assert(not (depth == 1 and tri_t::is_lsb_unused and tri_t::is_bool_valued));
 				if constexpr (not (depth == 1 and tri_t::is_lsb_unused and tri_t::is_bool_valued))

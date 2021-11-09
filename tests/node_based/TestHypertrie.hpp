@@ -37,7 +37,7 @@ namespace hypertrie::tests::node_context {
 		}
 	}
 
-	TEMPLATE_TEST_CASE("test_single_write_read", "[Hypertrie]", lsbunused_bool_Hypertrie_t, default_bool_Hypertrie_t, default_long_Hypertrie_t, default_double_Hypertrie_t) {
+	TEMPLATE_TEST_CASE("test_single_write_read", "[Hypertrie]", only_uc_bool_Hypertrie_t, default_bool_Hypertrie_t, lsbunused_bool_Hypertrie_t, default_long_Hypertrie_t, default_double_Hypertrie_t) {
 		using tr = TestType;
 		test_single_write<tr, 1>();
 		test_single_write<tr, 2>();
@@ -46,7 +46,7 @@ namespace hypertrie::tests::node_context {
 		test_single_write<tr, 5>();
 	}
 
-	TEMPLATE_TEST_CASE("test_iterator", "[Hypertrie]", lsbunused_bool_Hypertrie_t, default_bool_Hypertrie_t) {
+	TEMPLATE_TEST_CASE("test_iterator", "[Hypertrie]", only_uc_bool_Hypertrie_t, default_bool_Hypertrie_t,lsbunused_bool_Hypertrie_t) {
 		using tr = TestType;
 		constexpr const size_t depth = 4;
 		using key_part_type = typename tr::key_part_type;
@@ -78,7 +78,7 @@ namespace hypertrie::tests::node_context {
 		}
 	}
 
-	TEMPLATE_TEST_CASE("test_diagonal", "[Hypertrie]", lsbunused_bool_Hypertrie_t, default_bool_Hypertrie_t) {
+	TEMPLATE_TEST_CASE("test_diagonal", "[Hypertrie]", only_uc_bool_Hypertrie_t, default_bool_Hypertrie_t,lsbunused_bool_Hypertrie_t) {
 		using tr = TestType;
 		constexpr const size_t depth = 4;
 		using key_part_type = typename tr::key_part_type;
@@ -130,7 +130,7 @@ namespace hypertrie::tests::node_context {
 		}
 	}
 
-	TEMPLATE_TEST_CASE("test_slice", "[Hypertrie]", lsbunused_bool_Hypertrie_t, default_bool_Hypertrie_t) {
+	TEMPLATE_TEST_CASE("test_slice", "[Hypertrie]", only_uc_bool_Hypertrie_t, default_bool_Hypertrie_t,lsbunused_bool_Hypertrie_t) {
 		using tr = lsbunused_bool_Hypertrie_t;
 		constexpr const size_t depth = 4;
 
@@ -151,7 +151,7 @@ namespace hypertrie::tests::node_context {
 		WARN((std::string) sliced_hypertrie);
 	}
 
-	TEMPLATE_TEST_CASE("test_depth_0", "[Hypertrie]", lsbunused_bool_Hypertrie_t, default_bool_Hypertrie_t) {
+	TEMPLATE_TEST_CASE("test_depth_0", "[Hypertrie]", only_uc_bool_Hypertrie_t, default_bool_Hypertrie_t,lsbunused_bool_Hypertrie_t) {
 		using tr = lsbunused_bool_Hypertrie_t;
 		constexpr const size_t depth = 0;
 

@@ -150,6 +150,8 @@ namespace hypertrie::internal::raw {
 		constexpr static bool is_bool_valued = tr::is_bool_valued;
 		constexpr static const bool is_lsb_unused = tr::lsb_unused;
 		constexpr static bool is_tsl_map = std::is_same_v<map_type<int, int>, container::tsl_sparse_map<int, int>>;
+		constexpr static const bool compressed_nodes = tr::compressed_nodes;
+		static_assert(not (is_lsb_unused and not compressed_nodes));
 
 		/**
 		 * Generates a subkey by removing a key_part at the given position
@@ -202,6 +204,12 @@ namespace hypertrie::internal::raw {
 
 	template<class T>
 	concept HypertrieInternalTrait = internal::hypertrie_internal_trait::is_instance<T, Hypertrie_internal_t>::value;
+
+	template<class T>
+	concept HypertrieInternalTrait_only_uc = HypertrieInternalTrait<T> and not T::compressed_nodes;
+
+	template<class T>
+	concept HypertrieInternalTrait_tagged = HypertrieInternalTrait<T> and T::compressed_nodes and T::is_lsb_unused and T::is_lsb_unused;
 
 	using default_bool_Hypertrie_internal_t = Hypertrie_internal_t<default_bool_Hypertrie_t>;
 

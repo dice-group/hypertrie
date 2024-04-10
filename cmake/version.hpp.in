@@ -3,10 +3,10 @@
 
 #include <array>
 
-namespace Dice::hypertrie {
+namespace dice::hypertrie {
 	inline constexpr const char name[] = "@PROJECT_NAME@";
-	inline constexpr const char version[] = "@hypertrie_VERSION@";
-	inline constexpr std::array<int, 3> version_tuple = {@hypertrie_VERSION_MAJOR@, @hypertrie_VERSION_MINOR@, @hypertrie_VERSION_PATCH@};
-}// namespace Dice::hypertrie
+	inline constexpr const char version[] = "@PROJECT_VERSION@";
+	inline constexpr std::array<int, 3> version_tuple = {@PROJECT_VERSION_MAJOR@, @PROJECT_VERSION_MINOR@, @PROJECT_VERSION_PATCH@};
+}// namespace dice::hypertrie
 
 #endif//HYPERTRIE_VERSION_HPP

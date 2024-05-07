@@ -10,7 +10,7 @@
 // not working: (clang-13 + libc++-13)
 //
 
-#if !__has_include(<generator>)
+#if __cpp_lib_generator < 202207L
 
 #ifdef __clang__
 #if __clang_major__ <= 13
@@ -23,7 +23,7 @@ namespace std::experimental {
 #endif
 #endif
 
-#if __has_include(<coroutine>)
+#if __cpp_lib_coroutine >= 201902L
 #include <coroutine>
 #else
 #include <experimental/coroutine>
@@ -41,7 +41,7 @@ namespace std {
 #include <new>
 #include <type_traits>
 #include <utility>
-#if __has_include(<ranges>)
+#if __cpp_lib_ranges >= 201911L
 #include <ranges>
 #else
 // Placeholder implementation of the bits we need from <ranges> header

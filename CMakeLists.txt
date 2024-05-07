@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 project(hypertrie
-        VERSION 0.9.4
+        VERSION 0.9.5
         DESCRIPTION "A flexible data structure for low-rank, sparse tensors supporting slices by any dimension and einstein summation (einsum) and a flexible query interface"
         )
 

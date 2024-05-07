@@ -10,7 +10,7 @@
 // not working: (clang-13 + libc++-13)
 //
 
-#if !__has_include(<generator>)
+#if __cpp_lib_generator < 202207L
 
 #ifdef __clang__
 #if __clang_major__ <= 13
@@ -23,7 +23,7 @@ namespace std::experimental {
 #endif
 #endif
 
-#if __has_include(<coroutine>)
+#if __cpp_lib_coroutine >= 201902L
 #include <coroutine>
 #else
 #include <experimental/coroutine>
@@ -41,7 +41,7 @@ namespace std {
 #include <new>
 #include <type_traits>
 #include <utility>
-#if __has_include(<ranges>)
+#if __cpp_lib_ranges >= 201911L
 #include <ranges>
 #else
 // Placeholder implementation of the bits we need from <ranges> header
@@ -63,20 +63,20 @@ namespace std {
 
 			struct _fn {
 				template<typename Range>
-				requires requires(Range &r) {
-					r.begin();
-				}
+					requires requires(Range &r) {
+								 r.begin();
+							 }
 				auto operator()(Range &&r) const noexcept(noexcept(r.begin()))
 						-> decltype(r.begin()) {
 					return r.begin();
 				}
 
 				template<typename Range>
-				requires(!requires(Range & r) { r.begin(); }) && requires(Range &r) {
-					begin(r);
-				}
-				auto operator()(Range &&r) const noexcept(noexcept(begin(r)))
-						-> decltype(begin(r)) {
+					requires(!requires(Range & r) { r.begin(); }) && requires(Range &r) {
+																		 begin(r);
+																	 }
+																 auto operator()(Range &&r) const noexcept(noexcept(begin(r)))
+																		 -> decltype(begin(r)) {
 					return begin(r);
 				}
 			};
@@ -91,20 +91,20 @@ namespace std {
 
 			struct _fn {
 				template<typename Range>
-				requires requires(Range &r) {
-					r.end();
-				}
+					requires requires(Range &r) {
+								 r.end();
+							 }
 				auto operator()(Range &&r) const noexcept(noexcept(r.end()))
 						-> decltype(r.end()) {
 					return r.end();
 				}
 
 				template<typename Range>
-				requires(!requires(Range & r) { r.end(); }) && requires(Range &r) {
-					end(r);
-				}
-				auto operator()(Range &&r) const noexcept(noexcept(end(r)))
-						-> decltype(end(r)) {
+					requires(!requires(Range & r) { r.end(); }) && requires(Range &r) {
+																	   end(r);
+																   }
+															   auto operator()(Range &&r) const noexcept(noexcept(end(r)))
+																	   -> decltype(end(r)) {
 					return end(r);
 				}
 			};
@@ -128,9 +128,9 @@ namespace std {
 
 		template<typename T>
 		concept range = requires(T &t) {
-			ranges::begin(t);
-			ranges::end(t);
-		};
+							ranges::begin(t);
+							ranges::end(t);
+						};
 	}// namespace ranges
 }// namespace std
 #endif
@@ -142,9 +142,9 @@ namespace std {
 
 	template<typename Allocator>
 	concept proto_allocator = std::same_as<Allocator, void> ||(std::is_nothrow_copy_constructible_v<Allocator> &&requires(Allocator) {
-		typename std::allocator_traits<Allocator>;
-		typename rebound<Allocator>;
-	});
+																													   typename std::allocator_traits<Allocator>;
+																													   typename rebound<Allocator>;
+																												   });
 
 	// template<typename T>
 	// struct elements_of;
@@ -309,7 +309,7 @@ namespace std {
 
 
 	template<proto_allocator Alloc>
-	requires(!allocator_needs_to_be_stored<Alloc>) class promise_base_alloc<Alloc> {
+		requires(!allocator_needs_to_be_stored<Alloc>) class promise_base_alloc<Alloc> {
 		using bytes_alloc = typename std::allocator_traits<Alloc>::template rebind_alloc<std::byte>;
 
 	public:
@@ -394,8 +394,8 @@ namespace std {
 		};
 
 		template<typename T = std::remove_cvref_t<Ref>>
-		requires std::is_convertible_v<T, Ref> && std::is_constructible_v<Ref, T> &&(
-				!std::same_as<std::remove_cvref_t<T>, Ref>) yield_value_holder
+			requires std::is_convertible_v<T, Ref> && std::is_constructible_v<Ref, T> &&(
+																								 !std::same_as<std::remove_cvref_t<T>, Ref>) yield_value_holder
 				yield_value(T &&x) {
 			return yield_value_holder{static_cast<T &&>(x)};
 		}
@@ -468,7 +468,7 @@ namespace std {
 			}
 
 			template<typename T = std::remove_cvref_t<Ref>>
-			requires std::is_convertible_v<T, Ref>
+				requires std::is_convertible_v<T, Ref>
 			auto yield_value(T &&x) noexcept(std::is_nothrow_constructible_v<Ref, T>) {
 				return promise_base<Ref>::yield_value(std::forward<T>(x));
 			}

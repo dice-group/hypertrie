@@ -360,7 +360,7 @@ namespace dice::hypertrie {
 						if (slice_result.empty()) {
 							return const_Hypertrie<htt_t, allocator_type>(depth_arg - slice_key_depth_arg);
 						}
-						return {depth_arg - slice_key_depth_arg, nullptr, false, (RawNodeContainer_t) slice_result.get_stl_alloc_sen()};
+						return {depth_arg - slice_key_depth_arg, nullptr, false, static_cast<RawNodeContainer_t>(slice_result.get_stl_alloc_sen())};
 					}
 
 					auto nodec = this->template node_container<depth_arg>();

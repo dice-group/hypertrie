@@ -1,26 +1,36 @@
-cmake_minimum_required(VERSION 3.16)
-project(hypertrie
-        VERSION 0.9.5
-        DESCRIPTION "A flexible data structure for low-rank, sparse tensors supporting slices by any dimension and einstein summation (einsum) and a flexible query interface"
-        )
+cmake_minimum_required(VERSION 3.24)
+project(hypertrie VERSION 0.9.6
+        DESCRIPTION "A flexible data structure for low-rank, sparse tensors supporting slices by any dimension and einstein summation (einsum) and a flexible query interface")
 
 include(cmake/boilerplate_init.cmake)
 boilerplate_init()
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/version.hpp.in ${CMAKE_CURRENT_SOURCE_DIR}/libs/hypertrie/src/dice/hypertrie/Hypertrie_version.hpp)
 
-option(CONAN_CMAKE "If this should use conan cmake to fetch dependencies" On)
-if (IS_TOP_LEVEL AND CONAN_CMAKE)
-    include(cmake/conan_cmake.cmake)
-    install_packages_via_conan(${CMAKE_CURRENT_SOURCE_DIR}/conanfile.py)
+if (PROJECT_IS_TOP_LEVEL)
+    set(CONAN_INSTALL_ARGS "${CONAN_INSTALL_ARGS};-o=boost/*:header_only=True")
+
+    if (BUILD_TESTING)
+        set(CONAN_INSTALL_ARGS "${CONAN_INSTALL_ARGS};-o=&:with_test_deps=True")
+    endif ()
 endif ()
 
-if (IS_TOP_LEVEL AND USE_CLANG_TIDY)
+set(style_files
+        .clang-format
+        .clang-tidy
+)
+foreach(style_file ${style_files})
+    file(DOWNLOAD "https://raw.githubusercontent.com/dice-group/tentris-cpp-coding-guidelines/main/${style_file}"
+            "${CMAKE_SOURCE_DIR}/${style_file}"
+            TLS_VERIFY ON)
+endforeach()
+
+if (PROJECT_IS_TOP_LEVEL AND USE_CLANG_TIDY)
     include(cmake/ClangTidy.cmake)
 endif ()
 
 add_subdirectory(libs)
 
-if (IS_TOP_LEVEL AND BUILD_TESTING)
+if (PROJECT_IS_TOP_LEVEL AND BUILD_TESTING)
     include(CTest)
     enable_testing()
     add_subdirectory(tests)

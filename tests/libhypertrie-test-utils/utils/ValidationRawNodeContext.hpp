@@ -101,8 +101,8 @@ namespace dice::hypertrie::tests::core::node {
 			return equal(lhs.edges(), rhs.edges());
 		}
 
-		template <size_t depth, HypertrieTrait htt_t>
-		static bool equal(SingleEntryNode<depth, htt_t> const& lhs, SingleEntryNode<depth, htt_t> const& rhs) {
+		template <size_t depth, HypertrieTrait htt_t, ByteAllocator allocator_type, ByteAllocator allocator_type2>
+		static bool equal(SingleEntryNode<depth, htt_t, allocator_type> const& lhs, SingleEntryNode<depth, htt_t, allocator_type2> const& rhs) {
 			return lhs.key() == rhs.key() && lhs.value() == rhs.value();
 		}
 	};
@@ -132,11 +132,11 @@ namespace dice::hypertrie::tests::core::node {
 				if constexpr (depth == 1 and HypertrieTrait_bool_valued_and_taggable_key_part<htt_t>)
 					CHECK_MESSAGE(false, "There must be no depth-1 SEN. They are stored in the identifier.");
 				else {
-					SingleEntryNode<depth, htt_t> new_node{entries[0], 1};
+					SingleEntryNode<depth, htt_t, std::allocator<std::byte>> new_node{entries[0], 1};
 
 					auto existing_node = this->node_storage_.template lookup<depth, SingleEntryNode>(id);
 					if (existing_node) {
-						REQUIRE(SingleEntryNode<depth, htt_t>{*existing_node} == new_node);
+						REQUIRE(SingleEntryNode<depth, htt_t, std::allocator<std::byte>>{*existing_node} == new_node);
 						existing_node->ref_count() += 1;
 					} else {
 						this->node_storage_.template nodes<depth, SingleEntryNode>().nodes().insert(

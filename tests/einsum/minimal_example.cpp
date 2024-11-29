@@ -251,7 +251,7 @@ TEST_SUITE("Minimal tests: with exactly the same map as in the error case") {
 			-1>;
 	using RawIdent = dice::hypertrie::internal::raw::RawIdentifier<5, trait>;
 	using RawK = dice::hypertrie::internal::raw::RawKey<5, trait>;
-	using SingleEntryN = dice::hypertrie::internal::raw::SingleEntryNode<5, trait>;
+	using SingleEntryN = dice::hypertrie::internal::raw::SingleEntryNode<5, trait, std::allocator<std::byte>>;
 	using SingleE = dice::hypertrie::internal::raw::SingleEntry<5, trait>;
 	using pointer = boost::interprocess::offset_ptr<
 			SingleEntryN, long, unsigned long, 0>;

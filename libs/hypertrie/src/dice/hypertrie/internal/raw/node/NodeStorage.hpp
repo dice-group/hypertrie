@@ -23,27 +23,27 @@ namespace dice::hypertrie::internal::raw {
 		using FullNodeStorage_t = SpecificNodeStorage<depth, htt_t, FullNode, allocator_type>;
 
 		//TODO: change name
-		template<size_t depth, template<size_t, typename, typename...> typename node_type>
+		template<size_t depth, template<size_t, typename, typename> typename node_type>
 		using SpecificNodes = std::conditional_t<
 				(is_FullNode_v<node_type>),
 				FullNodeStorage_t<depth>,
 				SingleEntryNodeStorage_t<depth>>;
 
-		template<size_t depth, template<size_t, typename, typename...> typename node_type>
+		template<size_t depth, template<size_t, typename, typename> typename node_type>
 		using SpecificNodePtr = typename SpecificNodes<depth, node_type>::node_pointer_type;
 		//TODO: change name
-		using SingleEntryNodes = template_library::integral_template_tuple<SingleEntryNodeStorage_t, (HypertrieTrait_bool_valued_and_taggable_key_part<htt_t>) ? 2 : 1, max_depth, allocator_type const &>;
+		using SingleEntryNodes = template_library::integral_template_tuple<(HypertrieTrait_bool_valued_and_taggable_key_part<htt_t>) ? 2ul : 1ul, max_depth, SingleEntryNodeStorage_t>;
 		//TODO: change name
-		using FullNodes = template_library::integral_template_tuple<FullNodeStorage_t, 1, max_depth, allocator_type const &>;
+		using FullNodes = template_library::integral_template_tuple<1ul, max_depth, FullNodeStorage_t>;
 
 	private:
 		SingleEntryNodes single_entry_nodes;
 		FullNodes full_nodes;
 
 	public:
-		explicit NodeStorage(allocator_type const &alloc) noexcept : single_entry_nodes(alloc), full_nodes(alloc) {}
+		explicit NodeStorage(allocator_type const &alloc) noexcept : single_entry_nodes(template_library::uniform_construct, alloc), full_nodes(template_library::uniform_construct, alloc) {}
 
-		template<size_t depth, template<size_t, typename, typename...> typename node_type>
+		template<size_t depth, template<size_t, typename, typename> typename node_type>
 		SpecificNodes<depth, node_type> &nodes() noexcept {
 			if constexpr (is_FullNode_v<node_type>)
 				return full_nodes.template get<depth>();
@@ -51,7 +51,7 @@ namespace dice::hypertrie::internal::raw {
 				return single_entry_nodes.template get<depth>();
 		}
 
-		template<size_t depth, template<size_t, typename, typename...> typename node_type>
+		template<size_t depth, template<size_t, typename, typename> typename node_type>
 		[[nodiscard]] SpecificNodes<depth, node_type> const &nodes() const noexcept {
 			if constexpr (is_FullNode_v<node_type>)
 				return full_nodes.template get<depth>();
@@ -102,7 +102,7 @@ namespace dice::hypertrie::internal::raw {
 		 * @param identifier
 		 * @return
 		 */
-		template<size_t depth, template<size_t, typename, typename...> typename node_type>
+		template<size_t depth, template<size_t, typename, typename> typename node_type>
 		[[nodiscard]] SpecificNodePtr<depth, node_type> lookup(RawIdentifier<depth, htt_t> identifier) const noexcept {
 			auto &nodes_ = this->nodes<depth, node_type>().nodes();
 			auto found = nodes_.find(identifier);

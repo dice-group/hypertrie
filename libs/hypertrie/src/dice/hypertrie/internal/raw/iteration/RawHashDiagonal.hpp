@@ -11,7 +11,7 @@
 
 namespace dice::hypertrie::internal::raw {
 
-	template<size_t diag_depth, size_t depth, template<size_t, typename, typename...> typename node_type, HypertrieTrait htt_t, ByteAllocator allocator_type, size_t context_max_depth>
+	template<size_t diag_depth, size_t depth, template<size_t, typename, typename> typename node_type, HypertrieTrait htt_t, ByteAllocator allocator_type, size_t context_max_depth>
 	class RawHashDiagonal;
 
 	template<size_t diag_depth, size_t depth, HypertrieTrait htt_t, ByteAllocator allocator_type, size_t context_max_depth>
@@ -46,7 +46,7 @@ namespace dice::hypertrie::internal::raw {
 
 		child_iterator iter_;
 		child_iterator end_;
-		SingleEntryNode<result_depth, htt_t> sen_cache_;
+		SingleEntryNode<result_depth, htt_t, std::allocator<std::byte>> sen_cache_;
 		IterValue value_;
 
 	public:
@@ -339,7 +339,7 @@ namespace dice::hypertrie::internal::raw {
 				value_type>;
 
 		SENContainer<depth, htt_t, allocator_type> nodec_;
-		SingleEntryNode<result_depth, htt_t> sen_cache_;
+		SingleEntryNode<result_depth, htt_t, std::allocator<std::byte>> sen_cache_;
 		std::pair<key_part_type, IterValue> value_;
 		bool ended_ = true;
 		bool is_diagonal_ = false;
@@ -369,7 +369,7 @@ namespace dice::hypertrie::internal::raw {
 					if constexpr (diag_depth == depth) {
 						value_.second = nodec_.node_ptr()->value();
 					} else {
-						sen_cache_ = SingleEntryNode<result_depth, htt_t>{opt_slice.value(), nodec_.node_ptr()->value()};
+						sen_cache_ = SingleEntryNode<result_depth, htt_t, std::allocator<std::byte>>{opt_slice.value(), nodec_.node_ptr()->value()};
 						value_.second = SliceResult_t::make_sen_with_stl_alloc(true, RawIdentifier<result_depth, htt_t>{sen_cache_}, &sen_cache_);
 					}
 				} else {

@@ -8,7 +8,7 @@ find_package(Boost REQUIRED COMPONENTS)
 find_package(dice-template-library REQUIRED)
 
 target_link_libraries(hypertrie-fmt INTERFACE
-        hypertrie
+        hypertrie::hypertrie
         Boost::headers
         fmt::fmt
         dice-template-library::dice-template-library

@@ -51,12 +51,12 @@ namespace dice::query::operators {
 					if (sub_result.empty()) {
 						// if the cartesian is not between optional components this part will not be reached
 						// populate the corresponding vector with a single entry, whose key_parts will remain unbound
-						sub_result_vec.template emplace_back(Entry_t::make_filled(entry.size(), {}));
+						sub_result_vec.emplace_back(Entry_t::make_filled(entry.size(), {}));
 						continue;
 					}
 					sub_result_vec.reserve(sub_result.size());
 					for (const auto &[key, value] : sub_result)
-						sub_result_vec.template emplace_back(key, value);
+						sub_result_vec.emplace_back(key, value);
 					sub_result = {};
 				}
 				for (size_t i = 0; i < result_poss.size(); ++i)

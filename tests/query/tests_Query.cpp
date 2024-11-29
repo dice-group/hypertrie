@@ -15,7 +15,7 @@ namespace dice::query::tests {
 				  std::vector<Key<size_t, htt_t>> &expected_results) {
 		std::vector<Key<size_t, htt_t>> actual_results{};
 		for (const auto &res : Evaluation::evaluate<htt_t, allocator_type>(query)) {
-			std::cout << (std::string) res << std::endl;
+			std::cout << static_cast<std::string>(res) << std::endl;
 			for (size_t i = 0; i < res.value(); i++) {
 				actual_results.emplace_back(res.key());
 			}
@@ -32,7 +32,7 @@ namespace dice::query::tests {
 		entry.resize(query.projected_vars().size());
 		for (auto const &res : Evaluation::evaluate<htt_t, allocator_type , true>(query)) {
 			std::copy(res.key().begin(), res.key().end(), entry.begin());
-			std::cout << (std::string) res << std::endl;
+			std::cout << static_cast<std::string>(res) << std::endl;
 			for (size_t i = 0; i < res.value(); i++) {
 				actual_results.emplace_back(entry);
 			}

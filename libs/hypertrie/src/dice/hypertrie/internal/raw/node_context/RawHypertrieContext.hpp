@@ -147,7 +147,7 @@ namespace dice::hypertrie::internal::raw {
 				return FNContainer<depth - 1, htt_t, allocator_type>{value_or_child_id, node_storage_.template lookup<depth - 1, FullNode>(value_or_child_id)};
 			} else if constexpr (depth > 1) {
 				if (not value_or_child_id.empty()) {
-					return node_storage_.template lookup(value_or_child_id);
+					return node_storage_.lookup(value_or_child_id);
 				}
 				return {};
 			} else {// depth == 1
@@ -220,7 +220,7 @@ namespace dice::hypertrie::internal::raw {
 			using SliceResult_t = SliceResult<depth - fixed_keyparts, htt_t, alloc2>;
 
 			if constexpr (fixed_keyparts == 0) {
-				return SliceResult_t::make_sen_with_stl_alloc(false, nodec.raw_identifier(), new SingleEntryNode<depth, htt_t>{*nodec.node_ptr()});
+				return SliceResult_t::make_sen_with_stl_alloc(false, nodec.raw_identifier(), new SingleEntryNode<depth, htt_t, std::allocator<std::byte>>{*nodec.node_ptr()});
 			} else if constexpr (depth == fixed_keyparts) {
 				RawKey<depth, htt_t> raw_key;
 				for (size_t i = 0; i < depth; ++i) {
@@ -239,7 +239,7 @@ namespace dice::hypertrie::internal::raw {
 					if constexpr (result_depth == 1 and HypertrieTrait_bool_valued_and_taggable_key_part<htt_t>)
 						return SliceResult_t::make_with_provided_alloc(identifier);
 					else {
-						return SliceResult_t::make_sen_with_stl_alloc(false, identifier, new SingleEntryNode<result_depth, htt_t>(entry));
+						return SliceResult_t::make_sen_with_stl_alloc(false, identifier, new SingleEntryNode<result_depth, htt_t, std::allocator<std::byte>>(entry));
 					}
 				}
 				return SliceResult_t{};
@@ -287,7 +287,7 @@ namespace dice::hypertrie::internal::raw {
 			FNContainer<current_depth, htt_t, allocator_type> fn_nodec = nodec.template specific<FullNode>();
 			size_t const slice_key_i = fn_nodec.node_ptr()->min_fixed_keypart_i(raw_slice_key);
 			auto const &fixed_value = raw_slice_key[slice_key_i];
-			auto child = this->template resolve(fn_nodec, (pos_type) fixed_value.pos, fixed_value.key_part);
+			auto child = this->resolve(fn_nodec, static_cast<pos_type>(fixed_value.pos), fixed_value.key_part);
 			if (child.empty()) {
 				return SliceResult_t{};
 			}
@@ -300,7 +300,7 @@ namespace dice::hypertrie::internal::raw {
 
 		template<size_t depth, size_t fixed_keyparts>
 		auto diagonal_slice(NodeContainer<depth, htt_t, allocator_type> const &nodec, RawKeyPositions<depth> const &diagonal_positions, key_part_type fixed_key_part,
-							SingleEntryNode<depth - fixed_keyparts, htt_t> *sen_result_cache = nullptr) noexcept
+							SingleEntryNode<depth - fixed_keyparts, htt_t, std::allocator<std::byte>> *sen_result_cache = nullptr) noexcept
 				-> specific_slice_result<depth, fixed_keyparts, allocator_type> {
 			// TODO: implement for SENContainer<depth, tri_with_stl_alloc<htt_t>>
 			using SliceResult_t = SliceResult<depth - fixed_keyparts, htt_t, allocator_type>;
@@ -322,7 +322,7 @@ namespace dice::hypertrie::internal::raw {
 
 		template<size_t current_depth, size_t fixed_keyparts>
 		auto diagonal_slice_rek(NodeContainer<current_depth, htt_t, allocator_type> const &nodec, RawKeyPositions<current_depth> const &diagonal_positions, key_part_type fixed_key_part,
-								SingleEntryNode<current_depth - fixed_keyparts, htt_t> *sen_result_cache = nullptr) noexcept
+								SingleEntryNode<current_depth - fixed_keyparts, htt_t, std::allocator<std::byte>> *sen_result_cache = nullptr) noexcept
 				-> specific_slice_result<current_depth, fixed_keyparts, allocator_type> {
 
 			static constexpr size_t result_depth = current_depth - fixed_keyparts;
@@ -339,17 +339,17 @@ namespace dice::hypertrie::internal::raw {
 						return SliceResult_t::make_sen_with_stl_alloc(true, identifier, nullptr);
 					} else {
 						if (sen_result_cache != nullptr) {
-							*sen_result_cache = SingleEntryNode<current_depth - fixed_keyparts, htt_t>{entry};
+							*sen_result_cache = SingleEntryNode<current_depth - fixed_keyparts, htt_t, std::allocator<std::byte>>{entry};
 							return SliceResult_t::make_sen_with_stl_alloc(true, identifier, sen_result_cache);
 						}
-						return SliceResult_t::make_sen_with_stl_alloc(false, identifier, new SingleEntryNode<result_depth, htt_t>(entry));
+						return SliceResult_t::make_sen_with_stl_alloc(false, identifier, new SingleEntryNode<result_depth, htt_t, std::allocator<std::byte>>(entry));
 					}
 				}
 				return SliceResult_t{};
 			}
 			FNContainer<current_depth, htt_t, allocator_type> fn_nodec = nodec.template specific<FullNode>();
 			const size_t pos = fn_nodec.node_ptr()->min_card_pos(diagonal_positions);
-			auto child = this->template resolve(fn_nodec, (pos_type) pos, fixed_key_part);
+			auto child = this->resolve(fn_nodec, static_cast<pos_type>(pos), fixed_key_part);
 			if (child.empty()) {
 				return SliceResult_t{};
 			}

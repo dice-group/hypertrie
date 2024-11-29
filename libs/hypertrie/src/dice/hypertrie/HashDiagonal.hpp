@@ -28,7 +28,7 @@ namespace dice::hypertrie {
 		using RawKeyPositions_t = internal::raw::RawKeyPositions<hypertrie_max_depth>;
 
 	private:
-		template<size_t diag_depth, size_t depth, template<size_t, typename, typename...> typename node_type>
+		template<size_t diag_depth, size_t depth, template<size_t, typename, typename> typename node_type>
 		using RawHashDiagonal_t = typename internal::raw::template RawHashDiagonal<diag_depth, depth, node_type, htt_t, allocator_type, hypertrie_max_depth>;
 		using max_sized_RawHashDiagonal_t = std::conditional_t<(sizeof(RawHashDiagonal_t<1, hypertrie_max_depth, internal::raw::FullNode>) > sizeof(RawHashDiagonal_t<1, hypertrie_max_depth, internal::raw::SingleEntryNode>)),
 															   RawHashDiagonal_t<1, hypertrie_max_depth, internal::raw::FullNode>,
@@ -63,7 +63,7 @@ namespace dice::hypertrie {
 			void (*update_sen_cache_ptr)(void *) noexcept;
 		};
 
-		template<size_t diag_depth, size_t depth, template<size_t, typename, typename...> typename node_type, bool uses_provided_alloc = false>
+		template<size_t diag_depth, size_t depth, template<size_t, typename, typename> typename node_type, bool uses_provided_alloc = false>
 		inline static RawMethods generate_raw_methods() noexcept {
 			using namespace ::dice::hypertrie::internal::raw;
 			using namespace ::dice::hypertrie::internal::util;

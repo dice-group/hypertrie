@@ -28,7 +28,7 @@ namespace dice::einsum {
 				robin_hood::unordered_set<size_t, std::identity> found_entries{};
 				for (auto const &entry : get_sub_operator<value_type, htt_t, allocator_type, false>(subscript, context, operands, entry_arg)) {
 					size_t const hash = dice::hash::DiceHashwyhash<Entry<value_type, htt_t>>()(entry);
-					auto [_, is_new_entry] = found_entries.template emplace(hash);
+					auto [_, is_new_entry] = found_entries.emplace(hash);
 					if (is_new_entry) {
 						co_yield entry;
 					}

@@ -57,7 +57,7 @@ namespace dice::hypertrie::tests::core::node {
 			context.insert(nc, entries_1);
 			fmt::print("B: {}", context);
 			 ValidationRawNodeContext<5, htt_t, std::allocator<std::byte>> validation_context{alloc, all_entries};
-			fmt::print("V: {}", (RawHypertrieContext<5, htt_t, allocator_type> &) validation_context);
+			fmt::print("V: {}", static_cast<RawHypertrieContext<5, htt_t, allocator_type> &>(validation_context));
 
 			CHECK(validation_context == context);
 			for (const auto &entry : all_entries)
@@ -95,7 +95,7 @@ namespace dice::hypertrie::tests::core::node {
 			context.insert(nc, entries_1);
 			fmt::print("B: {}", context);
 			 ValidationRawNodeContext<5, htt_t, std::allocator<std::byte>> validation_context{std::allocator<std::byte>(), all_entries};
-			fmt::print("V: {}", (RawHypertrieContext<5, htt_t, allocator_type> &) validation_context);
+			fmt::print("V: {}", static_cast<RawHypertrieContext<5, htt_t, allocator_type> &>(validation_context));
 
 			CHECK(validation_context == context);
 			for (const auto &entry : all_entries)
@@ -134,7 +134,7 @@ namespace dice::hypertrie::tests::core::node {
 			context.insert(nc, entries_1);
 			fmt::print("B: {}", context);
 			 ValidationRawNodeContext<5, htt_t, std::allocator<std::byte>> validation_context{std::allocator<std::byte>(), all_entries};
-			fmt::print("V: {}", (RawHypertrieContext<5, htt_t, allocator_type> &) validation_context);
+			fmt::print("V: {}", static_cast<RawHypertrieContext<5, htt_t, allocator_type> &>(validation_context));
 
 			CHECK(validation_context == context);
 			for (const auto &entry : all_entries)
@@ -173,7 +173,7 @@ namespace dice::hypertrie::tests::core::node {
 			context.insert(nc, entries_1);
 			fmt::print("B: {}", context);
 			 ValidationRawNodeContext<5, htt_t, std::allocator<std::byte>> validation_context{std::allocator<std::byte>(), all_entries};
-			fmt::print("V: {}", (RawHypertrieContext<5, htt_t, allocator_type> &) validation_context);
+			fmt::print("V: {}", static_cast<RawHypertrieContext<5, htt_t, allocator_type> &>(validation_context));
 
 			CHECK(validation_context == context);
 			for (const auto &entry : all_entries)
@@ -213,7 +213,7 @@ namespace dice::hypertrie::tests::core::node {
 			context.insert(nc, entries_1);
 			fmt::print("B: {}", context);
 			 ValidationRawNodeContext<5, htt_t, std::allocator<std::byte>> validation_context{std::allocator<std::byte>(), all_entries};
-			fmt::print("V: {}", (RawHypertrieContext<5, htt_t, allocator_type> &) validation_context);
+			fmt::print("V: {}", static_cast<RawHypertrieContext<5, htt_t, allocator_type> &>(validation_context));
 
 			CHECK(validation_context == context);
 			for (const auto &entry : all_entries)
@@ -252,7 +252,7 @@ namespace dice::hypertrie::tests::core::node {
 			context.insert(nc, entries_1);
 			fmt::print("B: {}", context);
 			 ValidationRawNodeContext<5, htt_t, std::allocator<std::byte>> validation_context{std::allocator<std::byte>(), all_entries};
-			fmt::print("V: {}", (RawHypertrieContext<5, htt_t, allocator_type> &) validation_context);
+			fmt::print("V: {}", static_cast<RawHypertrieContext<5, htt_t, allocator_type> &>(validation_context));
 
 			CHECK(validation_context == context);
 			for (const auto &entry : all_entries)
@@ -291,7 +291,7 @@ namespace dice::hypertrie::tests::core::node {
 			context.insert(nc, entries_1);
 			fmt::print("B: {}", context);
 			 ValidationRawNodeContext<5, htt_t, std::allocator<std::byte>> validation_context{std::allocator<std::byte>(), all_entries};
-			fmt::print("V: {}", (RawHypertrieContext<5, htt_t, allocator_type> &) validation_context);
+			fmt::print("V: {}", static_cast<RawHypertrieContext<5, htt_t, allocator_type> &>(validation_context));
 
 			CHECK(validation_context == context);
 			for (const auto &entry : all_entries)
@@ -330,7 +330,7 @@ namespace dice::hypertrie::tests::core::node {
 			context.insert(nc, entries_1);
 			fmt::print("B: {}", context);
 			 ValidationRawNodeContext<5, htt_t, std::allocator<std::byte>> validation_context{std::allocator<std::byte>(), all_entries};
-			fmt::print("V: {}", (RawHypertrieContext<5, htt_t, allocator_type> &) validation_context);
+			fmt::print("V: {}", static_cast<RawHypertrieContext<5, htt_t, allocator_type> &>(validation_context));
 
 			CHECK(validation_context == context);
 			for (const auto &entry : all_entries)
@@ -369,7 +369,7 @@ namespace dice::hypertrie::tests::core::node {
 			context.insert(nc, entries_1);
 			fmt::print("B: {}", context);
 			 ValidationRawNodeContext<5, htt_t, std::allocator<std::byte>> validation_context{std::allocator<std::byte>(), all_entries};
-			fmt::print("V: {}", (RawHypertrieContext<5, htt_t, allocator_type> &) validation_context);
+			fmt::print("V: {}", static_cast<RawHypertrieContext<5, htt_t, allocator_type> &>(validation_context));
 
 			CHECK(validation_context == context);
 			for (const auto &entry : all_entries)
@@ -414,7 +414,7 @@ namespace dice::hypertrie::tests::core::node {
 			context.insert(nc, entries_1);
 			fmt::print("B: {}", context);
 			 ValidationRawNodeContext<5, htt_t, std::allocator<std::byte>> validation_context{std::allocator<std::byte>(), all_entries};
-			fmt::print("V: {}", (RawHypertrieContext<5, htt_t, allocator_type> &) validation_context);
+			fmt::print("V: {}", static_cast<RawHypertrieContext<5, htt_t, allocator_type> &>(validation_context));
 
 			CHECK(validation_context == context);
 			for (const auto &entry : all_entries)
@@ -454,7 +454,7 @@ namespace dice::hypertrie::tests::core::node {
 			context.insert(nc, entries_1);
 			fmt::print("B: {}", context);
 			 ValidationRawNodeContext<5, htt_t, std::allocator<std::byte>> validation_context{std::allocator<std::byte>(), all_entries};
-			fmt::print("V: {}", (RawHypertrieContext<5, htt_t, allocator_type> &) validation_context);
+			fmt::print("V: {}", static_cast<RawHypertrieContext<5, htt_t, allocator_type> &>(validation_context));
 
 			CHECK(validation_context == context);
 			for (const auto &entry : all_entries)

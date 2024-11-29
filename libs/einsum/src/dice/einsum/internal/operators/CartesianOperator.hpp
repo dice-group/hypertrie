@@ -49,7 +49,7 @@ namespace dice::einsum::internal::operators {
 					std::vector<Entry_t> &sub_result_vec = sub_results_.emplace_back();
 					sub_result_vec.reserve(sub_result.size());
 					for (const auto &[key, value] : sub_result) {
-						sub_result_vec.template emplace_back(key, value);
+						sub_result_vec.emplace_back(key, value);
 					}
 					sub_result = {};
 				}

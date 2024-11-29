@@ -6,7 +6,7 @@
 
 namespace fmt {
 	// TODO: find a way to represent node_type_t.
-	template<size_t depth, ::dice::hypertrie::HypertrieTrait htt_t, template<size_t, typename, typename...> typename node_type_t, dice::hypertrie::ByteAllocator allocator_type>
+	template<size_t depth, ::dice::hypertrie::HypertrieTrait htt_t, template<size_t, typename, typename> typename node_type_t, dice::hypertrie::ByteAllocator allocator_type>
 	struct formatter<::dice::hypertrie::internal::raw::AllocateNode<depth, htt_t, node_type_t, allocator_type>> : ::dice::hypertrie::internal::util::SimpleParsing {
 		template<typename T>
 		static auto nameOfType() {

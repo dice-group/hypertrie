@@ -1,0 +1,21 @@
+name: Publish Conan branch package
+
+on: [ push ]
+
+concurrency:
+  group: publish-conan-branch-package-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  publish-conan-branch-package:
+    uses: dice-group/cpp-conan-release-reusable-workflow/.github/workflows/publish-conan-branch-package.yml@main
+    with:
+      public_artifactory: true
+      os: ubuntu-22.04
+      compiler: clang-17
+      cmake-version: 3.30.5
+      conan-version: 2.9.3
+      conan-options: -o boost/*:header_only=True
+    secrets:
+      CONAN_USER: ${{ secrets.CONAN_USER }}
+      CONAN_PW: ${{ secrets.CONAN_PW }}

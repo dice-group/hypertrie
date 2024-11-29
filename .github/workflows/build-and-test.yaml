@@ -116,4 +116,4 @@ jobs:
         id: run-tests
         shell: bash
         working-directory: build
-        run: ctest --verbose --parallel $(nproc) --exclude-regex "(tests_RawHypertrieContext_systematic)|(tests_RawHypertrieContext_systematic_metall)|(tests_RawHypertrieContext_randomized_abort)|(tests_HypertrieContext_systematic_metall)|(tests_Einsum_metall)"
+        run: ctest --timeout 3000 --parallel $(nproc) --exclude-regex "(tests_RawHypertrieContext_systematic)|(tests_RawHypertrieContext_systematic_metall)|(tests_RawHypertrieContext_randomized_abort)|(tests_HypertrieContext_systematic_metall)|(tests_Einsum_metall)"

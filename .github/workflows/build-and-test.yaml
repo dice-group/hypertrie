@@ -110,10 +110,10 @@ jobs:
         env:
           CC: ${{ steps.install_cc.outputs.cc }}
           CXX: ${{ steps.install_cc.outputs.cxx }}
-        run: cmake --build . --parallel 8
+        run: cmake --build . --parallel $(nproc)
 
       - name: Run tests
         id: run-tests
         shell: bash
         working-directory: build
-        run: ctest --verbose --parallel 8 --exclude-regex "(tests_RawHypertrieContext_systematic)|(tests_RawHypertrieContext_systematic_metall)|(tests_RawHypertrieContext_randomized_abort)|(tests_HypertrieContext_systematic_metall)|(tests_Einsum_metall)"
+        run: ctest --verbose --parallel $(nproc) --exclude-regex "(tests_RawHypertrieContext_systematic)|(tests_RawHypertrieContext_systematic_metall)|(tests_RawHypertrieContext_randomized_abort)|(tests_HypertrieContext_systematic_metall)|(tests_Einsum_metall)"

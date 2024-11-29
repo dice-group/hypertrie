@@ -11,7 +11,7 @@ jobs:
       fail-fast: false
       matrix:
         config:
-          - os: arc-runner-set
+          - os: ubuntu-22.04
             compiler: clang-17
     runs-on: ${{ matrix.config.os }}
     name: ${{ matrix.config.os }} (${{ matrix.config.compiler }})

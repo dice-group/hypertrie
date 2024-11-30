@@ -64,7 +64,6 @@ namespace dice::hypertrie::tests::core::node {
 			SUBCASE("Reslice contextless hypertrie to [1,3,:]") {
 				auto slice_1 = std::get<0>(slice_0[{3, std::nullopt}]);
 
-				size_t count_1 = 0;
 				for ([[maybe_unused]] auto entry : slice_1)
 					CHECK(entry[1] == 3);
 			}

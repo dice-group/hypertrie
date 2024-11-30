@@ -1,5 +1,6 @@
-add_library(hypertrie INTERFACE)
-add_library(hypertrie::hypertrie ALIAS hypertrie)
+cmake_minimum_required(VERSION 3.21)
+set(lib_suffix "hypertrie")
+set(lib "${PROJECT_NAME}-${lib_suffix}")
 
 find_package(Threads REQUIRED)
 find_package(Boost REQUIRED COMPONENTS)
@@ -8,7 +9,10 @@ find_package(dice-sparse-map REQUIRED)
 find_package(dice-hash REQUIRED)
 find_package(dice-template-library REQUIRED)
 
-target_link_libraries(hypertrie INTERFACE
+add_library(${lib} INTERFACE)
+add_library(${PROJECT_NAME}::${lib_suffix} ALIAS ${lib})
+
+target_link_libraries(${lib} INTERFACE
         Threads::Threads
         Boost::headers
         robin_hood::robin_hood
@@ -17,8 +21,8 @@ target_link_libraries(hypertrie INTERFACE
         dice-template-library::dice-template-library
         )
 
-target_include_directories(hypertrie INTERFACE
+target_include_directories(${lib} INTERFACE
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>)
 
-include(${CMAKE_SOURCE_DIR}/cmake/install_interface_library.cmake)
-install_interface_component(hypertrie src)
+include(${CMAKE_SOURCE_DIR}/cmake/install_components.cmake)
+install_component(INTERFACE ${lib_suffix} src)

@@ -5,12 +5,12 @@
 #include <utility>
 
 #include <dice/hypertrie.hpp>
+#include <dice/hypertrie/internal/commons/generator.hpp>
 
 #include "Commons.hpp"
 #include "OperandDependencyGraph.hpp"
 #include "Query.hpp"
 #include "operators/Operator.hpp"
-#include "util/generator.hpp"
 
 namespace dice::query {
 

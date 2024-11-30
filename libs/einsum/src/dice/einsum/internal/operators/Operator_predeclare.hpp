@@ -4,9 +4,9 @@
 #include "dice/einsum/Commons.hpp"
 #include "dice/einsum/Subscript.hpp"
 #include "dice/einsum/internal/Context.hpp"
-#include "dice/einsum/internal/util/generator.hpp"
 
 #include <dice/hypertrie.hpp>
+#include <dice/hypertrie/internal/commons/generator.hpp>
 
 #include <memory>
 #include <utility>

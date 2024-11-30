@@ -4,7 +4,7 @@
 #include "dice/query/Commons.hpp"
 #include "dice/query/OperandDependencyGraph.hpp"
 #include "dice/query/Query.hpp"
-#include "dice/query/util/generator.hpp"
+#include "dice/hypertrie/internal/commons/generator.hpp"
 
 #include <memory>
 #include <utility>

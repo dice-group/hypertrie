@@ -15,10 +15,10 @@ namespace dice::hypertrie::internal::raw {
 	 * new_with_alloc() will construct an object and pass the allocator into the constructor of that object.
 	 * This is useful if the created object should use the same allocator.
 	 */
-	template<size_t depth, HypertrieTrait htt_t, template<size_t, typename, typename...> typename node_type_t, ByteAllocator allocator_type>
+	template<size_t depth, HypertrieTrait htt_t, template<size_t, typename, typename> typename node_type_t, ByteAllocator allocator_type>
 	class AllocateNode {
 	public:
-		using node_type = instantiate_NodeTemplate<node_type_t, depth, htt_t, allocator_type>;
+		using node_type = node_type_t<depth, htt_t, allocator_type>;
 		using cn_allocator_type = typename std::allocator_traits<allocator_type>::template rebind_alloc<node_type>;
 		using cn_allocator_traits = typename std::allocator_traits<cn_allocator_type>;
 		using pointer = typename cn_allocator_traits::pointer;

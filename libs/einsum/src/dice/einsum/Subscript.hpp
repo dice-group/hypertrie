@@ -335,7 +335,7 @@ namespace dice::einsum {
 		Subscript(OperandsSc operands, ResultSc result, Type type = Type::None) : Subscript{internal::RawSubscript{std::move(operands), std::move(result)}, type} {}
 
 		std::string to_string() const noexcept {
-			return (std::string) this->raw_subscript;
+			return static_cast<std::string>(this->raw_subscript);
 		}
 
 		static Subscript from_string(std::string const &subscript_str) {

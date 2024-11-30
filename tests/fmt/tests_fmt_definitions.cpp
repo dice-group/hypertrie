@@ -43,7 +43,7 @@ namespace dice::hypertrie::tests::fmt {
 			REQUIRE(result == "[0 -> 1, 1 -> 2, 3 -> 4, 4 -> 5]");
 		}
 
-		template<size_t N, typename>
+		template<size_t N, typename, typename>
 		struct MyMapType {};
 		TEST_CASE("AllocateNode") {
 			AllocateNode<5, default_bool_Hypertrie_trait, MyMapType, std::allocator<std::byte>> alloc_node(std::allocator<std::byte>{});
@@ -52,7 +52,7 @@ namespace dice::hypertrie::tests::fmt {
 		}
 
 		TEST_CASE("SingleEntryNode") {
-			SingleEntryNode<5, default_bool_Hypertrie_trait> sen(SingleEntry<5, default_bool_Hypertrie_trait>{{0, 1, 2, 3, 4}}, 3);
+			SingleEntryNode<5, default_bool_Hypertrie_trait, std::allocator<std::byte>> sen(SingleEntry<5, default_bool_Hypertrie_trait>{{0, 1, 2, 3, 4}}, 3);
 			std::string result = ::fmt::format("{}", sen);
 			std::cout << result << std::endl;
 			REQUIRE(result == "{ [ref_count=3] <0, 1, 2, 3, 4> -> true }");

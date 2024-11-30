@@ -214,7 +214,7 @@ namespace dice::hypertrie::tests::core::node {
 					HashDiagonal<htt_t, allocator_type> hash_diagonal_2 = std::move(hash_diagonal);
 
 					CHECK(hash_diagonal_2.find(1) == true);
-					std::cout << (std::string) hash_diagonal_2.current_hypertrie() << std::endl;
+					std::cout << static_cast<std::string>(hash_diagonal_2.current_hypertrie()) << std::endl;
 				}
 			} catch (...) {}
 

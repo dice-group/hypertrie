@@ -4,6 +4,6 @@ if(NOT CLANG_TIDY_FOUND)
 endif()
 
 set(CMAKE_CXX_CLANG_TIDY
-  ${CLANG_TIDY_FOUND};
-  -extra-arg=-Wno-unknown-warning-option;
+        ${CLANG_TIDY_FOUND};
+        -extra-arg=-Wno-unknown-warning-option;
 )

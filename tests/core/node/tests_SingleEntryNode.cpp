@@ -33,14 +33,14 @@ namespace dice::hypertrie::tests::core::node {
 
 				[[maybe_unused]] value_type value = gen.value();
 
-				SingleEntryNode<depth, htt_t> node{key, value};
+				SingleEntryNode<depth, htt_t, std::allocator<std::byte>> node{key, value};
 
 				REQUIRE(node.key() == key);
 				REQUIRE(node.value() == value);
 				REQUIRE(node.size() == 1);
 
 				SUBCASE("copy") {
-					SingleEntryNode<depth, htt_t> another_node{node};
+					SingleEntryNode<depth, htt_t, std::allocator<std::byte>> another_node{node};
 					REQUIRE(another_node == node);
 				}
 			}

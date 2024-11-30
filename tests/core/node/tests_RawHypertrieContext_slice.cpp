@@ -149,7 +149,7 @@ namespace dice::hypertrie::tests::core::node {
 										for (const auto &entry : utils::SingleEntryGenerator<result_depth, htt_t, max_key_part, 0>()) {
 											fmt::print("{} -> {}\n", entry.key(),
 													   (expected_entries.contains(entry.key())) ? expected_entries[entry.key()] : value_type(0));
-											auto slice = context.template slice(nodec, raw_slice_key);
+											auto slice = context.slice(nodec, raw_slice_key);
 											if constexpr (fixed_depth == depth) {
 												if (expected_entries.contains(entry.key()))
 													CHECK(slice == expected_entries[entry.key()]);
@@ -163,12 +163,12 @@ namespace dice::hypertrie::tests::core::node {
 																	: NodeContainer<result_depth, htt_t, allocator_type>(slice.get_sen());
 													if (expected_entries.contains(entry.key())) {
 														CHECK(not slice.empty());
-														CHECK(context.template get(slice_instance, entry.key()) == expected_entries[entry.key()]);
+														CHECK(context.get(slice_instance, entry.key()) == expected_entries[entry.key()]);
 													} else {
 														if (slice.empty()) {
 															CHECK_MESSAGE(true, "is empty");
 														} else {
-															CHECK(context.template get(slice_instance, entry.key()) == value_type{});
+															CHECK(context.get(slice_instance, entry.key()) == value_type{});
 														}
 													}
 												} else {
@@ -176,9 +176,9 @@ namespace dice::hypertrie::tests::core::node {
 													assert(expected_entries.size() == 1);
 													CHECK_MESSAGE(not slice.empty(), "If a node is not allocated with the allocator from the Trait that means that it is an slice of a SingleEntryNode. -> only one entry. ");
 													if (expected_entries.contains(entry.key())) {
-														CHECK(context.template get(slice_instance, entry.key()) == expected_entries[entry.key()]);
+														CHECK(context.get(slice_instance, entry.key()) == expected_entries[entry.key()]);
 													} else {
-														CHECK(context.template get(slice_instance, entry.key()) == value_type{});
+														CHECK(context.get(slice_instance, entry.key()) == value_type{});
 													}
 													assert(slice.is_managed() == false);
 

@@ -3,6 +3,7 @@
 
 #include <cstddef>
 
+#include "dice/hypertrie/ByteAllocator.hpp"
 #include "dice/hypertrie/Hypertrie_trait.hpp"
 #include "dice/hypertrie/internal/raw/node/ReferenceCounted.hpp"
 #include "dice/hypertrie/internal/raw/node/SingleEntry.hpp"
@@ -10,7 +11,7 @@
 
 namespace dice::hypertrie::internal::raw {
 
-	template<size_t depth, HypertrieTrait htt_t>
+	template<size_t depth, HypertrieTrait htt_t, ByteAllocator allocator_type>
 	class SingleEntryNode : public ReferenceCounted, public SingleEntry<depth, htt_t> {
 	public:
 		using RawKey_t = RawKey<depth, htt_t>;

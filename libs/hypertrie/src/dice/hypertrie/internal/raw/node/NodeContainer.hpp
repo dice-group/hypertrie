@@ -90,7 +90,7 @@ namespace dice::hypertrie::internal::raw {
 
 	template<size_t depth,
 			 HypertrieTrait tri_t,
-			 template<size_t, typename, typename...> typename node_type, ByteAllocator allocator_type>
+			 template<size_t, typename, typename> typename node_type, ByteAllocator allocator_type>
 	struct SpecificNodeContainer;
 
 	/**
@@ -111,7 +111,7 @@ namespace dice::hypertrie::internal::raw {
 		using RawIdentifier_t = RawIdentifier<depth, htt_t>;
 		using VoidNodePtr = typename RawNodeContainer_t::VoidNodePtr;
 		using FNPtr = typename ht_allocator_trait::template pointer<FullNode<depth, htt_t, allocator_type>>;
-		using SENPtr = typename ht_allocator_trait::template pointer<SingleEntryNode<depth, htt_t>>;
+		using SENPtr = typename ht_allocator_trait::template pointer<SingleEntryNode<depth, htt_t, allocator_type>>;
 		static constexpr bool allocator_uses_raw_ptr = ht_allocator_trait::uses_raw_pointer;
 
 
@@ -148,16 +148,16 @@ namespace dice::hypertrie::internal::raw {
 			: node_identifier_{raw_node_container.identifier()},
 			  node_ptr_{raw_node_container.raw_void_node_ptr()} {}
 
-		template<template<size_t, typename, typename...> typename node_type>
+		template<template<size_t, typename, typename> typename node_type>
 		explicit NodeContainer(const SpecificNodeContainer<depth, htt_t, node_type, allocator_type> &other) noexcept
 			: node_identifier_{other.raw_identifier()},
 			  node_ptr_{other.template specific_ptr<node_type>()} {}
 
-		template<template<size_t, typename, typename...> typename node_type>
+		template<template<size_t, typename, typename> typename node_type>
 		explicit NodeContainer(const SpecificNodeContainer<depth, htt_t, node_type, allocator_type> &&other) noexcept
 			: node_identifier_{other.raw_identifier()}, node_ptr_{other.template specific_ptr<node_type>()} {}
 
-		template<template<size_t, typename, typename...> typename node_type>
+		template<template<size_t, typename, typename> typename node_type>
 		[[nodiscard]] auto specific_ptr() const noexcept {
 			// if node_type is FullNode
 			if constexpr (is_FullNode_v<node_type>) {
@@ -175,7 +175,7 @@ namespace dice::hypertrie::internal::raw {
 			}
 		}
 
-		template<template<size_t, typename, typename...> typename node_type>
+		template<template<size_t, typename, typename> typename node_type>
 		[[nodiscard]] auto specific() const noexcept { return SpecificNodeContainer<depth, htt_t, node_type, allocator_type>{this->raw_identifier(), this->template specific_ptr<node_type>()}; }
 
 		[[nodiscard]] Identifier<htt_t> identifier() const noexcept { return node_identifier_; }
@@ -190,7 +190,7 @@ namespace dice::hypertrie::internal::raw {
 		[[nodiscard]] bool is_fn() const noexcept { return this->identifier().is_fn(); }
 
 		[[nodiscard]] bool operator==(const NodeContainer &rhs) const noexcept {
-			return std::tie(node_identifier_, node_ptr_.void_ptr) == std::tie(rhs.node_identifier_, rhs.void_ptr);
+			return std::tie(node_identifier_, node_ptr_.void_ptr) == std::tie(rhs.node_identifier_, rhs.node_ptr_.void_ptr);
 		}
 		[[nodiscard]] bool operator!=(const NodeContainer &rhs) const noexcept {
 			return !this->operator==(rhs);
@@ -221,7 +221,7 @@ namespace dice::hypertrie::internal::raw {
 	};
 
 
-	template<size_t depth, HypertrieTrait htt_t, template<size_t, typename, typename...> typename node_type_t, ByteAllocator allocator_type>
+	template<size_t depth, HypertrieTrait htt_t, template<size_t, typename, typename> typename node_type_t, ByteAllocator allocator_type>
 	struct SpecificNodeContainer : public NodeContainer<depth, htt_t, allocator_type> {
 	private:
 		using ht_allocator_trait = hypertrie_allocator_trait<allocator_type>;
@@ -234,7 +234,7 @@ namespace dice::hypertrie::internal::raw {
 
 		using Identifier_t = typename NodeContainer_t::Identifier_t;
 		using RawIdentifier_t = typename NodeContainer_t::RawIdentifier_t;
-		using Node = instantiate_NodeTemplate<node_type_t, depth, htt_t, allocator_type>;
+		using Node = node_type_t<depth, htt_t, allocator_type>;
 		using NodePtr = typename ht_allocator_trait::template pointer<Node>;
 		using VoidNodePtr = typename NodeContainer_t::VoidNodePtr;
 		static constexpr bool allocator_uses_raw_ptr = std::is_same_v<VoidNodePtr, void *>;

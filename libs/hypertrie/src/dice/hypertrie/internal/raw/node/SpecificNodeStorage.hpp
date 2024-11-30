@@ -10,7 +10,7 @@
 
 namespace dice::hypertrie::internal::raw {
 
-	template<size_t depth, HypertrieTrait htt_t, template<size_t, typename, typename...> typename node_type_t, ByteAllocator allocator_type>
+	template<size_t depth, HypertrieTrait htt_t, template<size_t, typename, typename> typename node_type_t, ByteAllocator allocator_type>
 	class SpecificNodeStorage {
 	private:
 		using ht_allocator_trait = hypertrie_allocator_trait<allocator_type>;
@@ -19,7 +19,7 @@ namespace dice::hypertrie::internal::raw {
 		using AllocateNode_t = AllocateNode<depth, htt_t, node_type_t, allocator_type>;
 
 		using key_type = RawIdentifier<depth, htt_t>;
-		using node_type = instantiate_NodeTemplate<node_type_t, depth, htt_t, allocator_type>;
+		using node_type = node_type_t<depth, htt_t, allocator_type>;
 		using node_pointer_type = typename ht_allocator_trait::template pointer<node_type>;
 		using Map_t = typename htt_t::template map_type<key_type, node_pointer_type, allocator_type>;
 

@@ -1,13 +1,13 @@
 #ifndef HYPERTRIE_OPERATOR_HPP
 #define HYPERTRIE_OPERATOR_HPP
 
+#include "dice/einsum/internal/operators/Operator_predeclare.hpp"
+
 #include "dice/einsum/internal/operators/CartesianOperator.hpp"
 #include "dice/einsum/internal/operators/CountOperator.hpp"
 #include "dice/einsum/internal/operators/EntryGeneratorOperator.hpp"
 #include "dice/einsum/internal/operators/JoinOperator.hpp"
 #include "dice/einsum/internal/operators/ResolveOperator.hpp"
-
-#include "dice/einsum/internal/operators/Operator_predeclare.hpp"
 
 
 #include <memory>

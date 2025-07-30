@@ -1,13 +1,12 @@
 #ifndef QUERY_OPERATOR_PREDECLARE_HPP
 #define QUERY_OPERATOR_PREDECLARE_HPP
 
+#include <dice/hypertrie/internal/commons/generator.hpp>
+
 #include "dice/query/Commons.hpp"
 #include "dice/query/OperandDependencyGraph.hpp"
 #include "dice/query/Query.hpp"
-#include "dice/hypertrie/internal/commons/generator.hpp"
 
-#include <memory>
-#include <utility>
 
 namespace dice::query::operators {
 

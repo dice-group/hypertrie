@@ -1,3 +1,4 @@
+#include "dice/hypertrie/internal/raw/node/NodeContainer.hpp"
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include <doctest/doctest.h>
 
@@ -5,11 +6,11 @@
 
 #include <cppitertools/itertools.hpp>
 
-#include <utils/ValidationRawNodeContext.hpp>
 #include <dice/hypertrie/internal/util/fmt_utils.hpp>
+#include <utils/DumpRawContext.hpp>
 #include <utils/Node_test_configs.hpp>
 #include <utils/RawEntryGenerator.hpp>
-
+#include <utils/ValidationRawNodeContext.hpp>
 
 #include <dice/hypertrie/internal/fmt_Hypertrie_trait.hpp>
 #include <dice/hypertrie/internal/raw/node/fmt_FullNode.hpp>
@@ -24,6 +25,7 @@
 #include <utils/EntrySetGenerator.hpp>
 
 namespace dice::hypertrie::tests::core::node {
+	bool debug = false;
 
 	TEST_SUITE("systematic testing of RawNodeContext") {
 		using namespace ::dice::hypertrie::internal::raw;
@@ -41,12 +43,12 @@ namespace dice::hypertrie::tests::core::node {
 			static constexpr auto max_key_part = key_part_type(no_key_parts);
 
 			using allocator_type = std::allocator<std::byte>;
-			allocator_type alloc{}; // allocator instance
+			allocator_type alloc{};// allocator instance
 
 			SUBCASE("{}"_format(htt_t{}).c_str()) {
 				SUBCASE("hypertrie depth = {}"_format(depth).c_str()) {
-					dice::template_library::for_range<min_no_entries, max_no_entries + 1>( [&](auto no_entries_0) {
-						dice::template_library::for_range<min_no_entries, max_no_entries + 1>( [&](auto no_entries_1) {
+					dice::template_library::for_range<min_no_entries, max_no_entries + 1>([&](auto no_entries_0) {
+						dice::template_library::for_range<min_no_entries, max_no_entries + 1>([&](auto no_entries_1) {
 							SUBCASE("first {} entries, then {} entries"_format(no_entries_0, no_entries_1).c_str()) {
 
 
@@ -56,10 +58,14 @@ namespace dice::hypertrie::tests::core::node {
 										RawHypertrieContext<depth, htt_t, allocator_type> context{std::allocator<std::byte>()};
 										NodeContainer<depth, htt_t, allocator_type> nc{};
 
-										context.insert(nc, entries_0);
+										context.insert(nc, std::vector{entries_0});
 										ValidationRawNodeContext<depth, htt_t, std::allocator<std::byte>> validation_context_0{std::allocator<std::byte>(), entries_0};
 										CHECK(context == validation_context_0);
-										std::cout << fmt::format("result identifier: {}", nc.raw_identifier()) << std::endl;
+										if (debug) {
+											std::cout << "\nContext before:" << std::endl;
+											dump_context(context);
+											dump_context_hash_translation_table(context);
+										}
 
 										utils::EntrySetGenerator_with_exclude<depth, no_entries_1, htt_t, max_key_part> inner_generator{entries_0};
 										for (const auto &entries_1 : inner_generator) {
@@ -67,11 +73,20 @@ namespace dice::hypertrie::tests::core::node {
 												std::vector<SingleEntry_t> all_entries = entries_0;
 												all_entries.insert(all_entries.end(), entries_1.begin(), entries_1.end());
 
-												context.insert(nc, entries_1);
-												std::cout << fmt::format("result identifier: {}", nc.raw_identifier()) << std::endl;
-												// std::cout << fmt::format("Actual:\n {}", context) << std::endl;
+												context.insert(nc, std::vector{entries_1});
+												if (debug) {
+													std::cout << "\nContext after:" << std::endl;
+													dump_context(context);
+													dump_context_hash_translation_table(context);
+												}
+
 												ValidationRawNodeContext<depth, htt_t, std::allocator<std::byte>> validation_context{std::allocator<std::byte>(), all_entries};
-												// std::cout << fmt::format("Verification:\n {}", (RawHypertrieContext<depth, htt_t>&)validation_context) << std::endl;
+												if (debug) {
+													std::cout << "\nContext expected:" << std::endl;
+													dump_context(validation_context);
+													dump_context_hash_translation_table(validation_context);
+												}
+
 												CHECK(context == validation_context);
 											}
 										}
@@ -137,7 +152,6 @@ namespace dice::hypertrie::tests::core::node {
 				constexpr size_t max_no_entries = 3;
 				write_and_read<T::depth, typename T::htt_t, no_key_parts, min_no_entries, max_no_entries>();
 			}
-
 		}
 
 		TEST_CASE_TEMPLATE("hypertrie depth 4", T,

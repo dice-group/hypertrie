@@ -2,7 +2,8 @@
 #define HYPERTRIE_RAWHYPERTRIEBULKINSERTER_HPP
 
 #include "dice/hypertrie/internal/raw/node/NodeContainer.hpp"
-#include "dice/hypertrie/internal/raw/node_context/BulkInserter_callback.hpp"
+#include "dice/hypertrie/internal/raw/node_context/BulkUpdaterSettings.hpp"
+#include "dice/hypertrie/internal/raw/node_context/BulkUpdater_callback.hpp"
 #include "dice/hypertrie/internal/raw/node_context/RawHypertrieContext.hpp"
 #include "dice/hypertrie/internal/util/folly_ProducerConsumerQueue.hpp"
 
@@ -15,10 +16,9 @@
 namespace dice::hypertrie::internal::raw {
 
 
-	template<size_t depth, HypertrieTrait_bool_valued htt_t, ByteAllocator allocator_type, size_t context_max_depth>
-	class RawHypertrieBulkInserter {
+	template<BulkUpdaterMode mode, size_t depth, HypertrieTrait_bool_valued htt_t, ByteAllocator allocator_type, size_t context_max_depth>
+	class RawHypertrieBulkUpdater {
 		// TODO: extend to non-Boolean valued hypertries
-		// TODO: extend to removing entries
 		// TODO: extend to change values (only non-Boolean valued hypertries)
 	public:
 		using Entry = SingleEntry<depth, htt_t>;
@@ -31,7 +31,7 @@ namespace dice::hypertrie::internal::raw {
 		RawHypertrieContext<context_max_depth, htt_t, allocator_type> *context_;
 		std::unique_ptr<std::jthread> check_and_insertion_thread_;
 		std::vector<Entry> new_entries_;// buffer_size
-		BulkInserter_bulk_loaded_callback get_stats_;
+		BulkUpdater_bulk_processed_callback get_stats_;
 		std::atomic<bool> please_flush_ = false;
 
 	public:
@@ -39,13 +39,13 @@ namespace dice::hypertrie::internal::raw {
 		 * @param nodec
 		 * @param context
 		 * @param bulk_size
-		 * @param get_stats see BulkInserter_bulk_loaded_callback
+		 * @param get_stats see BulkUpdater_bulk_processed_callback
 		 */
-		RawHypertrieBulkInserter(
+		RawHypertrieBulkUpdater(
 				RawNodeContainer<htt_t, allocator_type> &nodec,
 				RawHypertrieContext<context_max_depth, htt_t, allocator_type> &context,
 				uint32_t bulk_size = 1'000'000U,
-				BulkInserter_bulk_loaded_callback get_stats = [](auto...) {}) noexcept
+				BulkUpdater_bulk_processed_callback get_stats = [](auto...) {}) noexcept
 			: entry_queue_{(bulk_size > 2) ? bulk_size : uint32_t(2)},
 			  bulk_size_((bulk_size > 2) ? bulk_size : uint32_t(2)),
 			  nodec_(&nodec),
@@ -77,25 +77,42 @@ namespace dice::hypertrie::internal::raw {
 										}
 									}
 
-									if (is_new)
-										if (not context_->template get<depth>(NodeContainer<depth, htt_t, allocator_type>{*nodec_}, entry.key()))
-											new_entries_.push_back(entry);
+									if (is_new) {
+										bool const contained = context_->template get<depth>(NodeContainer<depth, htt_t, allocator_type>{*nodec_}, entry.key());
+
+										if constexpr (mode == BulkUpdaterMode::Insert) {
+											if (not contained) {
+												new_entries_.push_back(entry);
+											}
+										} else if constexpr (mode == BulkUpdaterMode::Remove) {
+											if (contained) {
+												new_entries_.push_back(entry);
+											}
+										}
+									}
 								} else if (stoken.stop_requested()) {
 									done = true;
 									break;
 								}
 							}
 							NodeContainer<depth, htt_t, allocator_type> nodec{*nodec_};
-							context_->insert(nodec, new_entries_);
+
+							auto const new_entries_size = new_entries_.size();
+							if constexpr (mode == BulkUpdaterMode::Insert) {
+								context_->insert(nodec, std::move(new_entries_));
+							} else if constexpr (mode == BulkUpdaterMode::Remove) {
+								context_->remove(nodec, std::move(new_entries_));
+							}
+
 							*nodec_ = nodec;
-							get_stats_(no_seen_entries, new_entries_.size(), context_->size(nodec));
+							get_stats_(no_seen_entries, new_entries_size, context_->size(nodec));
 							new_entries_.clear();
 							please_flush_.store(false);
 						}
 					});
 		}
 
-		~RawHypertrieBulkInserter() {
+		~RawHypertrieBulkUpdater() noexcept {
 			check_and_insertion_thread_->request_stop();
 			if (check_and_insertion_thread_->joinable()) [[likely]]
 				check_and_insertion_thread_->join();
@@ -129,6 +146,13 @@ namespace dice::hypertrie::internal::raw {
 				;
 		}
 	};
+
+	template<size_t depth, HypertrieTrait_bool_valued htt_t, ByteAllocator allocator_type, size_t context_max_depth>
+	using RawHypertrieBulkInserter = RawHypertrieBulkUpdater<BulkUpdaterMode::Insert, depth, htt_t, allocator_type, context_max_depth>;
+
+	template<size_t depth, HypertrieTrait_bool_valued htt_t, ByteAllocator allocator_type, size_t context_max_depth>
+	using RawHypertrieBulkRemover = RawHypertrieBulkUpdater<BulkUpdaterMode::Remove, depth, htt_t, allocator_type, context_max_depth>;
+
 }// namespace dice::hypertrie::internal::raw
 
 #endif// HYPERTRIE_RAWHYPERTRIEBULKINSERTER_HPP

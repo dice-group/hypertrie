@@ -1,5 +1,4 @@
 #include <dice/hypertrie.hpp>
-#include <dice/einsum.hpp>
 #include <dice/query.hpp>
 
 #include <iostream>

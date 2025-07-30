@@ -12,7 +12,6 @@
 #include "Operator_predeclare.hpp"
 
 namespace dice::query::operators {
-
 	template<hypertrie::HypertrieTrait_bool_valued htt_t, hypertrie::ByteAllocator allocator_type>
 	inline Operation next_op(OperandDependencyGraph &,
 							 Query<htt_t, allocator_type> const &);

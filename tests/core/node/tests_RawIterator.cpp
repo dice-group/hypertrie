@@ -55,7 +55,7 @@ namespace dice::hypertrie::tests::core::node {
 
 							std::unordered_set<SingleEntry_t, dice::hash::DiceHash<SingleEntry_t>> entry_set{entries_0.begin(), entries_0.end()};
 
-							context.insert(nc, entries_0);
+							context.insert(nc, std::vector{entries_0});
 
 							using RawIterator_t = RawIterator<depth, true, htt_t, allocator_type, depth>;
 

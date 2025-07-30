@@ -12,6 +12,7 @@
 #include "Query.hpp"
 #include "operators/Operator.hpp"
 
+
 namespace dice::query {
 
 	class Evaluation {

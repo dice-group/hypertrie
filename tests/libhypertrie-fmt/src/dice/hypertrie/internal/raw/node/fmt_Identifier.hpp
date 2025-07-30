@@ -11,14 +11,14 @@ namespace fmt {
 		auto format(::dice::hypertrie::internal::raw::RawIdentifier<depth, htt_t> const &id, FormatContext &ctx) {
 
 			if (id.empty()) {
-				return format_to(ctx.out(), "empty-id");
+				return format_to(ctx.out(), FMT_STRING("empty-id"));
 			} else if (id.is_sen()) {
 				if constexpr (depth == 1 and ::dice::hypertrie::HypertrieTrait_bool_valued_and_taggable_key_part<htt_t>)
-					return format_to(ctx.out(), "<key_part:{}", id.get_entry().key()[0]);
+					return format_to(ctx.out(), FMT_STRING("<key_part:{}"), id.get_entry().key()[0]);
 				else
-					return format_to(ctx.out(), "sen_{:X}", id.hash() & ~(1UL << ::dice::hypertrie::internal::raw::RawIdentifier<depth, htt_t>::tag_pos) & 0xFFFFUL);
+					return format_to(ctx.out(), FMT_STRING("sen_{:X}"), id.hash() & ~(1UL << ::dice::hypertrie::internal::raw::RawIdentifier<depth, htt_t>::tag_pos) & 0xFFFFUL);
 			} else {
-				return format_to(ctx.out(), "fn_{:X}", id.hash() & ~(1UL << ::dice::hypertrie::internal::raw::RawIdentifier<depth, htt_t>::tag_pos) & 0xFFFFUL);
+				return format_to(ctx.out(), FMT_STRING("fn_{:X}"), id.hash() & ~(1UL << ::dice::hypertrie::internal::raw::RawIdentifier<depth, htt_t>::tag_pos) & 0xFFFFUL);
 			}
 		}
 	};

@@ -19,8 +19,8 @@ namespace fmt {
 		auto format(::dice::hypertrie::internal::raw::RawSliceKey<depth, htt_t> const &raw_key, FormatContext &ctx) {
 			std::vector<std::string> entries;
 			for (const auto &fixed_key_part : raw_key)
-				entries.push_back(fmt::format("{} -> {}", fixed_key_part.pos, fixed_key_part.key_part));
-			return format_to(ctx.out(), "[{}]", fmt::join(entries, ", "));
+				entries.push_back(fmt::format(FMT_STRING("{} -> {}"), fixed_key_part.pos, fixed_key_part.key_part));
+			return format_to(ctx.out(), FMT_STRING("[{}]"), fmt::join(entries, ", "));
 		}
 	};
 }// namespace fmt

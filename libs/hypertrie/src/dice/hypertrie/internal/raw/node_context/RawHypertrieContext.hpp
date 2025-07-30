@@ -1,12 +1,24 @@
 #ifndef HYPERTRIE_NODECONTEXT_HPP
 #define HYPERTRIE_NODECONTEXT_HPP
 
-#include "dice/hypertrie/internal/container/deref_map_iterator.hpp"
-#include "dice/hypertrie/internal/raw/node/NodeStorage.hpp"
-#include "dice/hypertrie/internal/raw/node_context/SliceResult.hpp"
-#include "dice/hypertrie/internal/raw/node_context/insert_impl_RawNodeContext.hpp"
-
+#include "dice/hypertrie/ByteAllocator.hpp"
+#include "dice/hypertrie/Hypertrie_trait.hpp"
+#include "dice/hypertrie/internal/commons/PosType.hpp"
+#include "dice/hypertrie/internal/raw/RawDiagonalPositions.hpp"
 #include "dice/hypertrie/internal/raw/RawKey.hpp"
+#include "dice/hypertrie/internal/raw/node/FullNode.hpp"
+#include "dice/hypertrie/internal/raw/node/Identifier.hpp"
+#include "dice/hypertrie/internal/raw/node/NodeContainer.hpp"
+#include "dice/hypertrie/internal/raw/node/NodeStorage.hpp"
+#include "dice/hypertrie/internal/raw/node/SingleEntry.hpp"
+#include "dice/hypertrie/internal/raw/node/SingleEntryNode.hpp"
+#include "dice/hypertrie/internal/raw/node_context/SliceResult.hpp"
+#include "dice/hypertrie/internal/raw/node_context/update_details/ApplyUpdate.hpp"
+
+#include <cassert>
+#include <cstddef>
+#include <type_traits>
+#include <vector>
 
 namespace dice::hypertrie::internal::raw {
 
@@ -48,9 +60,9 @@ namespace dice::hypertrie::internal::raw {
 			if (ref_count > 1) {
 				--ref_count;
 			} else {
-				ContextLevelChanges<depth, htt_t, allocator_type> changes;
-				changes.inc_ref(nodec.raw_identifier(), -1);
-				insert_impl_RawNodeContext<max_depth, htt_t, allocator_type>::template apply<depth>(node_storage_, changes);
+				node_context::update_details::UpdateRequests<depth, htt_t, allocator_type, max_depth> update{node_storage_};
+				update.apply_ref_count_delta(nodec.raw_identifier(), -1);
+				node_context::update_details::apply_update(node_storage_, std::move(update));
 			}
 		}
 
@@ -77,29 +89,40 @@ namespace dice::hypertrie::internal::raw {
 		}
 
 		template<size_t depth>
-		auto set(NodeContainer<depth, htt_t, allocator_type> &nodec, SingleEntry<depth, htt_t> const &entry) noexcept {
+		auto set(NodeContainer<depth, htt_t, allocator_type> &nodec, RawKey<depth, htt_t> const &key, value_type const &value) noexcept {
 			if constexpr (HypertrieTrait_bool_valued_and_taggable_key_part<htt_t> and depth == 1) {
 				if (nodec.empty()) {
-					insert(nodec, {entry});
+					insert(nodec, {SingleEntry<depth, htt_t>{key, value}});
 				}
 			}
 
-			if (entry.value() == value_type{}) {
-				assert(false);// TODO: implement deleting entries
+			value_type const old_value = get(nodec, key);
+
+			if (value == old_value) {
+				return value;
 			}
 
-			value_type const old_value = get(nodec, entry.key());
-			if (entry.value() == old_value) {
-				return entry.value();
+			if (value == value_type{}) {
+				if constexpr (htt_t::is_bool_valued) {
+					remove(nodec, {SingleEntry<depth, htt_t>{key, true}});
+				} else {
+					// TODO FIX: for non-bool hypertries the value fed to remove needs to match the existing value exactly, which is annoying to use
+					// TODO FIX: implement removal correctly for non-bool hypertries
+					assert(false);
+				}
+
+				return old_value;
 			}
+
 			if (old_value == value_type{}) {
-				insert(nodec, {entry});
+				insert(nodec, {SingleEntry<depth, htt_t>{key, value}});
 			}
 			/*
 			else {
 				change_values(nodec, {entry});
 			}
 			*/
+
 			return old_value;
 		}
 
@@ -119,8 +142,13 @@ namespace dice::hypertrie::internal::raw {
 		 */
 		template<size_t depth>
 		void insert(NodeContainer<depth, htt_t, allocator_type> &nodec,
-					std::vector<SingleEntry<depth, htt_t>> const &entries) noexcept {
-			insert_impl_RawNodeContext<max_depth, htt_t, allocator_type>::exec(node_storage_, nodec, entries);
+					std::vector<SingleEntry<depth, htt_t>> &&entries) noexcept {
+			node_context::update_details::insert_entries_into_node(node_storage_, nodec, std::move(entries));
+		}
+
+		template<size_t depth>
+		void remove(NodeContainer<depth, htt_t, allocator_type> &nodec, std::vector<SingleEntry<depth, htt_t>> &&entries) noexcept {
+			node_context::update_details::erase_entries_from_node(node_storage_, nodec, std::move(entries));
 		}
 
 		/**
@@ -133,7 +161,7 @@ namespace dice::hypertrie::internal::raw {
 		 * If depth is 1, a value_type is return
 		 */
 		template<size_t depth>
-		inline auto resolve(FNContainer<depth, htt_t, allocator_type> const &nodec, pos_type pos, key_part_type key_part) noexcept
+		auto resolve(FNContainer<depth, htt_t, allocator_type> const &nodec, pos_type pos, key_part_type key_part) noexcept
 				-> std::conditional_t<(depth > 1), NodeContainer<depth - 1, htt_t, allocator_type>, value_type> {
 			assert(pos < depth);
 			if (nodec.empty()) {
@@ -209,7 +237,7 @@ namespace dice::hypertrie::internal::raw {
 		}
 
 
-		template <size_t DEPTH, size_t FIXED_KEYPARTS, ByteAllocator alloc2>
+		template<size_t DEPTH, size_t FIXED_KEYPARTS, ByteAllocator alloc2>
 		using specific_slice_result = std::conditional_t<(DEPTH > FIXED_KEYPARTS), SliceResult<DEPTH - FIXED_KEYPARTS, htt_t, alloc2>, value_type>;
 
 		template<size_t depth, size_t fixed_keyparts, ByteAllocator alloc2>

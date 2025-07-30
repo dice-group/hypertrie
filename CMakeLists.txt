@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.24)
-project(hypertrie VERSION 0.9.6
-        DESCRIPTION "A flexible data structure for low-rank, sparse tensors supporting slices by any dimension and einstein summation (einsum) and a flexible query interface")
+project(hypertrie VERSION 0.10.0
+        DESCRIPTION "The hypertrie is powering the Tentris triple store.")
 
 include(cmake/boilerplate_init.cmake)
 boilerplate_init()

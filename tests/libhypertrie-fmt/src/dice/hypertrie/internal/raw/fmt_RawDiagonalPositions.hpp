@@ -14,7 +14,7 @@ namespace fmt {
 				if (raw_key[i])
 					positions.push_back(i);
 
-			return format_to(ctx.out(), "[{}]", fmt::join(positions, ", "));
+			return format_to(ctx.out(), FMT_STRING("[{}]"), fmt::join(positions, ", "));
 		}
 	};
 }

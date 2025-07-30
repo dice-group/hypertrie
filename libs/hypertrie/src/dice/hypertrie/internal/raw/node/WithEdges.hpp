@@ -165,6 +165,14 @@ namespace dice::hypertrie::internal::raw {
 			return min_i;
 		}
 
+		[[nodiscard]] std::array<size_t, depth> getCards() const noexcept {
+			std::array<size_t, depth> cards;
+			for (size_t pos = 0; pos < depth; ++pos) {
+				cards[pos] = edges(pos).size();
+			}
+			return cards;
+		}
+
 		[[nodiscard]] std::vector<size_t> getCards(std::vector<pos_type> const &positions) const noexcept {
 			std::vector<size_t> cards(positions.size());
 			for (size_t i = 0; i < positions.size(); ++i) {

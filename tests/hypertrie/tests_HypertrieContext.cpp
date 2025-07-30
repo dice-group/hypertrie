@@ -16,7 +16,6 @@ namespace dice::hypertrie::tests::core::node {
 
 	TEST_SUITE("Testing of HypertrieContext") {
 		using namespace ::dice::hypertrie;
-
 		using allocator_type = std::allocator<std::byte>;
 		allocator_type alloc{};// allocator instance
 
@@ -127,9 +126,9 @@ namespace dice::hypertrie::tests::core::node {
 					fmt::print("{} -> {}\n", fmt::join(key, ", "), value);
 				}
 
-				auto use_bulk_inserter = [&]<bool async>() {
+				auto use_bulk_inserter = [&]<BulkUpdaterSyncness syncness>() {
 					{
-						BulkInserter<htt_t, allocator_type> bi{
+						BulkInserter<htt_t, allocator_type, syncness> bi{
 								hypertrie2, 10, []([[maybe_unused]] size_t processed_entries,//
 												   [[maybe_unused]] size_t inserted_entries, //
 												   [[maybe_unused]] size_t hypertrie_size_after) noexcept {
@@ -156,13 +155,26 @@ namespace dice::hypertrie::tests::core::node {
 				};
 
 				SUBCASE("async Bulkinserter") {
-					use_bulk_inserter.operator()<true>();
+					use_bulk_inserter.operator()<BulkUpdaterSyncness::Async>();
 				}
 
 				SUBCASE("sync Bulkinserter") {
-					use_bulk_inserter.operator()<false>();
+					use_bulk_inserter.operator()<BulkUpdaterSyncness::Sync>();
 				}
 			}
 		};
+
+		TEST_CASE("read write remove one entry") {
+			using htt_t = tagged_bool_Hypertrie_trait;
+
+			Hypertrie<htt_t, allocator_type> hyp{3};
+			CHECK(hyp.size() == 0);
+
+			hyp.set({1, 2, 3}, true);
+			CHECK(hyp.size() == 1);
+
+			hyp.set({1, 2, 3}, false);
+			CHECK(hyp.size() == 0);
+		}
 	};
 };// namespace dice::hypertrie::tests::core::node

@@ -7,7 +7,6 @@
 #include <dice/hypertrie/HashJoin.hpp>
 
 #include "OperandDependencyGraph.hpp"
-//#include "util/generator.hpp"
 
 namespace dice::query {
 

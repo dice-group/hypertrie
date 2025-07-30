@@ -1,9 +1,11 @@
+cmake_minimum_required(VERSION 3.21)
 
 find_package(doctest REQUIRED)
 find_package(cppitertools REQUIRED)
 find_package(Metall REQUIRED)
 find_package(Boost REQUIRED COMPONENTS)
 find_package(fmt REQUIRED)
+
 
 add_subdirectory(libhypertrie-test-utils)
 add_subdirectory(libhypertrie-fmt)
@@ -84,6 +86,15 @@ target_link_libraries(tests_RawHypertrieContext_randomized_large_data
         )
 add_test(NAME tests_RawHypertrieContext_randomized_large_data COMMAND tests_RawHypertrieContext_randomized_large_data)
 
+add_executable(tests_RawHypertrieContext_randomized_removal core/node/tests_RawHypertrieContext_randomized_removal.cpp)
+target_link_libraries(tests_RawHypertrieContext_randomized_removal
+        doctest::doctest
+        hypertrie::hypertrie
+        hypertrie-fmt
+        hypertrie-test-utils
+        fmt::fmt
+        )
+add_test(NAME tests_RawHypertrieContext_randomized_removal COMMAND tests_RawHypertrieContext_randomized_removal)
 
 add_executable(tests_RawHypertrieContext_systematic core/node/tests_RawHypertrieContext_systematic.cpp)
 target_link_libraries(tests_RawHypertrieContext_systematic
@@ -106,6 +117,15 @@ target_link_libraries(tests_RawHypertrieContext_systematic_metall
         )
 add_test(NAME tests_RawHypertrieContext_systematic_metall COMMAND tests_RawHypertrieContext_systematic_metall)
 
+add_executable(tests_RawHypertrieContext_removal core/node/tests_RawHypertrieContext_removal.cpp)
+target_link_libraries(tests_RawHypertrieContext_removal
+        doctest::doctest
+        hypertrie::hypertrie
+        hypertrie-fmt
+        hypertrie-test-utils
+        fmt::fmt
+        )
+add_test(NAME tests_RawHypertrieContext_removal COMMAND tests_RawHypertrieContext_removal)
 
 add_executable(tests_Identifier core/node/tests_Identifier.cpp)
 target_link_libraries(tests_Identifier
@@ -236,7 +256,6 @@ if (LIBTORCH_PATH)
 
     add_executable(minimal_example einsum/minimal_example.cpp)
     target_link_libraries(minimal_example
-            hypertrie::einsum
             doctest::doctest
             hypertrie-test-utils
             Metall::Metall

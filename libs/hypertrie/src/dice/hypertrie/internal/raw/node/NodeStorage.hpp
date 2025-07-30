@@ -8,8 +8,9 @@
 #include "dice/hypertrie/internal/raw/node/NodeContainer.hpp"
 #include "dice/hypertrie/internal/raw/node/SingleEntryNode.hpp"
 #include "dice/hypertrie/internal/raw/node/SpecificNodeStorage.hpp"
-
 #include "dice/template-library/integral_template_tuple.hpp"
+
+#include <optional>
 
 
 namespace dice::hypertrie::internal::raw {
@@ -32,9 +33,9 @@ namespace dice::hypertrie::internal::raw {
 		template<size_t depth, template<size_t, typename, typename> typename node_type>
 		using SpecificNodePtr = typename SpecificNodes<depth, node_type>::node_pointer_type;
 		//TODO: change name
-		using SingleEntryNodes = template_library::integral_template_tuple<(HypertrieTrait_bool_valued_and_taggable_key_part<htt_t>) ? 2ul : 1ul, max_depth, SingleEntryNodeStorage_t>;
+		using SingleEntryNodes = template_library::integral_template_tuple<(HypertrieTrait_bool_valued_and_taggable_key_part<htt_t>) ? 2UL : 1UL, max_depth, SingleEntryNodeStorage_t>;
 		//TODO: change name
-		using FullNodes = template_library::integral_template_tuple<1ul, max_depth, FullNodeStorage_t>;
+		using FullNodes = template_library::integral_template_tuple<1UL, max_depth, FullNodeStorage_t>;
 
 	private:
 		SingleEntryNodes single_entry_nodes;

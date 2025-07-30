@@ -295,7 +295,7 @@ namespace dice::einsum::tests {
 					 {{Entry{{3, 2, 2}, true},
 					   Entry{{3, 1, 3}, true},
 					   Entry{{2, 1, 1}, true},
-					   Entry{{0, 3, 1}, true},
+					   Entry{{9, 3, 1}, true},
 					   Entry{{1, 3, 1}, true},
 					   Entry{{1, 1, 1}, true}}}},
 					{std::string{"abc,ab->a"},

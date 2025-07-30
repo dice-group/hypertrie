@@ -10,7 +10,7 @@ namespace fmt {
 	struct formatter<::dice::hypertrie::internal::raw::SingleEntry<depth, htt_t>> : ::dice::hypertrie::internal::util::SimpleParsing {
 		template<typename FormatContext>
 		auto format(::dice::hypertrie::internal::raw::SingleEntry<depth, htt_t> const &sen, FormatContext &ctx) {
-			return format_to(ctx.out(), "{{ {{ {} }}, {} }}", fmt::join(sen.key(), ", "), sen.value());
+			return format_to(ctx.out(), FMT_STRING("{{ {{ {} }}, {} }}"), fmt::join(sen.key(), ", "), sen.value());
 		}
 	};
 }// namespace fmt

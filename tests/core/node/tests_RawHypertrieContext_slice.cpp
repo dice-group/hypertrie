@@ -126,7 +126,7 @@ namespace dice::hypertrie::tests::core::node {
 			utils::EntrySetGenerator<depth, no_entries, htt_t, max_key_part, min_key_part> outer_generator{};
 			for (const auto &entries : outer_generator) {
 				SUBCASE(fmt::format("entries: {}", fmt::join(entries, ", ")).c_str()) {
-					context.insert(nodec, entries);
+					context.insert(nodec, std::vector{entries});
 
 					dice::template_library::for_range<0UL, depth>(
 							[&](/** the fixed depth of slices */ auto fixed_depth) {

@@ -11,18 +11,18 @@ namespace fmt {
 	struct formatter<::dice::hypertrie::internal::raw::FullNode<depth, htt_t, allocator_type>> : ::dice::hypertrie::internal::util::SimpleParsing {
 		template<typename FormatContext>
 		auto format(::dice::hypertrie::internal::raw::FullNode<depth, htt_t, allocator_type> const &fn, FormatContext &ctx) {
-			format_to(ctx.out(), "{{ [size={},ref_count={}]\n", fn.size(), fn.ref_count());
+			format_to(ctx.out(), FMT_STRING("{{ [size={},ref_count={}]\n"), fn.size(), fn.ref_count());
 			for (size_t pos = 0; pos < depth; ++pos) {
 				std::string edges;
 				if constexpr (depth > 1 or not htt_t::is_bool_valued)
 					for (auto const &[key_part, identifier] : fn.edges(pos))
-						edges += fmt::format("{} -> {}\n", key_part, identifier);
+						edges += fmt::format(FMT_STRING("{} -> {}\n"), key_part, identifier);
 				else
 					for (auto const &key_part : fn.edges(pos))
-						edges += fmt::format("{}, ", key_part);
-				format_to(ctx.out(), "{}: [\n{}]\n", pos, edges);
+						edges += fmt::format(FMT_STRING("{}, "), key_part);
+				format_to(ctx.out(), FMT_STRING("{}: [\n{}]\n"), pos, edges);
 			}
-			return format_to(ctx.out(), " }}");
+			return format_to(ctx.out(), FMT_STRING(" }}"));
 		}
 	};
 }// namespace fmt

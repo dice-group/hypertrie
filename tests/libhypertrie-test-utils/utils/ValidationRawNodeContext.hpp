@@ -132,11 +132,11 @@ namespace dice::hypertrie::tests::core::node {
 				if constexpr (depth == 1 and HypertrieTrait_bool_valued_and_taggable_key_part<htt_t>)
 					CHECK_MESSAGE(false, "There must be no depth-1 SEN. They are stored in the identifier.");
 				else {
-					SingleEntryNode<depth, htt_t, std::allocator<std::byte>> new_node{entries[0], 1};
+					SingleEntryNode<depth, htt_t, allocator_type> new_node{entries[0], 1};
 
 					auto existing_node = this->node_storage_.template lookup<depth, SingleEntryNode>(id);
 					if (existing_node) {
-						REQUIRE(SingleEntryNode<depth, htt_t, std::allocator<std::byte>>{*existing_node} == new_node);
+						REQUIRE(SingleEntryNode<depth, htt_t, allocator_type>{*existing_node} == new_node);
 						existing_node->ref_count() += 1;
 					} else {
 						this->node_storage_.template nodes<depth, SingleEntryNode>().nodes().insert(
@@ -194,6 +194,7 @@ namespace dice::hypertrie::tests::core::node {
 
 				CHECK(this_FNs.size() == other_FNs.size());
 				for (const auto &[raw_id, node] : this_FNs) {
+					CHECK(raw_id.is_fn());
 					CHECK(other_FNs.contains(raw_id));
 					if (other_FNs.contains(raw_id)) {
 						auto other_node = other_FNs.find(raw_id).value();
@@ -210,6 +211,7 @@ namespace dice::hypertrie::tests::core::node {
 
 					for (const auto &[raw_id, node] : this_SENs) {
 						CHECK(other_SENs.contains(raw_id));
+						CHECK(raw_id.is_sen());
 						if (other_SENs.contains(raw_id)) {
 							auto other_node = other_SENs.find(raw_id).value();
 							CHECK(Equal::equal(*node, *other_node));

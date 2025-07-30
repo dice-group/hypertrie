@@ -4,7 +4,6 @@
 #include "dice/hypertrie.hpp"
 
 namespace dice::query {
-
 	enum class Operation {
 		NoOp,
 		Join,

@@ -15,7 +15,7 @@ namespace fmt {
 		template<typename FormatContext>
 		auto format(::dice::hypertrie::internal::raw::AllocateNode<depth, htt_t, node_type_t, allocator_type> const &, FormatContext &ctx) {
 			return format_to(ctx.out(),
-							 "<depth = {}, trait = {} ({})>",
+							 FMT_STRING("<depth = {}, trait = {} ({})>"),
 							 depth, nameOfType<htt_t>(), htt_t{});
 		}
 	};

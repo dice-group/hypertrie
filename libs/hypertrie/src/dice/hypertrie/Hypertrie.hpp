@@ -1,7 +1,7 @@
 #ifndef HYPERTRIE_HYPERTRIE_HPP
 #define HYPERTRIE_HYPERTRIE_HPP
 
-#include "dice/hypertrie/BulkInserter_predeclare.hpp"
+#include "dice/hypertrie/BulkUpdater_predeclare.hpp"
 #include "dice/hypertrie/HashDiagonal.hpp"
 #include "dice/hypertrie/HypertrieContext.hpp"
 #include "dice/hypertrie/Hypertrie_predeclare.hpp"
@@ -29,17 +29,24 @@ namespace dice::hypertrie {
 		friend HashDiagonal<htt_t, allocator_type>;
 		friend Iterator<htt_t, allocator_type>;
 
-		// BulkInserter types are set to void if htt_t is not boolean valued. Otherwise, const_Hypertrie template would not be instantiatable in such cases.
+		// BulkUpdater types are set to void if htt_t is not boolean valued. Otherwise, const_Hypertrie template would not be instantiatable in such cases.
 		using AsyncBulkInserter = std::conditional_t<HypertrieTrait_bool_valued<htt_t>,
-													 BulkInserter<htt_t, allocator_type, true>,
+													 ::dice::hypertrie::AsyncBulkInserter<htt_t, allocator_type>,
 													 void>;
 		using SyncBulkInserter = std::conditional_t<HypertrieTrait_bool_valued<htt_t>,
-													BulkInserter<htt_t, allocator_type, false>,
+													::dice::hypertrie::SyncBulkInserter<htt_t, allocator_type>,
 													void>;
+		using AsyncBulkRemover = std::conditional_t<HypertrieTrait_bool_valued<htt_t>,
+													::dice::hypertrie::AsyncBulkRemover<htt_t, allocator_type>,
+													void>;
+		using SyncBulkRemover = std::conditional_t<HypertrieTrait_bool_valued<htt_t>,
+												   ::dice::hypertrie::SyncBulkRemover<htt_t, allocator_type>,
+												   void>;
+
 		friend AsyncBulkInserter;
 		friend SyncBulkInserter;
-
-
+		friend AsyncBulkRemover;
+		friend SyncBulkRemover;
 	protected:
 		template<size_t depth>
 		using RawKey_t = internal::raw::RawKey<depth, htt_t>;
@@ -491,12 +498,13 @@ namespace dice::hypertrie {
 			auto result = template_library::switch_cases<1, hypertrie_max_depth + 1>(
 					this->depth_,
 					[&](auto depth_arg) -> value_type {
-						SingleEntry<depth_arg, htt_t> raw_entry{{}, value};
-						std::copy_n(key.begin(), depth_arg, raw_entry.key().begin());
+						RawKey<depth_arg, htt_t> raw_key{};
+						std::copy_n(key.begin(), depth_arg, raw_key.begin());
 						NodeContainer<depth_arg, htt_t, allocator_type> nodec{this->node_container_};
 						auto result = this->context()->raw_context().template set<depth_arg>(
 								nodec,
-								{raw_entry});
+								raw_key,
+								value);
 						this->node_container_ = nodec;
 						return result;
 					},

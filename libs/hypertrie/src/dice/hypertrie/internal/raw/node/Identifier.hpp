@@ -231,7 +231,7 @@ namespace dice::hypertrie::internal::raw {
 		 * @param other the other identifier
 		 * @return reference to this
 		 */
-		RawIdentifier &combine(RawIdentifier const &other) noexcept {
+		RawIdentifier &combine(RawIdentifier const &other, bool const becomes_sen = false) noexcept {
 			if (this->empty())
 				this->hash_ = other.hash_;
 			else if (not other.empty()) {
@@ -240,9 +240,21 @@ namespace dice::hypertrie::internal::raw {
 				if constexpr (in_place_node) {
 					auto left_hash = (this->is_sen()) ? hash_and_combine(get_entry()) : this->hash_;
 					auto right_hash = (other.is_sen()) ? hash_and_combine(other.get_entry()) : other.hash_;
-					this->hash_ = tag_as_fn(Hash::hash_invertible_combine({seed_, left_hash, right_hash}));
+					auto combined = Hash::hash_invertible_combine({seed_, left_hash, right_hash});
+
+					if (becomes_sen) {
+						this->hash_ = tag_as_sen(combined);
+					} else {
+						this->hash_ = tag_as_fn(combined);
+					}
 				} else {
-					this->hash_ = tag_as_fn(Hash::hash_invertible_combine({seed_, this->hash_, other.hash_}));
+					auto combined = Hash::hash_invertible_combine({seed_, this->hash_, other.hash_});
+
+					if (becomes_sen) {
+						this->hash_ = tag_as_sen(combined);
+					} else {
+						this->hash_ = tag_as_fn(combined);
+					}
 				}
 			}
 			return *this;
@@ -294,6 +306,11 @@ namespace dice::hypertrie::internal::raw {
 				this->hash_ = tag_as_sen(this->hash_);
 			else
 				this->hash_ = tag_as_fn(this->hash_);
+			return *this;
+		}
+
+		RawIdentifier &retag_as_sen() noexcept {
+			this->hash_ = tag_as_sen(this->hash_);
 			return *this;
 		}
 

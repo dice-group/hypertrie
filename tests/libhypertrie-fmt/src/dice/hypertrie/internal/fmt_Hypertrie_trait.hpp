@@ -17,7 +17,7 @@ namespace fmt {
 		template<typename FormatContext>
 		auto format(htt_t const &, FormatContext &ctx) {
 			return format_to(ctx.out(),
-							 "<key_part = {}, value = {}, map = {}, set = {}, key_part_tagging_bit = {}>",
+							 FMT_STRING("<key_part = {}, value = {}, map = {}, set = {}, key_part_tagging_bit = {}>"),
 							 nameOfType<key_part_type>(), nameOfType<value_type>(),
 							 nameOfType<typename htt_t::template map_type<key_part_type, value_type, std::allocator<std::byte>>>(),
 							 nameOfType<typename htt_t::template set_type<key_part_type, std::allocator<std::byte>>>(),

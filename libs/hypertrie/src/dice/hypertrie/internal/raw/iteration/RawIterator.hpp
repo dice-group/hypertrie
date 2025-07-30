@@ -25,8 +25,8 @@ namespace dice::hypertrie::internal::raw {
 
 		value_type value_ = []() { if constexpr (use_raw_key) return value_type{}; else return value_type(depth); }();
 		RawHypertrieContext<context_max_depth, htt_t, allocator_type> const *context_;
-		template_library::integral_template_tuple<1ul, depth, child_iterator> iters_;
-		template_library::integral_template_tuple<1ul, depth, child_iterator> ends_;
+		template_library::integral_template_tuple<1UL, depth, child_iterator> iters_;
+		template_library::integral_template_tuple<1UL, depth, child_iterator> ends_;
 		uint32_t active_iter_ = 0;
 		bool ended_ = true;
 

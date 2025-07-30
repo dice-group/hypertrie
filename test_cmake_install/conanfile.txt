@@ -1,9 +1,0 @@
-[requires]
-robin-hood-hashing/3.11.5
-dice-hash/0.3.0@dice-group/stable
-dice-sparse-map/0.2.0@dice-group/stable
-boost/1.78.0
-
-[generators]
-cmake
-cmake_find_package

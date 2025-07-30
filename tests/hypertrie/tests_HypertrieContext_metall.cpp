@@ -144,9 +144,9 @@ namespace dice::hypertrie::tests::core::node {
 							fmt::print("{} -> {}\n", fmt::join(key, ", "), value);
 						}
 
-						auto use_bulk_inserter = [&]<bool async>() {
+						auto use_bulk_inserter = [&]<BulkUpdaterSyncness syncness>() {
 							{
-								BulkInserter<htt_t, allocator_type> bi{
+								BulkInserter<htt_t, allocator_type, syncness> bi{
 										hypertrie2, 10, []([[maybe_unused]] size_t processed_entries,//
 														   [[maybe_unused]] size_t inserted_entries, //
 														   [[maybe_unused]] size_t hypertrie_size_after) noexcept {
@@ -173,11 +173,11 @@ namespace dice::hypertrie::tests::core::node {
 						};
 
 						SUBCASE("async Bulkinserter") {
-							use_bulk_inserter.operator()<true>();
+							use_bulk_inserter.operator()<BulkUpdaterSyncness::Async>();
 						}
 
 						SUBCASE("sync Bulkinserter") {
-							use_bulk_inserter.operator()<false>();
+							use_bulk_inserter.operator()<BulkUpdaterSyncness::Sync>();
 						}
 					}
 				}

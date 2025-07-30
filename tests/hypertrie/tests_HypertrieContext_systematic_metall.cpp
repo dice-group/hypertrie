@@ -85,7 +85,7 @@ namespace dice::hypertrie::tests::core::node {
 								for (const auto &entries_0 : outer_generator) {
 									SUBCASE("first_entries: {}"_format(fmt::join(entries_0, " | ")).c_str()) {
 										auto [context, nc] = generateConAndNC();
-										context.insert(nc, entries_0);
+										context.insert(nc, std::vector{entries_0});
 										std::cout << fmt::format("node_context: \n\n{}\n\n", context) << std::endl;
 										ValidationRawNodeContext<depth, htt_t, std::allocator<std::byte>> validation_context_0{std::allocator<std::byte>(), entries_0};
 										CHECK(context == validation_context_0);
@@ -96,7 +96,7 @@ namespace dice::hypertrie::tests::core::node {
 											SUBCASE("second_entries: {}"_format(fmt::join(entries_1, " | ")).c_str()) {
 												std::vector<SingleEntry_t> all_entries = entries_0;
 												all_entries.insert(all_entries.end(), entries_1.begin(), entries_1.end());
-												context.insert(nc, entries_1);
+												context.insert(nc, std::vector{entries_1});
 												std::cout << fmt::format("node_context: \n\n{}\n\n", context) << std::endl;
 												std::cout << fmt::format("result identifier: {}", nc.raw_identifier()) << std::endl;
 												ValidationRawNodeContext<depth, htt_t, std::allocator<std::byte>> validation_context{std::allocator<std::byte>(), all_entries};

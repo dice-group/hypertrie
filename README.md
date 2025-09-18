@@ -19,7 +19,7 @@ These properties are important to support worst-case optimal joins (WCOJ) effici
 ## Asymptotic Guarantees
 
 A depth $d$ the hypertrie encoding a set of $z$ tuples requires at most $\mathcal O (z\cdot 2^{d-1}\cdot d)$ space. The
-runtime complexity of applying (inserting or deleting) a changeset set $\Delta$ of $d$-tuples to a depth-$d$ hypertrie
+runtime complexity of applying (inserting or deleting) a changeset set $\Delta$ of $d$-tuples to a depth $d$ hypertrie
 is bound by the space complexity $\mathcal O (|\Delta| \cdot 2^{d-1}\cdot d)$ of a surrogate hypertrie that encodes the
 change set changeset $\Delta$.
 

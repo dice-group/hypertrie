@@ -49,6 +49,11 @@ Ensure cmake >3.24 is installed.
 
 ## Build the Tests
 
+Some dependencies are not on Conan Center but only on our own Package repository. Add it with:
+```shell
+conan remote add dice-group https://conan.dice-research.org/artifactory/api/conan/tentris
+```
+
 Download `conan_provider.cmake` to the project directory:
 
 ```shell

@@ -57,7 +57,7 @@ jobs:
       - uses: rui314/setup-mold@v1
 
       - name: install conan
-        uses: dice-group/cpp-conan-release-reusable-workflow/.github/actions/configure_conan@main
+        uses: dice-group/cpp-conan-release-reusable-workflow/.github/actions/configure_conan@v1.0.3
         with:
           conan-version: 2.3.1
 
@@ -92,7 +92,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Get dependency provider
-        uses: dice-group/cpp-conan-release-reusable-workflow/.github/actions/add_conan_provider@main
+        uses: dice-group/cpp-conan-release-reusable-workflow/.github/actions/add_conan_provider@v1.0.3
 
       - name: Configure CMake
         id: configure-cmake

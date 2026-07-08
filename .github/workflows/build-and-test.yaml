@@ -35,7 +35,7 @@ jobs:
           sudo apt-get install -y libstdc++-13-dev
 
       - name: Get minimum cmake version
-        uses: lukka/get-cmake@latest
+        uses: lukka/get-cmake@v4.3.3
         with:
           cmakeVersion: 3.30.5
 
@@ -57,9 +57,9 @@ jobs:
       - uses: rui314/setup-mold@v1
 
       - name: install conan
-        uses: dice-group/cpp-conan-release-reusable-workflow/.github/actions/configure_conan@main
+        uses: dice-group/cpp-conan-release-reusable-workflow/.github/actions/configure_conan@v1.0.3
         with:
-          conan-version: 2.3.1
+          conan-version: 2.21.0
 
       - name: add conan user
         run: |
@@ -67,14 +67,14 @@ jobs:
 
       - name: Cache conan data
         id: cache-conan
-        uses: actions/cache@v3
+        uses: actions/cache@v6.1.0
         with:
           path: ~/.conan/data
           key: ${{ matrix.config.os }}-${{ matrix.config.compiler }}-testing-conan
 
       - name: Cache torch
         id: cache-torch
-        uses: actions/cache@v3
+        uses: actions/cache@v6.1.0
         with:
           path: ~/.cache/libtorch
           key: cached-torch
@@ -89,10 +89,10 @@ jobs:
           unzip ~/.cache/libtorch-cxx11-abi-shared-with-deps-1.09.0+cpu.zip -d ~/.cache
 
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
 
       - name: Get dependency provider
-        uses: dice-group/cpp-conan-release-reusable-workflow/.github/actions/add_conan_provider@main
+        uses: dice-group/cpp-conan-release-reusable-workflow/.github/actions/add_conan_provider@v1.0.3
 
       - name: Configure CMake
         id: configure-cmake

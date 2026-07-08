@@ -18,8 +18,8 @@ These properties are important to support worst-case optimal joins (WCOJ) effici
 
 ## Asymptotic Guarantees
 
-A depth-$d$ the hypertrie encoding a set of $z$ tuples requires at most $\mathcal O (z\cdot 2^{d-1}\cdot d)$ space. The
-runtime complexity of applying (inserting or deleting) a changeset set $\Delta$ of $d$-tuples to a depth-$d$ hypertrie
+A depth $d$ the hypertrie encoding a set of $z$ tuples requires at most $\mathcal O (z\cdot 2^{d-1}\cdot d)$ space. The
+runtime complexity of applying (inserting or deleting) a changeset set $\Delta$ of $d$-tuples to a depth $d$ hypertrie
 is bound by the space complexity $\mathcal O (|\Delta| \cdot 2^{d-1}\cdot d)$ of a surrogate hypertrie that encodes the
 change set changeset $\Delta$.
 
@@ -48,6 +48,11 @@ sudo apt-get install -y libstdc++-13-dev
 Ensure cmake >3.24 is installed.
 
 ## Build the Tests
+
+Some dependencies are not on Conan Center but only on our own Package repository. Add it with:
+```shell
+conan remote add dice-group https://conan.dice-research.org/artifactory/api/conan/tentris
+```
 
 Download `conan_provider.cmake` to the project directory:
 

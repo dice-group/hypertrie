@@ -23,7 +23,7 @@ class Recipe(ConanFile):
 
     def requirements(self):
         self.requires("robin-hood-hashing/3.11.5", transitive_headers=True)
-        self.requires("dice-hash/0.4.6", transitive_headers=True)
+        self.requires("dice-hash/0.4.7", transitive_headers=True)
         self.requires("dice-sparse-map/0.2.5", transitive_headers=True)
         self.requires("dice-template-library/1.9.1", transitive_headers=True)
         self.requires("boost/1.84.0", transitive_headers=True, libs=False, force=True)

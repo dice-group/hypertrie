@@ -26,7 +26,7 @@ class Recipe(ConanFile):
         self.requires("dice-hash/0.4.7", transitive_headers=True)
         self.requires("dice-sparse-map/0.2.8", transitive_headers=True)
         self.requires("dice-template-library/1.9.1", transitive_headers=True)
-        self.requires("boost/1.84.0", transitive_headers=True, libs=False, force=True)
+        self.requires("boost/1.91.0", transitive_headers=True, libs=False, force=True)
 
         if self.options.with_test_deps:
             self.requires("fmt/8.0.1")

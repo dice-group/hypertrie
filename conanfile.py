@@ -30,7 +30,7 @@ class Recipe(ConanFile):
 
         if self.options.with_test_deps:
             self.requires("fmt/8.0.1")
-            self.requires("cppitertools/2.1")
+            self.requires("cppitertools/2.2")
             self.requires("doctest/2.4.11")
             self.requires("metall/0.26")
 

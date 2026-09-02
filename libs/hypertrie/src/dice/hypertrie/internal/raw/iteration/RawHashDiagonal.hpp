@@ -4,519 +4,791 @@
 #include "dice/hypertrie/Hypertrie_trait.hpp"
 #include "dice/hypertrie/internal/raw/RawDiagonalPositions.hpp"
 #include "dice/hypertrie/internal/raw/node/FullNode.hpp"
-#include "dice/hypertrie/internal/raw/node/NodeContainer.hpp"
 #include "dice/hypertrie/internal/raw/node/SingleEntryNode.hpp"
-#include "dice/hypertrie/internal/raw/node_context/RawHypertrieContext.hpp"
 #include "dice/hypertrie/internal/raw/node_context/SliceResult.hpp"
 
 namespace dice::hypertrie::internal::raw {
 
-	template<size_t diag_depth, size_t depth, template<size_t, typename, typename> typename node_type, HypertrieTrait htt_t, ByteAllocator allocator_type, size_t context_max_depth>
-	class RawHashDiagonal;
+	namespace diagonal_detail {
+		template<size_t diag_depth, size_t depth, HypertrieTrait htt_t, ByteAllocator allocator_type>
+		struct RawHashDiagonalBase {
+			static_assert(diag_depth >= 1);
+			static_assert(diag_depth <= depth);
 
-	template<size_t diag_depth, size_t depth, HypertrieTrait htt_t, ByteAllocator allocator_type, size_t context_max_depth>
-	class RawHashDiagonal<diag_depth, depth, FullNode, htt_t, allocator_type, context_max_depth> {
-		static_assert(diag_depth >= 1);
-		static_assert(diag_depth <= depth);
+			static constexpr size_t result_depth = depth - diag_depth;
 
-	public:
-		static constexpr const size_t result_depth = depth - diag_depth;
-		using key_part_type = typename htt_t::key_part_type;
-		using value_type = typename htt_t::value_type;
+			using diagonal_type = std::conditional_t<
+					(result_depth > 0),
+					SliceResult<result_depth, htt_t, allocator_type>,
+					typename htt_t::value_type>;
 
-		using DiagonalPositions = RawKeyPositions<depth>;
-		using SubDiagonalPositions = RawKeyPositions<(depth > 1) ? depth - 1 : 0>;
+			using value_type = std::pair<typename htt_t::key_part_type, diagonal_type>;
+			using result_buffer_type = SliceResultStorage<result_depth, htt_t, allocator_type>;
 
-	protected:
-		using child_iterator = typename FullNode<depth, htt_t, allocator_type>::ChildrenType::const_iterator;
+		protected:
+			value_type *value_buffer_;
+			result_buffer_type *result_buffer_;
+			
+		public:
+			RawHashDiagonalBase(value_type *value_buffer, result_buffer_type *result_buffer) noexcept : value_buffer_{value_buffer}, result_buffer_{result_buffer} {}
 
-		using SliceResult_t = SliceResult<result_depth, htt_t, allocator_type>;
-		using IterValue = std::conditional_t<
-				(result_depth > 0),
-				SliceResult_t,
-				value_type>;
+			/**
+			 * Advances the iterator to the diagonal at key_part
+			 */
+			virtual bool find(typename htt_t::key_part_type key_part) noexcept = 0;
 
-		FNContainer<depth, htt_t, allocator_type> const node_container_;
-		RawHypertrieContext<context_max_depth, htt_t, allocator_type> *context_;
-		DiagonalPositions diag_poss_;
-		/**
-		 * Only used for diag_depth >= 2
-		 */
-		SubDiagonalPositions sub_diag_poss_;
+			/**
+			 * Advances the iterator one step
+			 */
+			virtual void advance() noexcept = 0;
 
-		child_iterator iter_;
-		child_iterator end_;
-		SingleEntryNode<result_depth, htt_t, std::allocator<std::byte>> sen_cache_;
-		IterValue value_;
+			/**
+			 * @return if there is no next diagonal
+			 */
+			virtual bool ended() const noexcept = 0;
 
-	public:
-		RawHashDiagonal() = default;
-		~RawHashDiagonal() = default;
+			/**
+			 * Upper bound to the number of non-zero slices
+			 */
+			virtual size_t size() const noexcept = 0;
 
-		template<size_t any_depth>
-		explicit RawHashDiagonal(FNContainer<depth, htt_t, allocator_type> const &nodec, DiagonalPositions diag_poss, RawHypertrieContext<any_depth, htt_t, allocator_type> &node_context) noexcept
-			: node_container_(nodec), context_(&node_context), diag_poss_(diag_poss) {
-			static_assert(any_depth >= depth);
-		}
+			/**
+		 	 * Check whether the hypertrie where the diagonal is applied is empty()
+		 	 */
+			virtual bool empty() const noexcept = 0;
 
-		void update_sen_cache_ptr() noexcept {
-			if constexpr (result_depth > 0) {
-				if (not value_.uses_provided_alloc() and not value_.empty()) {
-					value_.get_stl_alloc_sen().node_ptr(&sen_cache_);
-					assert(value_.get_stl_alloc_sen().node_ptr() != nullptr);
+			/**
+			 * Clone this into dst
+			 */
+			virtual void clone_to(RawHashDiagonalBase *dst) const noexcept = 0;
+
+			/**
+			 * repoints the internal write buffers
+			 */
+			virtual void repoint_buffers(value_type *value_buffer, result_buffer_type *result_buffer) noexcept {
+				value_buffer_ = value_buffer;
+				result_buffer_ = result_buffer;
+			}
+		};
+
+		template<size_t diag_depth, size_t depth, HypertrieTrait htt_t, ByteAllocator allocator_type>
+		struct FNRawHashDiagonal final : RawHashDiagonalBase<diag_depth, depth, htt_t, allocator_type> {
+			using Base = RawHashDiagonalBase<diag_depth, depth, htt_t, allocator_type>;
+			using value_type = typename Base::value_type;
+			using diagonal_type = typename Base::diagonal_type;
+			using result_buffer_type = typename Base::result_buffer_type;
+
+		private:
+			static constexpr const size_t result_depth = depth - diag_depth;
+
+			using child_iterator = typename FullNode<depth, htt_t, allocator_type>::single_dim_edges_type::const_iterator;
+
+			FNPtr<depth, htt_t, allocator_type> const node_;
+
+			RawKeyPositions<depth> diag_poss_;
+			RawKeyPositions<depth - 1> sub_diag_poss_; // Only used for diag_depth >= 2
+
+			child_iterator iter_;
+			child_iterator end_;
+
+		public:
+			FNRawHashDiagonal(FNPtr<depth, htt_t, allocator_type> fn,
+							  RawKeyPositions<depth> diag_poss,
+							  value_type *value_buffer,
+							  result_buffer_type *result_buffer) noexcept : Base{value_buffer, result_buffer},
+																			node_{fn},
+																			diag_poss_{diag_poss} {
+				if constexpr (depth > 1) {
+					const size_t min_card_pos = fn->min_card_pos(diag_poss_);
+					// generate the sub_diag_poss_ diagonal positions mask to apply the diagonal to the values of iter_
+					if constexpr (diag_depth > 1) {
+						sub_diag_poss_ = diag_poss_.sub_raw_key_positions(min_card_pos);
+					}
+
+					auto const &min_dim_edges = fn->edges(min_card_pos);
+					iter_ = min_dim_edges.cbegin();
+					end_ = min_dim_edges.cend();
+				} else {// depth == 1 => diag_depth == 1
+					iter_ = fn->edges(0).cbegin();
+					end_ = fn->edges(0).cend();
+				}
+				advance_until_result(false);
+			}
+
+			bool find(typename htt_t::key_part_type key_part) noexcept override {
+				this->value_buffer_->first = key_part;
+				this->value_buffer_->second = node_context::slice_detail::diagonal_slice<diag_depth, depth, htt_t, allocator_type>(node_,
+																																   diag_poss_,
+																																   key_part,
+																																   this->result_buffer_);
+
+				if constexpr (result_depth == 0) {
+					return this->value_buffer_->second != typename htt_t::value_type{};
+				} else {
+					return !this->value_buffer_->second.empty();
 				}
 			}
-		}
 
-		RawHashDiagonal(RawHashDiagonal const &other) noexcept
-			: node_container_(other.node_container_),
-			  context_(other.context_),
-			  diag_poss_(other.diag_poss_),
-			  sub_diag_poss_(other.sub_diag_poss_),
-			  iter_(other.iter_),
-			  end_(other.end_),
-			  sen_cache_(other.sen_cache_),
-			  value_(other.value_) {
-			assert(this != &other);
-			update_sen_cache_ptr();
-		}
-
-		RawHashDiagonal &operator=(RawHashDiagonal const &other) noexcept {
-			if (this == &other)
-				return *this;
-
-			node_container_ = other.node_container_;
-			context_ = other.context_;
-			diag_poss_ = other.diag_poss_;
-			sub_diag_poss_ = other.sub_diag_poss_;
-			iter_ = other.iter_;
-			end_ = other.end_;
-			sen_cache_ = other.sen_cache_;
-			value_ = other.value_;
-
-			update_sen_cache_ptr();
-			return *this;
-		}
-
-		RawHashDiagonal(RawHashDiagonal &&other) noexcept
-			: node_container_(std::move(other.node_container_)),
-			  context_(other.context_),
-			  diag_poss_(other.diag_poss_),
-			  sub_diag_poss_(other.sub_diag_poss_),
-			  iter_(std::move(other.iter_)),
-			  end_(std::move(other.end_)),
-			  sen_cache_(other.sen_cache_),
-			  value_(other.value_) {
-			assert(this != &other);
-			update_sen_cache_ptr();
-			other.context_ = nullptr;
-			other.diag_poss_ = {};
-			other.sub_diag_poss_ = {};
-			other.iter_ = {};
-			other.end_ = {};
-			other.sen_cache_ = {};
-			other.value_ = {};
-		}
-
-		RawHashDiagonal &operator=(RawHashDiagonal &&other) noexcept {
-			if (this == &other)
-				return *this;
-
-			node_container_ = other.node_container_;
-			context_ = other.context_;
-			diag_poss_ = other.diag_poss_;
-			sub_diag_poss_ = other.sub_diag_poss_;
-			iter_ = std::move(other.iter_);
-			end_ = std::move(other.end_);
-			sen_cache_ = other.sen_cache_;
-			value_ = other.value_;
-
-			update_sen_cache_ptr();
-
-			other.node_container_ = {};
-			other.context_ = nullptr;
-			other.diag_poss_ = {};
-			other.sub_diag_poss_ = {};
-			other.iter_ = {};
-			other.end_ = {};
-			other.sen_cache_ = {};
-			other.value_ = {};
-			return *this;
-		}
-
-
-		/**
-		 * this must not be empty()
-		 */
-		RawHashDiagonal &begin() noexcept {
-			if constexpr (depth > 1) {
-				const size_t min_card_pos = node_container_.node_ptr()->min_card_pos(diag_poss_);
-				// generate the sub_diag_poss_ diagonal positions mask to apply the diagonal to the values of iter_
-				if constexpr (diag_depth > 1)
-					sub_diag_poss_ = diag_poss_.sub_raw_key_positions(min_card_pos);
-
-				const auto &min_dim_edges = node_container_.node_ptr()->edges(min_card_pos);
-				iter_ = min_dim_edges.begin();
-				end_ = min_dim_edges.end();
-			} else {// depth == 1 => diag_depth == 1
-				iter_ = node_container_.node_ptr()->edges(0).begin();
-				end_ = node_container_.node_ptr()->edges(0).end();
+			void advance() noexcept override {
+				advance_until_result(true);
 			}
-			forward_until_result(false);
-			return *this;
-		}
 
-		[[nodiscard]] bool end() const noexcept {
-			return false;
-		}
-
-		[[nodiscard]] bool find(key_part_type key_part) noexcept {
-			value_ = context_->template diagonal_slice<depth, diag_depth>(node_container_, diag_poss_, key_part,
-																		  (result_depth > 0) ? &sen_cache_ : nullptr);
-			if constexpr (result_depth == 0)
-				return value_ != value_type{};
-			else
-				return not value_.empty();
-		}
-
-		/**
-		 * Only valid when used as a iterator (not with find())
-		 */
-		[[nodiscard]] const key_part_type &current_key_part() const noexcept {
-			if constexpr (depth == 1 and HypertrieTrait_bool_valued<htt_t>)
-				return *iter_;
-			else
-				return iter_->first;
-		}
-
-		/**
-		 * this must not be empty()
-		 */
-		[[nodiscard]] IterValue current_value() const noexcept {
-			return value_;
-		}
-
-		/**
-		 * Only valid when used as a iterator (not with find())
-		 */
-		[[nodiscard]] std::pair<key_part_type, IterValue> operator*() const noexcept {
-			return std::make_pair(current_key_part(), current_value());
-		}
-
-		/**
-		 * this must not be empty()
-		 */
-		RawHashDiagonal &operator++() noexcept {
-			forward_until_result(true);
-			return *this;
-		}
-
-		/**
-		 * this must not be empty()
-		 */
-		RawHashDiagonal operator++(int) noexcept {
-			RawHashDiagonal old = *this;
-			++(*this);
-			return old;
-		}
-
-		/**
-		 * this must not be empty()
-		 */
-		operator bool() const noexcept {
-			return iter_ != end_;
-		}
-
-		[[nodiscard]] bool ended() const noexcept {
-			return not bool(*this);
-		}
-
-		/**
-		 * Check whether the hypertrie where the diagonal is applied is empty()
-		 */
-		[[nodiscard]] bool empty() const noexcept {
-			return node_container_.empty();
-		}
-
-		/**
-		 * Upper bound to the number of non-zero slices
-		 */
-		[[nodiscard]] size_t size() const noexcept {
-			if (empty()) {
-				return 0UL;
+			[[nodiscard]] bool ended() const noexcept override {
+				return iter_ == end_;
 			}
-			if constexpr (depth > 1) {
-				const auto min_card_pos = node_container_.node_ptr()->min_card_pos(diag_poss_);
-				return node_container_.node_ptr()->edges(min_card_pos).size();
-			} else {
-				return node_container_.node_ptr()->size();
-			}
-		}
 
-	protected:
-		void forward_until_result(bool ignore_current) noexcept {
-			if (ignore_current)
-				++iter_;
-			if constexpr (diag_depth >= 2) {
-				assert(not empty());
-				while (not ended() and not retrieve_subdiagonal_value()) {
+			[[nodiscard]] bool empty() const noexcept override {
+				return node_ == nullptr;
+			}
+
+			[[nodiscard]] size_t size() const noexcept override {
+				if (empty()) {
+					return 0;
+				}
+
+				if constexpr (depth > 1) {
+					auto const min_card_pos = node_->min_card_pos(diag_poss_);
+					return node_->edges(min_card_pos).size();
+				} else {
+					return node_->size();
+				}
+			}
+
+			void clone_to(Base *dst) const noexcept override {
+				new (dst) FNRawHashDiagonal{*this};
+			}
+
+		protected:
+			void commit_keypart() noexcept {
+				if constexpr (depth == 1 && HypertrieTrait_bool_valued<htt_t>) {
+					this->value_buffer_->first = *iter_;
+				} else {
+					this->value_buffer_->first = iter_->first;
+				}
+			}
+
+			void advance_until_result(bool ignore_current) noexcept {
+				if (ignore_current) {
 					++iter_;
 				}
-			} else {
-				if (not ended()) {
-					if constexpr (result_depth == 0) {
-						if constexpr (HypertrieTrait_bool_valued<htt_t>)
-							value_ = true;
-						else
-							value_ = iter_->second;
-					} else {
-						RawIdentifier<result_depth, htt_t> next_result_hash = iter_->second;
-						if constexpr (result_depth == 1 and HypertrieTrait_bool_valued_and_taggable_key_part<htt_t>) {// TODO: double check algorithm: was only bool valued before
-							if (iter_->second.is_sen()) {
-								value_ = SliceResult<result_depth, htt_t, allocator_type>::make_with_provided_alloc(next_result_hash);
 
-							} else {
-								auto child_node_ptr = context_->node_storage_.template lookup<result_depth, FullNode>(next_result_hash);
-								value_ = SliceResult<result_depth, htt_t, allocator_type>::make_with_provided_alloc(next_result_hash, child_node_ptr);
-							}
-							return;
+				if constexpr (diag_depth >= 2) {
+					assert(!empty());
+					while (!ended() && !retrieve_subdiagonal_value()) {
+						++iter_;
+					}
+
+				} else {
+					if (ended()) {
+						return;
+					}
+
+					commit_keypart();
+					if constexpr (result_depth == 0) {
+						if constexpr (HypertrieTrait_bool_valued<htt_t>) {
+							this->value_buffer_->second = true;
 						} else {
-							NodeContainer<result_depth, htt_t, allocator_type> child_node_container = context_->node_storage_.template lookup<result_depth>(next_result_hash);
-							value_ = SliceResult<result_depth, htt_t, allocator_type>::make_with_provided_alloc(child_node_container);
+							this->value_buffer_->second = iter_->second;
+						}
+					} else {
+						if constexpr (result_depth == 1 && HypertrieTrait_bool_valued_and_taggable_key_part<htt_t>) {
+							if (iter_->second.is_sen()) {
+								this->value_buffer_->second = SliceResult<result_depth, htt_t, allocator_type>{iter_->second.decode_key_part()};
+								return;
+							}
+						}
+
+						this->value_buffer_->second = SliceResult<result_depth, htt_t, allocator_type>{Ownership::ContextBorrowed, iter_->second};
+					}
+				}
+			}
+
+			/**
+			 * Retrieves the value from the sub-diagonal.
+			 * @return if a value was found
+			 */
+			bool retrieve_subdiagonal_value() noexcept {
+				static_assert(diag_depth >= 2);
+				auto const key_part = iter_->first;
+				this->value_buffer_->first = key_part;
+
+				if constexpr (depth - 1 == 1 && HypertrieTrait_bool_valued_and_taggable_key_part<htt_t>) {
+					if (iter_->second.is_sen()) {
+						this->value_buffer_->second = iter_->second.decode_key_part() == key_part;
+						return this->value_buffer_->second;
+					}
+				}
+
+				this->value_buffer_->second = node_context::slice_detail::diagonal_slice<diag_depth - 1>(iter_->second,
+																										 sub_diag_poss_,
+																										 key_part,
+																										 this->result_buffer_);
+				if constexpr (result_depth == 0) {
+					return this->value_buffer_->second != typename htt_t::value_type{};
+				} else {
+					return !this->value_buffer_->second.empty();
+				}
+			}
+		};
+
+		template<size_t diag_depth, size_t depth, HypertrieTrait htt_t, ByteAllocator allocator_type>
+		struct SENRawHashDiagonal final : RawHashDiagonalBase<diag_depth, depth, htt_t, allocator_type> {
+			using Base = RawHashDiagonalBase<diag_depth, depth, htt_t, allocator_type>;
+			using value_type = typename Base::value_type;
+			using diagonal_type = typename Base::diagonal_type;
+			using result_buffer_type = typename Base::result_buffer_type;
+
+		private:
+			static constexpr const size_t result_depth = depth - diag_depth;
+
+			std::optional<std::pair<typename htt_t::key_part_type, SingleEntry<depth - diag_depth, htt_t>>> diagonal_ = std::nullopt;
+			bool ended_ = false;
+
+			void commit() noexcept {
+				assert(diagonal_.has_value());
+
+				this->value_buffer_->first = diagonal_->first;
+
+				if constexpr (result_depth == 0) {
+					this->value_buffer_->second = diagonal_->second.value();
+				} else {
+					if constexpr (result_depth == 1 && HypertrieTrait_bool_valued_and_taggable_key_part<htt_t>) {
+						this->value_buffer_->second = diagonal_type{diagonal_->second.key()[0]};
+					} else {
+						if (this->result_buffer_ == nullptr) {
+							auto *sen = new SingleEntryNode<result_depth, htt_t>{diagonal_->second, 0};
+							this->value_buffer_->second = diagonal_type{Ownership::Owned,
+																		sen};
+						} else {
+							auto *sen = &this->result_buffer_->sen;
+							*sen = SingleEntryNode<result_depth, htt_t>{diagonal_->second, 0};
+							this->value_buffer_->second = diagonal_type{Ownership::EphemeralBorrowed,
+																		sen};
 						}
 					}
 				}
 			}
-		}
 
-		/**
-		 * Retrieves the value from the sub-diagonal.
-		 * @return if a value was found
-		 */
-		bool retrieve_subdiagonal_value() noexcept {
-			static_assert(diag_depth >= 2);
-			const key_part_type key_part = iter_->first;
-
-			if constexpr (HypertrieTrait_bool_valued_and_taggable_key_part<htt_t> and depth == 2) {
-				if (iter_->second.is_sen()) {
-					value_ = iter_->second.get_entry().key()[0] == key_part;
-
-				} else {
-					auto child_node_ptr = context_->node_storage_.template lookup<1, FullNode>(iter_->second);
-					value_ = context_->template get<1>(FNContainer<1, htt_t, allocator_type>{iter_->second, child_node_ptr}, {{key_part}});
-				}
-				return value_;
-			} else {
-
-				NodeContainer<depth - 1, htt_t, allocator_type> child_node = context_->node_storage_.lookup(iter_->second);
-				value_ = context_->template diagonal_slice<depth - 1, diag_depth - 1>(child_node, sub_diag_poss_, key_part,
-																					  (result_depth > 0) ? &sen_cache_ : nullptr);
-				if constexpr (result_depth == 0)
-					return value_ != value_type{};
-				else
-					return not value_.empty();
+		public:
+			SENRawHashDiagonal(typename htt_t::key_part_type key_part,
+							   value_type *value_buffer,
+							   result_buffer_type *result_buffer) noexcept requires (depth == 1 && HypertrieTrait_bool_valued_and_taggable_key_part<htt_t>)
+				: Base{value_buffer, result_buffer},
+				  diagonal_{std::make_pair(key_part, SingleEntry<0, htt_t>{{}, true})} /*depth == 1 implies diag_depth == 1*/ {
+				commit();
 			}
-		}
-	};
 
-	template<size_t diag_depth, size_t depth, HypertrieTrait htt_t, ByteAllocator allocator_type, size_t context_max_depth>
-	class RawHashDiagonal<diag_depth, depth, SingleEntryNode, htt_t, allocator_type, context_max_depth> {
+			SENRawHashDiagonal(SENPtr<depth, htt_t, allocator_type> sen,
+							   RawKeyPositions<depth> diag_poss,
+							   value_type *value_buffer,
+							   result_buffer_type *result_buffer) noexcept requires (depth > 1 || !HypertrieTrait_bool_valued_and_taggable_key_part<htt_t>)
+				: Base{value_buffer, result_buffer} {
+
+				auto const key_part = sen->key()[diag_poss.first_pos()];
+				auto maybe_sliced_key = diag_poss.template slice<diag_depth>(sen->key(), key_part);
+
+				if (maybe_sliced_key.has_value()) {
+					diagonal_ = std::make_pair(key_part, SingleEntry<result_depth, htt_t>{*maybe_sliced_key, sen->value()});
+				}
+
+				ended_ = !diagonal_.has_value();
+
+				if (diagonal_.has_value()) {
+					commit();
+				}
+			}
+
+			bool find(typename htt_t::key_part_type key_part) noexcept override {
+				bool const ret = diagonal_.has_value() && key_part == this->value_buffer_->first;
+				if (ret) {
+					commit();
+				}
+				return ret;
+			}
+
+			void advance() noexcept override {
+				ended_ = true;
+			}
+
+			[[nodiscard]] bool ended() const noexcept override {
+				return ended_;
+			}
+
+			[[nodiscard]] bool empty() const noexcept override {
+				return !diagonal_.has_value();
+			}
+
+			[[nodiscard]] size_t size() const noexcept override {
+				return static_cast<size_t>(diagonal_.has_value());
+			}
+
+			void clone_to(Base *dst) const noexcept override {
+				new (dst) SENRawHashDiagonal{*this};
+			}
+		};
+
+		template<size_t diag_depth, size_t depth, HypertrieTrait htt_t, ByteAllocator allocator_type> requires (depth >= 2)
+		struct XNRawHashDiagonal final : RawHashDiagonalBase<diag_depth, depth, htt_t, allocator_type> {
+			using Base = RawHashDiagonalBase<diag_depth, depth, htt_t, allocator_type>;
+			using value_type = typename Base::value_type;
+			using diagonal_type = typename Base::diagonal_type;
+			using result_buffer_type = typename Base::result_buffer_type;
+
+		private:
+			static constexpr const size_t result_depth = depth - diag_depth;
+
+			static consteval size_t max_iter_align() {
+				auto const base_align = alignof(iterator_detail::FNIterator<1, htt_t, allocator_type>);
+
+				if constexpr (HypertrieTrait_taggable_key_part<htt_t>) {
+					return std::max(base_align, alignof(iterator_detail::KeyPartIterator<htt_t>));
+				} else {
+					return std::max(base_align, alignof(iterator_detail::SENIterator<1, htt_t, allocator_type>));
+				}
+			}
+
+			static consteval size_t max_iter_size(){
+				auto const base_align = sizeof(iterator_detail::FNIterator<1, htt_t, allocator_type>);
+
+				if constexpr (HypertrieTrait_taggable_key_part<htt_t>) {
+					return std::max(base_align, sizeof(iterator_detail::KeyPartIterator<htt_t>));
+				} else {
+					return std::max(base_align, sizeof(iterator_detail::SENIterator<1, htt_t, allocator_type>));
+				}
+			}
+
+			XNPtr<depth, htt_t, allocator_type> cartesian_;
+			RawKeyPositions<depth> diag_poss_;
+			size_t size_upper_bound_;
+
+			alignas(max_iter_align()) std::byte keypart_iter_[max_iter_size()];
+
+			iterator_detail::NodeIteratorBase<htt_t> *keypart_iter() noexcept {
+				return reinterpret_cast<iterator_detail::NodeIteratorBase<htt_t> *>(keypart_iter_);
+			}
+
+			iterator_detail::NodeIteratorBase<htt_t> const *keypart_iter() const noexcept {
+				return reinterpret_cast<iterator_detail::NodeIteratorBase<htt_t> const *>(keypart_iter_);
+			}
+
+			void advance_until_result() {
+				while (!keypart_iter()->ended() && !commit(this->value_buffer_->first)) {
+					keypart_iter()->advance();
+				}
+			}
+
+			bool commit(typename htt_t::key_part_type const key_part) noexcept {
+				this->value_buffer_->second = node_context::slice_detail::diagonal_slice<diag_depth, depth, htt_t, allocator_type>(cartesian_,
+																																   diag_poss_,
+																																   key_part,
+																																   this->result_buffer_);
+
+				if constexpr (result_depth == 0) {
+					return this->value_buffer_->second != typename htt_t::value_type{};
+				} else {
+					return !this->value_buffer_->second.empty();
+				}
+			}
+
+		public:
+			XNRawHashDiagonal(XNPtr<depth, htt_t, allocator_type> xn,
+							  RawKeyPositions<depth> diag_poss,
+							  value_type *value_buffer,
+							  result_buffer_type *result_buffer) noexcept : Base{value_buffer, result_buffer},
+																			cartesian_{xn},
+																			diag_poss_{diag_poss} {
+				auto const [min_card_pos, min_card] = xn->min_card_pos(diag_poss);
+				size_upper_bound_ = min_card;
+				auto const [slice_now, slice_rest] = xn->discriminant().slice_index(min_card_pos);
+
+				auto const operand_depth = xn->discriminant()[slice_now];
+
+				dice::template_library::switch_cases<1, depth>(operand_depth, [&, slice_now = slice_now, slice_rest = slice_rest](auto operand_depth) noexcept {
+					auto const operand = static_cast<NodePtr<operand_depth, htt_t, allocator_type>>(xn->operand(slice_now));
+
+					if constexpr (operand_depth == 1) {
+						switch (operand.tag()) {
+							case IdentifierTag::FN: {
+								static_assert(std::is_trivially_destructible_v<iterator_detail::FNIterator<1, htt_t, allocator_type>>);
+								new (keypart_iter_) iterator_detail::FNIterator<1, htt_t, allocator_type>{operand.template specific_ptr<FullNode>(),
+																										  &this->value_buffer_->first,
+																										  0,
+																										  nullptr};
+								break;
+							}
+							case IdentifierTag::SEN: {
+								if constexpr (HypertrieTrait_taggable_key_part<htt_t>) {
+									static_assert(std::is_trivially_destructible_v<iterator_detail::KeyPartIterator<htt_t>>);
+									new (keypart_iter_) iterator_detail::KeyPartIterator<htt_t>{operand.decode_key_part(),
+																								&this->value_buffer_->first,
+																								0};
+								} else {
+									static_assert(std::is_trivially_destructible_v<iterator_detail::SENIterator<1, htt_t, allocator_type>>);
+									new (keypart_iter_) iterator_detail::SENIterator<1, htt_t, allocator_type>{operand.template specific_ptr<SingleEntryNode>(),
+																											   &this->value_buffer_->first,
+																											   0,
+																											   nullptr};
+								}
+
+								break;
+							}
+							default: {
+								HYPERTRIE_UNREACHABLE;
+							}
+						}
+					} else {
+						static_assert(std::is_trivially_destructible_v<iterator_detail::FNEdgeKeyPartIterator<operand_depth, htt_t, allocator_type>>);
+						new (keypart_iter_) iterator_detail::FNEdgeKeyPartIterator<operand_depth, htt_t, allocator_type>{operand.template specific_ptr<FullNode>(),
+																														 slice_rest,
+																														 &this->value_buffer_->first,
+																														 0};
+					}
+				});
+
+				keypart_iter()->init();
+				advance_until_result();
+			}
+
+			XNRawHashDiagonal(XNRawHashDiagonal const &other) noexcept : Base{other},
+																		 cartesian_{other.cartesian_},
+																		 diag_poss_{other.diag_poss_},
+																		 size_upper_bound_{other.size_upper_bound_} {
+				other.keypart_iter()->clone_to(keypart_iter());
+			}
+
+			XNRawHashDiagonal &operator=(XNRawHashDiagonal const &other) noexcept {
+				if (this == &other) {
+					return *this;
+				}
+
+				Base::operator=(other);
+				cartesian_ = other.cartesian_;
+				diag_poss_ = other.diag_poss_;
+				size_upper_bound_ = other.size_upper_bound_;
+				other.keypart_iter()->clone_to(keypart_iter());
+
+				return *this;
+			}
+
+			XNRawHashDiagonal(XNRawHashDiagonal &&other) = delete;
+			XNRawHashDiagonal &operator=(XNRawHashDiagonal &&other) = delete;
+
+			void advance() noexcept override {
+				keypart_iter()->advance();
+				advance_until_result();
+			}
+
+			bool find(typename htt_t::key_part_type const key_part) noexcept override {
+				commit(key_part);
+
+				if constexpr (result_depth == 0) {
+					return this->value_buffer_->second != typename htt_t::value_type{};
+				} else {
+					return !this->value_buffer_->second.empty();
+				}
+			}
+
+			[[nodiscard]] bool ended() const noexcept override {
+				return
+				keypart_iter()->ended();
+			}
+
+			[[nodiscard]] bool empty() const noexcept override {
+				return size_upper_bound_ == 0;
+			}
+
+			[[nodiscard]] size_t size() const noexcept override {
+				return size_upper_bound_;
+			}
+
+			void clone_to(Base *dst) const noexcept override {
+				new (dst) XNRawHashDiagonal{*this};
+			}
+
+			void repoint_buffers(value_type *value_buffer, result_buffer_type *result_buffer) noexcept override {
+				Base::repoint_buffers(value_buffer, result_buffer);
+				keypart_iter()->repoint_buffers(&value_buffer->first, nullptr);
+			}
+		};
+	} // namespace diagonal_detail
+
+	template<size_t diag_depth, size_t depth, HypertrieTrait htt_t, ByteAllocator allocator_type>
+	struct RawHashDiagonal {
 		static_assert(diag_depth >= 1);
 		static_assert(diag_depth <= depth);
 
-	public:
-		using key_part_type = typename htt_t::key_part_type;
-		using value_type = typename htt_t::value_type;
-		static constexpr const size_t result_depth = depth - diag_depth;
-
-		using DiagonalPositions = RawKeyPositions<depth>;
-
-	protected:
-		using SliceResult_t = SliceResult<result_depth, htt_t, allocator_type>;
-		using IterValue = std::conditional_t<
-				(result_depth > 0),
-				SliceResult_t,
-				value_type>;
-
-		SENContainer<depth, htt_t, allocator_type> nodec_;
-		SingleEntryNode<result_depth, htt_t, std::allocator<std::byte>> sen_cache_;
-		std::pair<key_part_type, IterValue> value_;
-		bool ended_ = true;
-		bool is_diagonal_ = false;
-		DiagonalPositions diag_poss_;
+	private:
+		using RawHashDiagonalBase = diagonal_detail::RawHashDiagonalBase<diag_depth, depth, htt_t, allocator_type>;
 
 	public:
-		RawHashDiagonal() = default;
-		~RawHashDiagonal() = default;
+		static constexpr size_t result_depth = depth - diag_depth;
+		using value_type = typename RawHashDiagonalBase::value_type;
+		using diagonal_type = typename RawHashDiagonalBase::diagonal_type;
+		using result_buffer_type = typename RawHashDiagonalBase::result_buffer_type;
 
-		RawHashDiagonal(SENContainer<depth, htt_t, allocator_type> const &nodec, DiagonalPositions diag_poss) noexcept
-			: nodec_{nodec}, diag_poss_(diag_poss) {
-			value_.first = [&]() {// key_part
-				if constexpr (depth == 1 and HypertrieTrait_bool_valued_and_taggable_key_part<htt_t>)
-					return nodec_.raw_identifier().get_entry().key()[0];
-				else
-					return nodec_.node_ptr()->key()[diag_poss.first_pos()];
-			}();
-			if constexpr (depth == 1 and HypertrieTrait_bool_valued_and_taggable_key_part<htt_t>) {
-				is_diagonal_ = true;
-				value_.second = true;
+	private:
+		static consteval size_t max_size() {
+			auto const max_1 = std::max(sizeof(diagonal_detail::FNRawHashDiagonal<diag_depth, depth, htt_t, allocator_type>),
+										sizeof(diagonal_detail::SENRawHashDiagonal<diag_depth, depth, htt_t, allocator_type>));
+
+			if constexpr (depth >= 2) {
+				return std::max(max_1,
+								sizeof(diagonal_detail::XNRawHashDiagonal<diag_depth, depth, htt_t, allocator_type>));
 			} else {
-
-				auto opt_slice = diag_poss.template slice<diag_depth>(nodec_.node_ptr()->key(), value_.first);
-
-				if (opt_slice.has_value()) {
-					is_diagonal_ = true;
-					if constexpr (diag_depth == depth) {
-						value_.second = nodec_.node_ptr()->value();
-					} else {
-						sen_cache_ = SingleEntryNode<result_depth, htt_t, std::allocator<std::byte>>{opt_slice.value(), nodec_.node_ptr()->value()};
-						value_.second = SliceResult_t::make_sen_with_stl_alloc(true, RawIdentifier<result_depth, htt_t>{sen_cache_}, &sen_cache_);
-					}
-				} else {
-					is_diagonal_ = false;
-				}
+				return max_1;
 			}
 		}
 
-		void update_sen_cache_ptr() noexcept {
+		static consteval size_t max_align() {
+			auto const max_1 = std::max(alignof(diagonal_detail::FNRawHashDiagonal<diag_depth, depth, htt_t, allocator_type>),
+										alignof(diagonal_detail::SENRawHashDiagonal<diag_depth, depth, htt_t, allocator_type>));
+
+			if constexpr (depth > 1) {
+				return std::max(max_1,
+								alignof(diagonal_detail::XNRawHashDiagonal<diag_depth, depth, htt_t, allocator_type>));
+			} else {
+				return max_1;
+			}
+		}
+
+		alignas(max_align()) std::byte inner_[max_size()];
+		bool is_constructed_ = false;
+
+		result_buffer_type result_buffer_;
+		value_type value_buffer_;
+
+		RawHashDiagonalBase const *inner() const noexcept {
+			return reinterpret_cast<RawHashDiagonalBase const *>(inner_);
+		}
+
+		RawHashDiagonalBase *inner() noexcept {
+			return reinterpret_cast<RawHashDiagonalBase *>(inner_);
+		}
+
+		void repoint_buffers(RawHashDiagonal const &reference) noexcept {
+			inner()->repoint_buffers(&value_buffer_, &result_buffer_);
+
 			if constexpr (result_depth > 0) {
-				if (not value_.second.uses_provided_alloc() and not value_.second.empty()) {
-					value_.second.get_stl_alloc_sen().node_ptr(&sen_cache_);
-					assert(value_.second.get_stl_alloc_sen().node_ptr() != nullptr);
+				auto &ptr = value_buffer_.second.node_ptr();
+
+				if (std::to_address(ptr.ptr()) == &reference.result_buffer_.sen) {
+					ptr = NodePtr<result_depth, htt_t, allocator_type>{&result_buffer_.sen};
+				} else if (std::to_address(ptr.ptr()) == &reference.result_buffer_.xn) {
+					ptr = NodePtr<result_depth, htt_t, allocator_type>{&result_buffer_.xn};
 				}
 			}
 		}
 
-		RawHashDiagonal(RawHashDiagonal const &other) noexcept
-			: nodec_(other.nodec_),
-			  sen_cache_(other.sen_cache_),
-			  value_(other.value_),
-			  ended_(other.ended_),
-			  is_diagonal_(other.is_diagonal_),
-			  diag_poss_(other.diag_poss_) {
-			assert(this != &other);
+	public:
+		RawHashDiagonal() noexcept = default;
 
-			update_sen_cache_ptr();
+		RawHashDiagonal(NodePtr<depth, htt_t, allocator_type> const &node,
+						RawKeyPositions<depth> diag_poss) noexcept {
+
+			assert(diag_poss.count() == diag_depth);
+
+			if (node == nullptr) {
+				return;
+			}
+
+			switch (node.tag()) {
+				case IdentifierTag::FN: {
+					static_assert(std::is_trivially_destructible_v<diagonal_detail::FNRawHashDiagonal<diag_depth, depth, htt_t, allocator_type>>);
+					new (inner_) diagonal_detail::FNRawHashDiagonal<diag_depth, depth, htt_t, allocator_type>{node.template specific_ptr<FullNode>(),
+																											  diag_poss,
+																											  &value_buffer_,
+																											  &result_buffer_};
+					break;
+				}
+				case IdentifierTag::SEN: {
+					static_assert(std::is_trivially_destructible_v<diagonal_detail::SENRawHashDiagonal<diag_depth, depth, htt_t, allocator_type>>);
+
+					if constexpr (depth == 1 && HypertrieTrait_bool_valued_and_taggable_key_part<htt_t>) {
+						new (inner_) diagonal_detail::SENRawHashDiagonal<diag_depth, depth, htt_t, allocator_type>{node.decode_key_part(),
+																												   &value_buffer_,
+																												   &result_buffer_};
+					} else {
+						new (inner_) diagonal_detail::SENRawHashDiagonal<diag_depth, depth, htt_t, allocator_type>{node.template specific_ptr<SingleEntryNode>(),
+																												   diag_poss,
+																												   &value_buffer_,
+																												   &result_buffer_};
+					}
+					break;
+				}
+				case IdentifierTag::XN: {
+					if constexpr (depth > 1) {
+						static_assert(std::is_trivially_destructible_v<diagonal_detail::XNRawHashDiagonal<diag_depth, depth, htt_t, allocator_type>>);
+						new (inner_) diagonal_detail::XNRawHashDiagonal<diag_depth, depth, htt_t, allocator_type>{node.template specific_ptr<CartesianNode>(),
+																												  diag_poss,
+																												  &value_buffer_,
+																												  &result_buffer_};
+						break;
+					} else {
+						HYPERTRIE_UNREACHABLE;
+					}
+				}
+				case IdentifierTag::Indeterminate: {
+					HYPERTRIE_UNREACHABLE;
+				}
+			}
+
+			is_constructed_ = true;
+		}
+
+		RawHashDiagonal(RawHashDiagonal const &other) noexcept : is_constructed_{other.is_constructed_},
+																 result_buffer_{other.result_buffer_} {
+
+			value_buffer_.first = other.value_buffer_.first;
+			if constexpr (result_depth == 0) {
+				value_buffer_.second = other.value_buffer_.second;
+			} else {
+				value_buffer_.second = other.value_buffer_.second.clone();
+			}
+
+			if (is_constructed_) {
+				other.inner()->clone_to(inner());
+				repoint_buffers(other);
+			}
+		}
+
+		RawHashDiagonal(RawHashDiagonal &&other) noexcept : is_constructed_{other.is_constructed_},
+															result_buffer_{std::move(other.result_buffer_)},
+															value_buffer_{std::move(other.value_buffer_)} {
+			if (is_constructed_) {
+				other.inner()->clone_to(inner());
+				repoint_buffers(other);
+			}
 		}
 
 		RawHashDiagonal &operator=(RawHashDiagonal const &other) noexcept {
-			if (this == &other)
+			if (this == &other) {
 				return *this;
+			}
 
-			nodec_ = other.nodec_;
-			sen_cache_ = other.sen_cache_;
-			value_ = other.value_;
-			ended_ = other.ended_;
-			is_diagonal_ = other.is_diagonal_;
-			diag_poss_ = other.diag_poss_;
+			is_constructed_ = other.is_constructed_;
 
-			update_sen_cache_ptr();
+			value_buffer_.first = other.value_buffer_.first;
+			if constexpr (result_depth == 0) {
+				value_buffer_.second = other.value_buffer_.second;
+			} else {
+				value_buffer_.second = other.value_buffer_.clone();
+			}
+
+			result_buffer_ = other.result_buffer_;
+
+			if (is_constructed_) {
+				other.inner()->clone_to(inner());
+				repoint_buffers(other);
+			}
+
 			return *this;
-		}
-
-		RawHashDiagonal(RawHashDiagonal &&other) noexcept
-			: nodec_(other.nodec_),
-			  sen_cache_(other.sen_cache_),
-			  value_(other.value_),
-			  ended_(other.ended_),
-			  is_diagonal_(other.is_diagonal_),
-			  diag_poss_(other.diag_poss_) {
-			assert(this != &other);
-			update_sen_cache_ptr();
-
-			other.nodec_ = {};
-			other.sen_cache_ = {};
-			other.value_ = {};
-			other.ended_ = true;
-			other.is_diagonal_ = false;
-			other.diag_poss_ = {};
 		}
 
 		RawHashDiagonal &operator=(RawHashDiagonal &&other) noexcept {
-			if (this == &other)
+			if (this == &other) {
 				return *this;
+			}
 
-			nodec_ = other.nodec_;
-			sen_cache_ = other.sen_cache_;
-			value_ = other.value_;
-			ended_ = other.ended_;
-			is_diagonal_ = other.is_diagonal_;
-			diag_poss_ = other.diag_poss_;
+			is_constructed_ = other.is_constructed_;
+			value_buffer_ = std::move(other.value_buffer_);
+			result_buffer_ = std::move(other.result_buffer_);
 
-			update_sen_cache_ptr();
-
-			other.nodec_ = {};
-			other.sen_cache_ = {};
-			other.value_ = {};
-			other.ended_ = true;
-			other.is_diagonal_ = false;
-			other.diag_poss_ = {};
+			if (is_constructed_) {
+				other.inner()->clone_to(inner());
+				repoint_buffers(other);
+			}
 
 			return *this;
 		}
 
-		RawHashDiagonal &begin() noexcept {
-			if (is_diagonal_)
-				ended_ = false;
-			return *this;
+		bool find(typename htt_t::key_part_type key_part) noexcept {
+			return inner()->find(key_part);
 		}
 
-		[[nodiscard]] bool end() const noexcept {
-			return false;
-		}
-
-		[[nodiscard]] bool find(key_part_type key_part) const noexcept {
-			return is_diagonal_ and (key_part == value_.first);
-		}
-
-		/**
-		 * Must only be called if not ended()
-		 */
-		[[nodiscard]] const key_part_type &current_key_part() const noexcept {
-			return value_.first;
-		}
-
-		/**
-		 * Must only be called if not ended()
-		 */
-		[[nodiscard]] auto current_value() const noexcept {
-			return value_.second;
-		}
-
-		[[nodiscard]] const std::pair<key_part_type, IterValue> &operator*() const noexcept {
-			return value_;
+		void advance() noexcept {
+			inner()->advance();
 		}
 
 		RawHashDiagonal &operator++() noexcept {
-			ended_ = true;
+			advance();
 			return *this;
 		}
 
 		RawHashDiagonal operator++(int) noexcept {
-			RawHashDiagonal old = *this;
-			++(*this);
-			return old;
+			auto cpy = *this;
+			this->advance();
+			return cpy;
 		}
 
-		operator bool() const noexcept {
-			return not ended_;
+		[[nodiscard]] value_type const &operator*() const noexcept {
+			return value_buffer_;
+		}
+
+		[[nodiscard]] value_type &operator*() noexcept {
+			return value_buffer_;
+		}
+
+		[[nodiscard]] value_type const *operator->() const noexcept {
+			return &value_buffer_;
+		}
+
+		[[nodiscard]] value_type *operator->() noexcept {
+			return &value_buffer_;
+		}
+
+		[[nodiscard]] value_type const &current_value() const noexcept {
+			return value_buffer_;
+		}
+
+		[[nodiscard]] value_type &current_value() noexcept {
+			return value_buffer_;
+		}
+
+		[[nodiscard]] typename htt_t::key_part_type current_key_part() const noexcept {
+			return value_buffer_.first;
+		}
+
+		[[nodiscard]] diagonal_type const &current_diagonal() const noexcept {
+			return value_buffer_.second;
+		}
+
+		[[nodiscard]] diagonal_type &current_diagonal() noexcept {
+			return value_buffer_.second;
 		}
 
 		[[nodiscard]] bool ended() const noexcept {
-			return ended_;
+			return !is_constructed_ || inner()->ended();
+		}
+
+		operator bool() const noexcept {
+			return !ended();
+		}
+
+		bool operator==(std::default_sentinel_t) const noexcept {
+			return ended();
+		}
+
+		bool operator!=(std::default_sentinel_t) const noexcept {
+			return !ended();
+		}
+
+		[[nodiscard]] size_t size() const noexcept {
+			if (!is_constructed_) {
+				return 0;
+			}
+
+			return inner()->size();
+		}
+
+		auto operator<=>(RawHashDiagonal const &other) const noexcept {
+			return this->size() <=> other.size();
 		}
 
 		[[nodiscard]] bool empty() const noexcept {
-			return not is_diagonal_;
-		}
-
-		/**
-		 * Upper bound to the number of non-zero slices
-		 */
-		[[nodiscard]] size_t size() const noexcept {
-			return size_t(is_diagonal_);
+			return !is_constructed_ || inner()->empty();
 		}
 	};
+
 }// namespace dice::hypertrie::internal::raw
 
 

@@ -2,9 +2,9 @@
 #define HYPERTRIE_DUMP_RAW_CONTEXT_HPP
 
 #include <dice/hypertrie/internal/raw/node/FullNode.hpp>
-#include <dice/hypertrie/internal/raw/node/NodeContainer.hpp>
 #include <dice/hypertrie/internal/raw/node/SingleEntryNode.hpp>
 #include <dice/hypertrie/internal/raw/node_context/RawHypertrieContext.hpp>
+#include <dice/hypertrie/internal/raw/node/fmt_Identifier.hpp>
 
 #include <fmt/format.h>
 
@@ -16,42 +16,78 @@ namespace dice::hypertrie::tests::core::node {
 	using namespace ::dice::hypertrie::internal;
 
 	template<size_t depth, HypertrieTrait htt_t, ByteAllocator allocator_type>
-	static void dump_full_node(RawIdentifier<depth, htt_t> const ident,
-	typename FNContainer<depth, htt_t, allocator_type>::NodePtr const node) {
-		std::cout << fmt::format("{} (rc = {}, size = {}): {{\n", ident, node->ref_count(), node->size());
+	static void dump_full_node(FullNode<depth, htt_t, allocator_type> const &node, std::ostream &os = std::cout) {
+		os << fmt::format("{} (rc = {}, size = {}): {{\n", node.identifier(), node.ref_count(), node.size());
 
 		if constexpr (depth > 1) {
 			for (size_t pos = 0; pos < depth; ++pos) {
-				std::cout << fmt::format("    (.{}): {{\n", pos);
+				os << fmt::format("    (.{}): {{\n", pos);
 
-				for (auto const &[keypart, child] : node->edges(pos)) {
+				for (auto const &[keypart, child] : node.edges(pos)) {
 					if constexpr (depth - 1 == 1 && HypertrieTrait_bool_valued_and_taggable_key_part<htt_t>) {
 						if (child.is_sen()) {
-							std::cout << fmt::format("        .{} = inplace {}\n", keypart, child.get_entry().key()[0]);
+							os << fmt::format("        .{} = inplace {}\n", keypart, child.decode_key_part());
 							continue;
 						}
 					}
 
-					std::cout << fmt::format("        .{} = {}\n", keypart, child);
+					os << fmt::format("        .{} = {}\n", keypart, child.identifier());
 				}
 
-				std::cout << "    }\n";
+				os << "    }\n";
 			}
 		} else {
-			std::cout << fmt::format("    (.0): {{\n");
+			os << fmt::format("    (.0): {{\n");
 
-			for (auto const &child : node->edges()) {
+			for (auto const &child : node.edges()) {
 				if constexpr (htt_t::is_bool_valued) {
-					std::cout << fmt::format("        .{} = true\n", child);
+					os << fmt::format("        .{} = true\n", child);
 				} else {
-					std::cout << fmt::format("        .{} = {}\n", child.first, child.second);
+					os << fmt::format("        .{} = {}\n", child.first, child.second);
 				}
 			}
 
-			std::cout << "    }\n";
+			os << "    }\n";
 		}
 
-		std::cout << "}\n";
+		os << "}\n";
+	}
+
+	template<size_t depth, HypertrieTrait htt_t, ByteAllocator allocator_type>
+	static void dump_cartesian_node(CartesianNode<depth, htt_t, allocator_type> const &node, std::ostream &os = std::cout) {
+		os << fmt::format("{} (rc = {}, size = {}): ", node.identifier(), node.ref_count(), node.size());
+
+		node.for_each_operand([&os]<size_t ix, size_t operand_depth>(NodePtr<operand_depth, htt_t, allocator_type> const &operand) {
+			if constexpr (ix == 0) {
+				if constexpr (operand_depth == 0) {
+					os << "empty-operand@D0";
+				} else {
+					if constexpr (operand_depth == 1 && HypertrieTrait_taggable_key_part<htt_t>) {
+						if (operand.is_sen()) {
+							os << fmt::format("inplace {}", operand.decode_key_part());
+							return;
+						}
+					}
+
+					os << fmt::format("{:#}@D{}", operand.identifier(), operand_depth);
+				}
+			} else {
+				if constexpr (operand_depth == 0) {
+					os << " ⨯ empty-operand@D0";
+				} else {
+					if constexpr (operand_depth == 1 && HypertrieTrait_taggable_key_part<htt_t>) {
+						if (operand.is_sen()) {
+							os << fmt::format(" ⨯ inplace {}", operand.decode_key_part());
+							return;
+						}
+					}
+
+					os << fmt::format(" ⨯ {:#}@D{}", operand.identifier(), operand_depth);
+				}
+			}
+		});
+
+		os << std::endl;
 	}
 
 	/**
@@ -59,33 +95,41 @@ namespace dice::hypertrie::tests::core::node {
 	 * for debugging purposes.
 	 */
 	template<size_t depth, size_t max_depth, HypertrieTrait htt_t, ByteAllocator allocator_type>
-	static void dump_context_level(RawHypertrieContext<max_depth, htt_t, allocator_type> const &context) {
+	static void dump_context_level(RawHypertrieContext<max_depth, htt_t, allocator_type> const &context, std::ostream &os = std::cout) {
+
+		if constexpr (depth > 1) {
+			auto const &xns = context.node_storage_.template nodes<depth, CartesianNode>().nodes();
+			for (auto const &xn : xns) {
+				dump_cartesian_node(*xn, os);
+			}
+		}
+
 		auto const &fns = context.node_storage_.template nodes<depth, FullNode>().nodes();
-		for (auto const &[ident, node] : fns) {
-			dump_full_node<depth, htt_t, allocator_type>(ident, node);
+		for (auto const &fn : fns) {
+			dump_full_node(*fn, os);
 		}
 
 		if constexpr (depth > 1 || !HypertrieTrait_bool_valued_and_taggable_key_part<htt_t>) {
 			auto const &sens = context.node_storage_.template nodes<depth, SingleEntryNode>().nodes();
-			for (auto const &[ident, node] : sens) {
+			for (auto const &sen : sens) {
 
 				if constexpr (htt_t::is_bool_valued) {
-					std::cout << fmt::format("{} (rc = {}, size = {}): ({}) = true\n",
-											 ident,
-											 node->ref_count(),
-											 node->size(),
-											 fmt::join(node->key(), ", "));
+					os << fmt::format("{} (rc = {}, size = {}): ({}) = true\n",
+											 sen->identifier(),
+											 sen->ref_count(),
+											 sen->size(),
+											 fmt::join(sen->key(), ", "));
 				} else {
-					std::cout << fmt::format("{} (rc = {}, size = {}): ({}) = {}\n",
-											 ident,
-											 node->ref_count(),
-											 node->size(),
-											 fmt::join(node->key(), ", "),
-											 node->value());
+					os << fmt::format("{} (rc = {}, size = {}): ({}) = {}\n",
+											 sen->identifier(),
+											 sen->ref_count(),
+											 sen->size(),
+											 fmt::join(sen->key(), ", "),
+											 sen->value());
 				}
 			}
 
-			std::cout << '\n';
+			os << std::endl;
 		}
 	}
 
@@ -94,11 +138,15 @@ namespace dice::hypertrie::tests::core::node {
 	 * for debugging purposes.
 	 */
 	template<size_t max_depth, HypertrieTrait htt_t, ByteAllocator allocator_type, size_t depth = max_depth>
-	void dump_context(RawHypertrieContext<max_depth, htt_t, allocator_type> const &context) {
-		dump_context_level<depth>(context);
+	void dump_context(RawHypertrieContext<max_depth, htt_t, allocator_type> const &context, std::string_view name = "", std::ostream &os = std::cout) {
+		if (!name.empty()) {
+			os << name << ":\n";
+		}
+
+		dump_context_level<depth>(context, os);
 
 		if constexpr (depth > 1) {
-			dump_context<max_depth, htt_t, allocator_type, depth - 1>(context);
+			dump_context<max_depth, htt_t, allocator_type, depth - 1>(context, "", os);
 		}
 	}
 
@@ -108,24 +156,29 @@ namespace dice::hypertrie::tests::core::node {
 	 * to the human readable identifiers that are also used to in dump_context.
 	 */
 	template<size_t max_depth, HypertrieTrait htt_t, ByteAllocator allocator_type, size_t depth = max_depth>
-	void dump_context_hash_translation_table(RawHypertrieContext<max_depth, htt_t, allocator_type> const &context) {
+	void dump_context_hash_translation_table(RawHypertrieContext<max_depth, htt_t, allocator_type> const &context, std::ostream &os = std::cout) {
 		auto const &fns = context.node_storage_.template nodes<depth, FullNode>().nodes();
-
-		for (auto const &[id, _] : fns) {
-			std::cout << fmt::format("{:<20} = {}\n", id.hash(), id);
+		for (auto const &fn : fns) {
+			os << fmt::format("{:<20} = {}\n", fn->identifier().hash(), fn->identifier());
 		}
 
+		if constexpr (depth > 1) {
+			auto const &xns = context.node_storage_.template nodes<depth, CartesianNode>().nodes();
+			for (auto const &xn : xns) {
+				os << fmt::format("{:<20} = {}\n", xn->identifier().hash(), xn->identifier());
+			}
+		}
 
 		if constexpr (depth > 1 || !HypertrieTrait_bool_valued_and_taggable_key_part<htt_t>) {
 			auto const &sens = context.node_storage_.template nodes<depth, SingleEntryNode>().nodes();
 
-			for (auto const &[id, _] : sens) {
-				std::cout << fmt::format("{:<20} = {}\n", id.hash(), id);
+			for (auto const &sen : sens) {
+				os << fmt::format("{:<20} = {}\n", sen->identifier().hash(), sen->identifier());
 			}
 		}
 
 		if constexpr (depth > 1) {
-			dump_context_hash_translation_table<max_depth, htt_t, allocator_type, depth - 1>(context);
+			dump_context_hash_translation_table<max_depth, htt_t, allocator_type, depth - 1>(context, os);
 		}
 	}
 

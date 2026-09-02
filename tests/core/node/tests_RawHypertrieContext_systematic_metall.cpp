@@ -7,11 +7,10 @@
 
 #include <dice/hypertrie/internal/container/AllContainer.hpp>
 
+#include <utils/ValidationRawNodeContext.hpp>
 #include <dice/hypertrie/internal/util/fmt_utils.hpp>
 #include <utils/Node_test_configs.hpp>
 #include <utils/RawEntryGenerator.hpp>
-#include <utils/ValidationRawNodeContext.hpp>
-#include <utils/DumpRawContext.hpp>
 
 #include <dice/hypertrie/internal/fmt_Hypertrie_trait.hpp>
 #include <dice/hypertrie/internal/raw/node/fmt_FullNode.hpp>
@@ -42,8 +41,8 @@ namespace std {
 }// namespace std
 
 namespace dice::hypertrie::tests::core::node {
-	bool debug = false;
 
+	
 	using allocator = metall::manager::allocator_type<std::byte>;
 
 	TEST_SUITE("systematic testing of RawNodeContext with the metall allocator") {
@@ -57,82 +56,75 @@ namespace dice::hypertrie::tests::core::node {
 		void metall_write_and_read() {
 			using SingleEntry_t = SingleEntry<depth, htt_t>;
 			using key_part_type = typename htt_t::key_part_type;
-			static constexpr auto max_key_part = key_part_type(no_key_parts);
 			using allocator = metall::manager::allocator_type<std::byte>;
 
-			const std::string path = fmt::format("/tmp/{}", std::random_device()());// important for parallel execution of different tests
+			static constexpr auto max_key_part = key_part_type(no_key_parts);
 
-			const std::string contextName = "someNameForTheObjectCreatedByMetall1";
-			const std::string containerName = "someNameForTheObjectCreatedByMetall2";
+			std::string const path = fmt::format("/tmp/hypertrie_tests_RawHypertrieContext_systematic_metall_{}", std::random_device{}());
 
-			//create segment
-			{
+			static constexpr char const *context_name = "context_1";
+			static constexpr char const *nodec_name = "nodec_1";
+
+			{ //create segment
 				metall::manager manager(metall::create_only, path.c_str());
 			}
-			//create allocator and manager to use
-			metall::manager manager(metall::open_only, path.c_str());
-			auto alloc = manager.get_allocator();
 
-			auto generateConAndNC = [&manager, &alloc, &contextName, &containerName]() {
-				auto &context = *manager.construct<RawHypertrieContext<depth, htt_t, allocator>>(contextName.c_str())(alloc);
-				auto &nc = *manager.construct<NodeContainer<depth, htt_t, allocator>>(containerName.c_str())();
-				return std::forward_as_tuple(context, nc);
-			};
-			auto deleteConAndNC = [&manager, &contextName, &containerName]() {
-				manager.destroy<RawHypertrieContext<depth, htt_t, allocator>>(contextName.c_str());
-				manager.destroy<NodeContainer<depth, htt_t, allocator>>(containerName.c_str());
-			};
+			{ //create allocator and manager to use
+				metall::manager manager(metall::open_only, path.c_str());
+				auto alloc = manager.get_allocator();
 
-			SUBCASE("{}"_format(htt_t{}).c_str()) {
-				SUBCASE("hypertrie depth = {}"_format(depth).c_str()) {
-					dice::template_library::for_range<min_no_entries, max_no_entries + 1>([&](auto no_entries_0) {
-						dice::template_library::for_range<min_no_entries, max_no_entries + 1>([&](auto no_entries_1) {
-							SUBCASE("first {} entries, then {} entries"_format(no_entries_0, no_entries_1).c_str()) {
-								utils::EntrySetGenerator<depth, no_entries_0, htt_t, max_key_part> outer_generator{};
-								for (const auto &entries_0 : outer_generator) {
-									SUBCASE("first_entries: {}"_format(fmt::join(entries_0, " | ")).c_str()) {
-										auto [context, nc] = generateConAndNC();
-										context.insert(nc, std::vector{entries_0});
-										ValidationRawNodeContext<depth, htt_t, std::allocator<std::byte>> validation_context_0{std::allocator<std::byte>(), entries_0};
-										CHECK(context == validation_context_0);
-										if (debug) {
-											std::cout << "\nContext before:" << std::endl;
-											dump_context(context);
-											dump_context_hash_translation_table(context);
-										}
+				auto make_context_and_nodec = [&manager, &alloc]() {
+					auto *context = manager.construct<RawHypertrieContext<depth, htt_t, allocator>>(context_name)(alloc);
+					auto *nc = manager.construct<NodePtr<depth, htt_t, allocator>>(nodec_name)();
+					return std::make_pair(context, nc);
+				};
+				auto delete_context_and_nodec = [&manager]() {
+					manager.destroy<RawHypertrieContext<depth, htt_t, allocator>>(context_name);
+					manager.destroy<NodePtr<depth, htt_t, allocator>>(nodec_name);
+				};
 
-										utils::EntrySetGenerator_with_exclude<depth, no_entries_1, htt_t, max_key_part> inner_generator{entries_0};
-										for (const auto &entries_1 : inner_generator) {
-											SUBCASE("second_entries: {}"_format(fmt::join(entries_1, " | ")).c_str()) {
-												std::vector<SingleEntry_t> all_entries = entries_0;
-												all_entries.insert(all_entries.end(), entries_1.begin(), entries_1.end());
+				dice::template_library::for_range<min_no_entries, max_no_entries + 1>([&](auto no_entries_0) {
+					dice::template_library::for_range<min_no_entries, max_no_entries + 1>([&](auto no_entries_1) {
+						utils::EntrySetGenerator<depth, no_entries_0, htt_t, max_key_part> outer_generator{};
+						for (const auto &entries_0 : outer_generator) {
+							CAPTURE(entries_0);
 
-												context.insert(nc, std::vector{entries_1});
-												if (debug) {
-													std::cout << "\nContext after:" << std::endl;
-													dump_context(context);
-													dump_context_hash_translation_table(context);
-												}
+							utils::EntrySetGenerator_with_exclude<depth, no_entries_1, htt_t, max_key_part> inner_generator{entries_0};
+							for (const auto &entries_1 : inner_generator) {
+								CAPTURE(entries_1);
 
-												ValidationRawNodeContext<depth, htt_t, std::allocator<std::byte>> validation_context{std::allocator<std::byte>(), all_entries};
-												if (debug) {
-													std::cout << "\nContext expected:" << std::endl;
-													dump_context(validation_context);
-													dump_context_hash_translation_table(validation_context);
-												}
+								ValidationRawNodeContext<depth, htt_t, std::allocator<std::byte>> const validation_context_0{std::allocator<std::byte>(), entries_0};
+								INFO("Expected after first insert:\n", validation_context_0);
 
-												CHECK(context == validation_context);
-											}
-										}
+								auto cnc = make_context_and_nodec();
+								auto &context = *cnc.first;
+								auto &nc = *cnc.second;
 
-										deleteConAndNC();
-									}
-								}
+								context.insert(nc, entries_0);
+								INFO("Actual after first insert:\n", context);
+								INFO("Result identifier after first insert: ", nc.identifier()); // note: debug output only correct if the next check fails
+
+								CHECK(context == validation_context_0);
+
+								std::vector<SingleEntry_t> all_entries = entries_0;
+								all_entries.insert(all_entries.end(), entries_1.begin(), entries_1.end());
+								ValidationRawNodeContext<depth, htt_t, std::allocator<std::byte>> const validation_context{std::allocator<std::byte>(), all_entries};
+								INFO("Expected after second insert:\n", validation_context);
+
+								context.insert(nc, entries_1);
+								INFO("Actual after second insert:\n", context);
+								INFO("Result identifier after second insert: ", nc.identifier());
+
+								CHECK(context == validation_context);
+
+								delete_context_and_nodec();
 							}
-						});
+						}
 					});
-				}
+				});
 			}
+
+			metall::manager::remove(path.c_str());
 		}
 
 		TEST_CASE("entry_generator") {
@@ -153,7 +145,10 @@ namespace dice::hypertrie::tests::core::node {
 						   bool_cfg<1>,
 						   tagged_bool_cfg<1>,
 						   long_cfg<1>,
-						   double_cfg<1>) {
+						   tagged_long_cfg<1>,
+						   double_cfg<1>,
+						   tagged_double_cfg<1>
+						   ){
 			constexpr size_t no_key_parts = 3;
 			constexpr size_t min_no_entries = 1;
 			constexpr size_t max_no_entries = 3;
@@ -164,19 +159,24 @@ namespace dice::hypertrie::tests::core::node {
 						   bool_cfg<2>,
 						   tagged_bool_cfg<2>,
 						   long_cfg<2>,
-						   double_cfg<2>) {
+						   tagged_long_cfg<2>,
+						   double_cfg<2>,
+						   tagged_double_cfg<2>
+						   ){
 			constexpr size_t no_key_parts = 2;
 			constexpr size_t min_no_entries = 1;
 			constexpr size_t max_no_entries = 2;
 			metall_write_and_read<T::depth, typename T::htt_t, no_key_parts, min_no_entries, max_no_entries>();
 		}
-		//
-		//
+//
+//
 		TEST_CASE_TEMPLATE("hypertrie depth 3", T,
 						   bool_cfg<3>,
 						   tagged_bool_cfg<3>,
 						   long_cfg<3>,
-						   double_cfg<3>) {
+						   tagged_long_cfg<3>,
+						   double_cfg<3>,
+						   tagged_double_cfg<3>) {
 			{
 				constexpr size_t no_key_parts = 3;
 				constexpr size_t min_no_entries = 1;
@@ -195,7 +195,9 @@ namespace dice::hypertrie::tests::core::node {
 						   bool_cfg<4>,
 						   tagged_bool_cfg<4>,
 						   long_cfg<4>,
-						   double_cfg<4>) {
+						   tagged_long_cfg<4>,
+						   double_cfg<4>,
+						   tagged_double_cfg<4>) {
 			{
 				constexpr size_t no_key_parts = 3;
 				constexpr size_t min_no_entries = 1;
@@ -210,4 +212,4 @@ namespace dice::hypertrie::tests::core::node {
 			}
 		}
 	}
-}// namespace dice::hypertrie::tests::core::node
+}

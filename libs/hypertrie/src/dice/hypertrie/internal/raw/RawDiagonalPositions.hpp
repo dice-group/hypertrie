@@ -70,12 +70,37 @@ namespace dice::hypertrie::internal::raw {
 		}
 
 		template<size_t fixed_depth, HypertrieTrait htt_t>
+		RawSliceKey<fixed_depth, htt_t> to_slice_key(typename htt_t::key_part_type fixed_key_part) const noexcept {
+			assert(this->count() == fixed_depth);
+			RawSliceKey<fixed_depth, htt_t> slice_key; {
+				size_t write_ix = 0;
+				for (size_t pos = 0; pos < depth; ++pos) {
+					if ((*this)[pos]) {
+						assert(write_ix < fixed_depth);
+						slice_key[write_ix].pos = pos;
+						slice_key[write_ix].key_part = fixed_key_part;
+						write_ix += 1;
+					}
+				}
+			}
+
+			return slice_key;
+		}
+
+		template<size_t fixed_depth, HypertrieTrait htt_t>
 		[[nodiscard]] std::optional<RawKey<depth - fixed_depth, htt_t>> slice(RawKey<depth, htt_t> const &raw_key, typename htt_t::key_part_type fixed_key_part) const noexcept {
+			assert(this->count() == fixed_depth);
 			static_assert(depth >= fixed_depth);
 			if constexpr (fixed_depth == 0) {
 				return raw_key;
-			}
-			else {
+			} else if constexpr (depth - fixed_depth == 0) {
+				for (size_t pos = 0; pos < depth; ++pos) {
+					if (raw_key[pos] != fixed_key_part) {
+						return std::nullopt;
+					}
+				}
+				return RawKey<0, htt_t>{};
+			} else {
 				RawKey<depth - fixed_depth, htt_t> result_key;
 				size_t offset = 0;
 				for (size_t pos = 0; pos < depth; ++pos) {

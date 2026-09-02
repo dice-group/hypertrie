@@ -10,8 +10,8 @@
 #include <utils/AssetGenerator.hpp>
 #include <utils/Node_test_configs.hpp>
 
-#include <dice/hypertrie/internal/raw/node/Identifier.hpp>
 #include <dice/hypertrie/internal/raw/node/NodeStorage.hpp>
+#include <dice/hypertrie/internal/raw/node/RawIdentifier.hpp>
 #include <dice/hypertrie/internal/raw/node/SingleEntryNode.hpp>
 #include <dice/hypertrie/internal/raw/node/SpecificNodeStorage.hpp>
 
@@ -34,8 +34,12 @@ namespace dice::hypertrie::tests::core::node {
 								depth, name_of_type<key_part_type>(), name_of_type<value_type>())
 							.c_str()) {
 				SpecificNodeStorage<depth, htt_t, SingleEntryNode, std::allocator<std::byte>> node_storage{std::allocator<std::byte>()};
-				auto node_ptr = node_storage.node_lifecycle().new_();
-				node_storage.nodes()[RawIdentifier_t{}] = node_ptr;
+
+				SingleEntry<depth, htt_t> const e{{}, true};
+				auto node_ptr = node_storage.node_lifecycle().new_(e, 0UL);
+				node_storage.nodes().insert(node_ptr);
+
+				CHECK(node_storage.nodes().find(RawIdentifier_t{e}) != node_storage.nodes().end());
 			}
 		}
 

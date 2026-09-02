@@ -1,38 +1,41 @@
 import os
 import re
 
-from conan import ConanFile, tools
-from conan.tools.cmake import cmake_layout, CMake
+from conan import ConanFile
+from conan.tools.cmake import CMake
 from conan.tools.files import rmdir, load
 
 
-class Recipe(ConanFile):
+class Hypertrie(ConanFile):
     author = "DICE Group <info@dice-research.org>"
-    url = "https://tentris.dice-research.org"
-    topics = "tensor", "data structure", "einsum", "einstein summation", "hypertrie", "query", "sparql"
+    homepage = "https://github.com/dice-group/hypertrie"
+    url = homepage
+    topics = "tensor", "data structure", "einsum", "einstein summation", "hypertrie"
     settings = "build_type", "compiler", "os", "arch"
-    options = {
-        "with_test_deps": [True, False],
-    }
+    generators = ("CMakeDeps", "CMakeToolchain")
+    options = {"with_test_deps": [True, False], "build_ffi": [True, False]}
     default_options = {
         "with_test_deps": False,
+        "build_ffi": False,
     }
 
     exports_sources = "libs/*", "CMakeLists.txt", "cmake/*"
-    generators = "CMakeDeps", "CMakeToolchain"
 
     def requirements(self):
-        self.requires("robin-hood-hashing/3.11.5", transitive_headers=True)
-        self.requires("dice-hash/0.4.6", transitive_headers=True)
-        self.requires("dice-sparse-map/0.2.5", transitive_headers=True)
-        self.requires("dice-template-library/1.9.1", transitive_headers=True)
-        self.requires("boost/1.84.0", transitive_headers=True, libs=False, force=True)
+        self.requires("boost/1.81.0")
+        self.requires("dice-hash/0.4.3")
+        self.requires("dice-sparse-map/0.2.4")
+        self.requires("dice-template-library/1.1.0")
+        self.requires("unordered_dense/4.0.4")
 
         if self.options.with_test_deps:
             self.requires("fmt/8.0.1")
             self.requires("cppitertools/2.1")
             self.requires("doctest/2.4.11")
-            self.requires("metall/0.26")
+            self.requires("metall/0.21")
+
+        if self.options.build_ffi:
+            self.requires("metall-ffi/0.2.0")
 
     def set_name(self):
         if not hasattr(self, 'name') or self.version is None:
@@ -47,15 +50,13 @@ class Recipe(ConanFile):
             cmake_file = load(self, os.path.join(self.recipe_folder, "CMakeLists.txt"))
             self.description = re.search(r"project\([^)]*DESCRIPTION\s+\"([^\"]+)\"[^)]*\)", cmake_file).group(1)
 
-    def layout(self):
-        cmake_layout(self)
-
     _cmake = None
 
     def _configure_cmake(self):
         if self._cmake is None:
             self._cmake = CMake(self)
-            self._cmake.configure()
+            self._cmake.configure(variables={"USE_CONAN": False, "BUILD_FFI": self.options.build_ffi})
+
         return self._cmake
 
     def build(self):
@@ -63,34 +64,52 @@ class Recipe(ConanFile):
 
     def package(self):
         self._configure_cmake().install()
-        for dir in ("res", "share", "cmake"):
-            tools.files.rmdir(self, os.path.join(self.package_folder, dir))
-        tools.files.copy(self, "LICENSE", src=self.folders.base_source, dst="licenses")
+        for dir in ("res", "share"):
+            rmdir(self, os.path.join(self.package_folder, dir))
 
     def package_info(self):
-        main_component = self.name
-        self.cpp_info.set_property("cmake_target_name", f"{self.name}")
-        self.cpp_info.components["global"].set_property("cmake_target_name", f"{self.name}::{main_component}")
+        self.cpp_info.set_property("cmake_file_name", f"{self.name}")
+
+        self.cpp_info.components["global"].set_property("cmake_target_name", f"{self.name}::{self.name}")
+        self.cpp_info.components["global"].includedirs = [f"include/{self.name}/{self.name}/"]
         self.cpp_info.components["global"].names["cmake_find_package_multi"] = f"{self.name}"
         self.cpp_info.components["global"].names["cmake_find_package"] = f"{self.name}"
-        self.cpp_info.set_property("cmake_file_name", f"{self.name}")
-        self.cpp_info.components["global"].includedirs = [f"include/{self.name}/{main_component}/"]
-        self.cpp_info.components["global"].libdirs = []
-        self.cpp_info.components["global"].bindirs = []
         self.cpp_info.components["global"].requires = [
             "dice-hash::dice-hash",
             "dice-sparse-map::dice-sparse-map",
             "dice-template-library::dice-template-library",
-            "robin-hood-hashing::robin-hood-hashing",
             "boost::headers",
+            "unordered_dense::unordered_dense",
         ]
-        if self.options.with_test_deps:
-            self.cpp_info.components["global"].requires.append("fmt::fmt")
-            self.cpp_info.components["global"].requires.append("metall::metall")
-            self.cpp_info.components["global"].requires.append("cppitertools::cppitertools")
-            self.cpp_info.components["global"].requires.append("doctest::doctest")
 
-        for component in ("einsum", "query"):
-            self.cpp_info.components[f"{component}"].includedirs = [f"include/{self.name}/{component}"]
-            self.cpp_info.components[f"{component}"].names["cmake_find_package_multi"] = f"{component}"
-            self.cpp_info.components[f"{component}"].names["cmake_find_package"] = f"{component}"
+        if self.options.with_test_deps:
+            self.cpp_info.components["global"].requires += [
+                "fmt::fmt",
+                "cppitertools::cppitertools",
+                "doctest::doctest",
+                "metall::metall",
+            ]
+
+        self.cpp_info.components["einsum"].requires = [
+            "global",
+        ]
+
+        self.cpp_info.components["einsum"].set_property("cmake_target_name", f"{self.name}::einsum")
+        self.cpp_info.components["einsum"].includedirs = [f"include/{self.name}/einsum"]
+        self.cpp_info.components["einsum"].names["cmake_find_package_multi"] = "einsum"
+        self.cpp_info.components["einsum"].names["cmake_find_package"] = "einsum"
+
+        if self.options.build_ffi:
+            self.cpp_info.components["ffi"].requires = (
+                "global",
+                "einsum",
+                "metall-ffi::metall-ffi",
+            )
+
+            original_cmake_name = f"{self.name}-ffi"
+            self.cpp_info.components["ffi"].set_property("cmake_target_name", f"{self.name}::ffi")
+            self.cpp_info.components["ffi"].includedirs = [f"include/{self.name}/{original_cmake_name}"]
+            self.cpp_info.components["ffi"].libdirs = [f"lib/{self.name}/{original_cmake_name}"]
+            self.cpp_info.components["ffi"].libs = [f"{original_cmake_name}"]
+            self.cpp_info.components["ffi"].names["cmake_find_package_multi"] = "ffi"
+            self.cpp_info.components["ffi"].names["cmake_find_package"] = "ffi"

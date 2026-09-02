@@ -51,67 +51,82 @@ namespace dice::hypertrie::tests::core::node {
 				 size_t min_no_entries,
 				 size_t max_no_entries>
 		void metall_write_and_read() {
+			CAPTURE(depth);
+			CAPTURE(htt_t{});
+			CAPTURE(no_key_parts);
+			CAPTURE(min_no_entries);
+			CAPTURE(max_no_entries);
+
 			using SingleEntry_t = SingleEntry<depth, htt_t>;
 			using key_part_type = typename htt_t::key_part_type;
 			static constexpr auto max_key_part = key_part_type(no_key_parts);
-			const std::string path = fmt::format("/tmp/{}", std::random_device()()); // important for parallel execution of different tests
-			const std::string contextName = "someNameForTheObjectCreatedByMetall1";
-			const std::string containerName = "someNameForTheObjectCreatedByMetall2";
 
-			//create segment
-			{
+			std::string const path = fmt::format("/tmp/hypertrie_tests_HypertrieContext_systematic_metall_{}", std::random_device{}());// important for parallel execution of different tests
+			static constexpr char const *context_name = "context_1";
+			static constexpr char const *nodec_name = "nodec_1";
+
+			{ //create segment
 				metall::manager manager(metall::create_only, path.c_str());
 			}
-			//create allocator and manager to use
-			metall::manager manager(metall::open_only, path.c_str());
-			auto alloc = manager.get_allocator();
 
-			auto generateConAndNC = [&manager, &alloc, &contextName, &containerName]() {
-				auto &context = *manager.construct<RawHypertrieContext<depth, htt_t, allocator_type>>(contextName.c_str())(alloc);
-				auto &nc = *manager.construct<NodeContainer<depth, htt_t, allocator_type>>(containerName.c_str())();
-				return std::forward_as_tuple(context, nc);
-			};
-			auto deleteConAndNC = [&manager, &contextName, &containerName]() {
-				manager.destroy<RawHypertrieContext<depth, htt_t, allocator_type>>(contextName.c_str());
-				manager.destroy<NodeContainer<depth, htt_t, allocator_type>>(containerName.c_str());
-			};
+			{ //create allocator and manager to use
+				metall::manager manager(metall::open_only, path.c_str());
+				auto alloc = manager.get_allocator();
 
-			SUBCASE("{}"_format(htt_t{}).c_str()) {
-				SUBCASE("hypertrie depth = {}"_format(depth).c_str()) {
-					dice::template_library::for_range<min_no_entries, max_no_entries + 1>([&](auto no_entries_0) {
-						dice::template_library::for_range<min_no_entries, max_no_entries + 1>([&](auto no_entries_1) {
-							SUBCASE("first {} entries, then {} entries"_format(no_entries_0, no_entries_1).c_str()) {
-								utils::EntrySetGenerator<depth, no_entries_0, htt_t, max_key_part> outer_generator{};
-								for (const auto &entries_0 : outer_generator) {
-									SUBCASE("first_entries: {}"_format(fmt::join(entries_0, " | ")).c_str()) {
-										auto [context, nc] = generateConAndNC();
-										context.insert(nc, std::vector{entries_0});
-										std::cout << fmt::format("node_context: \n\n{}\n\n", context) << std::endl;
-										ValidationRawNodeContext<depth, htt_t, std::allocator<std::byte>> validation_context_0{std::allocator<std::byte>(), entries_0};
-										CHECK(context == validation_context_0);
-										std::cout << fmt::format("result identifier: {}", nc.raw_identifier()) << std::endl;
+				auto make_context_and_nodec = [&manager, &alloc]() {
+					auto *context = manager.construct<RawHypertrieContext<depth, htt_t, allocator_type>>(context_name)(alloc);
+					auto *nc = manager.construct<NodePtr<depth, htt_t, allocator_type>>(nodec_name)();
+					return std::make_pair(context, nc);
+				};
+				auto delete_context_and_nodec = [&manager]() {
+					manager.destroy<RawHypertrieContext<depth, htt_t, allocator_type>>(context_name);
+					manager.destroy<NodePtr<depth, htt_t, allocator_type>>(nodec_name);
+				};
 
-										utils::EntrySetGenerator_with_exclude<depth, no_entries_1, htt_t, max_key_part> inner_generator{entries_0};
-										for (const auto &entries_1 : inner_generator) {
-											SUBCASE("second_entries: {}"_format(fmt::join(entries_1, " | ")).c_str()) {
-												std::vector<SingleEntry_t> all_entries = entries_0;
-												all_entries.insert(all_entries.end(), entries_1.begin(), entries_1.end());
-												context.insert(nc, std::vector{entries_1});
-												std::cout << fmt::format("node_context: \n\n{}\n\n", context) << std::endl;
-												std::cout << fmt::format("result identifier: {}", nc.raw_identifier()) << std::endl;
-												ValidationRawNodeContext<depth, htt_t, std::allocator<std::byte>> validation_context{std::allocator<std::byte>(), all_entries};
-												CHECK(context == validation_context);
-											}
-										}
+				dice::template_library::for_range<min_no_entries, max_no_entries + 1>([&](auto no_entries_0) {
+					CAPTURE(no_entries_0);
 
-										deleteConAndNC();
-									}
-								}
+					dice::template_library::for_range<min_no_entries, max_no_entries + 1>([&](auto no_entries_1) {
+						CAPTURE(no_entries_1);
+
+						utils::EntrySetGenerator<depth, no_entries_0, htt_t, max_key_part> outer_generator{};
+						for (const auto &entries_0 : outer_generator) {
+							CAPTURE(entries_0);
+
+							ValidationRawNodeContext<depth, htt_t, std::allocator<std::byte>> const validation_context_0{std::allocator<std::byte>(), entries_0};
+							INFO("Expected after first insert:\n", validation_context_0);
+
+							utils::EntrySetGenerator_with_exclude<depth, no_entries_1, htt_t, max_key_part> inner_generator{entries_0};
+							for (const auto &entries_1 : inner_generator) {
+								CAPTURE(entries_1);
+
+								auto cnc = make_context_and_nodec();
+								auto &context = *cnc.first;
+								auto &nc = *cnc.second;
+
+								context.insert(nc, entries_0);
+								INFO("Actual after first insert:\n", context);
+								INFO("Actual result indentifier after first insert: ", nc.identifier());
+								CHECK(context == validation_context_0);
+
+								std::vector<SingleEntry_t> all_entries = entries_0;
+								all_entries.insert(all_entries.end(), entries_1.begin(), entries_1.end());
+								ValidationRawNodeContext<depth, htt_t, std::allocator<std::byte>> const validation_context{std::allocator<std::byte>(), all_entries};
+								INFO("Expected after second insert:\n", validation_context);
+
+								context.insert(nc, entries_1);
+								INFO("Actual after second insert:\n", context);
+								INFO("Actual result identifier after second insert: ", nc.identifier());
+								CHECK(context == validation_context);
+
+								delete_context_and_nodec();
 							}
-						});
+						}
 					});
-				}
+				});
 			}
+
+			metall::manager::remove(path.c_str());
 		}
 
 		TEST_CASE("entry_generator") {

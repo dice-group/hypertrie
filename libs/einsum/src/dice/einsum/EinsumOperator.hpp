@@ -3,11 +3,11 @@
 
 #include "dice/einsum/internal/operators/Operator.hpp"
 
-#include <robin_hood.h>
+#include <ankerl/unordered_dense.h>
 
 namespace dice::einsum {
 
-	template<typename value_type, hypertrie::HypertrieTrait_bool_valued htt_t, hypertrie::ByteAllocator allocator_type>
+	template<typename value_type, hypertrie::HypertrieTrait htt_t, hypertrie::ByteAllocator allocator_type>
 	std::generator<Entry<value_type, htt_t> const &> einsum(
 			std::shared_ptr<Subscript> const &subscript,
 			std::vector<hypertrie::const_Hypertrie<htt_t, allocator_type>> const &operands,
@@ -15,20 +15,24 @@ namespace dice::einsum {
 		using namespace internal::operators;
 		constexpr bool bool_valued = std::is_same_v<value_type, bool>;
 
+		if (subscript->operandsCount() != operands.size()) {
+			throw std::invalid_argument{"operand count mismatch"};
+		}
+
 		auto context = std::make_shared<internal::Context>(end_time);
 		context->check_time_out();
-		auto entry_arg = Entry<value_type, htt_t>::make_filled(subscript->resultLabelCount(), {}, value_type(1));
+		auto entry_arg = Entry<value_type, htt_t>::make_with_defaulted_key(subscript->resultLabelCount(), value_type{1});
 		if (subscript->all_result_done) {
 			auto const &entry = get_sub_operator<value_type, htt_t, allocator_type, true>(subscript, context, operands, entry_arg);
 			if (entry.value()) {
-				co_yield get_sub_operator<value_type, htt_t, allocator_type, true>(subscript, context, operands, entry_arg);
+				co_yield entry;
 			}
 		} else {
 			if constexpr (bool_valued) {
-				robin_hood::unordered_set<size_t, std::identity> found_entries{};
+				::ankerl::unordered_dense::set<size_t> found_entries{};
 				for (auto const &entry : get_sub_operator<value_type, htt_t, allocator_type, false>(subscript, context, operands, entry_arg)) {
 					size_t const hash = dice::hash::DiceHashwyhash<Entry<value_type, htt_t>>()(entry);
-					auto [_, is_new_entry] = found_entries.emplace(hash);
+					auto [_, is_new_entry] = found_entries.template emplace(hash);
 					if (is_new_entry) {
 						co_yield entry;
 					}
@@ -39,7 +43,7 @@ namespace dice::einsum {
 		}
 	}
 
-	template<typename value_type, hypertrie::HypertrieTrait_bool_valued htt_t, hypertrie::ByteAllocator allocator_type>
+	template<typename value_type, hypertrie::HypertrieTrait htt_t, hypertrie::ByteAllocator allocator_type>
 	std::generator<Entry<value_type, htt_t> const &> einsum(
 			std::shared_ptr<Subscript> const &subscript,
 			std::vector<hypertrie::const_Hypertrie<htt_t, allocator_type>> const &operands,

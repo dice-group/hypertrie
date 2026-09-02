@@ -1,14 +1,43 @@
 cmake_minimum_required(VERSION 3.21)
 
+set(CMAKE_CXX_STANDARD 20)
+    # code coverage
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    if ("${CMAKE_C_COMPILER_ID}" MATCHES "(Apple)?[Cc]lang" OR "${CMAKE_CXX_COMPILER_ID}" MATCHES "(Apple)?[Cc]lang")
+        message("Building with llvm Code Coverage Tools")
+
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fprofile-instr-generate -fcoverage-mapping")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fprofile-instr-generate -fcoverage-mapping")
+
+    elseif (CMAKE_COMPILER_IS_GNUCXX)
+        message("Building with lcov Code Coverage Tools")
+
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --coverage -fprofile-arcs -ftest-coverage")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --coverage -fprofile-arcs -ftest-coverage")
+    endif ()
+endif ()
+
 find_package(doctest REQUIRED)
 find_package(cppitertools REQUIRED)
 find_package(Metall REQUIRED)
 find_package(Boost REQUIRED COMPONENTS)
 find_package(fmt REQUIRED)
+SET(Boost_USE_STATIC_LIBS ON)
 
 
-add_subdirectory(libhypertrie-test-utils)
 add_subdirectory(libhypertrie-fmt)
+add_subdirectory(libhypertrie-test-utils)
+
+add_executable(tests_NodePtr core/node/tests_NodePtr.cpp)
+target_link_libraries(tests_NodePtr
+        doctest::doctest
+        hypertrie::hypertrie
+        hypertrie-fmt
+        hypertrie-test-utils
+        fmt::fmt
+        Metall::Metall
+        )
+add_test(NAME tests_NodePtr COMMAND tests_NodePtr)
 
 add_executable(tests_SingleEntryNode core/node/tests_SingleEntryNode.cpp)
 target_link_libraries(tests_SingleEntryNode
@@ -30,6 +59,17 @@ target_link_libraries(tests_FullNode
         fmt::fmt
         )
 add_test(NAME tests_FullNode COMMAND tests_FullNode)
+
+
+add_executable(tests_CartesianNode core/node/tests_CartesianNode.cpp)
+target_link_libraries(tests_CartesianNode
+        doctest::doctest
+        hypertrie::hypertrie
+        hypertrie-fmt
+        hypertrie-test-utils
+        fmt::fmt
+        )
+add_test(NAME tests_CartesianNode COMMAND tests_CartesianNode)
 
 
 add_executable(tests_AllocateNode core/node/builds_NodeStorage.cpp)
@@ -210,6 +250,56 @@ target_link_libraries(tests_RawIterator
         )
 add_test(NAME tests_RawIterator COMMAND tests_RawIterator)
 
+if (BUILD_FFI)
+    add_executable(tests_FFI ffi/tests_FFI.cpp)
+    target_link_libraries(tests_FFI
+            doctest::doctest
+            hypertrie::ffi
+            )
+    add_test(NAME tests_FFI COMMAND tests_FFI)
+endif ()
+
+add_executable(test_PolymorphicAllocator allocator_awareness/tests_PolymorphicAllocator.cpp)
+target_link_libraries(test_PolymorphicAllocator
+        doctest::doctest
+        hypertrie::hypertrie
+        hypertrie-test-utils
+        fmt::fmt
+        hypertrie-fmt
+        Metall::Metall
+        )
+add_test(NAME test_PolymorphicAllocator COMMAND test_PolymorphicAllocator)
+
+add_executable(tests_PolymorphicAllocator_metall allocator_awareness/tests_PolymorphicAllocator_metall.cpp)
+add_dependencies(tests_PolymorphicAllocator_metall PolymorphicAllocator_metall_phase1 PolymorphicAllocator_metall_phase2)
+target_link_libraries(tests_PolymorphicAllocator_metall
+        doctest::doctest
+        hypertrie::hypertrie
+        hypertrie-test-utils
+        fmt::fmt
+        hypertrie-fmt
+        Metall::Metall
+        )
+
+add_executable(PolymorphicAllocator_metall_phase1 allocator_awareness/PolymorphicAllocator_metall_phase1.cpp)
+target_link_libraries(PolymorphicAllocator_metall_phase1
+        doctest::doctest
+        hypertrie::hypertrie
+        hypertrie-test-utils
+        fmt::fmt
+        hypertrie-fmt
+        Metall::Metall
+        )
+
+add_executable(PolymorphicAllocator_metall_phase2 allocator_awareness/PolymorphicAllocator_metall_phase2.cpp)
+target_link_libraries(PolymorphicAllocator_metall_phase2
+        doctest::doctest
+        hypertrie::hypertrie
+        hypertrie-test-utils
+        fmt::fmt
+        hypertrie-fmt
+        Metall::Metall
+        )
 
 # fmt
 add_executable(tests_fmt_definitions fmt/tests_fmt_definitions.cpp)
@@ -218,6 +308,16 @@ target_link_libraries(tests_fmt_definitions
         hypertrie-fmt
         )
 add_test(NAME tests_fmt_definitions COMMAND tests_fmt_definitions)
+
+add_executable(tests_Einsum_value_types einsum/tests_Einsum_value_types.cpp)
+target_link_libraries(tests_Einsum_value_types
+        doctest::doctest
+        hypertrie::einsum
+        hypertrie-test-utils
+        fmt::fmt
+        ${TORCH_LIBRARIES}
+        )
+add_dependencies(tests_Einsum_value_types hypertrie)
 
 
 set(LIBTORCH_PATH "" CACHE PATH "The installation directory of pytorch.")
@@ -233,9 +333,8 @@ if (LIBTORCH_PATH)
             fmt::fmt
             ${TORCH_LIBRARIES}
             )
-
+    add_dependencies(tests_Einsum hypertrie)
     target_compile_options(tests_Einsum PRIVATE "${TORCH_CXX_FLAGS}")
-
     add_test(NAME tests_Einsum COMMAND tests_Einsum)
 
     add_executable(tests_Einsum_metall einsum/tests_Einsum_metall.cpp)
@@ -250,32 +349,9 @@ if (LIBTORCH_PATH)
             )
 
     target_compile_options(tests_Einsum_metall PRIVATE "${TORCH_CXX_FLAGS}")
-
-
     add_test(NAME tests_Einsum_metall COMMAND tests_Einsum_metall)
 
-    add_executable(minimal_example einsum/minimal_example.cpp)
-    target_link_libraries(minimal_example
-            doctest::doctest
-            hypertrie-test-utils
-            Metall::Metall
-            )
 endif ()
-
-add_executable(tests_OperandDependencyGraph query/tests_OperandDependencyGraph.cpp)
-target_link_libraries(tests_OperandDependencyGraph
-        doctest::doctest
-        hypertrie::query
-        )
-add_test(NAME tests_OperandDependencyGraph COMMAND tests_OperandDependencyGraph)
-
-
-add_executable(tests_Query query/tests_Query.cpp)
-target_link_libraries(tests_Query
-        doctest::doctest
-        hypertrie::query
-        )
-add_test(NAME tests_Query COMMAND tests_Query)
 
 # copy files for testing to the binary folder
 #file(COPY data DESTINATION ${CMAKE_CURRENT_BINARY_DIR})

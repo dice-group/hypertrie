@@ -15,7 +15,7 @@ namespace dice::einsum::internal {
 	 * It is also responsible for managing timeouts.
 	 */
 	class Context {
-		static constexpr uint max_counter_ = 512;
+		static constexpr unsigned max_counter_ = 512;
 
 	public:
 		using clock = std::chrono::steady_clock;
@@ -32,7 +32,7 @@ namespace dice::einsum::internal {
 		/**
 		 * The time is only checked when counter hits max_counter.
 		 */
-		uint counter_ = 0;
+		unsigned counter_ = 0;
 
 	public:
 		explicit Context(time_point const &end_time = time_point::max()) noexcept

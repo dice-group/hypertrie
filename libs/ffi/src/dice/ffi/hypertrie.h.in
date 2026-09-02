@@ -1,0 +1,234 @@
+#ifndef HYPERTRIE_FFI_HPP
+#define HYPERTRIE_FFI_HPP
+
+#include <stdalign.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
+#include <dice/ffi/metall.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#define HYPERTRIE_MAX_DEPTH $HYPERTRIE_MAX_DEPTH$
+#define HYPERTRIE_NO_TIMEOUT UINT64_MAX
+
+typedef enum hypertrie_result {
+	HYPERTRIE_SUCCESS = 0,
+	HYPERTRIE_FAILURE = 1,
+} hypertrie_result;
+
+struct hypertrie;
+typedef struct hypertrie hypertrie;
+
+typedef enum hypertrie_value_discriminant {
+    HYPERTRIE_BOOL   = 0, ///< bool
+	HYPERTRIE_DOUBLE = 1, ///< double
+	HYPERTRIE_FLOAT  = 2, ///< float
+	HYPERTRIE_INT64  = 3, ///< int64_t
+} hypertrie_value_discriminant;
+
+typedef uint64_t hypertrie_key_part;
+
+typedef struct hypertrie_value {
+	hypertrie_value_discriminant discriminant;
+
+	union {
+		bool bool_;
+		double double_;
+		float float_;
+		int64_t int64_;
+	};
+} hypertrie_value;
+
+typedef struct hypertrie_key {
+	size_t size;
+	hypertrie_key_part key[HYPERTRIE_MAX_DEPTH];
+} hypertrie_key;
+
+/**
+ * A slice key.
+ * .size is the full size of the slice key e.g. for (5, :, :) it is 3.
+ * .mask determines how the values in .key are interpreted. If the nth bit of mask is set then the value at .key[n] is interpreted
+ * literally as the key part. If the nth bit is not set it is ignored and treated as : .
+ *
+ * @example
+ * The following hypertrie_slice_key is equivalent to (5, :, :)
+ * ```c
+ * hypertrie_slice_key sk;
+ * sk.size = 3;
+ * sk.mask = 0b001;
+ * sk.key[0] = 5;
+ * ```
+ */
+typedef struct hypertrie_slice_key {
+	size_t size;
+	uint8_t mask;
+	hypertrie_key_part key[HYPERTRIE_MAX_DEPTH];
+} hypertrie_slice_key;
+
+typedef struct hypertrie_key_value {
+	hypertrie_key key;
+	hypertrie_value value;
+} hypertrie_key_value;
+
+/**
+ * @brief Creates a new in memory hypertrie
+ * @return pointer to created hypertrie instance
+ * @note if value_type is not one of the valid options in hypertrie_value_discriminant: returns NULL and sets errno to EINVAL
+ */
+hypertrie *hypertrie_new_in_memory(hypertrie_value_discriminant value_type, size_t depth);
+
+/**
+ * @brief Attempts to create a hypertrie using the given metall manager and name
+ * @return if successful pointer to created hypertrie instance, otherwise nullptr sets errno to one of the following values
+ *      - EINVAL if value_type is not one of the valid options in hypertrie_value_discriminant
+ *      - ENOMEM if the hypertrie instance could not be created in the metall datastore
+ */
+hypertrie *hypertrie_create_persistent(hypertrie_value_discriminant value_type, size_t depth, metall_manager *manager, char const *name);
+
+/**
+ * @brief Attempts to load a hypertrie from the given metall manager
+ * @return if successful pointer to created hypertrie instance, otherwise nullptr sets errno to one of the following values
+ *      - ENOMEM if the hypertrie instance could not be loaded from the metall datastore
+ */
+hypertrie *hypertrie_open_persistent(metall_manager *manager, char const *name);
+
+/**
+ * @brief Creates a clone of hyp using copy-on-write semantics.
+ * @note Does not work for non-context-borrowed hypertries
+ */
+hypertrie *hypertrie_clone(hypertrie const *hyp);
+
+/**
+ * @brief Copies all entries from src to dst, casting the values to the value type of dst if necessary.
+ * @note dst is assumed to be an already initialized hypertrie
+ */
+void hypertrie_copy_into(hypertrie const *src, hypertrie *dst);
+
+/**
+ * @brief Destroys a hypertrie
+ * @note does not deallocate persistent hypertries, use hypertrie_destroy_persistent
+ *      if you actually want to deallocate the hypertrie from persistent memory
+ */
+void hypertrie_destroy(hypertrie const *hyp);
+
+/**
+ * @brief Destroys a persistent hypertrie created by hypertrie_create_persistent
+ * @return true if destruction was successful, otherwise false.
+ *      - If the given hypertrie is not persistent returns false and sets errno to EINVAL.
+ */
+bool hypertrie_destroy_persistent(metall_manager *manager, char const *name);
+
+hypertrie_value hypertrie_get(hypertrie const *hyp, hypertrie_key const *key);
+hypertrie_value hypertrie_set(hypertrie *hyp, hypertrie_key const *key, hypertrie_value value);
+
+/**
+ * @brief Slices the given hypertrie by the given slice-key.
+ * @note might return a non-context-borrowed hypertrie
+ */
+hypertrie const *hypertrie_slice(hypertrie const *hyp, hypertrie_slice_key const *slice_key);
+
+size_t hypertrie_depth(hypertrie const *hyp);
+size_t hypertrie_size(hypertrie const *hyp);
+hypertrie_value_discriminant hypertrie_value_type(hypertrie const *hyp);
+
+typedef struct hypertrie_cards {
+	size_t size;
+	size_t values[HYPERTRIE_MAX_DEPTH];
+} hypertrie_cards;
+
+hypertrie_cards hypertrie_get_cards(hypertrie const *hyp);
+
+
+typedef struct hypertrie_einsum_solution_generator {
+    alignas($EINSUM_GENERATOR_ALIGN$) char opaque[$EINSUM_GENERATOR_SIZE$];
+} hypertrie_einsum_solution_generator;
+
+/**
+ * Constructs a generator that performs einstein summation over the given operands using the given subscript.
+ *
+ * @param operands array of hypertries to sum over
+ * @param n_operands number of elements in operands
+ * @param subscript einsum subscript for the einstein summation
+ * @param timeout_ms timeout in milliseconds for the generator, set to HYPERTRIE_NO_TIMEOUT to disable
+ * @param out_type the result type of the einstein summation
+ * @param out_generator where to construct the solutiong generator
+ */
+hypertrie_result hypertrie_einsum(hypertrie const **operands, size_t n_operands, char const *subscript, unsigned long timeout_ms,
+                                  hypertrie_value_discriminant out_type, hypertrie_einsum_solution_generator *out_generator);
+
+/**
+ * The number of key parts in the solutions of the given generator
+ */
+size_t hypertrie_einsum_solution_generator_result_depth(hypertrie_einsum_solution_generator const *gen);
+
+/**
+ * Value of out_type previously provided to hypertrie_einsum
+ */
+hypertrie_value_discriminant hypertrie_einsum_solution_generator_result_value_type(hypertrie_einsum_solution_generator const *gen);
+
+/**
+ * Equivalent to hypertrie_key but used for einsum solutions which do not have an upper bound
+ * for the key size.
+ */
+typedef struct hypertrie_einsum_key {
+	hypertrie_key_part *key;
+	size_t size;
+} hypertrie_einsum_key;
+
+typedef struct hypertrie_einsum_solution {
+	hypertrie_einsum_key key;
+	hypertrie_value value;
+} hypertrie_einsum_solution;
+
+typedef enum hypertrie_iter_result {
+	HYPERTRIE_I_YIELDED = 0, ///< iterator-like had a next element and yielded it
+	HYPERTRIE_I_ENDED   = 1, ///< iterator-like did not have a next element and is exhausted
+	HYPERTRIE_I_FAILURE = 2, ///< iterator-like encountered an error during advance
+} hypertrie_iter_result;
+
+/**
+ * Advances the einsum solution generator by one step. Returns HYPERTRIE_I_YIELDED and populates out_solution if there was another solution.
+ * On failure (= timeout) returns HYPERTRIE_I_FAILURE.
+ * If there is no next solution returns HYPERTRIE_I_ENDED.
+ *
+ * out_solution->key.key must be initialized to `malloc(sizeof(hypertrie_key_part) * hypertrie_einsum_solution_generator_result_depth(&generator))` or equivalent
+ * out_solution->key.size must be initialized to `hypertrie_einsum_solution_generator_result_depth(&generator)`
+ */
+hypertrie_iter_result hypertrie_einsum_solution_generator_next(hypertrie_einsum_solution_generator *gen, hypertrie_einsum_solution *out_solution);
+void hypertrie_einsum_solution_generator_destroy(hypertrie_einsum_solution_generator *gen);
+
+/**
+ * @brief Consumes the einsum solution generator by inserting all results into the given hypertrie.
+ * @return true if successful, false otherwise. On failure sets errno to one of the following values:
+ *      - EINVAL if gen produces results with depth greater than HYPERTRIE_MAX_DEPTH
+ *               or if the given hypertrie does not have the same depth as the einsum solutions
+ */
+bool hypertrie_consume_einsum_solution_generator(hypertrie_einsum_solution_generator *gen, hypertrie *dst);
+
+typedef struct hypertrie_iterator {
+	alignas($HYPERTRIE_ITERATOR_ALIGN$) char opaque[$HYPERTRIE_ITERATOR_SIZE$];
+} hypertrie_iterator;
+
+/**
+ * Creates an iterator at out_iter for the given hypertrie (hyp)
+ */
+void hypertrie_iterate(hypertrie const *hyp, hypertrie_iterator *out_iter);
+
+/**
+ * Advances the given iterator (iter) to the next element.
+ * If there was a next element returns HYPERTRIE_I_YIELDED and populates out_elem with the element.
+ * If there was _not_ a next element return HYPERTRIE_I_ENDED.
+ */
+hypertrie_iter_result hypertrie_iterator_next(hypertrie_iterator *iter, hypertrie_key_value *out_elem);
+
+void hypertrie_iterator_destroy(hypertrie_iterator *iter);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif // HYPERTRIE_FFI_HPP

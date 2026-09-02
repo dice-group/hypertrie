@@ -10,14 +10,13 @@
 
 
 namespace dice::hypertrie::internal::container {
-	template<typename Key, typename T, typename Allocator = std::allocator<std::pair<Key, T>>>
+	template<typename Key, typename Value, typename Hash = dice::hash::DiceHash<Key>, typename Equal = std::equal_to<Key>, typename Allocator = std::allocator<std::pair<Key, Value>>>
 	using dice_sparse_map = dice::sparse_map::sparse_map<
 			Key,
-			T,
-			//hypertrie::internal::robin_hood::hash<Key>,
-			dice::hash::DiceHash<Key>,
-			std::equal_to<Key>,
-			typename std::allocator_traits<Allocator>::template rebind_alloc<std::pair<Key, T>>,
+			Value,
+			Hash,
+			Equal,
+			typename std::allocator_traits<Allocator>::template rebind_alloc<std::pair<Key, Value>>,
 			dice::sparse_map::sh::power_of_two_growth_policy<2>,
 			dice::sparse_map::sh::exception_safety::basic,
 			dice::sparse_map::sh::sparsity::high>;

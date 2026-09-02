@@ -5,6 +5,7 @@
 #include <dice/hypertrie.hpp>
 #include <dice/hypertrie/Hypertrie_default_traits.hpp>
 
+#include <algorithm>
 
 namespace dice::hypertrie::tests::core::node {
 
@@ -23,7 +24,7 @@ namespace dice::hypertrie::tests::core::node {
 				FAIL_CHECK("It's empty. This must not be hit.");
 
 			SUBCASE("Iterate slice of empty hypertrie") {
-				auto slice_1 = std::get<0>(op_0[{1, std::nullopt, std::nullopt}]);
+				auto slice_1 = op_0[{1, std::nullopt, std::nullopt}];
 
 				for ([[maybe_unused]] auto entry : slice_1)
 					FAIL_CHECK("It's empty. This must not be hit.");
@@ -33,7 +34,7 @@ namespace dice::hypertrie::tests::core::node {
 			Hypertrie<htt_t, allocator_type> op_0(3);
 			op_0.set({1, 2, 3}, true);
 
-			auto empty_slice = std::get<0>(op_0[{3, std::nullopt, 1}]);
+			auto empty_slice = op_0[{3, std::nullopt, 1}];
 
 			for ([[maybe_unused]] auto entry : empty_slice)
 				FAIL_CHECK("It's empty. This must not be hit.");
@@ -43,29 +44,29 @@ namespace dice::hypertrie::tests::core::node {
 			Hypertrie<htt_t, allocator_type> op_0(3);
 			op_0.set({1, 2, 3}, true);
 
-			auto empty_slice = std::get<0>(op_0[{1, std::nullopt, 3}]);
+			auto empty_slice = op_0[{1, std::nullopt, 3}];
 
 
 			for ([[maybe_unused]] auto entry : empty_slice)
-				CHECK(entry[0] == 2);
+				CHECK(entry.key()[0] == 2);
 		};
 
 		TEST_CASE("iterate depth 2 single entry slice of single entry node") {
 			Hypertrie<htt_t, allocator_type> op_0(3);
 			op_0.set({1, 2, 3}, true);
 
-			auto slice_0 = std::get<0>(op_0[{1, std::nullopt, std::nullopt}]);
+			auto slice_0 = op_0[{1, std::nullopt, std::nullopt}];
 
 			for ([[maybe_unused]] auto entry : slice_0) {
-				CHECK(entry[0] == 2);
-				CHECK(entry[1] == 3);
+				CHECK(entry.key()[0] == 2);
+				CHECK(entry.key()[1] == 3);
 			}
 
 			SUBCASE("Reslice contextless hypertrie to [1,3,:]") {
-				auto slice_1 = std::get<0>(slice_0[{3, std::nullopt}]);
+				auto slice_1 = slice_0[{3, std::nullopt}];
 
-				for ([[maybe_unused]] auto entry : slice_1)
-					CHECK(entry[1] == 3);
+				for (auto entry : slice_1)
+					CHECK(entry.key()[1] == 3);
 			}
 		};
 
@@ -88,7 +89,7 @@ namespace dice::hypertrie::tests::core::node {
 			}
 
 			SUBCASE("A full slice") {
-				auto slice_0 = std::get<0>(op_0[{std::nullopt, std::nullopt, std::nullopt}]);
+				auto slice_0 = op_0[{std::nullopt, std::nullopt, std::nullopt}];
 
 				size_t count_0 = 0;
 				for ([[maybe_unused]] auto entry : slice_0)
@@ -98,7 +99,7 @@ namespace dice::hypertrie::tests::core::node {
 
 
 			SUBCASE("Slice [1,:,:]") {
-				auto slice_1 = std::get<0>(op_0[{1, std::nullopt, std::nullopt}]);
+				auto slice_1 = op_0[{1, std::nullopt, std::nullopt}];
 
 				size_t count_1 = 0;
 				for ([[maybe_unused]] auto entry : slice_1)
@@ -107,14 +108,14 @@ namespace dice::hypertrie::tests::core::node {
 			}
 
 			SUBCASE("Empty slice [5,:,:]") {
-				auto slice_1_empty = std::get<0>(op_0[{5, std::nullopt, std::nullopt}]);
+				auto slice_1_empty = op_0[{5, std::nullopt, std::nullopt}];
 
 				for ([[maybe_unused]] auto entry : slice_1_empty)
 					FAIL_CHECK("It's empty. This must not be hit.");
 			}
 
 			SUBCASE("Slice [1,3,:]") {
-				auto slice_2 = std::get<0>(op_0[{1, 3, std::nullopt}]);
+				auto slice_2 = op_0[{1, 3, std::nullopt}];
 
 				size_t count_2 = 0;
 				for ([[maybe_unused]] auto entry : slice_2)
@@ -123,11 +124,66 @@ namespace dice::hypertrie::tests::core::node {
 			}
 
 			SUBCASE("Empty slice [1,1,:]") {
-				auto slice_2_empty = std::get<0>(op_0[{1, 1, std::nullopt}]);
+				auto slice_2_empty = op_0[{1, 1, std::nullopt}];
 
 				for ([[maybe_unused]] auto entry : slice_2_empty)
 					FAIL_CHECK("It's empty. This must not be hit.");
 			}
 		};
+
+		TEST_CASE("iterate depth 0") {
+			Hypertrie<htt_t, allocator_type> hyp{0};
+			for ([[maybe_unused]] auto const &e : hyp) {
+				FAIL_CHECK("empty hypertrie is expected to have no entries");
+			}
+
+			hyp.set({}, true);
+
+			size_t count = 0;
+			for ([[maybe_unused]] auto const &e : hyp) {
+				CHECK(e.size() == 0);
+				CHECK(e.value() == true);
+				count += 1;
+			}
+
+			CHECK(count == 1);
+		}
+
+		// TODO
+		/*TEST_CASE("iterate depth 0 valued") {
+			Hypertrie<default_long_Hypertrie_trait, allocator_type> hyp{0};
+			for ([[maybe_unused]] auto const &e : hyp) {
+				FAIL_CHECK("empty hypertrie is expected to have no entries");
+			}
+
+			hyp.set({}, 89);
+
+			size_t count = 0;
+			for ([[maybe_unused]] auto const &e : hyp) {
+				CHECK(e.size() == 0);
+				CHECK(e.value() == 89);
+				count += 1;
+			}
+
+			CHECK(count == 1);
+		}*/
+
+		TEST_CASE("std algorithms") {
+			Hypertrie<htt_t, allocator_type> hyp(3);
+			hyp.set({1, 2, 3}, true);
+			hyp.set({4, 5, 6}, true);
+
+			SUBCASE("distance") {
+				CHECK(std::ranges::distance(hyp.begin(), hyp.end()) == 2);
+			}
+
+			SUBCASE("copy and equal") {
+				std::vector<NonZeroEntry<htt_t>> entries;
+				entries.resize(2);
+				std::ranges::copy(hyp, entries.begin());
+
+				CHECK(std::ranges::equal(hyp, entries));
+			}
+		}
 	};
 };// namespace dice::hypertrie::tests::core::node

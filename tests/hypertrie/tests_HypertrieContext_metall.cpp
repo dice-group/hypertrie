@@ -13,6 +13,7 @@
 #include "../metall_mute_warnings.hpp"
 
 #include <dice/hypertrie/internal/raw/node_context/fmt_RawHypertrieContext.hpp>
+#include <utils/DumpRawContext.hpp>
 
 #include <random>
 
@@ -26,7 +27,7 @@ namespace dice::hypertrie::tests::core::node {
 		using allocator_type = metall::manager::allocator_type<std::byte>;
 
 		TEST_CASE("Basic creation-insertion-removal-deletion") {
-			const std::string path = fmt::format("/tmp/{}", std::random_device()());
+			const std::string path = fmt::format("/tmp/hypertrie_tests_HypertrieContext_metall_basic_{}", std::random_device()());
 			constexpr auto context = "context";
 			constexpr auto hypertrie = "hypertrie001";
 
@@ -48,7 +49,7 @@ namespace dice::hypertrie::tests::core::node {
 					// set entry
 					hypertrie.set({{1, 2, 3}}, true);
 					// validate entry
-					CHECK(std::get<bool>(hypertrie[SliceKey<htt_t>{{1, 2, 3}}]) == true);
+					CHECK(hypertrie[SliceKey<htt_t>{{1, 2, 3}}].to_scalar() == true);
 					CHECK(hypertrie[Key<htt_t>{{1, 2, 3}}] == true);
 					CHECK(hypertrie[Key<htt_t>{{0, 0, 0}}] == false);
 				}
@@ -63,10 +64,10 @@ namespace dice::hypertrie::tests::core::node {
 				auto ht_ptr = std::get<0>(manager.find<Hypertrie<htt_t, allocator_type>>(hypertrie));
 
 				{
-					fmt::print("before: {}\n", ctx_ptr->raw_context());
+					dump_context(ctx_ptr->raw_context(), "before");
 					// destroy hypertrie
 					manager.destroy_ptr(ht_ptr);
-					fmt::print("after: {}\n", ctx_ptr->raw_context());
+					dump_context(ctx_ptr->raw_context(), "after");
 				}
 			} catch (...) {}
 
@@ -74,7 +75,7 @@ namespace dice::hypertrie::tests::core::node {
 		}
 
 		TEST_CASE("write and read a single entry") {
-			const std::string path = fmt::format("/tmp/{}", std::random_device()());
+			const std::string path = fmt::format("/tmp/hypertrie_tests_HypertrieContext_metall_rw_single_entry_{}", std::random_device()());
 			constexpr auto context = "context";
 			constexpr auto hypertrie001 = "hypertrie001";
 			constexpr auto hypertrie002 = "hypertrie002";
@@ -95,7 +96,7 @@ namespace dice::hypertrie::tests::core::node {
 					hypertrie.set({{1, 2, 3}}, true);
 
 					auto result = hypertrie[SliceKey<htt_t>{{1, 2, 3}}];
-					CHECK(std::get<bool>(result) == true);
+					CHECK(result.to_scalar() == true);
 					CHECK(hypertrie[Key<htt_t>{{1, 2, 3}}] == true);
 					CHECK(hypertrie[Key<htt_t>{{0, 0, 0}}] == false);
 
@@ -108,7 +109,7 @@ namespace dice::hypertrie::tests::core::node {
 
 					SUBCASE("Iterator") {
 						for (const auto &entry : hypertrie) {
-							auto [key, value] = entry.tuple();
+							auto [key, value] = entry.as_tuple();
 							fmt::print("{} -> {}\n", fmt::join(key, ", "), value);
 						}
 					}
@@ -116,7 +117,7 @@ namespace dice::hypertrie::tests::core::node {
 					SUBCASE("Add another entry") {
 						hypertrie.set({{1, 2, 2}}, true);
 						auto slice_0_var = hypertrie[SliceKey<htt_t>{{1, std::nullopt, std::nullopt}}];
-						auto slice_0 = std::get<0>(slice_0_var);
+						auto slice_0 = slice_0_var;
 						CHECK(slice_0[Key<htt_t>{{2, 2}}] == true);
 						CHECK(slice_0[Key<htt_t>{{2, 3}}] == true);
 						CHECK(slice_0[Key<htt_t>{{3, 2}}] == false);
@@ -129,7 +130,7 @@ namespace dice::hypertrie::tests::core::node {
 
 						SUBCASE("Iterator") {
 							for (const auto &entry : slice_0) {
-								auto [key, value] = entry.tuple();
+								auto [key, value] = entry.as_tuple();
 								fmt::print("{} -> {}\n", fmt::join(key, ", "), value);
 							}
 						}
@@ -138,9 +139,9 @@ namespace dice::hypertrie::tests::core::node {
 					SUBCASE("Hypertrie2") {
 						auto &hypertrie2 = *manager.construct<Hypertrie<htt_t, allocator_type>>(hypertrie002)(3, ctx_ptr);
 						hypertrie2.set({{1, 2, 3}}, true);
-						auto slice_12 = std::get<0>(hypertrie[SliceKey<htt_t>{{std::nullopt, 2, 3}}]);
+						auto slice_12 = hypertrie[SliceKey<htt_t>{{std::nullopt, 2, 3}}];
 						for (const auto &entry : slice_12) {
-							auto [key, value] = entry.tuple();
+							auto [key, value] = entry.as_tuple();
 							fmt::print("{} -> {}\n", fmt::join(key, ", "), value);
 						}
 
@@ -188,7 +189,7 @@ namespace dice::hypertrie::tests::core::node {
 
 
 		TEST_CASE("move HashDiagonals") {
-			const std::string path = fmt::format("/tmp/{}", std::random_device()());// important for parallel execution of different tests
+			const std::string path = fmt::format("/tmp/hypertrie_tests_HypertrieContext_metall_move_hashdiagonals_{}", std::random_device()());// important for parallel execution of different tests
 			constexpr auto context = "context";
 			constexpr auto hypertrie001 = "hypertrie001";
 
@@ -214,7 +215,7 @@ namespace dice::hypertrie::tests::core::node {
 					HashDiagonal<htt_t, allocator_type> hash_diagonal_2 = std::move(hash_diagonal);
 
 					CHECK(hash_diagonal_2.find(1) == true);
-					std::cout << static_cast<std::string>(hash_diagonal_2.current_hypertrie()) << std::endl;
+					std::cout << static_cast<std::string>(hash_diagonal_2.current_diagonal()) << std::endl;
 				}
 			} catch (...) {}
 

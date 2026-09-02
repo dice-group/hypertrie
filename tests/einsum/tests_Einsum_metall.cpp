@@ -36,9 +36,9 @@ namespace dice::einsum::tests {
 			unsigned long result_depth = test_einsum.subscript()->resultLabelCount();
 			for (const auto &key_parts : utils::product<size_t>(result_depth, max_key_part + 1, 1)) {
 				using ResultKey = ::dice::einsum::Key<value_type, htt_t>;
-				ResultKey key{key_parts.begin(), key_parts.end()};
+				auto key = ResultKey::from_iters(key_parts.begin(), key_parts.end());
 				auto actual_entry = (actual_result.count(key)) ? actual_result[key] : 0;
-				std::cout << "result_empty: " << (actual_result.size() == 0) << std::endl;
+				INFO("result_empty: ", (actual_result.size() == 0));
 				dice::einsum::tests::utils::TorchDtype auto expected_entry = value_type(utils::TorchTensorAccessor<value_type, htt_t>::get(expected_result, key_parts));// to bool
 				WARN_MESSAGE(actual_entry == expected_entry,
 							 ("key: ({})\n"_format(fmt::join(key, ", ")) +
@@ -53,12 +53,15 @@ namespace dice::einsum::tests {
 			// result how it is
 			// TODO: actual_result is already problematic
 			auto actual_result = einsum2map<value_type, htt_t, allocator_type>(test_einsum.subscript(), test_einsum.hypertrieOperands());
-			std::string actual_result_str = [&]() {
+			auto actual_result_str = [&]() {
 				std::vector<std::string> elements;
 				for (auto &[key, value] : actual_result)
 					elements.push_back(fmt::format("⟨{}⟩ → {}", fmt::join(key, ", "), value));
 				return fmt::format("[ {} ]", fmt::join(elements, ", "));
-			}();
+			};
+
+			CAPTURE(actual_result_str());
+
 			// expected result
 			torch::Tensor expected_result = at::einsum(test_einsum.subscript_str(), test_einsum.torchOperands());
 			validateResult<value_type, htt_t>(max_key_part, test_einsum, actual_result, expected_result);
@@ -73,42 +76,47 @@ namespace dice::einsum::tests {
 
 		template<HypertrieTrait htt_t, ByteAllocator allocator_type, typename result_type>
 		void runSubscript(std::string const &subscript_string, int64_t max_key_part = 4, bool empty = false, std::size_t runs = 15) {
-			static std::string result_type_str = std::is_same_v<result_type, bool> ? "bool" : "ulong";
-			SUBCASE("{} [res:{}]"_format(subscript_string, result_type_str).c_str()) {
-				for (std::size_t run : iter::range(runs)) {
-					SUBCASE("run {}"_format(run).c_str()) {
-						const std::string path = fmt::format("/tmp/{}", std::random_device()()); // important for parallel execution of different tests
-						constexpr auto context = "context";
-						//create segment
-						{
-							metall::manager::remove(path.c_str());
-							metall::manager manager(metall::create_only, path.c_str());
-						}
+			static constexpr char const *result_type_str = std::is_same_v<result_type, bool> ? "bool" : "ulong";
 
-						try {// write into manager
-							metall::manager manager(metall::open_only, path.c_str());
-							// create context
-							auto ctx_ptr = manager.construct<HypertrieContext<htt_t, allocator_type>>(context)(manager.get_allocator());
-							{
-								auto subscript = std::make_shared<Subscript>(subscript_string);
-								// operands must not outlive metall manager. The instances of hypertrie (held in the operands) will clean up their data in ctx_ptr on destruction which is availle through the metall manager.
-								std::vector<test_data::Operand<result_type, htt_t, allocator_type>> operands{};
-								for (const auto &operand_sc : subscript->getRawSubscript().operands) {
-									operands.emplace_back(uint8_t(operand_sc.size()), ctx_ptr, max_key_part, empty);
-								}
-								runTest<htt_t, allocator_type, result_type>(max_key_part, operands, subscript);
-							}
-						} catch (...) {}
+			CAPTURE(result_type_str);
+			CAPTURE(subscript_string);
+			CAPTURE(max_key_part);
+			CAPTURE(empty);
+			CAPTURE(runs);
 
+			for (std::size_t const run : iter::range(runs)) {
+				SUBCASE("{}"_format(run).c_str()) {
+					std::string const path = fmt::format("/tmp/hypertrie_tests_Einsum_metall_{}", std::random_device{}()); // important for parallel execution of different tests
+					constexpr auto context = "context";
+					//create segment
+					{
 						metall::manager::remove(path.c_str());
+						metall::manager manager(metall::create_only, path.c_str());
 					}
+
+					try {// write into manager
+						metall::manager manager(metall::open_only, path.c_str());
+						// create context
+						auto ctx_ptr = manager.construct<HypertrieContext<htt_t, allocator_type>>(context)(manager.get_allocator());
+						{
+							auto subscript = std::make_shared<Subscript>(subscript_string);
+							// operands must not outlive metall manager. The instances of hypertrie (held in the operands) will clean up their data in ctx_ptr on destruction which is availle through the metall manager.
+							std::vector<test_data::Operand<result_type, htt_t, allocator_type>> operands{};
+							for (const auto &operand_sc : subscript->getRawSubscript().operands) {
+								operands.emplace_back(uint8_t(operand_sc.size()), ctx_ptr, max_key_part, empty);
+							}
+							runTest<htt_t, allocator_type, result_type>(max_key_part, operands, subscript);
+						}
+					} catch (...) {}
+
+					metall::manager::remove(path.c_str());
 				}
 			}
 		}
 
 
 		TEST_CASE_TEMPLATE("default test cases", htt_t, default_bool_Hypertrie_trait /*, ::dice::hypertrie::tagged_bool_Hypertrie_trait*/) {
-			std::vector<std::string> subscript_strs{
+			static constexpr std::array subscript_strs{
 					"a->a",
 					"ab->a",
 					"ab->b",
@@ -169,15 +177,11 @@ namespace dice::einsum::tests {
 					"abc,dcebf,gdghg,ijibg->c",    // its minimal
 					"abcd,ceffb,cfgaf,hbgi,ccfaj->j",
 					"abbc,d,ebcfg,hdif,hhchj->b"};
-			for (bool empty : {false, true}) {
-				SUBCASE("empty = {}"_format(empty).c_str()) {
-					for (auto max_key_part : {2, 4, 7, 10, 15}) {
-						SUBCASE("max_key_part = {}"_format(max_key_part).c_str()) {
-							for (const auto &subscript_str : subscript_strs) {
-								runSubscript<htt_t, allocator_type, ssize_t>(subscript_str, max_key_part, empty);
-								runSubscript<htt_t, allocator_type, bool>(subscript_str, max_key_part, empty);
-							}
-						}
+			for (bool const empty : {false, true}) {
+				for (auto const max_key_part : {2, 4, 7, 10, 15}) {
+					for (auto const &subscript_str : subscript_strs) {
+						runSubscript<htt_t, allocator_type, ssize_t>(subscript_str, max_key_part, empty);
+						runSubscript<htt_t, allocator_type, bool>(subscript_str, max_key_part, empty);
 					}
 				}
 			}

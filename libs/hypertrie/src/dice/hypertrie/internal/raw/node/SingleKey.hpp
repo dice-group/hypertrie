@@ -7,10 +7,10 @@
 namespace dice::hypertrie::internal::raw {
 
 	/**
- * A super class to provide a single key in a Node.
- * @tparam depth depth of the key
- * @tparam htt_t HypertrieTrait that defines node parameters
- */
+     * A super class to provide a single key in a Node.
+     * @tparam depth depth of the key
+     * @tparam htt_t HypertrieTrait that defines node parameters
+     */
 	template<size_t depth, HypertrieTrait htt_t>
 	struct SingleKey {
 		using RawKey_t = RawKey<depth, htt_t>;
@@ -47,6 +47,8 @@ namespace dice::hypertrie::internal::raw {
 		 * @return
 		 */
 		[[nodiscard]] constexpr size_t size() const noexcept { return 1; }
+
+		constexpr auto operator<=>(SingleKey const &other) const noexcept = default;
 	};
 
 }// namespace dice::hypertrie::internal::raw

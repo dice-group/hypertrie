@@ -3,14 +3,12 @@
 
 
 #include "dice/hypertrie/Hypertrie_trait.hpp"
-#include "dice/hypertrie/hypertrie_allocator_trait.hpp"
 #include "dice/hypertrie/internal/raw/node/FullNode.hpp"
-#include "dice/hypertrie/internal/raw/node/NodeContainer.hpp"
+#include "dice/hypertrie/internal/raw/node/CartesianNode.hpp"
 #include "dice/hypertrie/internal/raw/node/SingleEntryNode.hpp"
 #include "dice/hypertrie/internal/raw/node/SpecificNodeStorage.hpp"
-#include "dice/template-library/integral_template_tuple.hpp"
 
-#include <optional>
+#include "dice/template-library/integral_template_tuple.hpp"
 
 
 namespace dice::hypertrie::internal::raw {
@@ -18,81 +16,88 @@ namespace dice::hypertrie::internal::raw {
 	template<size_t max_depth, HypertrieTrait htt_t, ByteAllocator allocator_type>
 	class NodeStorage {
 	public:
-		template<size_t depth>
-		using SingleEntryNodeStorage_t = SpecificNodeStorage<depth, htt_t, SingleEntryNode, allocator_type>;
-		template<size_t depth>
-		using FullNodeStorage_t = SpecificNodeStorage<depth, htt_t, FullNode, allocator_type>;
+		template<size_t depth, template<size_t, typename, typename...> typename node_type>
+		using SpecificNodeStorage_t = SpecificNodeStorage<depth, htt_t, node_type, allocator_type>;
 
-		//TODO: change name
-		template<size_t depth, template<size_t, typename, typename> typename node_type>
-		using SpecificNodes = std::conditional_t<
-				(is_FullNode_v<node_type>),
-				FullNodeStorage_t<depth>,
-				SingleEntryNodeStorage_t<depth>>;
+		template<size_t depth, template<size_t, typename, typename...> typename node_type>
+		using SpecificNodePtr = typename SpecificNodeStorage_t<depth, node_type>::node_pointer;
 
-		template<size_t depth, template<size_t, typename, typename> typename node_type>
-		using SpecificNodePtr = typename SpecificNodes<depth, node_type>::node_pointer_type;
-		//TODO: change name
-		using SingleEntryNodes = template_library::integral_template_tuple<(HypertrieTrait_bool_valued_and_taggable_key_part<htt_t>) ? 2UL : 1UL, max_depth, SingleEntryNodeStorage_t>;
-		//TODO: change name
+		template<size_t depth>
+		using SingleEntryNodeStorage_t = SpecificNodeStorage_t<depth, SingleEntryNode>;
+
+		template<size_t depth>
+		using FullNodeStorage_t = SpecificNodeStorage_t<depth, FullNode>;
+
+		template<size_t depth>
+		using CartesianNodeStorage_t = SpecificNodeStorage_t<depth, CartesianNode>;
+
+		using SingleEntryNodes = template_library::integral_template_tuple<HypertrieTrait_bool_valued_and_taggable_key_part<htt_t> ? 2UL : 1UL, max_depth, SingleEntryNodeStorage_t>;
 		using FullNodes = template_library::integral_template_tuple<1UL, max_depth, FullNodeStorage_t>;
+		using CartesianNodes = template_library::integral_template_tuple<2UL, max_depth, CartesianNodeStorage_t>;
 
 	private:
 		SingleEntryNodes single_entry_nodes;
 		FullNodes full_nodes;
+		CartesianNodes cartesian_nodes;
 
 	public:
-		explicit NodeStorage(allocator_type const &alloc) noexcept : single_entry_nodes(template_library::uniform_construct, alloc), full_nodes(template_library::uniform_construct, alloc) {}
-
-		template<size_t depth, template<size_t, typename, typename> typename node_type>
-		SpecificNodes<depth, node_type> &nodes() noexcept {
-			if constexpr (is_FullNode_v<node_type>)
-				return full_nodes.template get<depth>();
-			else
-				return single_entry_nodes.template get<depth>();
+		explicit NodeStorage(allocator_type const &alloc) noexcept : single_entry_nodes{template_library::uniform_construct, alloc},
+																	 full_nodes{template_library::uniform_construct, alloc},
+																	 cartesian_nodes{template_library::uniform_construct, alloc} {
 		}
 
-		template<size_t depth, template<size_t, typename, typename> typename node_type>
-		[[nodiscard]] SpecificNodes<depth, node_type> const &nodes() const noexcept {
-			if constexpr (is_FullNode_v<node_type>)
+		template<size_t depth, template<size_t, typename, typename...> typename node_type>
+		SpecificNodeStorage_t<depth, node_type> &nodes() noexcept {
+			if constexpr (is_FullNode_v<node_type>) {
 				return full_nodes.template get<depth>();
-			else
+			} else if constexpr (is_CartesianNode_v<node_type>) {
+				static_assert(depth > 1,
+							  "Cartesian nodes only exist at depths > 1");
+				return cartesian_nodes.template get<depth>();
+			} else {
+				static_assert(depth > 1 || !HypertrieTrait_bool_valued_and_taggable_key_part<htt_t>,
+				        	  "SingleEntry nodes only exists on depth 1 in non-inplace configurations");
 				return single_entry_nodes.template get<depth>();
-		}
-
-		/**
-		 * If a sen for identifier is stored already, the delta_ref_count is updated and sen populated.
-		 * Otherwise, a new node with the content from sen is created.
-		 * @tparam depth
-		 * @param identifier
-		 * @param sen
-		 * @param delta_ref_count
-		 */
-		template<size_t depth>
-		void update_or_create_sen(RawIdentifier<depth, htt_t> identifier,
-								  std::optional<SingleEntry<depth, htt_t>> &sen,
-								  ssize_t delta_ref_count) noexcept {
-			auto &nodes_ = this->template nodes<depth, SingleEntryNode>().nodes();
-			auto &node_lifecycle_ = this->template nodes<depth, SingleEntryNode>().node_lifecycle();
-			if (delta_ref_count != 0) {
-				auto found = nodes_.find(identifier);
-				if (found != nodes_.end()) {
-					auto node_ptr = found->second;
-					assert(ssize_t(node_ptr->ref_count()) + delta_ref_count >= 0);
-					node_ptr->ref_count() += delta_ref_count;
-					sen = SingleEntry<depth, htt_t>{node_ptr->key(), node_ptr->value()};
-					if (node_ptr->ref_count() == 0UL) {
-						node_lifecycle_.delete_(node_ptr);
-						nodes_.erase(found);
-					}
-				} else {
-					assert(delta_ref_count > 0);
-					auto node = node_lifecycle_.new_(sen.value(), delta_ref_count);
-					nodes_.insert(
-							found,
-							{identifier, node});
-				}
 			}
+		}
+
+		template<size_t depth, template<size_t, typename, typename...> typename node_type>
+		[[nodiscard]] SpecificNodeStorage_t<depth, node_type> const &nodes() const noexcept {
+			if constexpr (is_FullNode_v<node_type>) {
+				return full_nodes.template get<depth>();
+			} else if constexpr (is_CartesianNode_v<node_type>) {
+				static_assert(depth > 1,
+							  "Cartesian nodes only exist at depths > 1");
+				return cartesian_nodes.template get<depth>();
+			} else {
+				static_assert(depth > 1 || !HypertrieTrait_bool_valued_and_taggable_key_part<htt_t>,
+							  "SingleEntry nodes only exists on depth 1 in non-inplace configurations");
+				return single_entry_nodes.template get<depth>();
+			}
+		}
+
+		template<size_t depth>
+		SENPtr<depth, htt_t, allocator_type> create_sen(SingleEntry<depth, htt_t> const &entry,
+														size_t ref_count) noexcept requires (depth > 1 || !HypertrieTrait_bool_valued_and_taggable_key_part<htt_t>) {
+			auto &sen_storage_ = this->template nodes<depth, SingleEntryNode>();
+			auto &sen_lifecycle_ = sen_storage_.node_lifecycle();
+			auto &sens_ = sen_storage_.nodes();
+
+			assert(!sens_.contains(RawIdentifier<depth, htt_t>{entry}));
+
+			auto sen_ptr = sen_lifecycle_.new_(entry, ref_count);
+			sens_.insert(sen_ptr);
+			return sen_ptr;
+		}
+
+		template<size_t depth>
+		XNPtr<depth, htt_t, allocator_type> create_placeholder_cartesian(RawIdentifier<depth, htt_t> const &id) noexcept {
+			auto &node_storage_ = this->template nodes<depth, CartesianNode>();
+			auto node_ptr = node_storage_.node_lifecycle().new_(id, 0UL);
+			[[maybe_unused]] auto [_, inserted] = node_storage_.nodes().insert(node_ptr);
+			assert(inserted);
+
+			return node_ptr;
 		}
 
 		/**
@@ -103,40 +108,66 @@ namespace dice::hypertrie::internal::raw {
 		 * @param identifier
 		 * @return
 		 */
-		template<size_t depth, template<size_t, typename, typename> typename node_type>
-		[[nodiscard]] SpecificNodePtr<depth, node_type> lookup(RawIdentifier<depth, htt_t> identifier) const noexcept {
-			auto &nodes_ = this->nodes<depth, node_type>().nodes();
-			auto found = nodes_.find(identifier);
-			if (found != nodes_.end()) {
-				return found->second;
+		template<size_t depth, template<size_t, typename, typename...> typename node_type>
+		[[nodiscard]] SpecificNodePtr<depth, node_type> lookup(RawIdentifier<depth, htt_t> const &identifier) const noexcept {
+			static_assert(!is_CartesianNode_v<node_type> || depth > 1,
+						  "Cartesian nodes only exist at depths > 1");
+
+			static_assert(!is_SingleEntryNode_v<node_type> || (depth > 1 || !HypertrieTrait_bool_valued_and_taggable_key_part<htt_t>),
+						  "SingleEntry nodes only exists on depth 1 in non-inplace configurations");
+
+			auto &nodes_ = this->template nodes<depth, node_type>().nodes();
+			if (auto it = nodes_.find(identifier); it != nodes_.end()) {
+				return *it;
 			}
+
 			return {};
 		}
 
 		/**
-		 * Looks up a Node by means of a RawIdentifier. Result is returned wrapped into an NodeContainer.
-		 * If no Node for the given identifier exists, an empty NodeContainer is returned.
+		 * Looks up a Node by means of a RawIdentifier. Result is returned wrapped into an NodePtr.
+		 * If no Node for the given identifier exists, a null NodePtr is returned.
 		 * @tparam depth
 		 * @param identifier
 		 * @return
 		 */
 		template<size_t depth>
-		[[nodiscard]] NodeContainer<depth, htt_t, allocator_type> lookup(RawIdentifier<depth, htt_t> identifier) const noexcept {
+		[[nodiscard]] NodePtr<depth, htt_t, allocator_type> lookup(RawIdentifier<depth, htt_t> identifier) const noexcept {
 			if (identifier.empty()) {
 				return {};
 			}
-			if (identifier.is_fn()) {
-				auto fn_ptr = lookup<depth, FullNode>(identifier);
-				if (fn_ptr != nullptr) {
-					return FNContainer<depth, htt_t, allocator_type>{identifier, fn_ptr};
+
+			switch (identifier.tag()) {
+				case IdentifierTag::FN: {
+					if (auto fn_ptr = lookup<depth, FullNode>(identifier); fn_ptr == nullptr) {
+						return fn_ptr;
+					}
+					return NodePtr<depth, htt_t, allocator_type>{};
 				}
-			} else {// identifier.is_sen()
-				auto sen_ptr = lookup<depth, SingleEntryNode>(identifier);
-				if (sen_ptr != nullptr) {
-					return SENContainer<depth, htt_t, allocator_type>{identifier, sen_ptr};
+				case IdentifierTag::SEN: {
+					if constexpr (depth > 1 || !HypertrieTrait_bool_valued_and_taggable_key_part<htt_t>) {
+						if (auto sen_ptr = lookup<depth, SingleEntryNode>(identifier); sen_ptr != nullptr) {
+							return sen_ptr;
+						}
+						return NodePtr<depth, htt_t, allocator_type>{};
+					} else {
+						HYPERTRIE_UNREACHABLE;
+					}
+				}
+				case IdentifierTag::XN: {
+					if constexpr (depth > 1) {
+						if (auto xn_ptr = lookup<depth, CartesianNode>(identifier); xn_ptr == nullptr) {
+							return xn_ptr;
+						}
+						return NodePtr<depth, htt_t, allocator_type>{};
+					} else {
+						HYPERTRIE_UNREACHABLE;
+					}
+				}
+				case IdentifierTag::Indeterminate: {
+					HYPERTRIE_UNREACHABLE;
 				}
 			}
-			return {};
 		}
 	};
 }// namespace dice::hypertrie::internal::raw

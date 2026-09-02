@@ -2,7 +2,6 @@ include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
 function(install_component TYPE COMPONENT_NAME INCLUDE_PATH)
-    set(lib_name "${PROJECT_NAME}-${COMPONENT_NAME}")
 
     set(possible_types INTERFACE PUBLIC)
     if(NOT TYPE IN_LIST possible_types)
@@ -11,28 +10,28 @@ function(install_component TYPE COMPONENT_NAME INCLUDE_PATH)
 
     if("${TYPE}" STREQUAL "INTERFACE")
         target_include_directories(
-                ${lib_name} INTERFACE $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>/${PROJECT_NAME}/${COMPONENT_NAME})
+                ${COMPONENT_NAME} INTERFACE $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>/${PROJECT_NAME}/${COMPONENT_NAME})
 
-        install(TARGETS ${lib_name}
-                EXPORT ${lib_name}-config
+        install(TARGETS ${COMPONENT_NAME}
+                EXPORT ${COMPONENT_NAME}-config
                 INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME}/${COMPONENT_NAME}/
-        )
+                )
     else()
-        set_target_properties(${lib_name} PROPERTIES
+        set_target_properties(${COMPONENT_NAME} PROPERTIES
                 VERSION ${PROJECT_VERSION}
                 SOVERSION ${PROJECT_VERSION_MAJOR}
-                CXX_STANDARD 23
+                CXX_STANDARD 20
                 CXX_EXTENSIONS OFF
                 CXX_STANDARD_REQUIRED ON)
         target_include_directories(
-                ${lib_name} PUBLIC $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>/${PROJECT_NAME}/${COMPONENT_NAME})
+                ${COMPONENT_NAME} PUBLIC $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>/${PROJECT_NAME}/${COMPONENT_NAME})
 
-        install(TARGETS ${lib_name}
-                EXPORT ${lib_name}-config
+        install(TARGETS ${COMPONENT_NAME}
+                EXPORT ${COMPONENT_NAME}-config
                 ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}/${PROJECT_NAME}/${COMPONENT_NAME}/
                 LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/${PROJECT_NAME}/${COMPONENT_NAME}/
                 INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME}/${COMPONENT_NAME}/
-        )
+                )
     endif()
 
     install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/${INCLUDE_PATH}/
@@ -40,8 +39,8 @@ function(install_component TYPE COMPONENT_NAME INCLUDE_PATH)
             FILES_MATCHING PATTERN "*.hpp" PATTERN "*.h")
 
     install(
-            EXPORT ${lib_name}-config
-            FILE ${lib_name}-config.cmake
+            EXPORT ${COMPONENT_NAME}-config
+            FILE ${COMPONENT_NAME}-config.cmake
             NAMESPACE ${PROJECT_NAME}::
             DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/cmake/${PROJECT_NAME}/${COMPONENT_NAME}/)
 

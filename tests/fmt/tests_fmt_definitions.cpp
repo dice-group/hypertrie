@@ -22,7 +22,7 @@ namespace dice::hypertrie::tests::fmt {
 			std::string result = ::fmt::format("{}", default_bool_Hypertrie_trait{});
 			REQUIRE(result == "<key_part = unsigned long, value = bool, "
 							  "map = dice::sparse_map::sparse_map, "
-							  "set = dice::sparse_map::sparse_set, key_part_tagging_bit = -1>");
+							  "set = dice::sparse_map::sparse_set, taggable_key_part = false>");
 		}
 
 		TEST_CASE("RawKeyPositions") {
@@ -43,58 +43,19 @@ namespace dice::hypertrie::tests::fmt {
 			REQUIRE(result == "[0 -> 1, 1 -> 2, 3 -> 4, 4 -> 5]");
 		}
 
-		template<size_t N, typename, typename>
+		template<size_t N, typename>
 		struct MyMapType {};
 		TEST_CASE("AllocateNode") {
-			AllocateNode<5, default_bool_Hypertrie_trait, MyMapType, std::allocator<std::byte>> alloc_node(std::allocator<std::byte>{});
+			AllocateNode<FullNode, 5, default_bool_Hypertrie_trait, std::allocator<std::byte>> alloc_node(std::allocator<std::byte>{});
 			std::string result = ::fmt::format("{}", alloc_node);
-			REQUIRE(result == "<depth = 5, trait = dice::hypertrie::Hypertrie_t (<key_part = unsigned long, value = bool, map = dice::sparse_map::sparse_map, set = dice::sparse_map::sparse_set, key_part_tagging_bit = -1>)>");
+			REQUIRE(result == "<depth = 5, trait = dice::hypertrie::Hypertrie_t (<key_part = unsigned long, value = bool, map = dice::sparse_map::sparse_map, set = dice::sparse_map::sparse_set, taggable_key_part = false>)>");
 		}
 
 		TEST_CASE("SingleEntryNode") {
-			SingleEntryNode<5, default_bool_Hypertrie_trait, std::allocator<std::byte>> sen(SingleEntry<5, default_bool_Hypertrie_trait>{{0, 1, 2, 3, 4}}, 3);
+			SingleEntryNode<5, default_bool_Hypertrie_trait> sen(SingleEntry<5, default_bool_Hypertrie_trait>{{0, 1, 2, 3, 4}}, 3);
 			std::string result = ::fmt::format("{}", sen);
 			std::cout << result << std::endl;
 			REQUIRE(result == "{ [ref_count=3] <0, 1, 2, 3, 4> -> true }");
-		}
-
-		TEST_CASE("FullNode") {
-			FullNode<3, default_bool_Hypertrie_trait, std::allocator<std::byte>> fn(10, {});
-			std::string result = ::fmt::format("{}", fn);
-
-			REQUIRE(result == "{ [size=0,ref_count=10]\n"
-							  "0: [\n"
-							  "]\n"
-							  "1: [\n"
-							  "]\n"
-							  "2: [\n"
-							  "]\n"
-							  " }");
-		}
-
-		TEST_CASE("SpecificNodeStorage") {
-			SpecificNodeStorage<2, default_bool_Hypertrie_trait, FullNode, std::allocator<std::byte>> fn_storage(std::allocator<std::byte>{});
-			std::string result = ::fmt::format("{}", fn_storage);
-			REQUIRE(result == "{}");
-			SpecificNodeStorage<2, default_bool_Hypertrie_trait, FullNode, std::allocator<std::byte>> sn_storage(std::allocator<std::byte>{});
-			result = ::fmt::format("{}", sn_storage);
-			REQUIRE(result == "{}");
-		}
-
-		TEST_CASE("RawHypertrieContext") {
-			RawHypertrieContext<2, default_bool_Hypertrie_trait, std::allocator<std::byte>> alloc_node(std::allocator<std::byte>{});
-			std::string result = ::fmt::format("{}", alloc_node);
-			std::cout << result << std::endl;
-			REQUIRE(result == "<RawHypertrieContext\n"
-							  "[2] FN\n"
-							  "{}\n"
-							  "[2] SEN\n"
-							  "{}\n"
-							  "[1] FN\n"
-							  "{}\n"
-							  "[1] SEN\n"
-							  "{}\n"
-							  ">");
 		}
 
 		/** TODO: std_set is only an alias for a special std::set. So std::set is also defined!
@@ -138,7 +99,7 @@ namespace dice::hypertrie::tests::fmt {
 			std::string result = ::fmt::format("{}", key);
 			REQUIRE(result == "<trait = dice::hypertrie::Hypertrie_t "
 							  "(<key_part = unsigned long, value = bool, "
-							  "map = dice::sparse_map::sparse_map, set = dice::sparse_map::sparse_set, key_part_tagging_bit = -1>)>: "
+							  "map = dice::sparse_map::sparse_map, set = dice::sparse_map::sparse_set, taggable_key_part = false>)>: "
 							  "{0, 1, 2}");
 		}
 
@@ -147,7 +108,7 @@ namespace dice::hypertrie::tests::fmt {
 			std::string result = ::fmt::format("{}", key);
 			REQUIRE(result == "<trait = dice::hypertrie::Hypertrie_t "
 							  "(<key_part = unsigned long, value = bool, "
-							  "map = dice::sparse_map::sparse_map, set = dice::sparse_map::sparse_set, key_part_tagging_bit = -1>)>: "
+							  "map = dice::sparse_map::sparse_map, set = dice::sparse_map::sparse_set, taggable_key_part = false>)>: "
 							  "{0, -, 2}");
 		}
 

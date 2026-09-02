@@ -17,25 +17,25 @@ namespace dice::hypertrie {
 	 * @tparam allocator_type The allocator used by the hypertrie.
 	 * @tparam syncness If queueing entries for insertion and executing the insertion happen on the same thread.
 	 */
-	template<BulkUpdaterMode mode, HypertrieTrait_bool_valued tr_t, ByteAllocator allocator_type, BulkUpdaterSyncness syncness>
+	template<BulkUpdaterMode mode, HypertrieTrait tr_t, ByteAllocator allocator_type, BulkUpdaterSyncness syncness>
 	class BulkUpdater;
 
-	template<HypertrieTrait_bool_valued tr_t, ByteAllocator allocator_type, BulkUpdaterSyncness syncness>
+	template<HypertrieTrait tr_t, ByteAllocator allocator_type, BulkUpdaterSyncness syncness>
 	using BulkInserter = BulkUpdater<BulkUpdaterMode::Insert, tr_t, allocator_type, syncness>;
 
-	template<HypertrieTrait_bool_valued tr_t, ByteAllocator allocator_type, BulkUpdaterSyncness syncness>
+	template<HypertrieTrait tr_t, ByteAllocator allocator_type, BulkUpdaterSyncness syncness>
 	using BulkRemover = BulkUpdater<BulkUpdaterMode::Remove, tr_t, allocator_type, syncness>;
 
-	template<HypertrieTrait_bool_valued tr_t, ByteAllocator allocator_type>
+	template<HypertrieTrait tr_t, ByteAllocator allocator_type>
 	using SyncBulkInserter = BulkInserter<tr_t, allocator_type, BulkUpdaterSyncness::Sync>;
 
-	template<HypertrieTrait_bool_valued tr_t, ByteAllocator allocator_type>
+	template<HypertrieTrait tr_t, ByteAllocator allocator_type>
 	using SyncBulkRemover = BulkRemover<tr_t, allocator_type, BulkUpdaterSyncness::Sync>;
 
-	template<HypertrieTrait_bool_valued tr_t, ByteAllocator allocator_type>
+	template<HypertrieTrait tr_t, ByteAllocator allocator_type>
 	using AsyncBulkInserter = BulkInserter<tr_t, allocator_type, BulkUpdaterSyncness::Async>;
 
-	template<HypertrieTrait_bool_valued tr_t, ByteAllocator allocator_type>
+	template<HypertrieTrait tr_t, ByteAllocator allocator_type>
 	using AsyncBulkRemover = BulkRemover<tr_t, allocator_type, BulkUpdaterSyncness::Async>;
 
 }// namespace dice::hypertrie

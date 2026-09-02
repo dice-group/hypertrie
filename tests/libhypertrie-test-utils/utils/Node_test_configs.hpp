@@ -23,7 +23,13 @@ namespace dice::hypertrie::tests {
 	using long_cfg = Node_test_config<depth, ::dice::hypertrie::default_long_Hypertrie_trait>;
 
 	template<size_t depth>
+	using tagged_long_cfg = Node_test_config<depth, ::dice::hypertrie::tagged_long_Hypertrie_trait>;
+
+	template<size_t depth>
 	using double_cfg = Node_test_config<depth, ::dice::hypertrie::default_double_Hypertrie_trait>;
+
+	template<size_t depth>
+	using tagged_double_cfg = Node_test_config<depth, ::dice::hypertrie::tagged_double_Hypertrie_trait>;
 }// namespace dice::hypertrie::tests
 
 #endif//HYPERTRIE_NODE_TEST_CONFIGS_HPP

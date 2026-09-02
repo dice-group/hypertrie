@@ -29,17 +29,21 @@ namespace dice::hypertrie::internal::raw {
 		 */
 		explicit Valued(value_type value) noexcept : value_(value) {}
 
+		void set_value(value_type const new_value) { this->value_ = new_value; }
+
 		/**
 		 * Modifiable reference to value.
 		 * @return
 		 */
-		[[nodiscard]] value_type &value() noexcept { return this->value_; }
+		[[nodiscard]] value_type &value_mut() noexcept { return this->value_; }
 
 		/**
 		 * Constant reference to value.
 		 * @return
 		 */
-		[[nodiscard]] const value_type &value() const noexcept { return this->value_; }
+		[[nodiscard]] value_type const &value() const noexcept { return this->value_; }
+
+		constexpr auto operator<=>(Valued const &other) const noexcept = default;
 	};
 }// namespace dice::hypertrie::internal::raw
 

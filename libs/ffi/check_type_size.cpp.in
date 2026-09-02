@@ -1,0 +1,42 @@
+#include <fstream>
+
+#include <dice/ffi/hypertrie_internal_ffi.hpp>
+
+using namespace dice::hypertrie::internal::ffi;
+
+inline constexpr std::array<std::pair<std::string_view, size_t>, 7> replace_templates{
+		std::make_pair("$HYPERTRIE_SIZE$", sizeof(AnyHypertrie)),
+		std::make_pair("$HYPERTRIE_ALIGN$", alignof(AnyHypertrie)),
+        std::make_pair("$HYPERTRIE_MAX_DEPTH$", dice::hypertrie::hypertrie_max_depth),
+        std::make_pair("$EINSUM_GENERATOR_SIZE$", sizeof(AnyEinsumGenerator)),
+        std::make_pair("$EINSUM_GENERATOR_ALIGN$", alignof(AnyEinsumGenerator)),
+		std::make_pair("$HYPERTRIE_ITERATOR_SIZE$", sizeof(AnyIterator)),
+		std::make_pair("$HYPERTRIE_ITERATOR_ALIGN$", alignof(AnyIterator))};
+
+void replace(std::string &str, std::pair<std::string_view, size_t> const &replace_template) {
+	auto pos = str.find(replace_template.first);
+	while (pos != std::string::npos) {
+		str.replace(pos, replace_template.first.size(), std::to_string(replace_template.second));
+		pos = str.find(replace_template.first);
+	}
+}
+
+int main() {
+	std::string input;
+
+	{
+		std::ifstream ifs{"@CMAKE_CURRENT_SOURCE_DIR@/src/dice/ffi/hypertrie.h.in"};
+		std::copy(std::istreambuf_iterator<char>{ifs}, std::istreambuf_iterator<char>{}, std::back_inserter(input));
+	}
+
+	for (auto const &replace_template : replace_templates) {
+		replace(input, replace_template);
+	}
+
+	{
+		std::ofstream ofs{"@CMAKE_CURRENT_SOURCE_DIR@/src/dice/ffi/hypertrie.h"};
+		std::copy(input.begin(), input.end(), std::ostreambuf_iterator<char>{ofs});
+	}
+
+	std::ofstream ofs{"@CMAKE_CURRENT_BINARY_DIR@/generating-done.cpp"};
+}

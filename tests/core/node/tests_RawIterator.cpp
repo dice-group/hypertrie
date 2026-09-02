@@ -6,8 +6,10 @@
 #include <cppitertools/itertools.hpp>
 
 #include <utils/ValidationRawHashDiagonal.hpp>
+#include <utils/ValidationRawNodeContext.hpp>
 #include <utils/Node_test_configs.hpp>
 #include <utils/RawEntryGenerator.hpp>
+#include <utils/DumpRawContext.hpp>
 
 
 #include <dice/hypertrie/internal/fmt_Hypertrie_trait.hpp>
@@ -33,43 +35,55 @@ namespace dice::hypertrie::tests::core::node {
 				 size_t min_no_entries,
 				 size_t max_no_entries>
 		void iterate() {
+			CAPTURE(depth);
+			CAPTURE(htt_t{});
+			CAPTURE(no_key_parts);
+			CAPTURE(min_no_entries);
+			CAPTURE(max_no_entries);
+
 			using SingleEntry_t = SingleEntry<depth, htt_t>;
-
 			using key_part_type = typename htt_t::key_part_type;
-
 			static constexpr auto max_key_part = key_part_type(no_key_parts);
-			
 			using allocator_type = std::allocator<std::byte>;
 			allocator_type alloc{}; // allocator instance
 
-
 			dice::template_library::for_range<min_no_entries, max_no_entries + 1>([&](auto no_entries_0) {
-				SUBCASE("{} entries"_format(no_entries_0).c_str()) {
-					utils::EntrySetGenerator<depth, no_entries_0, htt_t, max_key_part> outer_generator{};
-					for (const auto &entries_0 : outer_generator) {
-						SUBCASE("entries: {}"_format(fmt::join(entries_0, " | ")).c_str()) {
+				CAPTURE(no_entries_0);
 
+				utils::EntrySetGenerator<depth, no_entries_0, htt_t, max_key_part> outer_generator{};
+				for (const auto &entries_0 : outer_generator) {
+					CAPTURE(entries_0);
 
-							RawHypertrieContext<depth, htt_t, allocator_type> context{alloc};
-							NodeContainer<depth, htt_t, allocator_type> nc{};
+					NodePtr<depth, htt_t, allocator_type> nc{};
+					ValidationRawNodeContext<depth, htt_t, allocator_type> const context{alloc, nc, entries_0};
+					INFO("Context to iterate:\n", context);
 
-							std::unordered_set<SingleEntry_t, dice::hash::DiceHash<SingleEntry_t>> entry_set{entries_0.begin(), entries_0.end()};
+					std::unordered_set<SingleEntry_t, dice::hash::DiceHash<SingleEntry_t>> const entry_set{entries_0.begin(), entries_0.end()};
 
-							context.insert(nc, std::vector{entries_0});
+					using RawIterator_t = RawIterator<depth, true, htt_t, allocator_type>;
 
-							using RawIterator_t = RawIterator<depth, true, htt_t, allocator_type, depth>;
+					size_t count = 0;
+					for (RawIterator_t iter{nc}; iter; ++iter) {
+						CAPTURE(*iter);
 
-							RawIterator_t raw_iterator{nc, context};
+						{ // check for proper buffer isolation
+							auto before = *iter;
+							auto cpy = iter;
+							++cpy;
 
-							size_t count = 0;
-							while (not raw_iterator.ended()) {
-								CHECK(entry_set.contains(raw_iterator.value()));
-								raw_iterator.inc();
-								count++;
+							if (cpy) {
+								auto after = *iter;
+
+								CHECK(before == after);
+								CHECK(before != *cpy);
+								CHECK(entry_set.contains(*cpy));
 							}
-							CHECK(count == entry_set.size());
 						}
+
+						CHECK(entry_set.contains(*iter));
+						count += 1;
 					}
+					CHECK(count == entry_set.size());
 				}
 			});
 		}
@@ -79,12 +93,10 @@ namespace dice::hypertrie::tests::core::node {
 						   tagged_bool_cfg<1>,
 						   long_cfg<1>,
 						   double_cfg<1>) {
-			SUBCASE("{}"_format(typename T::htt_t{}).c_str()) {
-				constexpr size_t no_key_parts = 3;
-				constexpr size_t min_no_entries = 0;
-				constexpr size_t max_no_entries = 3;
-				iterate<T::depth, typename T::htt_t, no_key_parts, min_no_entries, max_no_entries>();
-			}
+			constexpr size_t no_key_parts = 3;
+			constexpr size_t min_no_entries = 0;
+			constexpr size_t max_no_entries = 3;
+			iterate<T::depth, typename T::htt_t, no_key_parts, min_no_entries, max_no_entries>();
 		}
 
 		TEST_CASE_TEMPLATE("hypertrie depth 2", T,
@@ -92,12 +104,10 @@ namespace dice::hypertrie::tests::core::node {
 						   tagged_bool_cfg<2>,
 						   long_cfg<2>,
 						   double_cfg<2>) {
-			SUBCASE("{}"_format(typename T::htt_t{}).c_str()) {
-				constexpr size_t no_key_parts = 3;
-				constexpr size_t min_no_entries = 0;
-				constexpr size_t max_no_entries = 4;
-				iterate<T::depth, typename T::htt_t, no_key_parts, min_no_entries, max_no_entries>();
-			}
+			constexpr size_t no_key_parts = 3;
+			constexpr size_t min_no_entries = 0;
+			constexpr size_t max_no_entries = 4;
+			iterate<T::depth, typename T::htt_t, no_key_parts, min_no_entries, max_no_entries>();
 		}
 
 		TEST_CASE_TEMPLATE("hypertrie depth 3", T,
@@ -105,19 +115,17 @@ namespace dice::hypertrie::tests::core::node {
 						   tagged_bool_cfg<3>,
 						   long_cfg<3>,
 						   double_cfg<3>) {
-			SUBCASE("{}"_format(typename T::htt_t{}).c_str()) {
-				{
-					constexpr size_t no_key_parts = 3;
-					constexpr size_t min_no_entries = 0;
-					constexpr size_t max_no_entries = 2;
-					iterate<T::depth, typename T::htt_t, no_key_parts, min_no_entries, max_no_entries>();
-				}
-				{
-					constexpr size_t no_key_parts = 2;
-					constexpr size_t min_no_entries = 3;
-					constexpr size_t max_no_entries = 3;
-					iterate<T::depth, typename T::htt_t, no_key_parts, min_no_entries, max_no_entries>();
-				}
+			{
+				constexpr size_t no_key_parts = 3;
+				constexpr size_t min_no_entries = 0;
+				constexpr size_t max_no_entries = 2;
+				iterate<T::depth, typename T::htt_t, no_key_parts, min_no_entries, max_no_entries>();
+			}
+			{
+				constexpr size_t no_key_parts = 2;
+				constexpr size_t min_no_entries = 3;
+				constexpr size_t max_no_entries = 3;
+				iterate<T::depth, typename T::htt_t, no_key_parts, min_no_entries, max_no_entries>();
 			}
 		}
 
@@ -126,19 +134,17 @@ namespace dice::hypertrie::tests::core::node {
 						   tagged_bool_cfg<4>,
 						   long_cfg<4>,
 						   double_cfg<4>) {
-			SUBCASE("{}"_format(typename T::htt_t{}).c_str()) {
-				{
-					constexpr size_t no_key_parts = 3;
-					constexpr size_t min_no_entries = 0;
-					constexpr size_t max_no_entries = 1;
-					iterate<T::depth, typename T::htt_t, no_key_parts, min_no_entries, max_no_entries>();
-				}
-				{
-					constexpr size_t no_key_parts = 2;
-					constexpr size_t min_no_entries = 2;
-					constexpr size_t max_no_entries = 3;
-					iterate<T::depth, typename T::htt_t, no_key_parts, min_no_entries, max_no_entries>();
-				}
+			{
+				constexpr size_t no_key_parts = 3;
+				constexpr size_t min_no_entries = 0;
+				constexpr size_t max_no_entries = 1;
+				iterate<T::depth, typename T::htt_t, no_key_parts, min_no_entries, max_no_entries>();
+			}
+			{
+				constexpr size_t no_key_parts = 2;
+				constexpr size_t min_no_entries = 2;
+				constexpr size_t max_no_entries = 3;
+				iterate<T::depth, typename T::htt_t, no_key_parts, min_no_entries, max_no_entries>();
 			}
 		}
 	}

@@ -1,8 +1,5 @@
 libs/hypertrie/src/dice/hypertrie/Hypertrie_version.hpp
 
-.clang-tidy
-.clang-format
-
 # Prerequisites
 *.d
 
@@ -44,8 +41,5 @@ cmake-build*/
 venv/
 /build/
 
-
-test_package/build/
-test_package/CMakeUserPresets.json
-/CMakeUserPresets.json
-/conan_provider.cmake
+# documentation folders
+docu/

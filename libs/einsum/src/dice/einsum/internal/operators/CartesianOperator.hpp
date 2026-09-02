@@ -4,23 +4,31 @@
 #include "dice/einsum/internal/CardinalityEstimation.hpp"
 #include "dice/einsum/internal/operators/Operator_predeclare.hpp"
 
-#include <robin_hood.h>
+#include <ankerl/unordered_dense.h>
 
 namespace dice::einsum::internal::operators {
 
-	template<typename value_type, hypertrie::HypertrieTrait_bool_valued htt_t, hypertrie::ByteAllocator allocator_type>
+	template<typename value_type, hypertrie::HypertrieTrait htt_t, hypertrie::ByteAllocator allocator_type>
 	struct CartesianOperator {
 		static constexpr bool bool_valued = std::is_same_v<value_type, bool>;
 		using Entry_t = Entry<value_type, htt_t>;
 
 
 	private:
-		using SubResult = robin_hood::unordered_map<Key<value_type, htt_t>, value_type, dice::hash::DiceHashMartinus<Key<value_type, htt_t>>>;
+		struct HashKey {
+			using is_avalanching = void;
+
+			inline size_t operator()(Key<value_type, htt_t> const &key) const noexcept {
+				return hash::dice_hash_templates<hash::Policies::wyhash>::dice_hash(key);
+			}
+		};
+
+		using SubResult = ::ankerl::unordered_dense::map<Key<value_type, htt_t>, value_type, HashKey>;
 
 		inline static void updateEntryKey(Subscript::OriginalResultPoss const &original_result_poss, Entry_t &sink,
 										  Key<value_type, htt_t> const &source_key) noexcept {
 			for (size_t i = 0; i < original_result_poss.size(); ++i) {
-				sink[original_result_poss[i]] = source_key[i];
+				sink.key()[original_result_poss[i]] = source_key[i];
 			}
 		}
 
@@ -49,7 +57,7 @@ namespace dice::einsum::internal::operators {
 					std::vector<Entry_t> &sub_result_vec = sub_results_.emplace_back();
 					sub_result_vec.reserve(sub_result.size());
 					for (const auto &[key, value] : sub_result) {
-						sub_result_vec.emplace_back(key, value);
+						sub_result_vec.template emplace_back(key, value);
 					}
 					sub_result = {};
 				}
@@ -158,7 +166,7 @@ namespace dice::einsum::internal::operators {
 				SubResult &sub_result = sub_results[cart_op_pos - (cart_op_pos > iterated_pos)];
 				auto &sub_operands = sub_operandss[cart_op_pos];
 				auto &sub_subscript = sub_subscripts[cart_op_pos];
-				auto sub_entry_arg = Entry_t::make_filled(sub_subscript->resultLabelCount(), {});
+				auto sub_entry_arg = Entry_t::make_with_defaulted_key(sub_subscript->resultLabelCount(), value_type{1});
 
 				if (sub_subscript->all_result_done) {
 					auto const &sub_entry = get_sub_operator<value_type, htt_t, allocator_type, true>(sub_subscript, context, sub_operands, sub_entry_arg);
@@ -224,7 +232,7 @@ namespace dice::einsum::internal::operators {
 													entry_arg,
 													iterated_pos);
 			// init iterator for the subscript part that is iterated as results are written out.
-			auto sub_entry_arg = Entry_t::make_filled(sub_subscripts[iterated_pos]->resultLabelCount(), {});
+			auto sub_entry_arg = Entry_t::make_with_defaulted_key(sub_subscripts[iterated_pos]->resultLabelCount(), value_type{1});
 			auto const &iterated_sub_op_result_mapping = subscript->getCartesianSubscript().getOriginalResultPoss()[iterated_pos];
 			if (not sub_subscripts[iterated_pos]->all_result_done) {
 				for (auto const &iterated_sub_entry : get_sub_operator<value_type, htt_t, allocator_type, false>(sub_subscripts[iterated_pos], context, sub_operandss[iterated_pos], sub_entry_arg)) {
@@ -234,7 +242,7 @@ namespace dice::einsum::internal::operators {
 						context->check_time_out();
 						updateEntryKey(iterated_sub_op_result_mapping, entry_arg, iterated_sub_entry.key());
 						if constexpr (not bool_valued) {
-							entry_arg.value(iterated_sub_entry.value() * precalculated_value);
+							entry_arg.set_value(iterated_sub_entry.value() * precalculated_value);
 						}
 						assert(entry_arg.value());
 						co_yield entry_arg;
@@ -248,9 +256,9 @@ namespace dice::einsum::internal::operators {
 						context->check_time_out();
 						updateEntryKey(iterated_sub_op_result_mapping, entry_arg, iterated_sub_entry.key());
 						if constexpr (not bool_valued) {
-							entry_arg.value(iterated_sub_entry.value() * precalculated_value);
+							entry_arg.set_value(iterated_sub_entry.value() * precalculated_value);
 						} else {
-							entry_arg.value(iterated_sub_entry.value() and precalculated_value);
+							entry_arg.set_value(iterated_sub_entry.value() and precalculated_value);
 						}
 						assert(entry_arg.value());
 						co_yield entry_arg;
@@ -273,7 +281,7 @@ namespace dice::einsum::internal::operators {
 			std::vector<std::vector<hypertrie::const_Hypertrie<htt_t, allocator_type>>> sub_operandss = extract_suboperands(iterated_pos, subscript, context, operands);
 			std::optional<std::vector<SubResult>> sub_results_opt = get_sub_results(iterated_pos, sub_operandss, sub_subscripts, context);
 			if (not sub_results_opt.has_value()) {
-				entry_arg.value(0);
+				entry_arg.set_value(0);
 				return entry_arg;
 			}
 			FullCartesianResult calculated_operands(std::move(sub_results_opt.value()),
@@ -281,13 +289,13 @@ namespace dice::einsum::internal::operators {
 													entry_arg,
 													iterated_pos);
 			// init iterator for the subscript part that is iterated as results are written out.
-			auto sub_entry_arg = Entry<value_type, htt_t>::make_filled(sub_subscripts[iterated_pos]->resultLabelCount(), {});
+			auto sub_entry_arg = Entry<value_type, htt_t>::make_with_defaulted_key(sub_subscripts[iterated_pos]->resultLabelCount(), value_type{1});
 			auto const &iterated_sub_entry = get_sub_operator<value_type, htt_t, allocator_type, true>(sub_subscripts[iterated_pos], context, sub_operandss[iterated_pos], sub_entry_arg);
 			if constexpr (not bool_valued) {
 				value_type other_subs_value = calculated_operands.begin().operator*();
-				entry_arg.value(iterated_sub_entry.value() * other_subs_value);
+				entry_arg.set_value(iterated_sub_entry.value() * other_subs_value);
 			} else {
-				entry_arg.value(iterated_sub_entry.value());
+				entry_arg.set_value(iterated_sub_entry.value());
 			}
 			return entry_arg;
 		}

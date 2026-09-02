@@ -37,7 +37,7 @@ namespace dice::einsum::tests::utils {
 			return template_library::switch_cases<1, ::dice::hypertrie::hypertrie_max_depth + 1>(
 					entry.key().size(),
 					[&](auto depth_arg) {
-						get_torch_value<depth_arg>(tensor, entry.key()) = dtype(entry.value());
+						get_torch_value<depth_arg>(tensor, entry.key().as_inner()) = dtype(entry.value());
 					},
 					[]() {
 						throw std::logic_error{

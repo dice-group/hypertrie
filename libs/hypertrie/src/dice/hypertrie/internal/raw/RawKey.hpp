@@ -9,21 +9,69 @@
 #include "dice/hypertrie/Hypertrie_trait.hpp"
 #include "dice/hypertrie/Key.hpp"
 #include "dice/hypertrie/internal/commons/PosType.hpp"
+#include <dice/template-library/switch_cases.hpp>
 
 
 namespace dice::hypertrie::internal::raw {
 	template<size_t depth, HypertrieTrait htt_t>
 	struct RawKey : std::array<typename htt_t::key_part_type, depth> {
-		// I don't see a reason for this to be a template
-		//template<typename = void>
-		// TODO: double check
-		[[nodiscard]] auto subkey(pos_type remove_pos) const noexcept {
+		[[nodiscard]] RawKey<depth - 1, htt_t> subkey(pos_type remove_pos) const noexcept {
 			static_assert(depth != 0, "A subkey of a key of length 0 is not possible.");
 			RawKey<depth - 1, htt_t> sub_key;
 			for (size_t i = 0, j = 0; i < depth; ++i) {
-				if (i != remove_pos) sub_key[j++] = (*this)[i];
+				if (i != remove_pos) {
+					sub_key[j++] = (*this)[i];
+				}
 			}
 			return sub_key;
+		}
+
+		template<size_t n>
+		[[nodiscard]] constexpr RawKey<depth - n, htt_t> without_prefix() const noexcept {
+			static_assert(depth != 0, "A subkey of a key of length 0 is not possible.");
+			static_assert(n <= depth);
+
+			if constexpr (n == 0) {
+				return *this;
+			} else {
+				RawKey<depth - n, htt_t> subkey;
+				std::copy(this->begin() + n, this->end(), subkey.begin());
+				return subkey;
+			}
+		}
+
+		template<size_t n>
+		[[nodiscard]] constexpr RawKey<depth - n, htt_t> without_postfix() const noexcept {
+			static_assert(depth != 0, "A subkey of a key of length 0 is not possible.");
+			static_assert(n <= depth);
+
+			if constexpr (n == 0) {
+				return *this;
+			} else {
+				RawKey<depth - n, htt_t> subkey;
+				std::copy(this->begin(), this->end() - n, subkey.begin());
+				return subkey;
+			}
+		}
+
+		template<size_t n>
+		[[nodiscard]] constexpr RawKey<depth - n, htt_t> prefix() const noexcept {
+			static_assert(depth != 0, "A subkey of a key of length 0 is not possible.");
+			static_assert(n <= depth);
+
+			RawKey<depth - n, htt_t> subkey;
+			std::copy(this->begin(), this->begin() + n, subkey.begin());
+			return subkey;
+		}
+
+		template<size_t n>
+		[[nodiscard]] constexpr RawKey<depth - n, htt_t> postfix() const noexcept {
+			static_assert(depth != 0, "A subkey of a key of length 0 is not possible.");
+			static_assert(n <= depth);
+
+			RawKey<depth - n, htt_t> subkey;
+			std::copy(this->end() - n, this->end(), subkey.begin());
+			return subkey;
 		}
 	};
 
@@ -85,6 +133,24 @@ namespace dice::hypertrie::internal::raw {
 			}
 		}
 
+		/**
+		 * Turns this RawSliceKey into a RawKey iff the *this is fully populated
+		 * with non `:` elements and they are in the correct order.
+		 * Otherwise behaviour is undefined
+		 */
+		template<size_t depth>
+		RawKey<depth, htt_t> to_key() const noexcept {
+			static_assert(depth == fixed_depth);
+
+			RawKey<depth, htt_t> ret;
+			for (size_t ix = 0; ix < depth; ++ix) {
+				assert((*this)[ix].pos == ix);
+				ret[ix] = (*this)[ix].key_part;
+			}
+
+			return ret;
+		}
+
 		[[nodiscard]] FixedValue const &operator[](size_t i) const noexcept {
 			assert(i < fixed_depth);
 			return fixed_values[i];
@@ -95,10 +161,7 @@ namespace dice::hypertrie::internal::raw {
 			return fixed_values[i];
 		}
 
-		// I don't see a reason for this to be a template
-		//<typename = void>
-		// TODO: double check
-		[[nodiscard]] auto subkey(pos_type const remove_pos) const noexcept {
+		[[nodiscard]] RawSliceKey<fixed_depth - 1, htt_t> subkey(pos_type const remove_pos) const noexcept {
 			static_assert(fixed_depth != 0, "A sub-slice-key the count of fixed entries cannot be less than 0.");
 			assert(fixed_values.contains(remove_pos));
 			RawSliceKey<fixed_depth - 1, htt_t> sub_slicekey;
@@ -113,10 +176,7 @@ namespace dice::hypertrie::internal::raw {
 			return sub_slicekey;
 		}
 
-		// I don't see a reason for this to be a template
-		//<typename = void>
-		// TODO: double check
-		[[nodiscard]] auto subkey_i(pos_type const remove_ith) const noexcept {
+		[[nodiscard]] RawSliceKey<fixed_depth - 1, htt_t> subkey_i(pos_type const remove_ith) const noexcept {
 			static_assert(fixed_depth != 0, "A sub-slice-key the count of fixed entries cannot be less than 0.");
 			assert(remove_ith < fixed_depth);
 			RawSliceKey<fixed_depth - 1, htt_t> sub_slicekey;

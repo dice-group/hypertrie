@@ -1,26 +1,45 @@
 #ifndef HYPERTRIE_FMT_IDENTIFIER_HPP
 #define HYPERTRIE_FMT_IDENTIFIER_HPP
 
-#include <dice/hypertrie/internal/raw/node/Identifier.hpp>
+#include <dice/hypertrie/internal/raw/node/RawIdentifier.hpp>
 #include <dice/hypertrie/internal/util/fmt_utils.hpp>
 
 namespace fmt {
 	template<size_t depth, ::dice::hypertrie::HypertrieTrait htt_t>
-	struct formatter<::dice::hypertrie::internal::raw::RawIdentifier<depth, htt_t>> : public ::dice::hypertrie::internal::util::SimpleParsing {
+	struct formatter<::dice::hypertrie::internal::raw::RawIdentifier<depth, htt_t>> : public ::dice::hypertrie::internal::util::IdentifierFmtParsing {
 		template<typename FormatContext>
 		auto format(::dice::hypertrie::internal::raw::RawIdentifier<depth, htt_t> const &id, FormatContext &ctx) {
+			using namespace ::dice::hypertrie;
+			using namespace internal::raw;
 
 			if (id.empty()) {
-				return format_to(ctx.out(), FMT_STRING("empty-id"));
-			} else if (id.is_sen()) {
-				if constexpr (depth == 1 and ::dice::hypertrie::HypertrieTrait_bool_valued_and_taggable_key_part<htt_t>)
-					return format_to(ctx.out(), FMT_STRING("<key_part:{}"), id.get_entry().key()[0]);
-				else
-					return format_to(ctx.out(), FMT_STRING("sen_{:X}"), id.hash() & ~(1UL << ::dice::hypertrie::internal::raw::RawIdentifier<depth, htt_t>::tag_pos) & 0xFFFFUL);
-			} else {
-				return format_to(ctx.out(), FMT_STRING("fn_{:X}"), id.hash() & ~(1UL << ::dice::hypertrie::internal::raw::RawIdentifier<depth, htt_t>::tag_pos) & 0xFFFFUL);
+				return format_to(ctx.out(), "empty-id");
+			}
+
+			switch (id.tag()) {
+				case IdentifierTag::FN: {
+					return format_to(ctx.out(), "fn_{:X}", id.hash());
+				}
+				case IdentifierTag::SEN: {
+					return format_to(ctx.out(), "sen_{:X}", id.hash());
+				}
+				case IdentifierTag::XN: {
+					return format_to(ctx.out(), "xn_{:X}", id.hash());
+				}
+				case IdentifierTag::Indeterminate: {
+					return format_to(ctx.out(), "?_{:X}", id.hash());
+				}
 			}
 		}
 	};
 }// namespace fmt
+
+namespace dice::hypertrie::internal::raw {
+	template<size_t depth, HypertrieTrait htt_t>
+	std::ostream &operator<<(std::ostream &os, RawIdentifier<depth, htt_t> const &id) {
+		os << fmt::format("{}", id);
+		return os;
+	}
+} // namespace dice::hypertrie::internal::raw
+
 #endif//HYPERTRIE_FMT_IDENTIFIER_HPP

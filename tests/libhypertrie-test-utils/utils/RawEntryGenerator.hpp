@@ -68,11 +68,8 @@ namespace dice::hypertrie::tests::utils {
 
 		key_part_type key_part() {
 			auto key_part_ = key_part_dist(rand);
-			// if the least significant bit is the tagging bit, we shift the value by 1.
-			if constexpr (htt_t::key_part_tagging_bit == 0)
-				return key_part_ << 1;
-			else if constexpr (htt_t::key_part_tagging_bit > 0)
-				return key_part_ & reinterpret_cast<key_part_type>(~(1UL << htt_t::key_part_tagging_bit));
+			if constexpr (htt_t::taggable_key_part)
+				return key_part_ & reinterpret_cast<key_part_type>(~(0b11UL << 62));
 			else
 				return key_part_dist(rand);
 		}

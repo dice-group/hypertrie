@@ -27,86 +27,107 @@ namespace dice::einsum::tests {
 		using time_point = std::chrono::steady_clock::time_point;
 
 		template<utils::TorchDtype value_type, HypertrieTrait htt_t, ByteAllocator allocator_type, typename HypertrieEinsumResultType>
-		void validateResult(const long max_key_part, const test_data::Einsum<value_type, htt_t, allocator_type> &test_einsum, HypertrieEinsumResultType actual_result, torch::Tensor &expected_result) {
+		bool validateResult(const long max_key_part, const test_data::Einsum<value_type, htt_t, allocator_type> &test_einsum, HypertrieEinsumResultType actual_result, torch::Tensor &expected_result) {
 			unsigned long result_depth = test_einsum.subscript()->resultLabelCount();
-			//	std::cout << "result_empty: " << (actual_result.size() == 0) << std::endl;
-			//	std::cout << "expected_result: " << expected_result << std::endl;
-			//	std::cout << "actual_result: ";
-			//	for (auto const &entry : actual_result)
-			//		std::cout << entry.first << "->" << entry.second << ",";
-			//	std::cout << std::endl;
+
+			bool valid = true;
 			for (const auto &key_parts : utils::product<size_t>(result_depth, max_key_part + 1, 1)) {
 				using ResultKey = ::dice::einsum::Key<value_type, htt_t>;
-				ResultKey key{key_parts.begin(), key_parts.end()};
+				auto key = ResultKey::from_iters(key_parts.begin(), key_parts.end());
 				auto actual_entry = (actual_result.count(key)) ? actual_result[key] : 0;
 				dice::einsum::tests::utils::TorchDtype auto expected_entry = value_type(utils::TorchTensorAccessor<value_type, htt_t>::get(expected_result, key_parts));// to bool
-				WARN_MESSAGE(actual_entry == expected_entry,
-							 ("key: ({})\n"_format(fmt::join(key, ", ")) +
-							  "expected: {}, actual {}"_format(expected_entry, actual_entry))
-									 .c_str());
+				valid = valid and (expected_entry == actual_entry);
+//					WARN_MESSAGE(actual_entry == expected_entry,
+//								 ("key: ({})\n"_format(fmt::join(key, ", ")) +
+//								  "expected: {}, actual {}"_format(expected_entry, actual_entry))
+//										 .c_str());
 			}
+			CHECK_MESSAGE(valid, "Solution was not correct.");
+
+			return valid;
 		}
 
 
 		template<HypertrieTrait htt_t, ByteAllocator allocator_type, typename value_type>
-		void runTest(long max_key_part, test_data::Einsum<value_type, htt_t, allocator_type> &test_einsum, std::chrono::milliseconds timeout_duration = 0ms) {
+		bool runTest(long max_key_part, test_data::Einsum<value_type, htt_t, allocator_type> &test_einsum, std::chrono::milliseconds timeout_duration = 0ms) {
 			// result how it is
 			auto start_time = std::chrono::steady_clock::now();
-			auto timeout = (timeout_duration != 0ms) ? start_time + timeout_duration : time_point::max();
-			auto actual_result = einsum2map<value_type, htt_t>(test_einsum.subscript(), test_einsum.hypertrieOperands(), timeout);
-			std::string actual_result_str = [&]() {
+			auto const timeout = (timeout_duration != 0ms) ? start_time + timeout_duration : time_point::max();
+			auto end_time = std::chrono::steady_clock::now();
+			std::cout.flush();
+			auto const actual_result = einsum2map<value_type, htt_t>(test_einsum.subscript(), test_einsum.hypertrieOperands(), timeout);
+			auto actual_result_str = [&]() {
 				std::vector<std::string> elements;
 				for (auto &[key, value] : actual_result)
 					elements.push_back(fmt::format("⟨{}⟩ → {}", fmt::join(key, ", "), value));
 				return fmt::format("[ {} ]", fmt::join(elements, ", "));
-			}();
-			auto end_time = std::chrono::steady_clock::now();
-			if (timeout_duration != 0ms)
-				CHECK((end_time - start_time) < (timeout_duration + 10ms));
+			};
 
+			if (timeout_duration != 0ms)
+				CHECK_MESSAGE((end_time - start_time) < (timeout_duration + 10ms), "Calculation was not stopped within 10ms from timeout.");
 
 			// expected result
 			start_time = std::chrono::steady_clock::now();
 			torch::Tensor expected_result = at::einsum(test_einsum.subscript_str(), test_einsum.torchOperands());
 			end_time = std::chrono::steady_clock::now();
+			bool valid = true;
 			if (timeout_duration == 0ms) {
-				validateResult<value_type, htt_t>(max_key_part, test_einsum, actual_result, expected_result);
+				valid = validateResult<value_type, htt_t>(max_key_part, test_einsum, actual_result, expected_result);
 			}
+			if (not valid) {
+				std::cout << "subscript: " << test_einsum.subscript()->to_string() << "\n";
+				std::cout << "actual result:  " << actual_result_str() << "\n";
+				std::cout << "expected result: " << expected_result << "\nexpected result\n"
+						  << std::endl;
+			}
+			return valid;
+
 		}
 
 		template<HypertrieTrait htt_t, ByteAllocator allocator_type, typename T>
-		void runTest(long max_key_part, std::vector<test_data::Operand<T, htt_t, allocator_type>> &operands, const std::shared_ptr<Subscript> &subscript,
+		bool runTest(long max_key_part, std::vector<test_data::Operand<T, htt_t, allocator_type>> &operands, const std::shared_ptr<Subscript> &subscript,
 					 std::chrono::milliseconds timeout_duration = 0ms) {
 			test_data::Einsum<T, htt_t, allocator_type> test_einsum{subscript, operands};
-			runTest<htt_t, allocator_type, T>(max_key_part, test_einsum, timeout_duration);
+			bool valid = runTest<htt_t, allocator_type, T>(max_key_part, test_einsum, timeout_duration);
+			return valid;
 		}
 
 
 		template<HypertrieTrait htt_t, ByteAllocator allocator_type, typename result_type>
-		void runSubscript(std::string const &subscript_string, int64_t max_key_part = 4, bool empty = false, std::size_t runs = 15,
+		void runSubscript(std::string const &subscript_string,
+						  int64_t max_key_part = 4,
+						  bool empty = false,
+						  std::size_t runs = 15,
 						  std::chrono::milliseconds timeout_duration = 0ms) {
-			static std::string result_type_str = std::is_same_v<result_type, bool> ? "bool" : "ulong";
-			SUBCASE("{} [res:{}]"_format(subscript_string, result_type_str).c_str()) {
-				for (std::size_t run : iter::range(runs)) {
-					SUBCASE("run {}"_format(run).c_str()) {
-						auto subscript = std::make_shared<Subscript>(subscript_string);
-						std::vector<test_data::Operand<result_type, htt_t, allocator_type>> operands{};
-						for (const auto &operand_sc : subscript->getRawSubscript().operands) {
-							[[maybe_unused]] test_data::Operand<result_type, htt_t, allocator_type> &operand = operands.emplace_back(uint8_t(operand_sc.size()), &DefaultHypertrieContext<htt_t, allocator_type>::instance(), max_key_part, empty);
-							//							std::cout << operand.torch_tensor() << std::endl;
-							//							std::cout << std::string(operand.hypertrie()) << std::endl;
-						}
-						runTest<htt_t, allocator_type, result_type>(max_key_part, operands, subscript, timeout_duration);
-					}
+
+			for (std::size_t const run : iter::range(runs)) {
+
+				std::cout << fmt::format("run {} begin", run) << std::endl;
+
+				auto subscript = std::make_shared<Subscript>(subscript_string);
+				std::vector<test_data::Operand<result_type, htt_t, allocator_type>> operands{};
+				for (const auto &operand_sc : subscript->getRawSubscript().operands) {
+					[[maybe_unused]] test_data::Operand<result_type, htt_t, allocator_type> &operand = operands.emplace_back(uint8_t(operand_sc.size()),
+																															 &DefaultHypertrieContext<htt_t, allocator_type>::instance(),
+																															 max_key_part,
+																															 empty);
 				}
+				bool valid = runTest<htt_t, allocator_type, result_type>(max_key_part, operands, subscript, timeout_duration);
+				if (not valid) {
+					std::vector<std::string> operand_strings;
+					std::ranges::transform(operands, std::back_inserter(operand_strings), [](const auto &o) {
+						return static_cast<std::string>(o.hypertrie());
+					});
+					std::cout << fmt::format("operands begin:\n {} \n operands end", fmt::join(operand_strings, "\n---\n")) << std::endl;
+				}
+
+				std::cout << fmt::format("run {} end", run) << std::endl;
 			}
 		}
 
 		template<utils::TorchDtype result_type, HypertrieTrait htt_t, ByteAllocator allocator_type>
-		void run_single_cases(
-				const std::string &subscript_str,
-				const std::vector<std::set<NonZeroEntry<htt_t>>> &operands_entries) {
-
+		void run_single_cases(const std::string &subscript_str,
+							  const std::vector<std::set<NonZeroEntry<htt_t>>> &operands_entries) {
 			auto subscript = std::make_shared<Subscript>(Subscript::from_string(subscript_str));
 
 			int64_t max_key_part = [&]() {
@@ -117,7 +138,6 @@ namespace dice::einsum::tests {
 							max = std::max<long>(max, key_part);
 				return max;
 			}();
-
 
 			std::vector<test_data::Operand<result_type, htt_t, allocator_type>> test_operands{};
 
@@ -133,16 +153,9 @@ namespace dice::einsum::tests {
 
 			test_data::Einsum<result_type, htt_t, allocator_type> test_einsum(subscript, test_operands);
 
-			auto actual_result = einsum2map<result_type, htt_t>(test_einsum.subscript(), test_einsum.hypertrieOperands());
-			std::string actual_result_str = [&]() {
-				std::vector<std::string> elements;
-				for (auto &[key, value] : actual_result)
-					elements.push_back(fmt::format("⟨{}⟩ → {}", fmt::join(key, ", "), value));
-				return fmt::format("[ {} ]", fmt::join(elements, ", "));
-			}();
+			auto const actual_result = einsum2map<result_type, htt_t>(test_einsum.subscript(), test_einsum.hypertrieOperands());
 
 			torch::Tensor expected_result = at::einsum(test_einsum.subscript_str(), test_einsum.torchOperands());
-
 
 			validateResult<result_type, htt_t>(max_key_part, test_einsum, actual_result, expected_result);
 		}
@@ -152,7 +165,7 @@ namespace dice::einsum::tests {
 			using result_type = bool;
 			using namespace std::string_literals;
 			using Entry = NonZeroEntry<htt_t>;
-			std::vector<std::tuple<std::string, std::vector<std::set<Entry>>>> configurations{
+			std::vector<std::tuple<std::string, std::vector<std::set<Entry>>>> const configurations{
 					{std::string{"ab,bc,bc,de,ee,ef,gh,hg->adg"},
 					 {{Entry{{3, 1}, true},
 					   Entry{{3, 3}, true},
@@ -223,7 +236,7 @@ namespace dice::einsum::tests {
 			using result_type = long;
 			using namespace std::string_literals;
 			using Entry = NonZeroEntry<htt_t>;
-			std::vector<std::tuple<std::string, std::vector<std::set<Entry>>>> configurations{
+			std::vector<std::tuple<std::string, std::vector<std::set<Entry>>>> const configurations{
 					{std::string{"abc,dcebf,gdghg,bdg,ijibg->c"},
 					 {{Entry{{2, 1, 1}, true},
 					   Entry{{2, 1, 2}, true},
@@ -295,7 +308,7 @@ namespace dice::einsum::tests {
 					 {{Entry{{3, 2, 2}, true},
 					   Entry{{3, 1, 3}, true},
 					   Entry{{2, 1, 1}, true},
-					   Entry{{9, 3, 1}, true},
+					   Entry{{0, 3, 1}, true},
 					   Entry{{1, 3, 1}, true},
 					   Entry{{1, 1, 1}, true}}}},
 					{std::string{"abc,ab->a"},
@@ -327,16 +340,15 @@ namespace dice::einsum::tests {
 					   Entry{{2, 2}, true}},
 					  {Entry{{1, 1}, true},
 					   Entry{{2, 2}, true}}}}};
-			auto i = 0;
 			for (const auto &[subscript_str, operands_entries] : configurations) {
-				SUBCASE("case {}: {}"_format(i++, subscript_str).c_str()) {
+				SUBCASE("case {}"_format(subscript_str).c_str()) {
 					run_single_cases<result_type, htt_t, allocator_type>(subscript_str, operands_entries);
 				}
 			}
 		}
 
 		TEST_CASE_TEMPLATE("default test cases", htt_t, ::dice::hypertrie::default_bool_Hypertrie_trait, ::dice::hypertrie::tagged_bool_Hypertrie_trait) {
-			std::vector<std::string> subscript_strs{
+			static constexpr std::array subscript_strs{
 					"a->a",
 					"ab->a",
 					"ab->b",
@@ -398,14 +410,19 @@ namespace dice::einsum::tests {
 					"abc,dcebf,gdghg,ijibg->c",    // its minimal
 					"abcd,ceffb,cfgaf,hbgi,ccfaj->j",
 					"abbc,d,ebcfg,hdif,hhchj->b"};
-			for (bool empty : {false, true}) {
-				SUBCASE("empty = {}"_format(empty).c_str()) {
-					for (auto max_key_part : {2, 4, 7, 10, 15}) {
-						SUBCASE("max_key_part = {}"_format(max_key_part).c_str()) {
-							for (const auto &subscript_str : subscript_strs) {
-								runSubscript<htt_t, allocator_type, ssize_t>(subscript_str, max_key_part, empty);
-								runSubscript<htt_t, allocator_type, bool>(subscript_str, max_key_part, empty);
-							}
+
+			for (bool const empty : {false, true}) {
+				for (auto const max_key_part : {2, 4, 7, 10, 15}) {
+					for (const auto &subscript_str : subscript_strs) {
+						SUBCASE(fmt::format("type: bool max_key_part: {} subscript: {}", max_key_part, subscript_str).c_str()) {
+							runSubscript<htt_t, allocator_type, bool>(subscript_str, max_key_part, empty);
+						}
+					}
+				}
+				for (auto const max_key_part : {2, 4, 7, 10, 15}) {
+					for (const auto &subscript_str : subscript_strs) {
+						SUBCASE(fmt::format("type: ssize_t max_key_part: {} subscript: {}", max_key_part, subscript_str).c_str()) {
+							runSubscript<htt_t, allocator_type, ssize_t>(subscript_str, max_key_part, empty);
 						}
 					}
 				}

@@ -6,12 +6,21 @@
 #include <dice/hypertrie/internal/util/fmt_utils.hpp>
 
 namespace fmt {
-	template<size_t depth, ::dice::hypertrie::HypertrieTrait htt_t, ::dice::hypertrie::ByteAllocator allocator_type>
-	struct formatter<::dice::hypertrie::internal::raw::SingleEntryNode<depth, htt_t, allocator_type>> : ::dice::hypertrie::internal::util::SimpleParsing {
+	template<size_t depth, ::dice::hypertrie::HypertrieTrait htt_t>
+	struct formatter<::dice::hypertrie::internal::raw::SingleEntryNode<depth, htt_t>> : ::dice::hypertrie::internal::util::SimpleParsing {
 		template<typename FormatContext>
-		auto format(::dice::hypertrie::internal::raw::SingleEntryNode<depth, htt_t, allocator_type> const &sen, FormatContext &ctx) {
-			return format_to(ctx.out(), FMT_STRING("{{ [ref_count={}] <{}> -> {} }}"), sen.ref_count(), fmt::join(sen.key(), ", "), sen.value());
+		auto format(::dice::hypertrie::internal::raw::SingleEntryNode<depth, htt_t> const &sen, FormatContext &ctx) {
+			return format_to(ctx.out(), "{{ [ref_count={}] <{}> -> {} }}", sen.ref_count(), fmt::join(sen.key(), ", "), sen.value());
 		}
 	};
 }// namespace fmt
+
+namespace dice::hypertrie::internal::raw {
+	template<size_t depth, HypertrieTrait htt_t>
+	std::ostream &operator<<(std::ostream &os, SingleEntryNode<depth, htt_t> const &sen) {
+		os << fmt::format("{}", sen);
+		return os;
+	}
+} // namespace dice::hypertrie::internal::raw
+
 #endif//HYPERTRIE_FMT_SINGLEENTRYNODE_HPP

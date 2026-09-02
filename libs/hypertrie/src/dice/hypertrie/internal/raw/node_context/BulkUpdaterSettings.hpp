@@ -3,12 +3,12 @@
 
 namespace dice::hypertrie::internal::raw {
 
-	enum struct BulkUpdaterMode {
+	enum struct BulkUpdaterMode : bool {
 		Insert,
 		Remove
 	};
 
-	enum struct BulkUpdaterSyncness {
+	enum struct BulkUpdaterSyncness : bool {
 		Sync,
 		Async,
 	};

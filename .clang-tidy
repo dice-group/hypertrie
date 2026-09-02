@@ -1,0 +1,39 @@
+---
+Checks: '-*,
+        clang-diagnostic-*,
+        llvm-*,
+          -llvm-header-guard,
+        misc-*,
+          -misc-non-private-member-variables-in-classes,
+          -misc-no-recursion,
+        readability-*,
+          -readability-braces-around-statements,
+          -readability-function-cognitive-complexity,
+          -readability-magic-numbers,
+          -readability-named-parameter,
+          -readability-identifier-length,
+        cppcoreguidelines-*,
+          -cppcoreguidelines-pro-type-reinterpret-cast,
+          -cppcoreguidelines-avoid-const-or-ref-data-members,
+          -cppcoreguidelines-avoid-magic-numbers,
+          -cppcoreguidelines-non-private-member-variables-in-classes,
+          -cppcoreguidelines-owning-memory,
+          -cppcoreguidelines-pro-bounds-constant-array-index,
+          -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+          -cppcoreguidelines-pro-type-union-access,
+        bugprone-*,
+          -bugprone-easily-swappable-parameters,
+        modernize-*,
+          -modernize-use-trailing-return-type,
+        performance-*,
+        clang-analyzer-*,
+'
+WarningsAsErrors: ''
+# this might need fixing
+HeaderFilterRegex: 'include\/dice\/|libs\/(einsum|hypertrie)\/'
+FormatStyle:     none
+CheckOptions:
+  - key: readability-function-cognitive-complexity.Threshold
+    value: 40
+  - key: readability-function-cognitive-complexity.DescribeBasicIncrements
+    value: 0

@@ -8,11 +8,13 @@
 
 namespace dice::hypertrie {
 
-	template<HypertrieTrait htt_t, ByteAllocator allocator_type, bool Optional = false>
+	template<HypertrieTrait htt_t, ByteAllocator allocator_type, bool Optional = false, typename value_type_ = bool>
 	class HashJoin {
 	public:
 		using key_part_type = typename htt_t::key_part_type;
-		using value_type = typename htt_t::value_type;
+		using operand_value_type = typename htt_t::value_type;
+		using result_value_type = value_type_;
+		static constexpr bool no_value_tracking = std::is_same_v<result_value_type, bool> or std::is_same_v<operand_value_type, bool>;
 		using poss_type = std::vector<internal::pos_type>;
 
 	private:
@@ -26,10 +28,11 @@ namespace dice::hypertrie {
 			: hypertries_(std::move(hypertries)), positions_(std::move(positions)) {}
 
 		class iterator {
-
 		public:
 			using iterator_category = std::forward_iterator_tag;
-			using value_type = std::pair<key_part_type, std::vector<const_Hypertrie<htt_t, allocator_type>>>;
+			using value_type = std::conditional_t<no_value_tracking,
+												  std::pair<key_part_type, std::vector<const_Hypertrie<htt_t, allocator_type>>>,
+												  std::pair<key_part_type, std::pair<std::vector<const_Hypertrie<htt_t, allocator_type>>, result_value_type>>>;
 			using difference_type = ptrdiff_t;
 			using pointer = value_type *;
 			using reference = value_type &;
@@ -64,22 +67,26 @@ namespace dice::hypertrie {
 						auto result_depth = result_depths_.emplace_back(hypertrie.depth() - size(join_poss));
 						if (result_depth) {
 							pos_in_out_.push_back(out_pos++);
-							value.second.emplace_back();// only a placeholder, is to be replaced in next()
+							if constexpr (no_value_tracking)
+								value.second.emplace_back();// only a placeholder, is to be replaced in next()
+							else
+								value.second.first.emplace_back();
 						} else {
 							pos_in_out_.push_back(std::numeric_limits<internal::pos_type>::max());
 						}
 					} else {
-						assert(hypertrie.depth() != 0);   // TODO: currently not possible
-						value.second.push_back(hypertrie);// this stays unchanged during the iteration
+						if constexpr (no_value_tracking)
+							value.second.push_back(hypertrie);// this stays unchanged during the iteration
+						else
+							value.second.first.push_back(hypertrie);
 						++out_pos;
 					}
 				}
 				optimizeOperandOrder();
-				ops_.front().begin();
 				next(true);
 			}
 
-			inline void next(bool init = false) noexcept {
+			void next(bool init = false) noexcept {
 				// _current_key_part is increased if containsAndUpdateLower returns false
 				HashDiagonal<htt_t, allocator_type> &smallest_operand = ops_.front();
 				if (not init and not smallest_operand.ended())
@@ -99,10 +106,20 @@ namespace dice::hypertrie {
 						}
 					}
 					if (found) {
+						if constexpr (not no_value_tracking)
+							value.second.second = result_value_type{1}; // init to multiplicative identity
+
 						for (size_t op_pos = 0; op_pos < ops_.size(); ++op_pos) {
-							if (const auto &result_depth = result_depths_[op_pos]; result_depth) {
+							if (const auto &result_depth = result_depths_[op_pos]; result_depth != 0U) {
 								// vector of resulting const_Hypertries
-								value.second[pos_in_out_[op_pos]] = const_Hypertrie<htt_t, allocator_type>(ops_[op_pos].current_hypertrie());
+								if constexpr(no_value_tracking)
+									value.second[pos_in_out_[op_pos]] = ops_[op_pos].current_diagonal();
+								else
+									value.second.first[pos_in_out_[op_pos]] = ops_[op_pos].current_diagonal();
+							} else {
+								if constexpr (not no_value_tracking) {
+									value.second.second *= ops_[op_pos].current_diagonal().to_scalar();
+								}
 							}
 						}
 						return;
@@ -125,15 +142,21 @@ namespace dice::hypertrie {
 				return copy;
 			}
 
-			inline operator bool() const noexcept {
-				return not ended;
-			}
-
-			const value_type &operator*() const noexcept {
+			value_type const &operator*() const noexcept {
 				return value;
 			}
 
-			value_type const *operator->() const noexcept { return &value; }
+			value_type const *operator->() const noexcept {
+				return &value;
+			}
+
+			bool operator==(std::default_sentinel_t) const noexcept {
+				return ended;
+			}
+
+			bool operator!=(std::default_sentinel_t) const noexcept {
+				return !ended;
+			}
 
 		private:
 			void optimizeOperandOrder() noexcept {
@@ -146,8 +169,7 @@ namespace dice::hypertrie {
 		};
 
 		[[nodiscard]] iterator begin() const noexcept { return iterator(*this); }
-
-		[[nodiscard]] bool end() const noexcept { return false; }
+		[[nodiscard]] std::default_sentinel_t end() const noexcept { return std::default_sentinel; }
 	};
 
 	template<HypertrieTrait htt_t, ByteAllocator allocator_type>
@@ -169,7 +191,6 @@ namespace dice::hypertrie {
 			: hypertries_(std::move(hypertries)), positions_(std::move(positions)), non_optional_positions_(std::move(non_opt)) {}
 
 		class iterator {
-
 		public:
 			using iterator_category = std::forward_iterator_tag;
 			using value_type = std::pair<key_part_type, std::vector<const_Hypertrie<htt_t, allocator_type>>>;
@@ -214,11 +235,10 @@ namespace dice::hypertrie {
 					}
 				}
 				optimizeOperandOrder();
-				ops_.front().begin();
 				next(true);
 			}
 
-			inline void next(bool init = false) noexcept {
+			void next(bool init = false) noexcept {
 				// _current_key_part is increased if containsAndUpdateLower returns false
 				HashDiagonal<htt_t, allocator_type> &smallest_operand = ops_.front();
 				if (not init and not smallest_operand.ended())
@@ -238,20 +258,11 @@ namespace dice::hypertrie {
 							}
 							value.second[pos_in_out_[op_pos]] = const_Hypertrie<htt_t, allocator_type>();
 						} else {
-							if (const auto &result_depth = result_depths_.at(op_pos); result_depth) {
-								value.second[pos_in_out_[op_pos]] = const_Hypertrie<htt_t, allocator_type>(ops_[op_pos].current_hypertrie());
-							} else {
-								value.second[pos_in_out_[op_pos]] = ops_[op_pos].current_scalar_as_tensor();
-							}
+							value.second[pos_in_out_[op_pos]] = ops_[op_pos].current_diagonal();
 						}
 					}
 					if (found) {
-						// assign hypertrie to smallest operand
-						if (const auto &result_depth = result_depths_.at(0); result_depth) {
-							value.second[pos_in_out_[0]] = const_Hypertrie<htt_t, allocator_type>(ops_[0].current_hypertrie());
-						} else {
-							value.second[pos_in_out_[0]] = ops_[0].current_scalar_as_tensor();
-						}
+						value.second[pos_in_out_[0]] = ops_[0].current_diagonal();
 						return;
 					}
 					++smallest_operand;
@@ -259,8 +270,7 @@ namespace dice::hypertrie {
 				ended = true;
 			}
 
-			iterator &
-			operator++() noexcept {
+			iterator &operator++() noexcept {
 				if (not ended)
 					next();
 				return *this;
@@ -272,15 +282,21 @@ namespace dice::hypertrie {
 				return copy;
 			}
 
-			inline operator bool() const noexcept {
-				return not ended;
-			}
-
-			const value_type &operator*() const noexcept {
+			value_type const &operator*() const noexcept {
 				return value;
 			}
 
-			value_type const *operator->() const noexcept { return &value; }
+			value_type const *operator->() const noexcept {
+				return &value;
+			}
+
+			bool operator==(std::default_sentinel_t) const noexcept {
+				return ended;
+			}
+
+			bool operator!=(std::default_sentinel_t) const noexcept {
+				return !ended;
+			}
 
 		private:
 			void optimizeOperandOrder() {
@@ -303,9 +319,8 @@ namespace dice::hypertrie {
 			}
 		};
 
-		iterator begin() const noexcept { return iterator(*this); }
-
-		[[nodiscard]] bool end() const noexcept { return false; }
+		[[nodiscard]] iterator begin() const noexcept { return iterator(*this); }
+		[[nodiscard]] std::default_sentinel_t end() const noexcept { return std::default_sentinel; }
 	};
 
 }// namespace dice::hypertrie

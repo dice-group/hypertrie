@@ -10,29 +10,26 @@
 
 namespace dice::hypertrie::internal::raw {
 
-	template<size_t depth, HypertrieTrait htt_t>
-	class SingleEntry : public SingleKey<depth, htt_t>, public Valued<htt_t> {
+	template<size_t depth_, HypertrieTrait htt_t_>
+	class SingleEntry : public SingleKey<depth_, htt_t_>, public Valued<htt_t_> {
 	public:
+		static constexpr size_t depth = depth_;
+		using htt_t = htt_t_;
 		using RawKey_t = RawKey<depth, htt_t>;
-		using value_type = typename htt_t::value_type;
 
 		SingleEntry() : SingleKey<depth, htt_t>() {}
 
-		SingleEntry(const RawKey_t &key, value_type value) noexcept
+		SingleEntry(const RawKey_t &key, typename htt_t::value_type value) noexcept
 			: SingleKey<depth, htt_t>(key), Valued<htt_t>(value) {}
 
-		auto operator<=>(const SingleEntry &other) const noexcept {
-			return std::tie(this->key(), this->value()) <=> std::tie(other.key(), other.value());
-		}
-
-		bool operator==(const SingleEntry &other) const noexcept {
-			return std::tie(this->key(), this->value()) == std::tie(other.key(), other.value());
-		}
+		constexpr auto operator<=>(const SingleEntry &other) const noexcept = default;
 	};
 
-	template<size_t depth, HypertrieTrait_bool_valued htt_t>
-	class SingleEntry<depth, htt_t> : public SingleKey<depth, htt_t> {
+	template<size_t depth_, HypertrieTrait_bool_valued htt_t_>
+	class SingleEntry<depth_, htt_t_> : public SingleKey<depth_, htt_t_> {
 	public:
+		static constexpr size_t depth = depth_;
+		using htt_t = htt_t_;
 		using RawKey_t = RawKey<depth, htt_t>;
 
 		SingleEntry() = default;
@@ -57,7 +54,27 @@ namespace dice::hypertrie::internal::raw {
 		}
 	};
 
+	template<typename T>
+	struct is_SingleEntry : std::false_type {
+	};
+
+	template<size_t depth, HypertrieTrait htt_t>
+	struct is_SingleEntry<SingleEntry<depth, htt_t>> : std::true_type {
+	};
+
+	template<typename T>
+	inline constexpr bool is_SingleEntry_v = is_SingleEntry<T>::value;
 
 }// namespace dice::hypertrie::internal::raw
+
+namespace dice::hash {
+	template<typename Policy, size_t depth, ::dice::hypertrie::HypertrieTrait htt_t>
+	struct dice_hash_overload<Policy, ::dice::hypertrie::internal::raw::SingleEntry<depth, htt_t>> {
+		static std::size_t dice_hash(::dice::hypertrie::internal::raw::SingleEntry<depth, htt_t> const &entry) noexcept {
+			using H = dice_hash_templates<Policy>;
+			return Policy::hash_combine({H::dice_hash(entry.key()), H::dice_hash(entry.value())});
+		}
+	};
+}// namespace dice::hash
 
 #endif//HYPERTRIE_ENTRY_HPP

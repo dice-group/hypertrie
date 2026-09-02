@@ -3,9 +3,9 @@
 
 #include "dice/hypertrie/ByteAllocator.hpp"
 #include "dice/hypertrie/Hypertrie_trait.hpp"
-#include "dice/hypertrie/hypertrie_allocator_trait.hpp"
 #include "dice/hypertrie/internal/raw/RawDiagonalPositions.hpp"
-#include "dice/hypertrie/internal/raw/node/Identifier.hpp"
+#include "dice/hypertrie/internal/raw/node/NodePtr.hpp"
+#include "dice/hypertrie/internal/raw/node/RawIdentifier.hpp"
 
 #include "dice/hypertrie/internal/commons/PosType.hpp"
 
@@ -15,122 +15,112 @@ namespace dice::hypertrie::internal::raw {
 
 	template<size_t depth, HypertrieTrait htt_t, ByteAllocator allocator_type>
 	struct WithEdges {
-		using ht_allocator_trait = hypertrie_allocator_trait<allocator_type>;
 		using value_type = typename htt_t::value_type;
 		using key_part_type = typename htt_t::key_part_type;
 
-		using ChildType = std::conditional_t<(depth > 1),
-											 RawIdentifier<depth - 1, htt_t>,
-											 value_type>;
-		using collection_alloc = std::conditional_t<((depth == 1) and htt_t::is_bool_valued),
-													typename ht_allocator_trait::template rebind_alloc<key_part_type>,
-													typename ht_allocator_trait::template rebind_alloc<std::pair<typename htt_t::key_part_type, ChildType>>>;
+		using child_type = std::conditional_t<(depth > 1),
+											  NodePtr<depth - 1, htt_t, allocator_type>,
+											  typename htt_t::value_type>;
 
-		// allocator might need to be cast to specific type for set/map
-		using ChildrenType = std::conditional_t<((depth == 1) and htt_t::is_bool_valued),
-												typename htt_t::template set_type<key_part_type, collection_alloc>,
-												typename htt_t::template map_type<typename htt_t::key_part_type, ChildType, collection_alloc>>;
+		using edge_type = std::conditional_t<(depth == 1 && HypertrieTrait_bool_valued<htt_t>),
+											 key_part_type,
+											 std::pair<key_part_type, child_type>>;
 
-		using EdgesType = std::conditional_t<(depth > 1),
-											 std::array<ChildrenType, depth>,
-											 ChildrenType>;
+		using single_dim_edges_allocator = typename std::allocator_traits<allocator_type>::template rebind_alloc<edge_type>;
 
-	protected:
-		EdgesType edges_;
+		using single_dim_edges_type = std::conditional_t<(depth == 1 && HypertrieTrait_bool_valued<htt_t>),
+														 typename htt_t::template set_type<key_part_type, single_dim_edges_allocator>,
+														 typename htt_t::template map_type<key_part_type, child_type, single_dim_edges_allocator>>;
 
-		/**
-		 * Can be used with an index_sequence to generate multiple ChildrenType objects.
-		 * @param alloc The allocator to pass to the ChildrenType constructor.
-		 * @return
-		 */
+		using edges_type = std::conditional_t<(depth > 1),
+											  std::array<single_dim_edges_type, depth>,
+											  single_dim_edges_type>;
+
+	private:
+		edges_type edges_;
+
 		template<size_t>
-		static auto createChild(allocator_type const &alloc) { return ChildrenType(alloc); }
-
-		template<size_t N, size_t... Is>
-		static auto fill(allocator_type const &alloc, std::index_sequence<Is...>) noexcept {
-			return std::array<ChildrenType, N>{createChild<Is>(alloc)...};
+		static single_dim_edges_type make_single_dim_edges(allocator_type const &alloc) noexcept {
+			return single_dim_edges_type{alloc};
 		}
 
-		template<size_t N>
-		static std::array<ChildrenType, N> fill(allocator_type const &alloc) noexcept {
-			return fill<N>(alloc, std::make_index_sequence<N>());
+		template<size_t ...Ixs>
+		static edges_type make_default_init_edges_high_depth(allocator_type const &alloc, std::index_sequence<Ixs...>) noexcept {
+			return edges_type{make_single_dim_edges<Ixs>(alloc)...};
 		}
 
-		static EdgesType init(allocator_type const &alloc) noexcept {
+		static edges_type make_default_init_edges(allocator_type const &alloc) noexcept {
 			if constexpr (depth == 1) {
-				return EdgesType(alloc);
+				return edges_type{alloc};
 			} else {
-				return fill<depth>(alloc);
+				return make_default_init_edges_high_depth(alloc, std::make_index_sequence<depth>{});
 			}
 		}
 
 	public:
-		// TODO: does with make any problems?
-		WithEdges() = delete;// default
+		WithEdges() = delete;
+		explicit WithEdges(allocator_type const &alloc) : edges_{make_default_init_edges(alloc)} {}
 
-		explicit WithEdges(allocator_type const &alloc) : edges_(init(alloc)) {}
+		[[nodiscard]] edges_type &edges() noexcept { return this->edges_; }
+		[[nodiscard]] edges_type const &edges() const noexcept { return this->edges_; }
 
-		explicit WithEdges(EdgesType edges) noexcept : edges_(std::move(edges)) {}
-
-		[[nodiscard]] EdgesType &edges() noexcept { return this->edges_; }
-
-		[[nodiscard]] EdgesType const &edges() const noexcept { return this->edges_; }
-
-		[[nodiscard]] ChildrenType &edges(size_t pos) noexcept {
+		[[nodiscard]] single_dim_edges_type &edges(size_t pos) noexcept {
 			assert(pos < depth);
-			if constexpr (depth > 1)
+			if constexpr (depth > 1) {
 				return this->edges_[pos];
-			else
-				return this->edges_;
-		}
-
-		[[nodiscard]] ChildrenType const &edges(size_t pos) const noexcept {
-			assert(pos < depth);
-			if constexpr (depth > 1)
-				return this->edges_[pos];
-			else
-				return this->edges_;
-		}
-
-		[[nodiscard]] std::pair<bool, typename ChildrenType::iterator> find(size_t pos, key_part_type key_part) noexcept {
-			auto found = this->edges(pos).find(key_part);
-			return {found != this->edges(pos).end(), found};
-		}
-
-		[[nodiscard]] std::pair<bool, typename ChildrenType::const_iterator> find(size_t pos, key_part_type key_part) const noexcept {
-			auto found = this->edges(pos).find(key_part);
-			return {found != this->edges(pos).end(), found};
-		}
-
-		[[nodiscard]] ChildType child(size_t pos, key_part_type key_part) const noexcept {
-			if (auto [found, iter] = this->find(pos, key_part); found) {
-				if constexpr ((depth == 1) and htt_t::is_bool_valued)
-					return true;
-				else
-					return iter->second;
 			} else {
-				return ChildType{};// 0, 0.0, false
+				return this->edges_;
 			}
 		}
 
-		[[nodiscard]] size_t minCardPos(std::vector<size_t> const &positions) const noexcept {
-			assert(not positions.empty());
-			auto min_pos = positions[0];
-			auto min_card = std::numeric_limits<size_t>::max();
-			for (const size_t pos : positions) {
-				const size_t current_card = edges(pos).size();
-				if (current_card < min_card) {
-					min_card = current_card;
-					min_pos = pos;
+		[[nodiscard]] single_dim_edges_type const &edges(size_t pos) const noexcept {
+			assert(pos < depth);
+			if constexpr (depth > 1) {
+				return this->edges_[pos];
+			} else {
+				return this->edges_;
+			}
+		}
+
+		[[nodiscard]] std::pair<bool, typename single_dim_edges_type::iterator> find(size_t pos, key_part_type key_part) noexcept {
+			auto it = this->edges(pos).find(key_part);
+			return {it != this->edges(pos).end(), it};
+		}
+
+		[[nodiscard]] std::pair<bool, typename single_dim_edges_type::const_iterator> find(size_t pos, key_part_type key_part) const noexcept {
+			auto it = this->edges(pos).find(key_part);
+			return {it != this->edges(pos).end(), it};
+		}
+
+		[[nodiscard]] child_type child(size_t pos, key_part_type key_part) const noexcept {
+			if (auto [found, iter] = this->find(pos, key_part); found) {
+				if constexpr ((depth == 1) and htt_t::is_bool_valued) {
+					return true;
+				} else {
+					return iter->second;
 				}
 			}
-			return min_pos;
+
+			return child_type{};
+		}
+
+		[[nodiscard]] std::vector<size_t> get_cards(std::vector<internal::pos_type> const &positions) const noexcept {
+			assert(positions.size() <= depth);
+
+			std::vector<size_t> cards;
+			cards.resize(positions.size());
+
+			for (size_t ix = 0; ix < positions.size(); ++ix) {
+				assert(positions[ix] < depth);
+				cards[ix] = edges(positions[ix]).size();
+			}
+			return cards;
 		}
 
 		[[nodiscard]] size_t min_card_pos() const noexcept {
-			if constexpr (depth == 1)
+			if constexpr (depth == 1) {
 				return 0;
-			else {
+			} else {
 				pos_type min_pos = 0;
 				auto min_card = std::numeric_limits<size_t>::max();
 				for (size_t pos = 0; pos < depth; ++pos) {
@@ -144,6 +134,34 @@ namespace dice::hypertrie::internal::raw {
 			}
 		}
 
+		[[nodiscard]] size_t min_card_pos(std::vector<size_t> const &positions) const noexcept {
+			assert(not positions.empty());
+			auto min_pos = positions[0];
+			auto min_card = std::numeric_limits<size_t>::max();
+			for (const size_t pos : positions) {
+				const size_t current_card = edges(pos).size();
+				if (current_card < min_card) {
+					min_card = current_card;
+					min_pos = pos;
+				}
+			}
+			return min_pos;
+		}
+
+		[[nodiscard]] size_t min_card_pos(RawKeyPositions<depth> const &positions_mask) const noexcept {
+			size_t min_pos = 0;
+			auto min_card = std::numeric_limits<size_t>::max();
+			for (size_t pos = 0; pos < depth; ++pos) {
+				if (positions_mask[pos]) {
+					const size_t current_card = edges(pos).size();
+					if (current_card < min_card) {
+						min_card = current_card;
+						min_pos = pos;
+					}
+				}
+			}
+			return min_pos;
+		}
 
 		template<size_t fixed_positions>
 		[[nodiscard]] size_t min_fixed_keypart_i(RawSliceKey<fixed_positions, htt_t> const &raw_slicekey) const noexcept {
@@ -163,39 +181,6 @@ namespace dice::hypertrie::internal::raw {
 					break;
 			}
 			return min_i;
-		}
-
-		[[nodiscard]] std::array<size_t, depth> getCards() const noexcept {
-			std::array<size_t, depth> cards;
-			for (size_t pos = 0; pos < depth; ++pos) {
-				cards[pos] = edges(pos).size();
-			}
-			return cards;
-		}
-
-		[[nodiscard]] std::vector<size_t> getCards(std::vector<pos_type> const &positions) const noexcept {
-			std::vector<size_t> cards(positions.size());
-			for (size_t i = 0; i < positions.size(); ++i) {
-				auto pos = positions[i];
-				assert(pos < depth);
-				cards[i] = edges(pos).size();
-			}
-			return cards;
-		}
-
-		[[nodiscard]] size_t min_card_pos(RawKeyPositions<depth> const &positions_mask) const noexcept {
-			size_t min_pos = 0;
-			auto min_card = std::numeric_limits<size_t>::max();
-			for (size_t pos = 0; pos < depth; ++pos) {
-				if (positions_mask[pos]) {
-					const size_t current_card = edges(pos).size();
-					if (current_card < min_card) {
-						min_card = current_card;
-						min_pos = pos;
-					}
-				}
-			}
-			return min_pos;
 		}
 	};
 

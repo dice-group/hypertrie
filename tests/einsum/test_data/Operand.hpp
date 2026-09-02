@@ -45,7 +45,7 @@ namespace dice::einsum::tests::test_data {
 					hypertrie_.set(key, value);
 				for (const auto &[key, value] : entries)
 					utils::TorchTensorAccessor<dtype, operand_htt_t>::set(torch_tensor_, NonZeroEntry<operand_htt_t>{key, value});
-				auto torch_sum = size_t(torch_tensor_.sum().item<int64_t>());
+				[[maybe_unused]] auto torch_sum = size_t(torch_tensor_.sum().item<int64_t>());
 				assert(hypertrie_.size() == torch_sum);
 			}
 			if (empty)

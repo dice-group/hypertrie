@@ -4,7 +4,7 @@
 #include "dice/einsum/internal/RawSubscript.hpp"
 #include "dice/einsum/internal/util/UndirectedGraph.hpp"
 
-#include <robin_hood.h>
+#include <ankerl/unordered_dense.h>
 
 #include <algorithm>
 #include <memory>
@@ -131,15 +131,15 @@ namespace dice::einsum {
 
 
 	private:
-		mutable robin_hood::unordered_map<Label, std::shared_ptr<Subscript>> sub_subscripts{};
+		mutable ::ankerl::unordered_dense::map<Label, std::shared_ptr<Subscript>> sub_subscripts{};
 
 		internal::RawSubscript raw_subscript{};
 
-		robin_hood::unordered_set<Label> operands_label_set{};
+		::ankerl::unordered_dense::set<Label> operands_label_set{};
 
-		robin_hood::unordered_set<Label> result_label_set{};
+		::ankerl::unordered_dense::set<Label> result_label_set{};
 
-		robin_hood::unordered_set<Label> lonely_non_result_labels{};
+		::ankerl::unordered_dense::set<Label> lonely_non_result_labels{};
 
 		DependencyGraph dependency_graph{};
 
@@ -148,14 +148,14 @@ namespace dice::einsum {
 		LabelPossInOperand used_result_poss_{};
 
 		// Join
-		mutable robin_hood::unordered_map<Label, LabelPossInOperands> label_poss_in_operands{};
+		mutable ::ankerl::unordered_dense::map<Label, LabelPossInOperands> label_poss_in_operands{};
 		// Join & resolve
-		mutable robin_hood::unordered_map<Label, LabelPos> label_poss_in_result{};
+		mutable ::ankerl::unordered_dense::map<Label, LabelPos> label_poss_in_result{};
 		// Resolve
 		LabelPossInOperand operand2result_mapping_resolveType{};
 
 		// Join
-		robin_hood::unordered_map<Label, std::vector<OperandPos>> poss_of_operands_with_labels{};
+		::ankerl::unordered_dense::map<Label, std::vector<OperandPos>> poss_of_operands_with_labels{};
 
 		// Cartesian
 		CartesianSubSubscripts cartesian_sub_subscripts;
@@ -171,15 +171,15 @@ namespace dice::einsum {
 			}
 		}
 
-		robin_hood::unordered_set<Label> const &getLonelyNonResultLabelSet() const noexcept {
+		::ankerl::unordered_dense::set<Label> const &getLonelyNonResultLabelSet() const noexcept {
 			return lonely_non_result_labels;
 		}
 
-		robin_hood::unordered_set<Label> const &getOperandsLabelSet() const noexcept {
+		::ankerl::unordered_dense::set<Label> const &getOperandsLabelSet() const noexcept {
 			return operands_label_set;
 		}
 
-		robin_hood::unordered_set<Label> const &getResultLabelSet() const noexcept {
+		::ankerl::unordered_dense::set<Label> const &getResultLabelSet() const noexcept {
 			return result_label_set;
 		}
 
@@ -263,8 +263,8 @@ namespace dice::einsum {
 
 		Subscript(std::string const &subscript_str) : Subscript(from_string(subscript_str)) {}
 
-		bool calcAllResultDone(robin_hood::unordered_set<Label> const &operand_labels,
-							   robin_hood::unordered_set<Label> const &result_labels) {
+		bool calcAllResultDone(::ankerl::unordered_dense::set<Label> const &operand_labels,
+							   ::ankerl::unordered_dense::set<Label> const &result_labels) {
 			return std::none_of(result_labels.begin(), result_labels.end(),
 								[&](auto label){ return operand_labels.count(label);});
 		}
@@ -341,7 +341,7 @@ namespace dice::einsum {
 		static Subscript from_string(std::string const &subscript_str) {
 			auto iter = subscript_str.cbegin();
 			auto end = subscript_str.end();
-			robin_hood::unordered_map<char, Label> char_mapping{};
+			::ankerl::unordered_dense::map<char, Label> char_mapping{};
 			OperandsSc operands_sc{};
 			ResultSc result_sc{};
 			Label next_label = 'a';
@@ -365,7 +365,9 @@ namespace dice::einsum {
 			}
 			iter = iter + 2;
 			while (iter != end) {
-				assert(char_mapping.count(*iter));
+				if (not char_mapping.count(*iter)) {
+					throw std::invalid_argument{"invalid subscript string"};
+				}
 				result_sc.push_back(char_mapping[*iter]);
 				++iter;
 			}
@@ -383,8 +385,8 @@ namespace dice::einsum {
 
 	private:
 		Type calcState(internal::RawSubscript const &raw_subscript,
-					   robin_hood::unordered_set<Label> const &operands_label_set,
-					   robin_hood::unordered_set<Label> const &result_label_set,
+					   ::ankerl::unordered_dense::set<Label> const &operands_label_set,
+					   ::ankerl::unordered_dense::set<Label> const &result_label_set,
 					   ConnectedComponents const &connected_components) {
 			switch (raw_subscript.operandsCount()) {
 				case 0:

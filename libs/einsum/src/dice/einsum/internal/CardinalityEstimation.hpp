@@ -7,14 +7,14 @@
 
 #include <dice/hypertrie/Hypertrie.hpp>
 
-#include <robin_hood.h>
+#include <ankerl/unordered_dense.h>
 
 #include <cmath>
 
 namespace dice::einsum::internal {
 
 
-	template<hypertrie::HypertrieTrait_bool_valued htt_t, hypertrie::ByteAllocator allocator_type>
+	template<hypertrie::HypertrieTrait htt_t, hypertrie::ByteAllocator allocator_type>
 	struct CardinalityEstimation {
 
 		/**
@@ -27,8 +27,8 @@ namespace dice::einsum::internal {
 		static Label getMinCardLabel(std::vector<::dice::hypertrie::const_Hypertrie<htt_t, allocator_type>> const &operands,
 									 std::shared_ptr<Subscript> const &sc,
 									 [[maybe_unused]] std::shared_ptr<Context> const &context) {
-			::robin_hood::unordered_set<Label> const &operandsLabelSet = sc->getOperandsLabelSet();
-			::robin_hood::unordered_set<Label> const &lonely_non_result_labels = sc->getLonelyNonResultLabelSet();
+			::ankerl::unordered_dense::set<Label> const &operandsLabelSet = sc->getOperandsLabelSet();
+			::ankerl::unordered_dense::set<Label> const &lonely_non_result_labels = sc->getLonelyNonResultLabelSet();
 			if (operandsLabelSet.size() == 1) {
 				return *operandsLabelSet.begin();
 			}
@@ -52,8 +52,8 @@ namespace dice::einsum::internal {
 				std::vector<::dice::hypertrie::const_Hypertrie<htt_t, allocator_type>> const &operands,
 				std::shared_ptr<Subscript> const &sc,
 				[[maybe_unused]] std::shared_ptr<Context> const &context) {
-			::robin_hood::unordered_set<Label> const &operandsLabelSet = sc->getOperandsLabelSet();
-			::robin_hood::unordered_set<Label> const &lonely_non_result_labels = sc->getLonelyNonResultLabelSet();
+			::ankerl::unordered_dense::set<Label> const &operandsLabelSet = sc->getOperandsLabelSet();
+			::ankerl::unordered_dense::set<Label> const &lonely_non_result_labels = sc->getLonelyNonResultLabelSet();
 			std::vector<double> operand_sizes(operands.size());
 			for (size_t i = 0; i < operands.size(); ++i) {
 				operand_sizes[i] = operands[i].size();
@@ -94,7 +94,7 @@ namespace dice::einsum::internal {
 			std::vector<double> op_dim_cardinalities(op_poss.size(), 1.0);
 			auto label_count = 0;
 			auto min_dim_card = std::numeric_limits<size_t>::max();
-			::robin_hood::unordered_set<size_t> sizes{};
+			::ankerl::unordered_dense::set<size_t> sizes{};
 			const LabelPossInOperands &label_poss_in_operands = sc->getLabelPossInOperands(label);
 			// iterate the operands that hold the label
 			for (size_t i = 0; i < op_poss.size(); ++i) {

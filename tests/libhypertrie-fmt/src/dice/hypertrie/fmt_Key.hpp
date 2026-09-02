@@ -14,10 +14,10 @@ namespace fmt {
 		template <typename FormatContext>
 		auto format(::dice::hypertrie::Key<tri_t> const& key, FormatContext &ctx) {
 			auto out = format_to(ctx.out(),
-							 FMT_STRING("<trait = {} ({})>: "),
+							 "<trait = {} ({})>: ",
 							 nameOfType<tri_t>(), tri_t{}
 			);
-			return ::dice::hypertrie::internal::util::format_vector(key, out);
+			return ::dice::hypertrie::internal::util::format_vector(key.as_inner(), out);
 		}
 	};
 
@@ -30,10 +30,10 @@ namespace fmt {
 		template <typename FormatContext>
 		auto format(::dice::hypertrie::SliceKey<tri_t> const& key, FormatContext &ctx) {
 			auto out = format_to(ctx.out(),
-								 FMT_STRING("<trait = {} ({})>: "),
+								 "<trait = {} ({})>: ",
 								 nameOfType<tri_t>(), tri_t{}
 			);
-			return ::dice::hypertrie::internal::util::format_vector(key, out);
+			return ::dice::hypertrie::internal::util::format_vector(key.as_inner(), out);
 		}
 	};
 }

@@ -1,6 +1,7 @@
 #ifndef HYPERTRIE_ITERATOR_HPP
 #define HYPERTRIE_ITERATOR_HPP
 
+#include "dice/hypertrie/Hypertrie_default_traits.hpp"
 #include "dice/hypertrie/Hypertrie_predeclare.hpp"
 #include "dice/hypertrie/internal/raw/iteration/RawIterator.hpp"
 #include "dice/template-library/switch_cases.hpp"
@@ -11,159 +12,177 @@ namespace dice::hypertrie {
 	class Iterator {
 	public:
 		using key_part_type = typename htt_t::key_part_type;
+		using value_type = NonZeroEntry<htt_t> const;
+		using reference = value_type &;
+		using pointer = value_type *;
+		using iterator_category = std::forward_iterator_tag;
+		using difference_type = std::ptrdiff_t;
 
 	protected:
-		using max_sized_RawIterator_t = internal::raw::RawIterator<hypertrie_max_depth, false, htt_t, allocator_type, hypertrie_max_depth>;
 		template<size_t depth>
-		using RawIterator_t = internal::raw::RawIterator<depth, false, htt_t, allocator_type, hypertrie_max_depth>;
+		using RawIterator_t = internal::raw::RawIterator<depth, false, htt_t, allocator_type>;
 
-		// TODO: same as in HashDiagonal.hpp. Rewrite with typical inheritance might advance readability.
-		//  However the runtime cost might be problematic.
-		struct RawMethods {
-			void (*construct)(const const_Hypertrie<htt_t, allocator_type> &, void *) noexcept = nullptr;
-			void (*destroy)(void *) noexcept = nullptr;
+		using max_sized_RawIterator_t = RawIterator_t<hypertrie_max_depth>;
 
-			NonZeroEntry<htt_t> const &(*value)(void const *) noexcept = nullptr;
+		struct VTable {
+			void (*construct)(void *location, const_Hypertrie<htt_t, allocator_type> const &hypertrie) noexcept;
+			void (*copy)(void *location, void const *self) noexcept;
+			void (*move)(void *location, void *self) noexcept;
+			void (*destroy)(void *self) noexcept;
+			reference (*value)(void const *self) noexcept;
+			void (*advance)(void *self) noexcept;
+			bool (*ended)(void const *self) noexcept;
 
-			void (*inc)(void *) noexcept = nullptr;
+			template<size_t depth>
+			static consteval VTable make() {
+				using RawIterator_tt = RawIterator_t<depth>;
 
-			bool (*ended)(void const *) noexcept = nullptr;
+				return VTable{
+						.construct = [](void *location, const_Hypertrie<htt_t, allocator_type> const &hypertrie) noexcept -> void {
+							if (hypertrie.empty()) {
+								new (location) RawIterator_tt{};
+							} else if (hypertrie.depth() == 0) {
+								if constexpr (depth == 0) {
+									new (location) RawIterator_tt{hypertrie.to_scalar()};
+								} else {
+									HYPERTRIE_UNREACHABLE;
+								}
+							} else {
+								if constexpr (depth > 0) {
+									using internal::raw::Ownership;
+									new (location) RawIterator_tt{hypertrie.template node_ptr<depth>()};
+								} else {
+									HYPERTRIE_UNREACHABLE;
+								}
+							}
+						},
+						.copy = [](void *location, void const *self) noexcept -> void {
+							new (location) RawIterator_tt{*reinterpret_cast<RawIterator_tt const *>(self)};
+						},
+						.move = [](void *location, void *self) noexcept -> void {
+							new (location) RawIterator_tt{std::move(*reinterpret_cast<RawIterator_tt *>(self))};
+						},
+						.destroy = [](void *self) noexcept -> void {
+							reinterpret_cast<RawIterator_tt *>(self)->~RawIterator_tt();
+						},
+						.value = [](void const *self) noexcept -> reference {
+							return reinterpret_cast<RawIterator_tt const *>(self)->value();
+						},
+						.advance = [](void *self) noexcept -> void {
+							reinterpret_cast<RawIterator_tt *>(self)->advance();
+						},
+						.ended = [](void const *self) noexcept -> bool {
+							return reinterpret_cast<RawIterator_tt const *>(self)->ended();
+						}};
+			}
 		};
 
-		template<size_t depth>
-		inline static RawMethods generate_raw_methods() noexcept {
-			return RawMethods{
-					.construct =
-							[](const_Hypertrie<htt_t, allocator_type> const &hypertrie, void *raw_iterator_ptr) noexcept {
-								if (hypertrie.empty())
-									std::construct_at(reinterpret_cast<RawIterator_t<depth> *>(raw_iterator_ptr));
-								else if (hypertrie.contextless())
-									std::construct_at(reinterpret_cast<RawIterator_t<depth> *>(raw_iterator_ptr), hypertrie.template stl_node_container<depth>());
-								else
-									std::construct_at(reinterpret_cast<RawIterator_t<depth> *>(raw_iterator_ptr), hypertrie.template node_container<depth>(), hypertrie.context()->raw_context());
-							},
-					.destroy =
-							[](void *raw_iterator_ptr) noexcept {
-							  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-							  std::destroy_at(reinterpret_cast<RawIterator_t<depth> *>(raw_iterator_ptr));
-							},
-					.value =
-							[](void const *raw_iterator_ptr) noexcept -> NonZeroEntry<htt_t> const & {
-							  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-							  return reinterpret_cast<RawIterator_t<depth> const *>(raw_iterator_ptr)->value();
-					},
-					.inc =
-							[](void *raw_iterator_ptr) noexcept {
-							  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-							  reinterpret_cast<RawIterator_t<depth> *>(raw_iterator_ptr)->inc();
-							},
-					.ended =
-							[](void const *raw_iterator_ptr) noexcept -> bool {
-							  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-							  return reinterpret_cast<RawIterator_t<depth> const *>(raw_iterator_ptr)->ended();
-					}};
+		template<size_t ...depths>
+		static consteval std::array<VTable, hypertrie_max_depth + 1> make_vtables(std::index_sequence<depths...>) {
+			return {VTable::template make<depths>()...};
 		}
 
-		inline static const std::vector<RawMethods> raw_method_cache = []() noexcept {
-			using namespace internal;
-			std::vector<RawMethods> raw_methods;
-			for (size_t depth = 1; depth < hypertrie_max_depth + 1; ++depth) {
-				raw_methods.push_back(template_library::switch_cases<1, hypertrie_max_depth + 1>(
-						depth,
-						[](auto depth_arg) -> RawMethods {
-							return generate_raw_methods<depth_arg>();
-						},
-						[]() -> RawMethods { assert(false); __builtin_unreachable(); }));
+		static constexpr std::array<VTable, hypertrie_max_depth + 1> vtables_ = make_vtables(std::make_index_sequence<hypertrie_max_depth + 1>{});
+
+		VTable const *vtable_;
+		alignas(max_sized_RawIterator_t) std::byte inner_[sizeof(max_sized_RawIterator_t)];
+
+		void drop() noexcept {
+			if (vtable_ != nullptr) {
+				// need to call destructor because RawIterator with non-raw keys is not trivially destructible
+				vtable_->destroy(inner_);
 			}
-			return raw_methods;
-		}();
-
-
-		static RawMethods const &get_raw_methods(size_t depth) noexcept {
-			return raw_method_cache[depth - 1];
-		};
-
-		RawMethods const *raw_methods = nullptr;
-		std::array<std::byte, sizeof(max_sized_RawIterator_t)> raw_iterator;
+		}
 
 	public:
-		using value_type = NonZeroEntry<htt_t>;
+		explicit Iterator(const_Hypertrie<htt_t, allocator_type> const &hypertrie) noexcept : vtable_{&vtables_[hypertrie.depth()]} {
+			vtable_->construct(inner_, hypertrie);
+		}
 
-		Iterator() = default;
+		Iterator(Iterator const &other) : vtable_{other.vtable_} {
+			vtable_->copy(inner_, other.inner_);
+		}
 
-		// TODO: review
-		Iterator &operator=(Iterator const &other) noexcept {
-			if (this == *other) {
+		Iterator &operator=(Iterator const &other) {
+			if (this == &other) {
 				return *this;
 			}
-			if (raw_methods != nullptr) {
-				raw_methods->destroy(&raw_iterator);
-			}
-			this->raw_methods = other.raw_methods;
-			this->raw_iterator = other.raw_iterator;
+
+			drop();
+			vtable_ = other.vtable_;
+			vtable_->copy(inner_, other.inner_);
 			return *this;
 		}
 
-		// TODO: review
-		Iterator(Iterator const &other) noexcept {
-			assert(this != &other);
-			if (raw_methods != nullptr) {
-				raw_methods->destroy(&raw_iterator);
-			}
-			this->raw_methods = other.raw_methods;
-			this->raw_iterator = other.raw_iterator;
-		}
-
-		Iterator(Iterator &&other) noexcept {
-			assert(this != &other);
-			if (raw_methods != nullptr) {
-				raw_methods->destroy(&raw_iterator);
-			}
-			this->raw_methods = other.raw_methods;
-			this->raw_iterator = other.raw_iterator;
-			other.raw_iterator = {};
-			other.raw_methods = nullptr;
+		Iterator(Iterator &&other) noexcept : vtable_{std::exchange(other.vtable_, nullptr)} {
+			vtable_->move(inner_, other.inner_);
 		}
 
 		Iterator &operator=(Iterator &&other) noexcept {
-			assert(this != &other);
-			if (raw_methods != nullptr) {
-				raw_methods->destroy(&raw_iterator);
+			if (this == &other) {
+				return *this;
 			}
-			this->raw_methods = other.raw_methods;
-			this->raw_iterator = other.raw_iterator;
-			other.raw_iterator = {};
-			other.raw_methods = nullptr;
+
+			drop();
+			vtable_ = std::exchange(other.vtable_, nullptr);
+			vtable_->move(inner_, other.inner_);
 			return *this;
 		}
 
 		~Iterator() noexcept {
-			if (raw_methods != nullptr) {
-				raw_methods->destroy(&raw_iterator);
-			}
-			raw_methods = nullptr;
+			drop();
 		}
-		explicit Iterator(const_Hypertrie<htt_t, allocator_type> const &hypertrie) noexcept : raw_methods(&get_raw_methods(hypertrie.depth())) {
-			raw_methods->construct(hypertrie, &raw_iterator);
+
+		void advance() noexcept {
+			vtable_->advance(inner_);
 		}
 
 		Iterator &operator++() noexcept {
-			raw_methods->inc(&raw_iterator);
+			advance();
 			return *this;
 		}
 
-		Iterator operator++(int) noexcept {
-			auto copy = *this;
-			++(*this);
-			return copy;
+		Iterator operator++(int) {
+			auto cpy = *this;
+			this->advance();
+			return cpy;
 		}
 
-		value_type const &operator*() const noexcept { return raw_methods->value(&raw_iterator); }
+		[[nodiscard]] reference value() const noexcept {
+			return vtable_->value(inner_);
+		}
 
-		value_type const *operator->() const noexcept { return &raw_methods->value(&raw_iterator); }
+		reference operator*() const noexcept {
+			return value();
+		}
 
+		pointer operator->() const noexcept {
+			return &value();
+		}
 
-		operator bool() const noexcept { return not raw_methods->ended(&raw_iterator); }
+		[[nodiscard]] bool ended() const noexcept {
+			return vtable_->ended(inner_);
+		}
+
+		explicit operator bool() const noexcept {
+			return !ended();
+		}
+
+		friend bool operator==(Iterator const &self, std::default_sentinel_t) noexcept {
+			return self.ended();
+		}
+
+		friend bool operator==(std::default_sentinel_t, Iterator const &self) noexcept {
+			return self.ended();
+		}
+
+		friend bool operator!=(Iterator const &self, std::default_sentinel_t) noexcept {
+			return !self.ended();
+		}
+
+		friend bool operator!=(std::default_sentinel_t, Iterator const &self) noexcept {
+			return !self.ended();
+		}
 	};
 
 }// namespace dice::hypertrie

@@ -3,11 +3,11 @@
 
 #include <dice/hash/DiceHash.hpp>
 
-#include <robin_hood.h>
-
 #include <tuple>
 #include <vector>
 #include <cassert>
+
+#include <ankerl/unordered_dense.h>
 
 namespace dice::einsum::internal {
 	/**
@@ -128,7 +128,7 @@ namespace dice::einsum::internal {
 		 * @return set of labels used in the operands
 		 */
 		[[nodiscard]] auto getOperandsLabelSet() const noexcept {
-			::robin_hood::unordered_set<Label> operand_labels{};
+			::ankerl::unordered_dense::set<Label> operand_labels{};
 			for (auto const &operand : operands) {
 				for (auto label : operand) {
 					operand_labels.insert(label);
@@ -141,7 +141,7 @@ namespace dice::einsum::internal {
 		 * @return set of labels used in the result
 		 */
 		[[nodiscard]] auto getResultLabelSet() const noexcept {
-			::robin_hood::unordered_set<Label> result_labels{};
+			::ankerl::unordered_dense::set<Label> result_labels{};
 			for (auto label : result) {
 				result_labels.insert(label);
 			}
@@ -171,9 +171,9 @@ namespace dice::einsum::internal {
 		 * @return a map from label to its position in the result. Only labels, that are in the result, are mapped.
 		 */
 		[[nodiscard]] auto getLabelPossInResult() const noexcept {
-			::robin_hood::unordered_map<Label, LabelPos> label_poss_in_result{};
+			::ankerl::unordered_dense::map<Label, LabelPos> label_poss_in_result{};
 			for (size_t pos = 0; pos < result.size(); ++pos) {
-				label_poss_in_result.insert({result[pos], pos});
+				label_poss_in_result.emplace(result[pos], pos);
 			}
 			return label_poss_in_result;
 		}

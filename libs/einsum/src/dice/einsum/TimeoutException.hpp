@@ -10,11 +10,11 @@ namespace dice::einsum {
 	class TimeoutException : public std::runtime_error {
 		using DurationType = std::chrono::steady_clock::duration;
 
-		static constexpr std::size_t countMS(DurationType const& duration) noexcept {
+		static std::size_t countMS(DurationType const& duration) noexcept {
 			return std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
 		}
 
-		static constexpr std::size_t countS(DurationType const& duration) noexcept {
+		static std::size_t countS(DurationType const& duration) noexcept {
 			return std::chrono::duration_cast<std::chrono::seconds>(duration).count();
 		}
 

@@ -116,11 +116,9 @@ namespace dice::hypertrie::tests::utils {
 
 		key_part_type key_part() {
 			auto key_part_ = key_part_dist(rand);
-			// if the least significant bit is the tagging bit, we shift the value by 1.
-			if constexpr (htt_t::key_part_tagging_bit == 0)
-				return key_part_ << 1;
-			else if constexpr (htt_t::key_part_tagging_bit > 0)
-				return key_part_ & reinterpret_cast<key_part_type>(~(1UL << htt_t::key_part_tagging_bit));
+			// if the 2 least significant bits are the tagging bit, we shift the value by 2.
+			if constexpr (htt_t::taggable_key_part)
+				return key_part_ & reinterpret_cast<key_part_type>(~(0b11ul << 62));
 			else
 				return key_part_dist(rand);
 		}
@@ -186,7 +184,7 @@ namespace dice::hypertrie::tests::utils {
 			: RawGenerator<1, htt_t>(min, max, valueMin, valueMax) {}
 
 		auto key(const size_t depth = 1) {
-			Key<htt_t> key_(depth);
+			auto key_ = Key<htt_t>::make_defaulted(depth);
 			std::generate(key_.begin(), key_.end(), [&]() { return this->key_part(); });
 			return key_;
 		}

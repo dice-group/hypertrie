@@ -1,28 +1,33 @@
-cmake_minimum_required(VERSION 3.24)
-project(hypertrie VERSION 0.10.0
-        DESCRIPTION "The hypertrie is powering the Tentris triple store.")
+cmake_minimum_required(VERSION 3.21)
+project(hypertrie
+        VERSION 0.15.0
+        DESCRIPTION "A flexible data structure for low-rank, sparse tensors supporting slices by any dimension and einstein summation (einsum) and a flexible query interface"
+        )
 
 include(cmake/boilerplate_init.cmake)
 boilerplate_init()
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/version.hpp.in ${CMAKE_CURRENT_SOURCE_DIR}/libs/hypertrie/src/dice/hypertrie/Hypertrie_version.hpp)
 
-if (PROJECT_IS_TOP_LEVEL)
-    set(CONAN_INSTALL_ARGS "${CONAN_INSTALL_ARGS};-o=boost/*:header_only=True")
+option(BUILD_FFI "Build hypertrie foreign function interface" OFF)
 
-    if (BUILD_TESTING)
-        set(CONAN_INSTALL_ARGS "${CONAN_INSTALL_ARGS};-o=&:with_test_deps=True")
+option(USE_CONAN "If available, use conan to retrieve dependencies." ON)
+if (PROJECT_IS_TOP_LEVEL AND USE_CONAN)
+    include(cmake/conan_cmake.cmake)
+    if (PROJECT_IS_TOP_LEVEL AND BUILD_TESTING)
+        set(CONAN_HYPERTRIE_WITH_TEST_DEPS "True")
+    else()
+        set(CONAN_HYPERTRIE_WITH_TEST_DEPS "False")
+    endif()
+
+    if (BUILD_FFI)
+        set(CONAN_HYPERTRIE_BUILD_FFI "True")
+    else ()
+        set(CONAN_HYPERTRIE_BUILD_FFI "False")
     endif ()
-endif ()
 
-set(style_files
-        .clang-format
-        .clang-tidy
-)
-foreach(style_file ${style_files})
-    file(DOWNLOAD "https://raw.githubusercontent.com/dice-group/tentris-cpp-coding-guidelines/main/${style_file}"
-            "${CMAKE_SOURCE_DIR}/${style_file}"
-            TLS_VERIFY ON)
-endforeach()
+    set(CONAN_OPTIONS "with_test_deps=${CONAN_HYPERTRIE_WITH_TEST_DEPS};build_ffi=${CONAN_HYPERTRIE_BUILD_FFI};boost:header_only=True")
+    install_packages_via_conan("${CMAKE_SOURCE_DIR}/conanfile.py" "${CONAN_OPTIONS}")
+endif ()
 
 if (PROJECT_IS_TOP_LEVEL AND USE_CLANG_TIDY)
     include(cmake/ClangTidy.cmake)

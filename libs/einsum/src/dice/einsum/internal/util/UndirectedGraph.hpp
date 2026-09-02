@@ -4,7 +4,7 @@
 
 #include <dice/hash/DiceHash.hpp>
 
-#include <robin_hood.h>
+#include <ankerl/unordered_dense.h>
 
 #include <vector>
 
@@ -18,7 +18,7 @@ namespace dice::einsum::internal::util {
 	template<typename T>
 	class UndirectedGraph {
 	public:
-		using NodeSet = ::robin_hood::unordered_set<T, dice::hash::DiceHashMartinus<T>>;
+		using NodeSet = ::ankerl::unordered_dense::set<T>;
 		/**
 		 * New empty UndirectedGraph.
 		 */
@@ -32,7 +32,7 @@ namespace dice::einsum::internal::util {
 		/**
 		 * Set of all directed edges. (a,a)-edged are allowed.
 		 */
-		::robin_hood::unordered_map<T, NodeSet, dice::hash::DiceHash<T>> edges{};
+		::ankerl::unordered_dense::map<T, NodeSet> edges{};
 
 	public:
 		/**

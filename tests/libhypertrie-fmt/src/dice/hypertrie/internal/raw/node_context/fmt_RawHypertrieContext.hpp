@@ -8,24 +8,17 @@
 #include <dice/hypertrie/internal/container/fmt_SparseMap.hpp>
 #include <dice/hypertrie/internal/container/fmt_SparseSet.hpp>
 #include <dice/hypertrie/internal/raw/node_context/RawHypertrieContext.hpp>
+#include <utils/DumpRawContext.hpp>
 
 #include <dice/template-library/for.hpp>
 
-namespace fmt {
-	template<size_t depth, ::dice::hypertrie::HypertrieTrait htt_t, dice::hypertrie::ByteAllocator allocator_type>
-	struct formatter<::dice::hypertrie::internal::raw::RawHypertrieContext<depth, htt_t, allocator_type>> : ::dice::hypertrie::internal::util::SimpleParsing {
-		template<typename FormatContext>
-		auto format(::dice::hypertrie::internal::raw::RawHypertrieContext<depth, htt_t, allocator_type> const &rnc, FormatContext &ctx) {
-			format_to(ctx.out(), FMT_STRING("<RawHypertrieContext\n"));
-			dice::template_library::for_range<1, depth + 1>([&](auto depth_) {
-				constexpr auto height = depth + 1 - depth_;
-				format_to(ctx.out(), FMT_STRING("[{}] FN\n{}\n"), height, rnc.node_storage_.template nodes<height, ::dice::hypertrie::internal::raw::FullNode>());
-				if constexpr (not(height == 1 and ::dice::hypertrie::HypertrieTrait_bool_valued_and_taggable_key_part<htt_t>))
-					format_to(ctx.out(), FMT_STRING("[{}] SEN\n{}\n"), height, rnc.node_storage_.template nodes<height, ::dice::hypertrie::internal::raw::SingleEntryNode>());
-			});
-			return format_to(ctx.out(), FMT_STRING(">"));
-		}
-	};
-}// namespace fmt
+namespace dice::hypertrie::internal::raw {
+	template<size_t max_depth, HypertrieTrait htt_t, ByteAllocator allocator_type>
+	std::ostream &operator<<(std::ostream &os, RawHypertrieContext<max_depth, htt_t, allocator_type> const &context) {
+		tests::core::node::dump_context(context, "", os);
+		tests::core::node::dump_context_hash_translation_table(context, os);
+		return os;
+	}
+} // namespace dice::hypertrie::internal::raw
 
 #endif//HYPERTRIE_FMT_RAWHYPERTRIECONTEXT_HPP

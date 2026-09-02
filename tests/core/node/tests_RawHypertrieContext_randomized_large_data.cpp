@@ -52,11 +52,14 @@ namespace dice::hypertrie::tests::core::node {
 
 
 			auto entries = gen.entries(total_count);
+			//std::sort(entries.begin(), entries.end());
+			//auto uniq_end = std::unique(entries.begin(), entries.end());
+			//entries.erase(uniq_end, entries.end());
 
-			std::cout << "total triples" << entries.size() << std::endl;
+			std::cout << "total triples: " << entries.size() << std::endl;
 
 			RawHypertrieContext<depth, htt_t, allocator_type> context{std::allocator<std::byte>()};
-			NodeContainer<depth, htt_t, allocator_type> nc{};
+			NodePtr<depth, htt_t, allocator_type> nc{};
 
 			SUBCASE("insert entries manually") {
 				auto start = std::chrono::high_resolution_clock::now();
@@ -66,10 +69,10 @@ namespace dice::hypertrie::tests::core::node {
 
 				for (const auto run : iter::range(runs)) {
 					auto batch_start = std::chrono::high_resolution_clock::now();
-					for (auto &entry : entry_batches[run])
+					for (auto const &entry : entry_batches[run])
 						if (context.template get<depth>(nc, entry.key()))
 							break;
-					context.insert(nc, std::move(entry_batches[run]));
+					context.insert(nc, entry_batches[run]);
 					auto batch_duration = std::chrono::high_resolution_clock::now() - batch_start;
 					fmt::print("batch {}\n  time: {}\n",
 							   run,
@@ -86,9 +89,8 @@ namespace dice::hypertrie::tests::core::node {
 				{
 					size_t run = 0;
 					auto batch_start = std::chrono::high_resolution_clock::now();
-					RawNodeContainer<htt_t, allocator_type> raw_nc{nc};
-					RawHypertrieBulkInserter<depth, htt_t, allocator_type, depth> bulk_insert//
-							{raw_nc, context, batch,
+					RawHypertrieBulkInserter<depth, htt_t, allocator_type, depth> bulk_insert
+							{nc, context, batch,
 							 [&]([[maybe_unused]] size_t processed_entries,
 								 [[maybe_unused]] size_t inserted_entries,
 								 [[maybe_unused]] size_t hypertrie_size_after) {
@@ -102,7 +104,6 @@ namespace dice::hypertrie::tests::core::node {
 					for (const auto &entry : entries) {
 						bulk_insert.add(entry);
 					}
-					nc = NodeContainer<depth, htt_t, allocator_type>{raw_nc};
 				}
 				fmt::print("size: {}\n", context.size(nc));
 				auto duration = std::chrono::high_resolution_clock::now() - start;
@@ -115,9 +116,8 @@ namespace dice::hypertrie::tests::core::node {
 				{
 					size_t run = 0;
 					auto batch_start = std::chrono::high_resolution_clock::now();
-					RawNodeContainer<htt_t, allocator_type> raw_nc{nc};
-					SynchronousRawHypertrieBulkUpdater<BulkUpdaterMode::Insert, depth, htt_t, allocator_type, depth> bulk_insert//
-							{raw_nc, context, batch,
+					SynchronousRawHypertrieBulkUpdater<BulkUpdaterMode::Insert, depth, htt_t, allocator_type, depth> bulk_insert
+							{nc, context, batch,
 							 [&]([[maybe_unused]] size_t processed_entries,
 								 [[maybe_unused]] size_t inserted_entries,
 								 [[maybe_unused]] size_t hypertrie_size_after) {
@@ -131,7 +131,6 @@ namespace dice::hypertrie::tests::core::node {
 					for (const auto &entry : entries) {
 						bulk_insert.add(entry);
 					}
-					nc = NodeContainer<depth, htt_t, allocator_type>{raw_nc};
 				}
 				fmt::print("size: {}\n", context.size(nc));
 				auto duration = std::chrono::high_resolution_clock::now() - start;
@@ -164,7 +163,7 @@ namespace dice::hypertrie::tests::core::node {
 			std::cout << "total triples: " << entries.size() << std::endl;
 
 			RawHypertrieContext<depth, htt_t, allocator_type> context{std::allocator<std::byte>()};
-			RawNodeContainer<htt_t, allocator_type> raw_nc{};
+			NodePtr<depth, htt_t, allocator_type> nc{};
 
 			auto start = std::chrono::high_resolution_clock::now();
 			{
@@ -173,7 +172,7 @@ namespace dice::hypertrie::tests::core::node {
 
 				std::cout << "inserting..." << std::endl;
 				RawHypertrieBulkInserter<depth, htt_t, allocator_type, depth> bulk_insert{
-						raw_nc,
+						nc,
 						context,
 						batch,
 						[&]([[maybe_unused]] size_t processed_entries,
@@ -196,7 +195,7 @@ namespace dice::hypertrie::tests::core::node {
 						   std::chrono::duration_cast<std::chrono::milliseconds>(duration).count());
 			}
 
-			std::cout << "size after insertion: " << context.size(NodeContainer<depth, htt_t, allocator_type>{raw_nc}) << std::endl;
+			std::cout << "size after insertion: " << nc.size() << std::endl;
 
 			start = std::chrono::high_resolution_clock::now();
 			{
@@ -206,7 +205,7 @@ namespace dice::hypertrie::tests::core::node {
 				std::cout << "removing..." << std::endl;
 
 				RawHypertrieBulkRemover<depth, htt_t, allocator_type, depth> bulk_remove {
-						raw_nc,
+						nc,
 						context,
 						batch,
 						[&]([[maybe_unused]] size_t processed_entries,
@@ -221,11 +220,11 @@ namespace dice::hypertrie::tests::core::node {
 						}};
 
 				for (auto const &entry : entries) {
-					bulk_remove.add(entry);
+					bulk_remove.add(entry.key());
 				}
 			}
 
-			auto const size = context.size(NodeContainer<depth, htt_t, allocator_type>{raw_nc});
+			auto const size = nc.size();
 
 			CHECK(size == 0);
 

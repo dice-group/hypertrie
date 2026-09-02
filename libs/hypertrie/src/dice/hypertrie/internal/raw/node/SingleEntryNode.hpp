@@ -3,55 +3,36 @@
 
 #include <cstddef>
 
-#include "dice/hypertrie/ByteAllocator.hpp"
 #include "dice/hypertrie/Hypertrie_trait.hpp"
 #include "dice/hypertrie/internal/raw/node/ReferenceCounted.hpp"
 #include "dice/hypertrie/internal/raw/node/SingleEntry.hpp"
 #include "dice/hypertrie/internal/raw/node/Valued.hpp"
+#include "dice/hypertrie/internal/raw/node/Hashed.hpp"
 
 namespace dice::hypertrie::internal::raw {
 
-	template<size_t depth, HypertrieTrait htt_t, ByteAllocator allocator_type>
-	class SingleEntryNode : public ReferenceCounted, public SingleEntry<depth, htt_t> {
-	public:
-		using RawKey_t = RawKey<depth, htt_t>;
+	template<size_t depth, HypertrieTrait htt_t>
+	struct SingleEntryNode : ReferenceCounted, SingleEntry<depth, htt_t> {
+		using key_part_type = typename htt_t::key_part_type;
 		using value_type = typename htt_t::value_type;
 
 		SingleEntryNode() noexcept = default;
 
-		explicit SingleEntryNode(SingleEntry<depth, htt_t> const &entry, size_t ref_count = 0) noexcept
-			: ReferenceCounted(ref_count), SingleEntry<depth, htt_t>(entry) {}
-
-		/**
-		 * Constructor for bool-valued SingleEntryNode
-		 * @param key
-		 * @param value
-		 * @param ref_count
-		 */
-		SingleEntryNode(const RawKey_t &key, [[maybe_unused]] value_type value, size_t ref_count = 0) noexcept
-				requires HypertrieTrait_bool_valued<htt_t>
-			: ReferenceCounted(ref_count), SingleEntry<depth, htt_t>(key /* here is the difference to the constructor below */) {}
-
-		/**
-		 * Constructor for non-bool-valued SingleEntryNode
-		 * @param key
-		 * @param value
-		 * @param ref_count
-		 */
-		SingleEntryNode(const RawKey_t &key, [[maybe_unused]] value_type value, size_t ref_count = 0) noexcept
-				requires(not HypertrieTrait_bool_valued<htt_t>)
-			: ReferenceCounted(ref_count), SingleEntry<depth, htt_t>(key, value) {}
-
-		// TODO: should be inherited from SingleEntry
-		/*
-		auto operator<=>(const SingleEntryNode &other) const noexcept {
-			return this->SingleEntry<depth,htt_t>::operator<=>(other);
+		explicit SingleEntryNode(size_t ref_count) noexcept
+			: ReferenceCounted{ref_count} {
 		}
 
-		bool operator==(const SingleEntryNode &other) const noexcept {
-			return this->SingleEntry<depth,htt_t>::operator==(other);
+		SingleEntryNode(SingleEntry<depth, htt_t> const &entry, size_t ref_count) noexcept
+			: ReferenceCounted{ref_count}, SingleEntry<depth, htt_t>{entry} {
 		}
-		 */
+
+		[[nodiscard]] RawIdentifier<depth, htt_t> identifier() const noexcept {
+			return RawIdentifier<depth, htt_t>{*this};
+		}
+
+		[[nodiscard]] typename Hashed<depth, htt_t>::hash_type hash() const noexcept {
+			return RawIdentifier<depth, htt_t>::hash_single_entry(*this);
+		}
 	};
 
 }// namespace dice::hypertrie::internal::raw
